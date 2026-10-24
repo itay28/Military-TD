@@ -61,7 +61,7 @@ Not in 1.0 (candidates for 1.x): player-made maps / in-game editor, endless mode
 | **`area:*` label** | The same area as the epic, as a label for filtering and colors | `area:towers` |
 | **Triage label** | Whether it's ready to work on | `needs-triage` → `ready-for-agent` / `ready-for-human` |
 | **Blocked by** | Native issue dependencies. Don't start an issue while it has an open blocker. | #9 blocked by #6, #8 |
-| **Project board** | The views: board by status, table by milestone, current work | [Military-TD Roadmap](https://github.com/users/itay28/projects/4): Board, Current milestone, Roadmap by milestone, Epics, In progress |
+| **Project board** | The views: board by status, table by milestone, current work | [Military-TD Roadmap](https://github.com/users/itay28/projects/4): Board, Current milestone, Roadmap by milestone, Epics, In progress, Releases |
 
 Epics: #19 Core mechanics · #20 Towers · #21 Units · #22 UI · #23 Art & audio · #24 Infra & testing.
 

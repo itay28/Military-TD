@@ -97,7 +97,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 - [ ] No game rules outside `src/sim`; no Phaser in `src/sim`
 - [ ] New assets recorded in `assets/manifest.json`
 - [ ] Docs updated if behaviour, terms or decisions changed (PLAN, GLOSSARY, ADR)
-- [ ] PR title is a Conventional Commit; body says `Closes #n`
+- [ ] PR title is a Conventional Commit; body says `Closes #n` (the one exception: a milestone report PR says `Refs #<release issue>`; see **Milestone release**)
 
 ## Commit types and versions
 
@@ -115,7 +115,6 @@ PR titles are checked by the *PR title* workflow (`.github/workflows/pr-title.ym
 ## Releasing
 - **Release PR:** on every push to `main`, the *Release* workflow (`.github/workflows/release-please.yml`) runs release-please. It keeps one open release PR (`chore(main): release …`) that bumps `package.json`, `package-lock.json` and `.release-please-manifest.json` and updates `CHANGELOG.md` from the commits since the last release.
 - **Release:** merging that PR tags `vX.Y.Z` and publishes a GitHub Release with the same notes. Nothing else releases: ordinary merges only update the release PR.
-- **Milestone release:** a milestone ends with a `0.N.0` release that goes through a milestone report PR. See **Milestone release** below.
 - **Config:** `release-please-config.json` (release type `node`, `bump-minor-pre-major`, `bump-patch-for-minor-pre-major`, tags without a component) and `.release-please-manifest.json` (the last released version). Guarded by `tests/release-config.test.ts`.
 - **Version in the game:** `vite.config.ts` injects the `package.json` version as `__APP_VERSION__`; `src/data/version.ts` exposes it, and `src/ui/version.ts` writes it into the DOM overlay (`#version`, bottom-right corner; ADR-0003).
 - **Deploy (#17):** add the itch.io upload as a job in `release-please.yml` that `needs: release-please` and runs `if: needs.release-please.outputs.release_created == 'true'`. A Release created with `GITHUB_TOKEN` doesn't start other workflows, so an `on: release` workflow would never run.
@@ -128,15 +127,16 @@ Milestones can't be cards on the project board, so each milestone has a **releas
 | Milestone moment | Release issue status | Moved by |
 | --- | --- | --- |
 | Planned, not started | Backlog | created there |
-| First PR opened for an issue in the milestone | In progress | #97 |
-| Last issue in the milestone closed → milestone report PR opened | In review | #96 |
-| `v0.N.0` released | Done; milestone closed | #97 |
+| First PR opened for an issue in the milestone | In progress | by hand until #97 lands |
+| Last issue in the milestone closed → milestone report PR opened | In review | by hand until #96 lands |
+| `v0.N.0` released | Done; milestone closed | by hand until #97 lands |
 
-**When is a milestone done?** When every issue in it is closed **except its release issue**. The release issue stays open until the release, so anything that asks "is the milestone done?" (the report workflow, `promote-ready`, a human) ignores issues labelled `release`.
+**When is a milestone done?** When every issue in it is closed **except its release issue**. The release issue stays open until the release, so anything that checks whether a milestone is done (the report workflow, a human) ignores issues labelled `release`.
 
 **The milestone report PR.** When the milestone's last other issue closes, a workflow (#96) opens the milestone report PR:
 - Title `chore: release 0.N.0`. It adds `docs/releases/0.N.0.md`, an audit of the milestone: **Planned** (every issue in it), **Delivered** (closed as completed, with the PRs that closed them), **Skipped** (closed as not planned), **Moved out** (removed from the milestone during it), **Added** (merged PRs since the last `v0.(N-1).*` tag that don't close an issue in the milestone), and an empty **Notes** section.
-- The body says `Refs #<release issue>` (not `Closes`: the release issue closes on the release itself) and ends with `Release-As: 0.N.0` as its own final paragraph: after the `🤖 Generated with …` line, with a blank line before it. Squash merge copies the PR body into the commit, and release-please reads `Release-As` only from the commit's last paragraph (the footer).
+- The body says `Refs #<release issue>`, not `Closes`: the release issue closes on the release itself. This is the one exception to "every PR closes an issue".
+- The body and ends with `Release-As: 0.N.0` as its own final paragraph: after the `🤖 Generated with …` line, with a blank line before it. Squash merge copies the PR body into the commit, and release-please reads `Release-As` only from the commit's last paragraph (the footer).
 - If a report PR for the milestone is already open, the workflow updates it instead. It can be re-run by hand (`workflow_dispatch` with the milestone).
 
 **What the human decides.**
