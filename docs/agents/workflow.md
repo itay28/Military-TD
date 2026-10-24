@@ -75,7 +75,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 - Match the existing code style; keep tuning numbers in `src/data`.
 
 ### 4. Verify
-- `npm run check` (typecheck, lint, unit, scenario tests) and `npm run test:e2e` when UI is touched.
+- `npm run check` (typecheck, lint, format check, unit and scenario tests) and `npm run test:e2e` when UI is touched.
 - For gameplay changes, also run the relevant scenario with `npm run scenario -- <name>` and read the outcome.
 - `mattpocock-skills:code-review` against `main` before marking the PR ready.
 

@@ -2,11 +2,12 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import { defineConfig } from 'eslint/config';
 
-export default tseslint.config(
+export default defineConfig(
   { ignores: ['dist/', 'coverage/', 'playwright-report/', 'test-results/', '.claude/'] },
   js.configs.recommended,
-  ...tseslint.configs.recommended,
+  tseslint.configs.recommended,
   {
     languageOptions: {
       ecmaVersion: 2023,
@@ -16,7 +17,7 @@ export default tseslint.config(
   },
   // The Simulation is pure and deterministic (ADR-0002, ADR-0003).
   {
-    files: ['src/sim/**/*.ts'],
+    files: ['src/sim/**/*.{ts,js}'],
     rules: {
       'no-restricted-imports': [
         'error',
