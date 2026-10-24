@@ -11,6 +11,8 @@ export const TICK_MS = 1000 / 60;
 
 export interface GameConfig {
   readonly map: MapData;
+  /** Starting Money. Costs and rewards come with #9. */
+  readonly money: number;
   readonly lives: number;
   readonly waves: readonly WaveData[];
 }
@@ -23,6 +25,7 @@ export interface GameState {
   /** The validated map, for drawing and placement checks. */
   readonly map: GameMap;
   readonly timeMs: number;
+  readonly money: number;
   readonly lives: number;
   /** In spawn order. */
   readonly enemies: readonly Enemy[];
@@ -79,6 +82,7 @@ export function createGame(config: GameConfig): Game {
   const state: { -readonly [K in keyof GameState]: GameState[K] } & { enemies: Enemy[]; towers: Tower[] } = {
     map,
     timeMs: 0,
+    money: config.money,
     lives: config.lives,
     enemies: [],
     towers: [],

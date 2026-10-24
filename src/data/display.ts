@@ -12,3 +12,6 @@ export const MAP_STYLE = {
   buildable: 0x5b6b3a, // olive
   grid: { color: 0x000000, alpha: 0.15, width: 1 },
 } as const;
+
+/** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
+export const WAVE_BANNER_MS = 2000;
