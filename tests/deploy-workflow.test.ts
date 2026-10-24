@@ -1,10 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 // Guards the itch.io deploy (ADR-0005) so an edit can't silently stop releases reaching the page.
-const read = (path: string): string => (existsSync(path) ? readFileSync(path, 'utf8') : '');
-const deploy = read('.github/workflows/deploy.yml');
-const release = read('.github/workflows/release-please.yml');
+const deploy = readFileSync('.github/workflows/deploy.yml', 'utf8');
+const release = readFileSync('.github/workflows/release-please.yml', 'utf8');
 const runs = [...deploy.matchAll(/^\s+run: (.+)$/gm)].map((m) => m[1]);
 
 describe('deploy workflow', () => {
@@ -35,8 +34,13 @@ describe('deploy workflow', () => {
 
 describe('release workflow', () => {
   it('deploys only when release-please created a release, passing its tag', () => {
-    expect(release).toMatch(
-      / {2}deploy:\n(?: {4}.*\n)*? {4}needs: release-please\n {4}if: needs\.release-please\.outputs\.release_created == 'true'\n {4}uses: \.\/\.github\/workflows\/deploy\.yml\n {4}with:\n {6}tag: \$\{\{ needs\.release-please\.outputs\.tag_name \}\}\n {4}secrets: inherit\n/,
-    );
+    const start = release.indexOf('\n  deploy:\n');
+    expect(start).toBeGreaterThan(0);
+    const job = release.slice(start);
+    expect(job).toContain('    needs: release-please\n');
+    expect(job).toContain("    if: needs.release-please.outputs.release_created == 'true'\n");
+    expect(job).toContain('    uses: ./.github/workflows/deploy.yml\n');
+    expect(job).toContain('      tag: ${{ needs.release-please.outputs.tag_name }}\n');
+    expect(job).toContain('    secrets: inherit\n');
   });
 });

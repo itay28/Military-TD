@@ -41,11 +41,11 @@ How a release gets there: merging the release PR publishes a GitHub Release, and
 
 **One-time setup (maintainer):**
 
-1. On itch.io, create a project: kind **HTML**, visibility **Restricted** (or **Draft**). After the first upload, tick **This file will be played in the browser** on the `html5` file, and set the embed size to **768 × 480** (the game's canvas; raise it when the HUD lands).
+1. On itch.io, create a project: kind **HTML**, visibility **Restricted**. (**Draft** is fine while setting up, but only you can open a draft, so testers need **Restricted**.) After the first upload, tick **This file will be played in the browser** on the `html5` file, and set the embed size to **768 × 480** (the game's canvas; raise it when the HUD lands).
 2. Create an API key: itch.io → **Settings → API keys**.
 3. In the GitHub repo, **Settings → Secrets and variables → Actions**: add the secret `BUTLER_API_KEY` (the key), and the variables `ITCH_USER` (your itch.io username) and `ITCH_GAME` (the project's URL name).
 
-Until all three are set, the deploy job fails with a message naming what's missing. The release itself still goes out.
+Until all three are set, the deploy job fails with a message naming what's missing, and the Release workflow run shows red. The release itself still goes out.
 
 ## Project docs
 

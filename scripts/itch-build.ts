@@ -2,8 +2,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-/** itch.io's limits for an HTML5 upload (https://itch.io/docs/creators/html5). */
-export const ITCH_LIMITS = { maxFiles: 1000, maxFileBytes: 200 * 2 ** 20, maxTotalBytes: 500 * 2 ** 20 };
+/** itch.io's limits for an HTML5 upload (https://itch.io/docs/creators/html5). MB read as 10^6 bytes, the stricter reading. */
+export const ITCH_LIMITS = { maxFiles: 1000, maxPathLength: 240, maxFileBytes: 200e6, maxTotalBytes: 500e6 };
 
 export type ItchLimits = typeof ITCH_LIMITS;
 
@@ -30,6 +30,9 @@ export function checkItchBuild(dir: string, limits: ItchLimits = ITCH_LIMITS): s
 
   let total = 0;
   for (const file of files) {
+    if (file.length > limits.maxPathLength) {
+      problems.push(`${file} is ${file.length} characters long; itch.io allows ${limits.maxPathLength} per path.`);
+    }
     const bytes = statSync(join(dir, file)).size;
     total += bytes;
     if (bytes > limits.maxFileBytes) {
