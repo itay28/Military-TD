@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MVP_MAP } from '../data/maps';
-import { createGame } from './game';
-import type { MapData } from './map';
+import { createGame, TICK_MS } from './game';
+import { InvalidMapError, type MapData } from './map';
 
 // Path line through tile centers: right 3, then down 3. 6 tiles long; the turn waypoint is at 3.
 const SMALL: MapData = {
@@ -64,6 +64,21 @@ describe('createGame', () => {
     expect(a!.position).toEqual({ x: 3.5, y: 3 });
   });
 
+  it('builds the map from data and exposes it on state', () => {
+    const game = createGame({ map: MVP_MAP, lives: 20 });
+    expect(game.state.map.id).toBe('mvp');
+    expect(game.state.map.isPath({ col: 0, row: 2 })).toBe(true);
+  });
+
+  it('throws InvalidMapError for a malformed map', () => {
+    const map = { ...MVP_MAP, waypoints: [{ col: 0, row: 0 }] };
+    expect(() => createGame({ map, lives: 20 })).toThrow(InvalidMapError);
+  });
+
+  it('the fixed step is 1/60 s', () => {
+    expect(TICK_MS).toBe(1000 / 60);
+  });
+
   it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])('tick rejects dt %s', (dt) => {
     const game = newGame();
     game.spawnEnemy('infantry');
@@ -74,8 +89,6 @@ describe('createGame', () => {
 });
 
 describe('leaking', () => {
-  const TICK_MS = 1000 / 60;
-
   it('Infantry leaks on the MVP map after exactly 1160 ticks (29 tiles at 1.5 tiles/s)', () => {
     const game = createGame({ map: MVP_MAP, lives: 20 });
     game.spawnEnemy('infantry');

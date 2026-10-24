@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from './data/display';
 import { BootScene } from './scenes/BootScene';
+import { GameScene } from './scenes/GameScene';
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -8,5 +9,5 @@ new Phaser.Game({
   width: CANVAS_WIDTH,
   height: CANVAS_HEIGHT,
   backgroundColor: '#2f3a24',
-  scene: [BootScene],
+  scene: [BootScene, GameScene],
 });

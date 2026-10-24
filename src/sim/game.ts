@@ -1,7 +1,10 @@
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { createMap, type MapData } from './map';
+import { createMap, type GameMap, type MapData } from './map';
+
+/** The one fixed step, in ms. The Game scene and the scenario runner both tick with it. */
+export const TICK_MS = 1000 / 60;
 
 export interface GameConfig {
   readonly map: MapData;
@@ -10,6 +13,8 @@ export interface GameConfig {
 
 /** The live game state, read-only to callers. Read it through `game.state` each time: arrays are replaced on tick. */
 export interface GameState {
+  /** The validated map, for drawing and placement checks. */
+  readonly map: GameMap;
   readonly timeMs: number;
   readonly lives: number;
   /** In spawn order. */
@@ -30,9 +35,16 @@ export interface Game {
   spawnEnemy(kind: EnemyKind): number;
 }
 
+/** Builds a game from data. Throws InvalidMapError when the map is malformed. */
 export function createGame(config: GameConfig): Game {
-  const line = createPathLine(createMap(config.map).waypointPositions);
-  const state: { timeMs: number; lives: number; enemies: Enemy[] } = { timeMs: 0, lives: config.lives, enemies: [] };
+  const map = createMap(config.map);
+  const line = createPathLine(map.waypointPositions);
+  const state: { map: GameMap; timeMs: number; lives: number; enemies: Enemy[] } = {
+    map,
+    timeMs: 0,
+    lives: config.lives,
+    enemies: [],
+  };
   const emitter = createEmitter<GameEvents>();
   let nextId = 1;
 
