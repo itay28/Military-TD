@@ -44,8 +44,8 @@ Status lives on the **Military-TD Roadmap** project: https://github.com/users/it
 | --- | --- |
 | Backlog | Not startable yet: open blockers, or a later milestone |
 | Ready | Current milestone, `ready-for-agent`, no open blockers, unassigned |
-| In progress | Someone is working on it (assigned) |
-| In review | A PR that closes it is open |
+| In progress | Someone is working on it (assigned), including while its PR is a draft |
+| In review | A PR that closes it is ready for review (not a draft) |
 | Done | Closed |
 
 **Other fields:** Area (`core`, `towers`, `units`, `ui`, `art`, `infra`, matching the `area:*` label), Priority and Size, as defined below. Set all three on new issues.
@@ -71,12 +71,16 @@ Status lives on the **Military-TD Roadmap** project: https://github.com/users/it
 
 When unsure between two levels, pick the bigger Size and the less urgent Priority.
 
-**Automations** (project ⋯ → Workflows; all on):
+**Automations** (project ⋯ → Workflows):
 - Auto-add: open issues in this repo, and sub-issues, land on the board on their own.
-- PR linked to issue → *In review*.
 - Item closed, PR merged → *Done*.
+- *Pull request linked to issue* is **off on purpose**: it moves the card when a draft PR is opened, which is too early. No built-in workflow fires on "ready for review".
 
-So agents only move cards by hand when **starting work** (→ *In progress*), when an issue becomes unblocked (Backlog → Ready), and to fix a card an automation missed.
+So agents move cards by hand:
+- **Starting work** → *In progress*.
+- **PR marked ready** (`gh pr ready`) → *In review*. Converting it back to draft → *In progress*.
+- **Unblocked** issue: Backlog → *Ready*.
+- To fix a card an automation missed.
 
 **Token:** the repo's `gh` login is a fine-grained token scoped to this repo, and fine-grained tokens can't edit user-owned Projects. Board edits need a classic token with `project` and `repo` scopes, passed only for that call via `GH_TOKEN`. Never print or commit it. If you don't have one, ask the human; don't skip the board update silently. (`@claude` in GitHub Actions has no such token: say on the issue which card needs moving.)
 
