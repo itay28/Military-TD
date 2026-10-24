@@ -97,7 +97,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 - [ ] No game rules outside `src/sim`; no Phaser in `src/sim`
 - [ ] New assets recorded in `assets/manifest.json`
 - [ ] Docs updated if behaviour, terms or decisions changed (PLAN, GLOSSARY, ADR)
-- [ ] PR title is a Conventional Commit; body says `Closes #n`
+- [ ] PR title is a Conventional Commit; body says `Closes #n` (the one exception: a milestone report PR says `Refs #<release issue>`; see **Milestone release**)
 
 ## Commit types and versions
 
@@ -108,15 +108,45 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 | `feat!:` / `BREAKING CHANGE:` | Breaks saves/settings or a big notable change | minor | major |
 | `test:` `refactor:` `chore:` `ci:` `docs:` | Everything else | none | none |
 
-A milestone ends with a release of the next minor version (`0.N.0`) through a `Release-As: 0.N.0` commit footer; see **Milestone release** under **Releasing** below and ADR-0004.
+A milestone ends with a release of the next minor version (`0.N.0`) through a `Release-As: 0.N.0` commit footer, carried by the milestone report PR; see **Milestone release** below and ADR-0004.
 
 PR titles are checked by the *PR title* workflow (`.github/workflows/pr-title.yml`, rule in `scripts/pr-title.ts`). PRs are squash-merged with the PR title as the commit subject and the PR body as the commit body, so the title is what release-please reads. (`pr-title` isn't a required status check, so a red title doesn't block the merge button; fix it before merging.)
 
 ## Releasing
 - **Release PR:** on every push to `main`, the *Release* workflow (`.github/workflows/release-please.yml`) runs release-please. It keeps one open release PR (`chore(main): release …`) that bumps `package.json`, `package-lock.json` and `.release-please-manifest.json` and updates `CHANGELOG.md` from the commits since the last release.
 - **Release:** merging that PR tags `vX.Y.Z` and publishes a GitHub Release with the same notes. Nothing else releases: ordinary merges only update the release PR.
-- **Milestone release:** to release `0.N.0`, end the body of the milestone's last PR with `Release-As: 0.N.0` as its own final paragraph: after the `🤖 Generated with …` line, with a blank line before it. Squash merge copies the PR body into the commit, and release-please reads `Release-As` only from the commit's last paragraph (the footer). After that merge the release PR switches to `0.N.0`. Editing the release PR's title or body does not change the version; its next run overwrites the edit.
 - **Config:** `release-please-config.json` (release type `node`, `bump-minor-pre-major`, `bump-patch-for-minor-pre-major`, tags without a component) and `.release-please-manifest.json` (the last released version). Guarded by `tests/release-config.test.ts`.
 - **Version in the game:** `vite.config.ts` injects the `package.json` version as `__APP_VERSION__`; `src/data/version.ts` exposes it, and `src/ui/version.ts` writes it into the DOM overlay (`#version`, bottom-right corner; ADR-0003).
-- **Deploy (#17):** add the itch.io upload as a job in `release-please.yml` that `needs: release-please` and runs `if: needs.release-please.outputs.release_created == 'true'`. A Release created with `GITHUB_TOKEN` doesn't start other workflows, so an `on: release` workflow would never run.
+- **Deploy:** after a release, the `deploy` job in `release-please.yml` (`needs: release-please`, `if: needs.release-please.outputs.release_created == 'true'`) calls the reusable `.github/workflows/deploy.yml`, which builds the tag, runs `node scripts/itch-build.ts dist` and pushes `dist/` to itch.io with butler (ADR-0005). A Release created with `GITHUB_TOKEN` doesn't start other workflows, so don't use an `on: release` trigger. Redeploy a tag with **Actions → Deploy → Run workflow**. Setup and access: README → **Playing builds (itch.io)**. Guarded by `tests/deploy-workflow.test.ts`. The deploy runs inside the Release workflow, so a failed deploy turns that run red (the release is already out), and the next push to main waits in the `release-please` concurrency group until the deploy ends.
 - **One-time setup (maintainer):** Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests**. Optional: add a repo secret `RELEASE_PLEASE_TOKEN` (fine-grained PAT for this repo, Contents and Pull requests read/write) so CI and the PR-title check also run on the release PR. Without it they don't run there, because PRs opened with `GITHUB_TOKEN` don't start workflows.
+
+## Milestone release
+
+Milestones can't be cards on the project board, so each milestone has a **release issue** that stands in for it: `Release v0.N.0`, in that milestone, labelled `release` + `area:infra`, a sub-issue of the infra epic (#24). Its body links the milestone. Nobody works on a release issue directly: it moves as the milestone does, and the **Releases** view on the board lists them all. It has no `ready-for-agent` label, so it is never picked as work and never promoted to *Ready*.
+
+| Milestone moment | Release issue status | Moved by |
+| --- | --- | --- |
+| Planned, not started | Backlog | created there |
+| First PR opened for an issue in the milestone | In progress | by hand until #97 lands |
+| Last issue in the milestone closed → milestone report PR opened | In review | by hand until #96 lands |
+| `v0.N.0` released | Done; milestone closed | by hand until #97 lands |
+
+**When is a milestone done?** When every issue in it is closed **except its release issue**. The release issue stays open until the release, so anything that checks whether a milestone is done (the report workflow, a human) ignores issues labelled `release`.
+
+**The milestone report PR.** When the milestone's last other issue closes, a workflow (#96) opens the milestone report PR:
+- Title `chore: release 0.N.0`. It adds `docs/releases/0.N.0.md`, an audit of the milestone: **Planned** (every issue in it), **Delivered** (closed as completed, with the PRs that closed them), **Skipped** (closed as not planned), **Moved out** (removed from the milestone during it), **Added** (merged PRs since the last `v0.(N-1).*` tag that don't close an issue in the milestone), and an empty **Notes** section.
+- The body says `Refs #<release issue>`, not `Closes`: the release issue closes on the release itself. This is the one exception to "every PR closes an issue".
+- The body ends with `Release-As: 0.N.0` as its own final paragraph: after the `🤖 Generated with …` line, with a blank line before it. Squash merge copies the PR body into the commit, and release-please reads `Release-As` only from the commit's last paragraph (the footer).
+- If a report PR for the milestone is already open, the workflow updates it instead. It can be re-run by hand (`workflow_dispatch` with the milestone).
+
+**What the human decides.**
+1. **Is the milestone really done?** Read the audit. Anything missing gets reopened, or moved to a later milestone on purpose; the report updates when the milestone closes out again.
+2. **Notes:** write the Notes section (highlights, known issues, anything the changelog doesn't say).
+3. **Merge the report PR.** release-please's release PR then switches to `0.N.0`. Editing the release PR's title or body does not change the version; its next run overwrites the edit.
+4. **Merge the release PR** when you want to ship. That tags `v0.N.0` and publishes the GitHub Release, and #97 closes the release issue and the milestone.
+
+For `v1.0.0` it's the same, with `Release-As: 1.0.0`.
+
+**Until #96 and #97 land**, do their steps by hand: move the release issue on the board (see **Project board** in `docs/agents/issue-tracker.md`), open the report PR yourself with the same title, file, `Refs` line and footer, and after the release close the release issue and the milestone with a comment linking the GitHub Release.
+
+**New milestone?** Create its release issue at the same time, as above, in *Backlog*.
