@@ -5,10 +5,10 @@ import { START_LIVES } from '../data/start';
 import { MVP_WAVES } from '../data/waves';
 import type { Enemy } from '../sim/enemies';
 import { createGame, TICK_MS, type Game } from '../sim/game';
-import { tileCenter, type Position } from '../sim/map';
-import type { Tower } from '../sim/towers';
-import { pixelToTile, toPixels } from './coords';
-import { drawEnemy, drawRangeRing, drawTower, drawTracers, towerAt } from './drawEntities';
+import { tileCenter, type Position, type Tile } from '../sim/map';
+import { towerAt, type Tower } from '../sim/towers';
+import { pixelToTile, toPixels, type Pixel } from './coords';
+import { drawEnemy, drawRangeRing, drawTower, drawTracers } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { interpolatePosition, snapshotPositions } from './interpolate';
@@ -17,6 +17,8 @@ import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
 const MAX_TICKS_PER_FRAME = 5;
+
+const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
 
 /** Draw order, back to front. */
 const DEPTH = { map: 0, towers: 1, enemies: 2, tracers: 3, rangeRing: 4 } as const;
@@ -38,6 +40,8 @@ export class GameScene extends Phaser.Scene {
   private rangeRing!: Phaser.GameObjects.Graphics;
   /** Enemy positions before the latest tick, to interpolate from. */
   private previousPositions: ReadonlyMap<number, Position> = new Map();
+  /** The tile under the pointer, or undefined when it is off the canvas. */
+  private pointerTile: Tile | undefined;
   /** The tower whose range ring is drawn, by id. */
   private hoveredTowerId: number | undefined;
 
@@ -73,7 +77,7 @@ export class GameScene extends Phaser.Scene {
 
     this.towerViews = createViewSync({
       create: (tower) => {
-        const { x, y } = toPixels(tileCenter(tower.tile));
+        const { x, y } = towerCenter(tower);
         const graphics = this.add.graphics().setDepth(DEPTH.towers).setPosition(x, y);
         drawTower(graphics, tower);
         return graphics;
@@ -86,14 +90,14 @@ export class GameScene extends Phaser.Scene {
     this.tracerGraphics = this.add.graphics().setDepth(DEPTH.tracers);
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
-      if (tower) this.tracers.add(toPixels(tileCenter(tower.tile)), toPixels(shot.position));
+      if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position));
     });
 
     this.rangeRing = this.add.graphics().setDepth(DEPTH.rangeRing).setVisible(false);
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      this.hover(towerAt(this.sim.state.towers, pixelToTile({ x: pointer.worldX, y: pointer.worldY })));
+      this.pointerTile = pixelToTile({ x: pointer.worldX, y: pointer.worldY });
     });
-    this.input.on('gameout', () => this.hover(undefined));
+    this.input.on('gameout', () => (this.pointerTile = undefined));
   }
 
   override update(_time: number, deltaMs: number): void {
@@ -106,6 +110,8 @@ export class GameScene extends Phaser.Scene {
     this.enemyViews.sync(enemies);
     this.tracerGraphics.clear();
     drawTracers(this.tracerGraphics, this.tracers.active());
+    // Checked every frame, not only on pointer moves, so a tower that appears under a still pointer shows its ring.
+    this.hover(this.pointerTile && towerAt(towers, this.pointerTile));
   }
 
   /** Shows the range ring of `tower`, or hides it when the pointer isn't over one. */
@@ -114,7 +120,7 @@ export class GameScene extends Phaser.Scene {
     this.hoveredTowerId = tower?.id;
     this.rangeRing.clear().setVisible(tower !== undefined);
     if (!tower) return;
-    const { x, y } = toPixels(tileCenter(tower.tile));
+    const { x, y } = towerCenter(tower);
     drawRangeRing(this.rangeRing.setPosition(x, y), tower);
   }
 }

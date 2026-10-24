@@ -4,7 +4,7 @@ import { ENEMY_STYLE, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '.
 import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
-import { drawEnemy, drawRangeRing, drawTower, drawTracers, towerAt, type EntityPainter } from './drawEntities';
+import { drawEnemy, drawRangeRing, drawTower, drawTracers, type EntityPainter } from './drawEntities';
 
 type Call = [string, ...number[]];
 
@@ -115,17 +115,5 @@ describe('drawTracers', () => {
       ['lineStyle', TRACER.width, TRACER.color, 0.5],
       ['lineBetween', 5, 5, 6, 7],
     ]);
-  });
-});
-
-describe('towerAt', () => {
-  const towers = [rifleNest(1, 2, 3), rifleNest(2, 4, 1)];
-
-  it('finds the tower on a tile', () => {
-    expect(towerAt(towers, { col: 4, row: 1 })?.id).toBe(2);
-  });
-
-  it('returns undefined for a tile with no tower', () => {
-    expect(towerAt(towers, { col: 3, row: 3 })).toBeUndefined();
   });
 });

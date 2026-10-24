@@ -1,18 +1,14 @@
 import { ENEMY_STYLE, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
 import type { Enemy } from '../sim/enemies';
-import type { Tile } from '../sim/map';
 import type { Tower } from '../sim/towers';
+import type { MapPainter } from './drawMap';
 import type { TracerLine } from './tracers';
 
 /** The part of Phaser's Graphics that the entity drawers use, so tests can pass a recording fake. */
-export interface EntityPainter {
-  fillStyle(color: number, alpha?: number): void;
+export interface EntityPainter extends MapPainter {
   fillCircle(x: number, y: number, radius: number): void;
-  fillRect(x: number, y: number, width: number, height: number): void;
-  lineStyle(lineWidth: number, color: number, alpha?: number): void;
   strokeRect(x: number, y: number, width: number, height: number): void;
   strokeCircle(x: number, y: number, radius: number): void;
-  lineBetween(x1: number, y1: number, x2: number, y2: number): void;
 }
 
 // Enemies, towers and range rings are drawn around the local origin; the scene positions each one's Graphics.
@@ -53,9 +49,4 @@ export function drawTracers(painter: EntityPainter, tracers: readonly TracerLine
     painter.lineStyle(TRACER.width, TRACER.color, alpha);
     painter.lineBetween(from.x, from.y, to.x, to.y);
   }
-}
-
-/** The tower standing on `tile`, if any, for the hover range ring. */
-export function towerAt(towers: readonly Tower[], { col, row }: Tile): Tower | undefined {
-  return towers.find((tower) => tower.tile.col === col && tower.tile.row === row);
 }

@@ -30,6 +30,11 @@ export interface Shot {
   readonly position: Position;
 }
 
+/** The tower standing on `tile`, if any. */
+export function towerAt(towers: readonly Tower[], { col, row }: Tile): Tower | undefined {
+  return towers.find((tower) => tower.tile.col === col && tower.tile.row === row);
+}
+
 /** Slack for float sums of tick times, so a shot due on a tick fires on it. */
 const COOLDOWN_EPSILON = 1e-9;
 
