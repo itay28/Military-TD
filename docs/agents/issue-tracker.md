@@ -44,8 +44,8 @@ Status lives on the **Military-TD Roadmap** project: https://github.com/users/it
 | --- | --- |
 | Backlog | Not startable yet: open blockers, or a later milestone |
 | Ready | Current milestone, `ready-for-agent`, no open blockers, unassigned |
-| In progress | Someone is working on it (assigned) |
-| In review | A PR that closes it is open |
+| In progress | Someone is working on it (assigned), including while its PR is a draft |
+| In review | A PR that closes it is ready for review (not a draft) |
 | Done | Closed |
 
 **Other fields:** Area (`core`, `towers`, `units`, `ui`, `art`, `infra`, matching the `area:*` label), Priority and Size, as defined below. Set all three on new issues.
@@ -71,12 +71,19 @@ Status lives on the **Military-TD Roadmap** project: https://github.com/users/it
 
 When unsure between two levels, pick the bigger Size and the less urgent Priority.
 
-**Automations** (project ⋯ → Workflows; all on):
+**Automations** (project ⋯ → Workflows):
 - Auto-add: open issues in this repo, and sub-issues, land on the board on their own.
-- PR linked to issue → *In review*.
 - Item closed, PR merged → *Done*.
+- *Pull request linked to issue* is **off on purpose**: it moves the card when a draft PR is opened, which is too early. No built-in workflow fires on "ready for review".
 
-So agents only move cards by hand when **starting work** (→ *In progress*), when an issue becomes unblocked (Backlog → Ready), to fix a card an automation missed, and to move release issues until #96/#97 automate it.
+**Board-status hook** (`.claude/settings.json` → `scripts/board-status.ts`): in local Claude Code sessions, after `gh pr ready` (or `--undo`) or a non-draft `gh pr create`, it moves the cards of the issues the PR closes: *In review* when the PR is ready, *In progress* when it's a draft. It never touches *Done* or *Backlog* cards and never blocks a command. It reports what it did, or why it couldn't, as context to the agent. Token: `GH_PROJECT_TOKEN`, the file named by `GH_PROJECT_TOKEN_FILE`, or `~/.config/gh-project-token.txt`.
+
+So agents move cards by hand:
+- **Starting work** → *In progress*.
+- **PR marked ready** → *In review*, back to draft → *In progress*: only when the hook didn't (it reports when it couldn't), or when the PR changed outside a local session (GitHub UI, `@claude` in CI).
+- **Unblocked** issue: Backlog → *Ready*.
+- **Release issues**, until #96/#97 automate it (see below).
+- To fix a card an automation missed.
 
 **Release issues** (label `release`) are the exception to the Status definitions above. Each one stands in for its milestone (milestones can't be cards) and moves with the milestone, not with assignees or closing PRs; see **Milestone release** in `docs/agents/workflow.md`. They have Area `infra` and no Priority or Size (they're trackers, not work), and no `ready-for-agent`, so they never go to *Ready*. The **Releases** view (filter `label:release`) shows them with their Status and Milestone. The other views include them.
 

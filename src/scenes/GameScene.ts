@@ -28,7 +28,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.sim = createGame({ map: MVP_MAP, money: START_MONEY, lives: START_LIVES, waves: MVP_WAVES });
+    this.sim = createGame({ map: MVP_MAP, lives: START_LIVES, money: START_MONEY, waves: MVP_WAVES });
     drawMap(this.add.graphics(), this.sim.state.map);
     this.loop = createFixedStep({
       stepMs: TICK_MS,
