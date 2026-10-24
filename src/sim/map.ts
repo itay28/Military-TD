@@ -110,4 +110,4 @@ function expandPath(map: MapData): Tile[] {
 }
 
 /** A tile's string id, `"col,row"`, for sets and messages. */
-const tileKey = ({ col, row }: Tile) => `${col},${row}`;
+export const tileKey = ({ col, row }: Tile) => `${col},${row}`;

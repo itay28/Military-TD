@@ -113,7 +113,7 @@ src/
     events.ts   typed event emitter behind game.events
     towers.ts   targeting, cooldowns, damage
     waves.ts    spawn schedule, wave/phase transitions
-    economy.ts  money, costs, rewards
+    economy.ts  money, costs, rewards (in game.ts until upgrades and selling give it more to do)
     stats.ts    damage/kills/DPS per tower, per wave (v0.2)
     scenario.ts runScenario(): headless, as fast as the CPU allows
     rng.ts      seeded RNG (the only source of randomness)
