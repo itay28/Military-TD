@@ -1,0 +1,30 @@
+name: PR title
+
+# The PR title becomes the squash commit on main, and its Conventional Commit
+# type drives release-please's version bump (ADR-0004). This check fails
+# when the title doesn't match. Rule and tests: scripts/pr-title.ts.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    name: pr-title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # The title goes through env, never straight into the shell, so a title can't inject commands.
+      - name: Check PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node scripts/pr-title.ts
