@@ -1,0 +1,80 @@
+name: Deploy
+
+# Builds a release tag and pushes it to the itch.io HTML5 page with butler
+# (ADR-0005). release-please.yml calls this after it publishes a Release; run it
+# by hand (Actions → Deploy → Run workflow) to redeploy a tag. Needs the repo
+# secret BUTLER_API_KEY and the repo variables ITCH_USER and ITCH_GAME (README).
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to deploy, e.g. v0.1.0
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to deploy, e.g. v0.1.0
+        type: string
+        required: true
+
+# One upload at a time; a newer deploy waits instead of cancelling one mid-push.
+concurrency:
+  group: deploy-itch
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    env:
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+      ITCH_USER: ${{ vars.ITCH_USER }}
+      ITCH_GAME: ${{ vars.ITCH_GAME }}
+    steps:
+      - name: Check itch.io settings
+        run: |
+          missing=""
+          [ -n "$BUTLER_API_KEY" ] || missing="$missing secret BUTLER_API_KEY,"
+          [ -n "$ITCH_USER" ] || missing="$missing variable ITCH_USER,"
+          [ -n "$ITCH_GAME" ] || missing="$missing variable ITCH_GAME,"
+          if [ -n "$missing" ]; then
+            echo "::error::Can't deploy to itch.io, missing repo${missing%,}. See README → Playing builds (itch.io)."
+            exit 1
+          fi
+
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check the build fits itch.io
+        run: node scripts/itch-build.ts dist
+
+      - name: Read the version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+
+      - name: Install butler
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+          echo "$RUNNER_TEMP/butler" >> "$GITHUB_PATH"
+
+      - name: Push to itch.io
+        run: butler push dist "$ITCH_USER/$ITCH_GAME:html5" --userversion "$VERSION"

@@ -2,7 +2,8 @@ name: Release
 
 # release-please keeps an open release PR that bumps the version and updates
 # CHANGELOG.md from the Conventional Commits on main. Merging that PR tags
-# vX.Y.Z and publishes a GitHub Release (ADR-0004). Config:
+# vX.Y.Z and publishes a GitHub Release (ADR-0004), which the deploy job then
+# pushes to itch.io (deploy.yml, ADR-0005). Config:
 # release-please-config.json and .release-please-manifest.json.
 on:
   push:
@@ -23,9 +24,6 @@ jobs:
   release-please:
     name: release-please
     runs-on: ubuntu-latest
-    # The itch.io deploy (ADR-0005) adds a job here that needs this one and runs
-    # when release_created is 'true'. A Release made with GITHUB_TOKEN doesn't
-    # start other workflows, so a separate `on: release` workflow would never run.
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
@@ -39,3 +37,15 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  # Ships the new release to itch.io (ADR-0005). A Release made with GITHUB_TOKEN
+  # doesn't start other workflows, so an `on: release` trigger would never run;
+  # this job calls the reusable deploy workflow instead.
+  deploy:
+    name: deploy
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit
