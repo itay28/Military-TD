@@ -22,6 +22,8 @@ How every change gets made, by agents and humans alike. The rules are short; fol
 | Turn a discussion into a spec issue | `/to-spec` |
 | Split a spec or plan into tickets with blocking links | `/to-tickets` |
 | A large area needing many decisions first (e.g. a whole milestone) | `/wayfinder` |
+| Move unblocked Backlog issues of a milestone to Ready | `/promote-ready` (repo skill) |
+| Open one Claude session (own worktree and terminal tab) per Ready issue | `/spawn-sessions` (repo skill, human-invoked) |
 | Implement one ready issue | `/implement` (drives `tdd` at agreed seams, finishes with `code-review`) |
 | Implement a whole spec's tickets on one branch | `/implement-spec` |
 | Interface or module design | `codebase-design` |

@@ -55,7 +55,7 @@ Status lives on the **Military-TD Roadmap** project: https://github.com/users/it
 - PR linked to issue → *In review*.
 - Item closed, PR merged → *Done*.
 
-So agents only move cards by hand when **starting work** (→ *In progress*), when an issue becomes unblocked (Backlog → Ready), and to fix a card an automation missed.
+So agents only move cards by hand when **starting work** (→ *In progress*), when an issue becomes unblocked (Backlog → Ready, via `/promote-ready`), and to fix a card an automation missed.
 
 **Token:** the repo's `gh` login is a fine-grained token scoped to this repo, and fine-grained tokens can't edit user-owned Projects. Board edits need a classic token with `project` and `repo` scopes, passed only for that call via `GH_TOKEN`. Never print or commit it. If you don't have one, ask the human; don't skip the board update silently. (`@claude` in GitHub Actions has no such token: say on the issue which card needs moving.)
 
