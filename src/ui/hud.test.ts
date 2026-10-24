@@ -55,6 +55,14 @@ describe('HUD', () => {
     expect(byTestId('hud-lives')?.textContent).toBe('Lives 19');
   });
 
+  it('Money drops on the next update after a tower is placed', () => {
+    const game = newGame();
+    const hud = mountHud(root, game);
+    expect(game.placeTower('rifleNest', { col: 1, row: 0 })).toMatchObject({ ok: true });
+    hud.update();
+    expect(byTestId('hud-money')?.textContent).toBe('Money 50');
+  });
+
   it('the wave counter shows the started wave', () => {
     const game = newGame();
     const hud = mountHud(root, game);
