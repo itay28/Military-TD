@@ -7,6 +7,11 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
+# A newer title or push makes the older run moot.
+concurrency:
+  group: pr-title-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

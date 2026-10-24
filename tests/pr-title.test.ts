@@ -18,7 +18,7 @@ describe('isConventionalTitle', () => {
     expect(isConventionalTitle('build: bump vite')).toBe(false);
   });
 
-  it('rejects a title without a description, a space after the colon, or a lowercase type', () => {
+  it('rejects a missing description, a missing space after the colon, a capitalised type, or no type', () => {
     expect(isConventionalTitle('feat:')).toBe(false);
     expect(isConventionalTitle('feat:   ')).toBe(false);
     expect(isConventionalTitle('feat:towers')).toBe(false);

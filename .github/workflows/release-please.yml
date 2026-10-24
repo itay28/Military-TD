@@ -16,6 +16,8 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  # release-please labels its PRs autorelease: pending / tagged.
+  issues: write
 
 jobs:
   release-please:
