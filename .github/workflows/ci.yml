@@ -1,8 +1,9 @@
 name: CI
 
 # Guards main: every PR and every push to main must typecheck, lint, pass the
-# format check and tests, build, and fit itch.io's HTML5 limits (ADR-0005). The job id and name stay `ci` so it can
-# be a required check in main's branch protection.
+# format check and tests, build, and fit itch.io's HTML5 limits (ADR-0005).
+# The job id and name stay `ci` so it can be a required check in main's branch
+# protection.
 on:
   pull_request:
   push:
