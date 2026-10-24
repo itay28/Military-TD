@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ENEMY_STATS } from '../data/enemies';
 import type { Enemy } from './enemies';
 import { createGame, TICK_MS, type Game } from './game';
 import type { MapData } from './map';
@@ -102,13 +103,10 @@ describe('targeting', () => {
     game.placeTower('rifleNest', { col: 2, row: 2 });
     const tower = game.state.towers[0]!;
     const enemy = (enemyId: number, distance: number): Enemy => ({
+      ...ENEMY_STATS.infantry,
       id: enemyId,
       kind: 'infantry',
-      maxHp: 30,
-      hp: 30,
-      speed: 1.5,
-      reward: 5,
-      leakCost: 1,
+      hp: ENEMY_STATS.infantry.maxHp,
       distance,
       position: { x: 0.5 + distance, y: 1.5 },
     });

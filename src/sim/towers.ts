@@ -61,7 +61,7 @@ export function fireTowers(
   let alive = [...enemies];
   const shots: Shot[] = [];
   const kills: Enemy[] = [];
-  const fired = towers.map((tower) => {
+  const nextTowers = towers.map((tower) => {
     const cooldownMs = tower.cooldownMs - dtMs;
     const target = cooldownMs <= COOLDOWN_EPSILON ? selectTarget(tower, alive) : undefined;
     if (!target) return { ...tower, cooldownMs: Math.max(0, cooldownMs) };
@@ -78,5 +78,5 @@ export function fireTowers(
     const lateMs = tower.cooldownMs > 0 ? Math.max(0, -cooldownMs) : 0;
     return { ...tower, cooldownMs: Math.max(0, 1000 / tower.fireRate - lateMs) };
   });
-  return { towers: fired, enemies: alive, shots, kills };
+  return { towers: nextTowers, enemies: alive, shots, kills };
 }
