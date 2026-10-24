@@ -136,7 +136,7 @@ Milestones can't be cards on the project board, so each milestone has a **releas
 **The milestone report PR.** When the milestone's last other issue closes, a workflow (#96) opens the milestone report PR:
 - Title `chore: release 0.N.0`. It adds `docs/releases/0.N.0.md`, an audit of the milestone: **Planned** (every issue in it), **Delivered** (closed as completed, with the PRs that closed them), **Skipped** (closed as not planned), **Moved out** (removed from the milestone during it), **Added** (merged PRs since the last `v0.(N-1).*` tag that don't close an issue in the milestone), and an empty **Notes** section.
 - The body says `Refs #<release issue>`, not `Closes`: the release issue closes on the release itself. This is the one exception to "every PR closes an issue".
-- The body and ends with `Release-As: 0.N.0` as its own final paragraph: after the `🤖 Generated with …` line, with a blank line before it. Squash merge copies the PR body into the commit, and release-please reads `Release-As` only from the commit's last paragraph (the footer).
+- The body ends with `Release-As: 0.N.0` as its own final paragraph: after the `🤖 Generated with …` line, with a blank line before it. Squash merge copies the PR body into the commit, and release-please reads `Release-As` only from the commit's last paragraph (the footer).
 - If a report PR for the milestone is already open, the workflow updates it instead. It can be re-run by hand (`workflow_dispatch` with the milestone).
 
 **What the human decides.**

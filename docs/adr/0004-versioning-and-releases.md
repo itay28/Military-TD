@@ -27,5 +27,6 @@ Mechanics:
 
 - Version numbers stay meaningful: 0.3.x always means "has art, no menus yet".
 - Releasing is a deliberate act (merge the release PR), not a side effect of every merge.
-- Each milestone release leaves a written record of what was planned and what shipped, Once the report PR is automated (#96), nobody has to remember the `Release-As` footer.
+- Each milestone release leaves a written record of what was planned and what shipped.
+- Once the report PR is automated (#96), nobody has to remember the `Release-As` footer.
 - The one-time GitHub setting "Allow GitHub Actions to create and approve pull requests" must be enabled by a maintainer.
