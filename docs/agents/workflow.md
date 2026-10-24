@@ -38,6 +38,17 @@ How every change gets made, by agents and humans alike. The rules are short; fol
 - Assign yourself. Move it to *In progress* on the project board.
 - `needs-triage` issues get planned first (step 1, via `/triage` or `/grill-with-docs`), then relabelled `ready-for-agent`. Don't implement them directly.
 
+### 0b. Open a session tracker
+Every working session gets a **session tracker**: a live page that follows the work.
+- **Where:** an Artifact page published with Claude's Artifact tool, created at the start of the session. Sessions without the Artifact tool (e.g. `@claude` in GitHub Actions) keep the same content as a pinned comment on the issue instead.
+- **Contents:**
+  - links to the issue(s) and, once it exists, the PR;
+  - **what** is being built and **why** (the goal, in two or three sentences);
+  - the plan (from step 1);
+  - a short progress log with timestamps;
+  - current status and any blockers or open questions.
+- **Updates:** update it at each milestone of the session (plan agreed, tests red, tests green, PR opened, review done), and link it in the first progress comment on the issue.
+
 ### 1. Plan (comment on the issue)
 Post a short plan as an issue comment before writing code:
 - **Modules and interfaces** touched or added, with signatures.
@@ -46,6 +57,10 @@ Post a short plan as an issue comment before writing code:
 - **Decisions**: anything hard to reverse becomes an ADR in `docs/adr/`. New domain terms go in `GLOSSARY.md`.
 
 The `tdd` skill asks for seams to be agreed before tests are written. For a `ready-for-agent` issue, this plan comment is that agreement: a plan inside the acceptance criteria can proceed. One that changes scope needs a human (comment and add `needs-info`).
+
+### Keep the issue up to date (throughout)
+- **Progress comments:** comment on the issue at each meaningful step: plan posted, tests written (red), implementation green, PR opened, review feedback addressed, blockers hit. Keep each comment short: what happened, what's next.
+- **Edit the description when the idea changes:** if the approach, flow, scope or acceptance criteria change in a significant way, update the issue description itself so it stays the source of truth. Add a dated "Changed:" note at the bottom saying what changed and why. Minor details stay in comments.
 
 ### 2. Tests first
 - Write the tests from the list. Run them and confirm they **fail for the right reason**.
@@ -71,6 +86,8 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 
 ## Definition of done
 - [ ] Acceptance criteria met
+- [ ] Issue has progress comments; description updated if the idea changed
+- [ ] Session tracker shows the final status and the PR link
 - [ ] Tests written first, now passing; new behaviour covered at the right layer
 - [ ] `npm run check` green locally and in CI (plus e2e if UI changed)
 - [ ] No game rules outside `src/sim`; no Phaser in `src/sim`

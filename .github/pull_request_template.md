@@ -8,7 +8,8 @@ Closes #
 <!-- Which unit / scenario / e2e tests cover this; anything run manually -->
 
 ## Checklist
-- [ ] Plan was posted on the issue before coding
+- [ ] Plan was posted on the issue before coding; progress comments kept it current
+- [ ] Session tracker link: <!-- artifact URL or pinned comment -->
 - [ ] Tests were written first and are now passing
 - [ ] `npm run check` passes (and `npm run test:e2e` if UI changed)
 - [ ] Game rules stay in `src/sim` (no Phaser there)
