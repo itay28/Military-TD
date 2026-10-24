@@ -108,6 +108,10 @@ describe('createMap validation', () => {
     ['non-integer coordinates', withWaypoints([0, 1.5], [3, 1.5], [3, 4]), /outside the 6×5 grid/],
     ['a start off the grid edge', withWaypoints([1, 1], [3, 1], [3, 4]), /start .* edge/],
     ['an end off the grid edge', withWaypoints([0, 1], [3, 1], [3, 3]), /end .* edge/],
+    ['a Path that doubles back', withWaypoints([0, 1], [4, 1], [2, 1], [2, 4]), /revisits/],
+    ['a Path that crosses itself', withWaypoints([0, 2], [4, 2], [4, 0], [2, 0], [2, 4]), /revisits tile 2,2/],
+    ['an empty grid', { ...SMALL, cols: 0 }, /grid size/],
+    ['a fractional grid size', { ...SMALL, rows: 4.5 }, /grid size/],
   ])('rejects %s', (_, data, message) => {
     expect(() => createMap(data)).toThrow(InvalidMapError);
     expect(() => createMap(data)).toThrow(message);
