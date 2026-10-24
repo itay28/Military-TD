@@ -1,7 +1,10 @@
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
+import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { createMap, type GameMap, type MapData } from './map';
+import { createMap, type GameMap, type MapData, type Tile } from './map';
+import { fireTowers, type Shot, type Tower } from './towers';
+import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
 /** The one fixed step, in ms. The Game scene and the scenario runner both tick with it. */
 export const TICK_MS = 1000 / 60;
@@ -9,7 +12,11 @@ export const TICK_MS = 1000 / 60;
 export interface GameConfig {
   readonly map: MapData;
   readonly lives: number;
+  readonly waves: readonly WaveData[];
 }
+
+/** Build phase between waves, Wave phase while one runs; Victory and Defeat end the game. */
+export type Phase = 'build' | 'wave' | 'victory' | 'defeat';
 
 /** The live game state, read-only to callers. Read it through `game.state` each time: arrays are replaced on tick. */
 export interface GameState {
@@ -19,34 +26,75 @@ export interface GameState {
   readonly lives: number;
   /** In spawn order. */
   readonly enemies: readonly Enemy[];
+  /** In placement order. */
+  readonly towers: readonly Tower[];
+  readonly phase: Phase;
+  /** The latest started wave, counting from 1; 0 before the first. */
+  readonly waveNumber: number;
+  readonly totalWaves: number;
 }
 
 export interface GameEvents {
   /** An enemy reached the Path end and was removed. `lives` is what's left after the leak. */
   enemyLeaked: { readonly enemy: Enemy; readonly lives: number };
+  /** A tower hit an enemy (hitscan), for tracers: from the tower's tile center to `position`. */
+  towerFired: Shot;
+  /** An enemy's HP reached 0 and it was removed. `reward` is the Money it pays. */
+  enemyKilled: { readonly enemy: Enemy; readonly reward: number };
+  waveStarted: { readonly waveNumber: number };
+  /** Every enemy of the wave has spawned and none is left alive. */
+  waveCleared: { readonly waveNumber: number };
+  /** The last wave was cleared with Lives left. The game is over. */
+  victory: { readonly lives: number };
+  /** Lives reached 0. `waveNumber` is the latest started wave (0 if none had started). The game is over. */
+  defeat: { readonly waveNumber: number };
 }
+
+/** What a command returns: success, or the reason it was refused (and changed nothing). */
+export type CommandResult<Reason extends string> =
+  { readonly ok: true } | { readonly ok: false; readonly reason: Reason };
 
 export interface Game {
   readonly state: GameState;
   readonly events: Events<GameEvents>;
-  /** Advances the game by `dtMs` milliseconds. Throws RangeError for a negative or non-finite dt. */
+  /** Advances the game by `dtMs` milliseconds; does nothing once it's over. Throws RangeError for a negative or non-finite dt. */
   tick(dtMs: number): void;
-  /** Spawns an enemy at the Path start and returns its id. Waves (#10) will call this; until then it's a plain command. */
+  /** Spawns an enemy at the Path start, outside any wave, and returns its id. For tests and scenarios. */
   spawnEnemy(kind: EnemyKind): number;
+  /**
+   * Starts the next wave: its first enemy spawns at once, the rest one every spacing.
+   * Refuses with `noWavesLeft` once every wave has started (so after Victory too), else `notBuildPhase`
+   * outside the Build phase (during a wave, after Defeat).
+   */
+  startWave(): CommandResult<'noWavesLeft' | 'notBuildPhase'>;
+  /** Places a tower on `tile` and returns its id. Money and placement checks come with #9. */
+  placeTower(kind: TowerKind, tile: Tile): number;
 }
 
-/** Builds a game from data. Throws InvalidMapError when the map is malformed. */
+/** Builds a game from data. Throws InvalidMapError when the map is malformed, RangeError for a malformed wave. */
 export function createGame(config: GameConfig): Game {
   const map = createMap(config.map);
+  validateWaves(config.waves);
   const line = createPathLine(map.waypointPositions);
-  const state: { map: GameMap; timeMs: number; lives: number; enemies: Enemy[] } = {
+  const state: { -readonly [K in keyof GameState]: GameState[K] } & { enemies: Enemy[]; towers: Tower[] } = {
     map,
     timeMs: 0,
     lives: config.lives,
     enemies: [],
+    towers: [],
+    phase: 'build',
+    waveNumber: 0,
+    totalWaves: config.waves.length,
   };
   const emitter = createEmitter<GameEvents>();
   let nextId = 1;
+  /** The running wave, from startWave until it is cleared. */
+  let wave: { readonly data: WaveData; readonly schedule: SpawnSchedule; readonly startMs: number } | undefined;
+
+  const createEnemy = (kind: EnemyKind): Enemy => {
+    const stats = ENEMY_STATS[kind];
+    return { ...stats, id: nextId++, kind, hp: stats.maxHp, distance: 0, position: line.positionAt(0) };
+  };
 
   return {
     state,
@@ -54,20 +102,62 @@ export function createGame(config: GameConfig): Game {
     tick(dtMs) {
       if (!Number.isFinite(dtMs) || dtMs < 0)
         throw new RangeError(`tick(dtMs): ${dtMs} is not a finite, non-negative time`);
+      if (state.phase === 'victory' || state.phase === 'defeat') return;
       state.timeMs += dtMs;
       const { walking, leaked } = walkEnemies(state.enemies, line, dtMs);
-      state.enemies = walking;
+      const enemies = [...walking];
+      if (wave) {
+        // A spawn due mid-tick walks the rest of the tick, so tick size doesn't change where enemies are.
+        const elapsedMs = state.timeMs - wave.startMs;
+        for (const spawnMs of wave.schedule.take(elapsedMs)) {
+          const spawned = walkEnemies([createEnemy(wave.data.kind)], line, Math.max(0, elapsedMs - spawnMs));
+          enemies.push(...spawned.walking);
+          leaked.push(...spawned.leaked);
+        }
+      }
       const leaks = leaked.map((enemy) => {
         state.lives = Math.max(0, state.lives - enemy.leakCost);
         return { enemy, lives: state.lives };
       });
+      const fired = fireTowers(state.towers, enemies, dtMs);
+      state.towers = fired.towers;
+      state.enemies = fired.enemies;
+      let cleared = false;
+      if (state.lives === 0) {
+        wave = undefined;
+        state.phase = 'defeat';
+      } else if (wave?.schedule.finished && state.enemies.length === 0) {
+        cleared = true;
+        wave = undefined;
+        state.phase = state.waveNumber === state.totalWaves ? 'victory' : 'build';
+      }
       // Emit once the state is settled, so listeners read this tick's state.
       for (const leak of leaks) emitter.emit('enemyLeaked', leak);
+      for (const shot of fired.shots) emitter.emit('towerFired', shot);
+      for (const enemy of fired.kills) emitter.emit('enemyKilled', { enemy, reward: enemy.reward });
+      if (cleared) emitter.emit('waveCleared', { waveNumber: state.waveNumber });
+      if (state.phase === 'victory') emitter.emit('victory', { lives: state.lives });
+      if (state.phase === 'defeat') emitter.emit('defeat', { waveNumber: state.waveNumber });
     },
     spawnEnemy(kind) {
+      const enemy = createEnemy(kind);
+      state.enemies.push(enemy);
+      return enemy.id;
+    },
+    startWave() {
+      const next = config.waves[state.waveNumber];
+      if (!next) return { ok: false, reason: 'noWavesLeft' };
+      if (state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
+      wave = { data: next, schedule: createSpawnSchedule(next), startMs: state.timeMs };
+      state.phase = 'wave';
+      state.waveNumber++;
+      state.enemies.push(...wave.schedule.take(0).map(() => createEnemy(next.kind)));
+      emitter.emit('waveStarted', { waveNumber: state.waveNumber });
+      return { ok: true };
+    },
+    placeTower(kind, tile) {
       const id = nextId++;
-      const stats = ENEMY_STATS[kind];
-      state.enemies.push({ ...stats, id, kind, hp: stats.maxHp, distance: 0, position: line.positionAt(0) });
+      state.towers.push({ ...TOWER_STATS[kind], id, kind, tile, cooldownMs: 0 });
       return id;
     },
   };
