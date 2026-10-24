@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TRACER } from '../data/display';
 import { MVP_MAP } from '../data/maps';
-import { START_LIVES } from '../data/start';
+import { START_LIVES, START_MONEY } from '../data/start';
 import { MVP_WAVES } from '../data/waves';
 import type { Enemy } from '../sim/enemies';
 import { createGame, TICK_MS, type Game } from '../sim/game';
@@ -50,7 +50,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.sim = createGame({ map: MVP_MAP, lives: START_LIVES, waves: MVP_WAVES });
+    this.sim = createGame({ map: MVP_MAP, lives: START_LIVES, money: START_MONEY, waves: MVP_WAVES });
     drawMap(this.add.graphics().setDepth(DEPTH.map), this.sim.state.map);
     this.loop = createFixedStep({
       stepMs: TICK_MS,
