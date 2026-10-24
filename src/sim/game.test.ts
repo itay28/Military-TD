@@ -223,6 +223,19 @@ describe('waves and phases', () => {
     expect(cleared).toEqual([{ waveNumber: 1 }]);
   });
 
+  it('a tower killing the last enemy of a wave clears it', () => {
+    const game = newGame(20, [{ kind: 'infantry', count: 1, spacingMs: 0 }, TWO_WAVES[0]!]);
+    const seen: string[] = [];
+    game.events.on('enemyKilled', () => seen.push('enemyKilled'));
+    game.events.on('waveCleared', () => seen.push('waveCleared'));
+    // Tile (1, 2) is next to the Path start: three Rifle Nest shots, 500 ms apart, kill the 30 HP Infantry.
+    game.placeTower('rifleNest', { col: 1, row: 2 });
+    game.startWave();
+    for (let i = 0; i < 120 && game.state.phase === 'wave'; i++) game.tick(TICK_MS);
+    expect(seen).toEqual(['enemyKilled', 'waveCleared']);
+    expect(game.state).toMatchObject({ phase: 'build', lives: 20, enemies: [] });
+  });
+
   it('the next wave spawns its own count and spacing', () => {
     const game = newGame();
     game.startWave();
