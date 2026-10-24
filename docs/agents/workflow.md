@@ -35,7 +35,8 @@ How every change gets made, by agents and humans alike. The rules are short; fol
 
 ### 0. Pick
 - Pick an open issue in the **current milestone** with `ready-for-agent`, no open blockers, and no assignee. The order in `docs/PLAN.md` helps.
-- Assign yourself. Move it to *In progress* on the project board.
+- Assign yourself. Move it to *In progress* on the project board (see **Project board** in `docs/agents/issue-tracker.md`).
+- No issue for the work yet? Create one first, under the right epic with its area label and milestone. Every PR closes an issue.
 - `needs-triage` issues get planned first (step 1, via `/triage` or `/grill-with-docs`), then relabelled `ready-for-agent`. Don't implement them directly.
 
 ### 0b. Open a session tracker
@@ -76,14 +77,16 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 ### 4. Verify
 - `npm run check` (typecheck, lint, unit, scenario tests) and `npm run test:e2e` when UI is touched.
 - For gameplay changes, also run the relevant scenario with `npm run scenario -- <name>` and read the outcome.
-- `code-review` before opening the PR.
+- `mattpocock-skills:code-review` against `main` before marking the PR ready.
 
 ### 5. PR
 - Branch: `<type>/<issue>-<slug>`, e.g. `feat/8-tower-targeting`.
 - PR title in Conventional Commit form (it becomes the squash commit and drives the version bump): `feat: tower targeting and firing`.
 - Body via the `pr` skill, with `Closes #<n>` and the template checklist.
 - **Draft vs ready:** open the PR as a draft while work is still in progress. As soon as it's complete (acceptance criteria met, checks green, review done), mark it ready for review (`gh pr ready <n>`) and say so on the issue. Never leave a finished PR in draft.
-- Squash-merge when CI is green.
+- **Automatic review:** marking the PR ready starts the *Claude Code Review* workflow, which runs `mattpocock-skills:code-review` and posts a Standards / Spec report as a PR comment. It runs again on each push while the PR is ready, and skips drafts. Address its findings or say on the PR why not.
+- **Board:** linking the PR moves the issue to *In review*; merging it (or closing the issue) moves it to *Done*. These are automatic; fix the card by hand only if an automation missed it.
+- Squash-merge when CI is green. Never push to `main` directly.
 
 ## Definition of done
 - [ ] Acceptance criteria met
