@@ -38,7 +38,7 @@ export interface GameEvents {
   waveCleared: { readonly waveNumber: number };
   /** The last wave was cleared with Lives left. The game is over. */
   victory: { readonly lives: number };
-  /** Lives reached 0 during wave `waveNumber`. The game is over. */
+  /** Lives reached 0. `waveNumber` is the latest started wave (0 if none had started). The game is over. */
   defeat: { readonly waveNumber: number };
 }
 
@@ -53,7 +53,11 @@ export interface Game {
   tick(dtMs: number): void;
   /** Spawns an enemy at the Path start, outside any wave, and returns its id. For tests and scenarios. */
   spawnEnemy(kind: EnemyKind): number;
-  /** Starts the next wave: its first enemy spawns at once, the rest one every spacing. */
+  /**
+   * Starts the next wave: its first enemy spawns at once, the rest one every spacing.
+   * Refuses with `noWavesLeft` once every wave has started (so after Victory too), else `notBuildPhase`
+   * outside the Build phase (during a wave, after Defeat).
+   */
   startWave(): CommandResult<'noWavesLeft' | 'notBuildPhase'>;
 }
 
@@ -62,15 +66,7 @@ export function createGame(config: GameConfig): Game {
   const map = createMap(config.map);
   validateWaves(config.waves);
   const line = createPathLine(map.waypointPositions);
-  const state: {
-    map: GameMap;
-    timeMs: number;
-    lives: number;
-    enemies: Enemy[];
-    phase: Phase;
-    waveNumber: number;
-    totalWaves: number;
-  } = {
+  const state: { -readonly [K in keyof GameState]: GameState[K] } & { enemies: Enemy[] } = {
     map,
     timeMs: 0,
     lives: config.lives,
@@ -82,7 +78,7 @@ export function createGame(config: GameConfig): Game {
   const emitter = createEmitter<GameEvents>();
   let nextId = 1;
   /** The running wave, from startWave until it is cleared. */
-  let wave: { readonly kind: EnemyKind; readonly schedule: SpawnSchedule; readonly startMs: number } | undefined;
+  let wave: { readonly data: WaveData; readonly schedule: SpawnSchedule; readonly startMs: number } | undefined;
 
   const createEnemy = (kind: EnemyKind): Enemy => {
     const stats = ENEMY_STATS[kind];
@@ -103,7 +99,7 @@ export function createGame(config: GameConfig): Game {
         // A spawn due mid-tick walks the rest of the tick, so tick size doesn't change where enemies are.
         const elapsedMs = state.timeMs - wave.startMs;
         for (const spawnMs of wave.schedule.take(elapsedMs)) {
-          const spawned = walkEnemies([createEnemy(wave.kind)], line, Math.max(0, elapsedMs - spawnMs));
+          const spawned = walkEnemies([createEnemy(wave.data.kind)], line, Math.max(0, elapsedMs - spawnMs));
           state.enemies.push(...spawned.walking);
           leaked.push(...spawned.leaked);
         }
@@ -136,7 +132,7 @@ export function createGame(config: GameConfig): Game {
       const next = config.waves[state.waveNumber];
       if (!next) return { ok: false, reason: 'noWavesLeft' };
       if (state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
-      wave = { kind: next.kind, schedule: createSpawnSchedule(next), startMs: state.timeMs };
+      wave = { data: next, schedule: createSpawnSchedule(next), startMs: state.timeMs };
       state.phase = 'wave';
       state.waveNumber++;
       state.enemies.push(...wave.schedule.take(0).map(() => createEnemy(next.kind)));

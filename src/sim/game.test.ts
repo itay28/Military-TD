@@ -73,14 +73,14 @@ describe('createGame', () => {
   });
 
   it('builds the map from data and exposes it on state', () => {
-    const game = createGame({ map: MVP_MAP, lives: 20, waves: TWO_WAVES });
+    const game = createGame({ map: MVP_MAP, lives: 20, waves: [] });
     expect(game.state.map.id).toBe('mvp');
     expect(game.state.map.isPath({ col: 0, row: 2 })).toBe(true);
   });
 
   it('throws InvalidMapError for a malformed map', () => {
     const map = { ...MVP_MAP, waypoints: [{ col: 0, row: 0 }] };
-    expect(() => createGame({ map, lives: 20, waves: TWO_WAVES })).toThrow(InvalidMapError);
+    expect(() => createGame({ map, lives: 20, waves: [] })).toThrow(InvalidMapError);
   });
 
   it('the fixed step is 1/60 s', () => {
@@ -98,7 +98,7 @@ describe('createGame', () => {
 
 describe('leaking', () => {
   it('Infantry leaks on the MVP map after exactly 1160 ticks (29 tiles at 1.5 tiles/s)', () => {
-    const game = createGame({ map: MVP_MAP, lives: 20, waves: TWO_WAVES });
+    const game = createGame({ map: MVP_MAP, lives: 20, waves: [] });
     game.spawnEnemy('infantry');
     for (let i = 0; i < 1159; i++) game.tick(TICK_MS);
     expect(game.state.enemies).toHaveLength(1);
@@ -301,6 +301,7 @@ describe('waves and phases', () => {
     ['a fractional count', { count: 2.5 }],
     ['a negative spacing', { spacingMs: -1 }],
     ['an infinite spacing', { spacingMs: Number.POSITIVE_INFINITY }],
+    ['a NaN spacing', { spacingMs: Number.NaN }],
   ])('createGame rejects a wave with %s', (_, bad) => {
     const waves = [TWO_WAVES[0]!, { ...TWO_WAVES[1]!, ...bad }];
     expect(() => newGame(20, waves)).toThrow(RangeError);
