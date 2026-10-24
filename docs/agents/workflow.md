@@ -82,6 +82,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 - Branch: `<type>/<issue>-<slug>`, e.g. `feat/8-tower-targeting`.
 - PR title in Conventional Commit form (it becomes the squash commit and drives the version bump): `feat: tower targeting and firing`.
 - Body via the `pr` skill, with `Closes #<n>` and the template checklist.
+- **Draft vs ready:** open the PR as a draft while work is still in progress. As soon as it's complete (acceptance criteria met, checks green, review done), mark it ready for review (`gh pr ready <n>`) and say so on the issue. Never leave a finished PR in draft.
 - Squash-merge when CI is green.
 
 ## Definition of done

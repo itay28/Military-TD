@@ -37,4 +37,5 @@ Full process in `docs/agents/workflow.md`. In short:
 5. **Assets are tracked**: no third-party file gets committed without an entry in `assets/manifest.json` and an allowed license (`docs/assets.md`).
 6. **Keep the issue current**: comment on the issue at each step (plan, red, green, PR, review). If the idea, flow or scope changes, update the issue description with a dated "Changed:" note.
 7. **Session tracker**: at the start of a working session, publish an Artifact page with links to the issue and PR, what and why, the plan, a progress log, and status. Update it as you go. Without the Artifact tool, use a pinned issue comment instead.
-8. **PR title is a Conventional Commit** (`feat:`, `fix:`, …) and the body says `Closes #n`. It drives versioning (ADR-0004).
+8. **Draft until done, then ready**: PRs are drafts while in progress. Once a PR is complete and checks pass, mark it ready for review (`gh pr ready`). Don't leave a finished PR in draft.
+9. **PR title is a Conventional Commit** (`feat:`, `fix:`, …) and the body says `Closes #n`. It drives versioning (ADR-0004).
