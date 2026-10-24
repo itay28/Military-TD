@@ -18,7 +18,7 @@ const SMALL: MapData = {
   ],
 };
 
-const newGame = () => createGame({ map: SMALL, lives: 20 });
+const newGame = () => createGame({ map: SMALL, lives: 20, waves: [] });
 
 describe('placeTower', () => {
   it('a placed Rifle Nest has its stats from data and is ready to fire', () => {
