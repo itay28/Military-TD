@@ -1,18 +1,45 @@
 import Phaser from 'phaser';
+import { TRACER } from '../data/display';
 import { MVP_MAP } from '../data/maps';
 import { START_LIVES } from '../data/start';
 import { MVP_WAVES } from '../data/waves';
+import type { Enemy } from '../sim/enemies';
 import { createGame, TICK_MS, type Game } from '../sim/game';
+import { tileCenter, type Position } from '../sim/map';
+import type { Tower } from '../sim/towers';
+import { pixelToTile, toPixels } from './coords';
+import { drawEnemy, drawRangeRing, drawTower, drawTracers, towerAt } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
+import { interpolatePosition, snapshotPositions } from './interpolate';
+import { createTracers, type Tracers } from './tracers';
+import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
 const MAX_TICKS_PER_FRAME = 5;
+
+/** Draw order, back to front. */
+const DEPTH = { map: 0, towers: 1, enemies: 2, tracers: 3, rangeRing: 4 } as const;
+
+interface EnemyView {
+  readonly graphics: Phaser.GameObjects.Graphics;
+  /** The HP last drawn, so the bar is redrawn only when it changes. */
+  hp: number;
+}
 
 /** Owns the Simulation, draws it, and advances it on a fixed timestep. */
 export class GameScene extends Phaser.Scene {
   private sim!: Game;
   private loop!: FixedStep;
+  private enemyViews!: ViewSync<Enemy, EnemyView>;
+  private towerViews!: ViewSync<Tower, Phaser.GameObjects.Graphics>;
+  private tracers!: Tracers;
+  private tracerGraphics!: Phaser.GameObjects.Graphics;
+  private rangeRing!: Phaser.GameObjects.Graphics;
+  /** Enemy positions before the latest tick, to interpolate from. */
+  private previousPositions: ReadonlyMap<number, Position> = new Map();
+  /** The tower whose range ring is drawn, by id. */
+  private hoveredTowerId: number | undefined;
 
   constructor() {
     super('Game');
@@ -20,15 +47,74 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.sim = createGame({ map: MVP_MAP, lives: START_LIVES, waves: MVP_WAVES });
-    drawMap(this.add.graphics(), this.sim.state.map);
+    drawMap(this.add.graphics().setDepth(DEPTH.map), this.sim.state.map);
     this.loop = createFixedStep({
       stepMs: TICK_MS,
       maxStepsPerFrame: MAX_TICKS_PER_FRAME,
-      step: (dtMs) => this.sim.tick(dtMs),
+      step: (dtMs) => {
+        this.previousPositions = snapshotPositions(this.sim.state.enemies);
+        this.sim.tick(dtMs);
+      },
     });
+
+    this.enemyViews = createViewSync({
+      create: () => ({ graphics: this.add.graphics().setDepth(DEPTH.enemies), hp: Number.NaN }),
+      update: (view, enemy) => {
+        if (view.hp !== enemy.hp) {
+          view.graphics.clear();
+          drawEnemy(view.graphics, enemy);
+          view.hp = enemy.hp;
+        }
+        const { x, y } = toPixels(interpolatePosition(this.previousPositions, enemy, this.loop.alpha));
+        view.graphics.setPosition(x, y);
+      },
+      destroy: (view) => view.graphics.destroy(),
+    });
+
+    this.towerViews = createViewSync({
+      create: (tower) => {
+        const { x, y } = toPixels(tileCenter(tower.tile));
+        const graphics = this.add.graphics().setDepth(DEPTH.towers).setPosition(x, y);
+        drawTower(graphics, tower);
+        return graphics;
+      },
+      update: () => {},
+      destroy: (graphics) => graphics.destroy(),
+    });
+
+    this.tracers = createTracers(TRACER.fadeMs);
+    this.tracerGraphics = this.add.graphics().setDepth(DEPTH.tracers);
+    this.sim.events.on('towerFired', (shot) => {
+      const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
+      if (tower) this.tracers.add(toPixels(tileCenter(tower.tile)), toPixels(shot.position));
+    });
+
+    this.rangeRing = this.add.graphics().setDepth(DEPTH.rangeRing).setVisible(false);
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      this.hover(towerAt(this.sim.state.towers, pixelToTile({ x: pointer.worldX, y: pointer.worldY })));
+    });
+    this.input.on('gameout', () => this.hover(undefined));
   }
 
   override update(_time: number, deltaMs: number): void {
+    // Age tracers before ticking, so one fired this frame is drawn fully opaque.
+    this.tracers.advance(deltaMs);
     this.loop.advance(deltaMs);
+
+    const { enemies, towers } = this.sim.state;
+    this.towerViews.sync(towers);
+    this.enemyViews.sync(enemies);
+    this.tracerGraphics.clear();
+    drawTracers(this.tracerGraphics, this.tracers.active());
+  }
+
+  /** Shows the range ring of `tower`, or hides it when the pointer isn't over one. */
+  private hover(tower: Tower | undefined): void {
+    if (tower?.id === this.hoveredTowerId) return;
+    this.hoveredTowerId = tower?.id;
+    this.rangeRing.clear().setVisible(tower !== undefined);
+    if (!tower) return;
+    const { x, y } = toPixels(tileCenter(tower.tile));
+    drawRangeRing(this.rangeRing.setPosition(x, y), tower);
   }
 }
