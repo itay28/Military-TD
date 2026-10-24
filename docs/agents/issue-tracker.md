@@ -57,6 +57,8 @@ Status lives on the **Military-TD Roadmap** project: https://github.com/users/it
 
 So agents only move cards by hand when **starting work** (→ *In progress*), when an issue becomes unblocked (Backlog → Ready), and to fix a card an automation missed.
 
+**Release issues:** each milestone has one issue labelled `release` (`Release v0.N.0`) that stands in for the milestone, since milestones can't be cards. It sets Area `infra` and no Priority or Size, never goes to *Ready*, and moves with the milestone; see **Milestone release** in `docs/agents/workflow.md`. The **Releases** view (filter `label:release`) shows them with their Status and Milestone. The other views include them.
+
 **Token:** the repo's `gh` login is a fine-grained token scoped to this repo, and fine-grained tokens can't edit user-owned Projects. Board edits need a classic token with `project` and `repo` scopes, passed only for that call via `GH_TOKEN`. Never print or commit it. If you don't have one, ask the human; don't skip the board update silently. (`@claude` in GitHub Actions has no such token: say on the issue which card needs moving.)
 
 ```sh
