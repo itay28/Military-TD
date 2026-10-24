@@ -76,9 +76,11 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 - Item closed, PR merged → *Done*.
 - *Pull request linked to issue* is **off on purpose**: it moves the card when a draft PR is opened, which is too early. No built-in workflow fires on "ready for review".
 
+**Board-status hook** (`.claude/settings.json` → `scripts/board-status.ts`): in local Claude Code sessions, after `gh pr ready` (or `--undo`) or a non-draft `gh pr create`, it moves the cards of the issues the PR closes: *In review* when the PR is ready, *In progress* when it's a draft. It never touches *Done* or *Backlog* cards and never blocks a command. It reports what it did, or why it couldn't, as context to the agent. Token: `GH_PROJECT_TOKEN`, the file named by `GH_PROJECT_TOKEN_FILE`, or `~/.config/gh-project-token.txt`.
+
 So agents move cards by hand:
 - **Starting work** → *In progress*.
-- **PR marked ready** (`gh pr ready`) → *In review*. Converting it back to draft → *In progress*.
+- **PR marked ready** → *In review*, back to draft → *In progress*: only when the hook didn't (it reports when it couldn't), or when the PR changed outside a local session (GitHub UI, `@claude` in CI).
 - **Unblocked** issue: Backlog → *Ready*.
 - To fix a card an automation missed.
 
