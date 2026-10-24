@@ -7,7 +7,7 @@ export interface Pixel {
   readonly y: number;
 }
 
-// The only place tiles and pixels are converted (ADR-0002: the sim works in tiles).
+// Tile↔pixel conversion for scenes. The sim works in tiles only (ADR-0002); scenes convert through these.
 
 export function toPixels({ x, y }: Position): Pixel {
   return { x: x * TILE_PX, y: y * TILE_PX };

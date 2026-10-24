@@ -1,3 +1,6 @@
+/** Absorbs float error from steps like 1000/60, so 50 ms of frames runs exactly 3 steps, not 2. */
+const FLOAT_TOLERANCE_MS = 1e-6;
+
 export interface FixedStepOptions {
   readonly stepMs: number;
   /** Steps allowed in one frame. Past it, the backlog is dropped and the game runs slower than real time. */
@@ -33,6 +36,3 @@ export function createFixedStep({ stepMs, maxStepsPerFrame, step }: FixedStepOpt
     },
   };
 }
-
-/** Absorbs float error from steps like 1000/60, so 50 ms of frames runs exactly 3 steps, not 2. */
-const FLOAT_TOLERANCE_MS = 1e-6;

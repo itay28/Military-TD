@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAP_COLORS, TILE_PX } from '../data/display';
+import { MAP_STYLE, TILE_PX } from '../data/display';
 import { MVP_MAP } from '../data/maps';
 import { createMap, type MapData } from '../sim/map';
 import { drawMap, type MapPainter } from './drawMap';
@@ -52,8 +52,8 @@ describe('drawMap', () => {
     expect(fills).toHaveLength(6);
     expect(fills.every((f) => f.w === TILE_PX && f.h === TILE_PX)).toBe(true);
     for (const col of [0, 1, 2]) {
-      expect(at(col, 0).map((f) => f.color)).toEqual([MAP_COLORS.path]);
-      expect(at(col, 1).map((f) => f.color)).toEqual([MAP_COLORS.buildable]);
+      expect(at(col, 0).map((f) => f.color)).toEqual([MAP_STYLE.path]);
+      expect(at(col, 1).map((f) => f.color)).toEqual([MAP_STYLE.buildable]);
     }
   });
 
@@ -62,11 +62,13 @@ describe('drawMap', () => {
     drawMap(painter, createMap(TINY));
     const vertical = lines.filter((l) => l.x1 === l.x2);
     const horizontal = lines.filter((l) => l.y1 === l.y2);
-    expect(vertical.map((l) => l.x1)).toEqual([0, 48, 96, 144]);
-    expect(horizontal.map((l) => l.y1)).toEqual([0, 48, 96]);
+    expect(vertical.map((l) => l.x1)).toEqual([0, 1, 2, 3].map((n) => n * TILE_PX));
+    expect(horizontal.map((l) => l.y1)).toEqual([0, 1, 2].map((n) => n * TILE_PX));
     expect(vertical.every((l) => l.y1 === 0 && l.y2 === 2 * TILE_PX)).toBe(true);
     expect(horizontal.every((l) => l.x1 === 0 && l.x2 === 3 * TILE_PX)).toBe(true);
-    expect(lineStyles).toEqual([{ width: 1, color: MAP_COLORS.grid, alpha: MAP_COLORS.gridAlpha }]);
+    expect(lineStyles).toEqual([
+      { width: MAP_STYLE.grid.width, color: MAP_STYLE.grid.color, alpha: MAP_STYLE.grid.alpha },
+    ]);
   });
 
   it('draws the MVP map with only the map in the sim (no enemies or towers)', () => {
@@ -74,6 +76,6 @@ describe('drawMap', () => {
     const map = createMap(MVP_MAP);
     drawMap(painter, map);
     expect(fills).toHaveLength(16 * 10);
-    expect(fills.filter((f) => f.color === MAP_COLORS.path)).toHaveLength(map.pathTiles.length);
+    expect(fills.filter((f) => f.color === MAP_STYLE.path)).toHaveLength(map.pathTiles.length);
   });
 });
