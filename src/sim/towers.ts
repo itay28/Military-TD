@@ -1,6 +1,6 @@
 import type { TowerKind } from '../data/towers';
 import type { Enemy } from './enemies';
-import { tileCenter, type Tile } from './map';
+import { tileCenter, type Position, type Tile } from './map';
 
 export interface TowerStats {
   /** Money to place it. */
@@ -26,6 +26,8 @@ export interface Tower extends TowerStats {
 export interface Shot {
   readonly towerId: number;
   readonly targetId: number;
+  /** Where the target was when hit, for the tracer's end even if the shot killed it. */
+  readonly position: Position;
 }
 
 /** Slack for float sums of tick times, so a shot due on a tick fires on it. */
@@ -63,7 +65,7 @@ export function fireTowers(
     const cooldownMs = tower.cooldownMs - dtMs;
     const target = cooldownMs <= COOLDOWN_EPSILON ? selectTarget(tower, alive) : undefined;
     if (!target) return { ...tower, cooldownMs: Math.max(0, cooldownMs) };
-    shots.push({ towerId: tower.id, targetId: target.id });
+    shots.push({ towerId: tower.id, targetId: target.id, position: target.position });
     const hit = { ...target, hp: Math.max(0, target.hp - tower.damage) };
     if (hit.hp === 0) {
       kills.push(hit);

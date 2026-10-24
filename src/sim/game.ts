@@ -28,7 +28,7 @@ export interface GameState {
 export interface GameEvents {
   /** An enemy reached the Path end and was removed. `lives` is what's left after the leak. */
   enemyLeaked: { readonly enemy: Enemy; readonly lives: number };
-  /** A tower hit an enemy (hitscan), for tracers. */
+  /** A tower hit an enemy (hitscan), for tracers: from the tower's tile center to `position`. */
   towerFired: Shot;
   /** An enemy's HP reached 0 and it was removed. `reward` is the Money it pays. */
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
