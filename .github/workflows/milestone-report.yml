@@ -1,0 +1,55 @@
+name: Milestone report
+
+# When the last issue in a milestone closes (its release issue aside), opens
+# the milestone report PR `chore: release 0.N.0`: an audit of the milestone in
+# docs/releases/0.N.0.md, with a `Release-As: 0.N.0` footer that switches
+# release-please's release PR to the milestone's version (ADR-0004). Re-running
+# updates the open report PR. Flow: docs/agents/workflow.md → Milestone release.
+# Script and tests: scripts/milestone-report.ts.
+on:
+  issues:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      milestone:
+        description: Milestone number (from its URL, e.g. 1 for /milestone/1)
+        required: true
+        type: number
+
+# Reports run one at a time, so two issues closing together can't open two PRs.
+concurrency:
+  group: milestone-report
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  milestone-report:
+    name: milestone-report
+    if: github.event_name == 'workflow_dispatch' || (github.event.issue.milestone && !contains(github.event.issue.labels.*.name, 'release'))
+    runs-on: ubuntu-latest
+    steps:
+      # Optional PAT secret, as in the Release workflow: with it, CI runs on the
+      # report PR (pushes and PRs made with GITHUB_TOKEN don't start workflows).
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # Without PROJECT_TOKEN (#97) the board move is skipped with a warning.
+      - name: Open or update the report PR
+        env:
+          MILESTONE: ${{ inputs.milestone || github.event.issue.milestone.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/milestone-report.ts

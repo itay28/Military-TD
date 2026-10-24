@@ -76,7 +76,7 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 - PR linked to issue → *In review*.
 - Item closed, PR merged → *Done*.
 
-So agents only move cards by hand when **starting work** (→ *In progress*), when an issue becomes unblocked (Backlog → Ready), to fix a card an automation missed, and to move release issues until #96/#97 automate it.
+So agents only move cards by hand when **starting work** (→ *In progress*), when an issue becomes unblocked (Backlog → Ready), to fix a card an automation missed, and to move release issues until #97 automates it (the milestone report workflow already moves them to *In review* when `PROJECT_TOKEN` is set).
 
 **Release issues** (label `release`) are the exception to the Status definitions above. Each one stands in for its milestone (milestones can't be cards) and moves with the milestone, not with assignees or closing PRs; see **Milestone release** in `docs/agents/workflow.md`. They have Area `infra` and no Priority or Size (they're trackers, not work), and no `ready-for-agent`, so they never go to *Ready*. The **Releases** view (filter `label:release`) shows them with their Status and Milestone. The other views include them.
 
