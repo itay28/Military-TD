@@ -47,3 +47,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Check the build fits itch.io
+        run: node scripts/itch-build.ts dist

@@ -18,7 +18,7 @@ describe('ci workflow', () => {
     expect(workflow).toContain('cache: npm');
   });
 
-  it('runs npm ci, then typecheck, lint, format check, test and build in that order', () => {
+  it('runs npm ci, then typecheck, lint, format check, test, build and the itch.io build check in that order', () => {
     const runs = [...workflow.matchAll(/^\s+run: (.+)$/gm)].map((m) => m[1]);
     expect(runs).toEqual([
       'npm ci',
@@ -27,6 +27,7 @@ describe('ci workflow', () => {
       'npm run format:check',
       'npm test',
       'npm run build',
+      'node scripts/itch-build.ts dist',
     ]);
   });
 });
