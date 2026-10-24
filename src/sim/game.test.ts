@@ -1,29 +1,154 @@
 import { describe, expect, it } from 'vitest';
 import { MVP_MAP } from '../data/maps';
 import { createGame, TICK_MS } from './game';
-import { InvalidMapError } from './map';
+import { InvalidMapError, type MapData } from './map';
+
+// Path line through tile centers: right 3, then down 3. 6 tiles long; the turn waypoint is at 3.
+const SMALL: MapData = {
+  id: 'small',
+  cols: 6,
+  rows: 5,
+  waypoints: [
+    { col: 0, row: 1 },
+    { col: 3, row: 1 },
+    { col: 3, row: 4 },
+  ],
+};
+
+const INFANTRY = { kind: 'infantry', hp: 30, maxHp: 30, speed: 1.5, reward: 5, leakCost: 1 };
+
+const newGame = (lives = 20) => createGame({ map: SMALL, lives });
 
 describe('createGame', () => {
+  it('a new game has the configured Lives, no enemies, and time 0', () => {
+    const game = newGame();
+    expect(game.state.lives).toBe(20);
+    expect(game.state.enemies).toEqual([]);
+    expect(game.state.timeMs).toBe(0);
+  });
+
+  it('a spawned Infantry starts at the Path start with 30/30 HP and 1.5 tiles/s', () => {
+    const game = newGame();
+    const id = game.spawnEnemy('infantry');
+    expect(game.state.enemies).toEqual([{ ...INFANTRY, id, distance: 0, position: { x: 0.5, y: 1.5 } }]);
+    expect(game.spawnEnemy('infantry')).not.toBe(id);
+  });
+
+  it('an enemy moves speed × dt along the Path each tick', () => {
+    const game = newGame();
+    game.spawnEnemy('infantry');
+    game.tick(1000);
+    expect(game.state.timeMs).toBe(1000);
+    expect(game.state.enemies[0]).toMatchObject({ distance: 1.5, position: { x: 2, y: 1.5 } });
+  });
+
+  it('an enemy passing a waypoint mid-tick continues on the next segment without overshoot', () => {
+    const game = newGame();
+    game.spawnEnemy('infantry');
+    game.tick(2500); // 3.75 tiles: the waypoint at 3, then 0.75 down
+    expect(game.state.enemies[0]).toMatchObject({ distance: 3.75, position: { x: 3.5, y: 2.25 } });
+  });
+
+  it('one big tick and many small ticks put an enemy in the same place', () => {
+    const big = newGame();
+    const small = newGame();
+    big.spawnEnemy('infantry');
+    small.spawnEnemy('infantry');
+    big.tick(3000);
+    for (let i = 0; i < 180; i++) small.tick(1000 / 60);
+    const [a] = big.state.enemies;
+    const [b] = small.state.enemies;
+    expect(b!.distance).toBeCloseTo(a!.distance, 9);
+    expect(b!.position.x).toBeCloseTo(a!.position.x, 9);
+    expect(b!.position.y).toBeCloseTo(a!.position.y, 9);
+    expect(a!.position).toEqual({ x: 3.5, y: 3 });
+  });
+
   it('builds the map from data and exposes it on state', () => {
-    const game = createGame({ map: MVP_MAP });
+    const game = createGame({ map: MVP_MAP, lives: 20 });
     expect(game.state.map.id).toBe('mvp');
     expect(game.state.map.isPath({ col: 0, row: 2 })).toBe(true);
   });
 
   it('throws InvalidMapError for a malformed map', () => {
     const map = { ...MVP_MAP, waypoints: [{ col: 0, row: 0 }] };
-    expect(() => createGame({ map })).toThrow(InvalidMapError);
-  });
-
-  it('starts at time 0 and each tick advances time by dtMs', () => {
-    const game = createGame({ map: MVP_MAP });
-    expect(game.state.timeMs).toBe(0);
-    game.tick(TICK_MS);
-    game.tick(TICK_MS);
-    expect(game.state.timeMs).toBeCloseTo(2 * TICK_MS);
+    expect(() => createGame({ map, lives: 20 })).toThrow(InvalidMapError);
   });
 
   it('the fixed step is 1/60 s', () => {
     expect(TICK_MS).toBe(1000 / 60);
+  });
+
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])('tick rejects dt %s', (dt) => {
+    const game = newGame();
+    game.spawnEnemy('infantry');
+    expect(() => game.tick(dt)).toThrow(RangeError);
+    expect(game.state.timeMs).toBe(0);
+    expect(game.state.enemies[0]!.distance).toBe(0);
+  });
+});
+
+describe('leaking', () => {
+  it('Infantry leaks on the MVP map after exactly 1160 ticks (29 tiles at 1.5 tiles/s)', () => {
+    const game = createGame({ map: MVP_MAP, lives: 20 });
+    game.spawnEnemy('infantry');
+    for (let i = 0; i < 1159; i++) game.tick(TICK_MS);
+    expect(game.state.enemies).toHaveLength(1);
+    expect(game.state.enemies[0]!.position.x).toBeCloseTo(15.5, 1);
+    game.tick(TICK_MS);
+    expect(game.state.enemies).toEqual([]);
+    expect(game.state.lives).toBe(19);
+  });
+
+  it('a leaking enemy is removed, Lives drop by its leak cost, and enemyLeaked fires once', () => {
+    const game = newGame();
+    const leaks: unknown[] = [];
+    game.events.on('enemyLeaked', (e) => leaks.push(e));
+    const id = game.spawnEnemy('infantry');
+    game.tick(4000); // exactly the 6-tile Path
+    game.tick(1000);
+    expect(game.state.enemies).toEqual([]);
+    expect(game.state.lives).toBe(19);
+    expect(leaks).toEqual([{ enemy: { ...INFANTRY, id, distance: 6, position: { x: 3.5, y: 4.5 } }, lives: 19 }]);
+  });
+
+  it('other enemies keep walking when one leaks', () => {
+    const game = newGame();
+    game.spawnEnemy('infantry');
+    game.tick(2000);
+    const second = game.spawnEnemy('infantry');
+    game.tick(2000);
+    expect(game.state.enemies).toEqual([expect.objectContaining({ id: second, distance: 3 })]);
+  });
+
+  it('Lives never drop below 0', () => {
+    const game = newGame(1);
+    game.spawnEnemy('infantry');
+    game.spawnEnemy('infantry');
+    game.tick(4000);
+    expect(game.state.enemies).toEqual([]);
+    expect(game.state.lives).toBe(0);
+  });
+
+  it('enemyLeaked listeners see the enemy already removed', () => {
+    const game = newGame();
+    const seen: number[] = [];
+    game.events.on('enemyLeaked', () => seen.push(game.state.enemies.length));
+    game.spawnEnemy('infantry');
+    game.tick(4000);
+    expect(seen).toEqual([0]);
+  });
+
+  it('an unsubscribed listener gets no more events', () => {
+    const game = newGame();
+    let count = 0;
+    const off = game.events.on('enemyLeaked', () => count++);
+    game.spawnEnemy('infantry');
+    game.tick(4000);
+    off();
+    game.spawnEnemy('infantry');
+    game.tick(4000);
+    expect(count).toBe(1);
+    expect(game.state.lives).toBe(18);
   });
 });
