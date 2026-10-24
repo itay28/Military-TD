@@ -11,35 +11,33 @@ export interface EnemyStats {
   readonly leakCost: number;
 }
 
-export interface Enemy {
+/** An enemy on the Path. Its stats are copied from its kind when it spawns. */
+export interface Enemy extends EnemyStats {
   readonly id: number;
   readonly kind: EnemyKind;
   readonly hp: number;
-  readonly maxHp: number;
-  /** Tiles per second. */
-  readonly speed: number;
   /** Tiles travelled along the Path from its start. */
   readonly distance: number;
   readonly position: Position;
 }
 
-/** The polyline enemies walk, through the waypoint tile centers. */
-export interface Route {
+/** The Path as a line through its waypoint tile centers, for measuring distance along it. */
+export interface PathLine {
   /** In tiles. */
   readonly length: number;
-  /** The point `distance` tiles along the route, clamped to its ends; exact at waypoints. */
+  /** The point `distance` tiles along the line, clamped to its ends; exact at waypoints. */
   positionAt(distance: number): Position;
 }
 
-export function createRoute(points: readonly Position[]): Route {
-  // starts[i] is the distance along the route at points[i].
-  const starts = [0];
+export function createPathLine(points: readonly Position[]): PathLine {
+  // startDistances[i] is the distance along the line at points[i].
+  const startDistances = [0];
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1]!;
     const b = points[i]!;
-    starts.push(starts[i - 1]! + Math.hypot(b.x - a.x, b.y - a.y));
+    startDistances.push(startDistances[i - 1]! + Math.hypot(b.x - a.x, b.y - a.y));
   }
-  const length = starts[starts.length - 1]!;
+  const length = startDistances[startDistances.length - 1]!;
   const first = points[0]!;
   const last = points[points.length - 1]!;
 
@@ -49,11 +47,36 @@ export function createRoute(points: readonly Position[]): Route {
       if (distance <= 0) return first;
       if (distance >= length) return last;
       let i = 1;
-      while (starts[i]! < distance) i++;
+      while (startDistances[i]! < distance) i++;
       const a = points[i - 1]!;
       const b = points[i]!;
-      const t = (distance - starts[i - 1]!) / (starts[i]! - starts[i - 1]!);
+      const t = (distance - startDistances[i - 1]!) / (startDistances[i]! - startDistances[i - 1]!);
       return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
     },
   };
+}
+
+/** Slack for float sums of tick distances, so an enemy due at the end on a tick arrives on it. */
+const DISTANCE_EPSILON = 1e-9;
+
+/**
+ * Moves each enemy `speed × dtMs` along the line. Enemies that reach the end leak:
+ * they are returned in `leaked`, placed at the end, in their original order.
+ */
+export function walkEnemies(
+  enemies: readonly Enemy[],
+  line: PathLine,
+  dtMs: number,
+): { walking: Enemy[]; leaked: Enemy[] } {
+  const walking: Enemy[] = [];
+  const leaked: Enemy[] = [];
+  for (const enemy of enemies) {
+    const distance = enemy.distance + (enemy.speed * dtMs) / 1000;
+    if (distance >= line.length - DISTANCE_EPSILON) {
+      leaked.push({ ...enemy, distance: line.length, position: line.positionAt(line.length) });
+    } else {
+      walking.push({ ...enemy, distance, position: line.positionAt(distance) });
+    }
+  }
+  return { walking, leaked };
 }

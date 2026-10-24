@@ -110,6 +110,7 @@ src/
     game.ts     createGame(config) → { tick(dtMs), placeTower(kind, tile), startWave(), state, events }
     map.ts      grid, path waypoints, buildable tiles
     enemies.ts  movement along the path, leaking
+    events.ts   typed event emitter behind game.events
     towers.ts   targeting, cooldowns, damage
     waves.ts    spawn schedule, wave/phase transitions
     economy.ts  money, costs, rewards
