@@ -2,7 +2,7 @@ import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { createMap, type GameMap, type MapData, type Tile } from './map';
+import { createMap, tileKey, type GameMap, type MapData, type Tile } from './map';
 import { fireTowers, type Shot, type Tower } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
@@ -72,13 +72,13 @@ export interface Game {
   startWave(): CommandResult<'noWavesLeft' | 'notBuildPhase'>;
   /**
    * Places a tower on `tile` for its cost, in the Build or Wave phase, and returns its id.
-   * Refuses, in this order: `gameOver` after Victory or Defeat, `notBuildable` off the grid or on the Path,
+   * Refuses, in this order: `gameEnded` after Victory or Defeat, `notBuildable` off the grid or on the Path,
    * `occupied` where a tower stands, `insufficientMoney` when Money is below the cost.
    */
   placeTower(
     kind: TowerKind,
     tile: Tile,
-  ): CommandResult<'gameOver' | 'notBuildable' | 'occupied' | 'insufficientMoney', { readonly towerId: number }>;
+  ): CommandResult<'gameEnded' | 'notBuildable' | 'occupied' | 'insufficientMoney', { readonly towerId: number }>;
 }
 
 /** Builds a game from data. Throws InvalidMapError when the map is malformed, RangeError for a malformed wave. */
@@ -168,11 +168,10 @@ export function createGame(config: GameConfig): Game {
       return { ok: true };
     },
     placeTower(kind, tile) {
-      const stats = TOWER_STATS[kind];
-      if (state.phase === 'victory' || state.phase === 'defeat') return { ok: false, reason: 'gameOver' };
+      if (state.phase === 'victory' || state.phase === 'defeat') return { ok: false, reason: 'gameEnded' };
       if (!map.isBuildable(tile)) return { ok: false, reason: 'notBuildable' };
-      if (state.towers.some((tower) => tower.tile.col === tile.col && tower.tile.row === tile.row))
-        return { ok: false, reason: 'occupied' };
+      if (state.towers.some((tower) => tileKey(tower.tile) === tileKey(tile))) return { ok: false, reason: 'occupied' };
+      const stats = TOWER_STATS[kind];
       if (state.money < stats.cost) return { ok: false, reason: 'insufficientMoney' };
       const towerId = nextId++;
       state.money -= stats.cost;

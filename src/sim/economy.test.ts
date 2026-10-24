@@ -97,20 +97,20 @@ describe('placeTower refusals', () => {
     expect(game.placeTower('rifleNest', { col: 2, row: 2 })).toMatchObject({ ok: true });
   });
 
-  it('placement after Victory is gameOver', () => {
+  it('placement after Victory is gameEnded', () => {
     const game = newGame(100, ONE_INFANTRY);
     game.placeTower('rifleNest', { col: 1, row: 2 });
     game.startWave();
     runWave(game);
     expect(game.state.phase).toBe('victory');
-    expectRefused(game, { col: 4, row: 4 }, 'gameOver');
+    expectRefused(game, { col: 4, row: 4 }, 'gameEnded');
   });
 
-  it('placement after Defeat is gameOver', () => {
+  it('placement after Defeat is gameEnded', () => {
     const game = createGame({ map: SMALL, lives: 1, money: 100, waves: ONE_INFANTRY });
     game.startWave();
     runWave(game);
     expect(game.state.phase).toBe('defeat');
-    expectRefused(game, { col: 4, row: 4 }, 'gameOver');
+    expectRefused(game, { col: 4, row: 4 }, 'gameEnded');
   });
 });
