@@ -1,0 +1,23 @@
+name: Feature / task
+description: New content, mechanic, UI or tooling
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area (epic)
+      options: [core, towers, units, ui, art, infra]
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What the player (or developer) gets
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria
+      description: Checkable statements; each one should be provable by a test
