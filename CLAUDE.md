@@ -4,6 +4,8 @@ A basic military-themed tower defense game.
 
 ## Agent skills
 
+Use **Matt Pocock's skills** (`mattpocock-skills`) for all workflow steps. Don't use overlapping skills from other plugins (`agent-engineering:*`, Anthropic's `engineering:*`), and prefer `mattpocock-skills:code-review` over the built-in `/code-review`. Which skill to use when: `docs/agents/workflow.md`.
+
 ### Issue tracker
 
 Issues are tracked in GitHub Issues on itay28/Military-TD (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
@@ -32,4 +34,5 @@ Full process in `docs/agents/workflow.md`. In short:
 2. **Tests first**: write failing tests, then implement (red → green → refactor). Use the `tdd` skill.
 3. **Agent-verifiable**: every behaviour is checked by unit tests, headless scenarios (`npm run scenario`), or Playwright e2e. Never rely on a human playing (ADR-0003).
 4. **Rules live in `src/sim`**: no Phaser and no `Math.random`/`Date.now` there (ADR-0002).
-5. **PR title is a Conventional Commit** (`feat:`, `fix:`, …) and the body says `Closes #n`. It drives versioning (ADR-0004).
+5. **Assets are tracked**: no third-party file gets committed without an entry in `assets/manifest.json` and an allowed license (`docs/assets.md`).
+6. **PR title is a Conventional Commit** (`feat:`, `fix:`, …) and the body says `Closes #n`. It drives versioning (ADR-0004).

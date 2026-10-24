@@ -11,7 +11,7 @@ We want `major.minor.patch` versions, but releasing a game as "5.0.0" just becau
 Follow [Semantic Versioning](https://semver.org) with its 0.x rules before the first public release:
 
 - **Before 1.0 (development):** `0.MINOR.PATCH`.
-  - **Minor** = a roadmap milestone, one of the notable steps: v0.1.0 MVP, v0.2.0 Expand, v0.3.0 Art, v0.4.0 Menus & settings.
+  - **Minor** = a roadmap milestone, one of the notable steps (v0.1.0 MVP, v0.2.0 Combat depth, v0.3.0 Game shell, … v0.9.0 Beta; see PLAN.md).
   - **Patch** = any feature or fix that lands during a milestone (`feat:` and `fix:` both bump the patch).
 - **1.0.0** = first public release.
 - **After 1.0:** standard SemVer. **Major** = a notable change worth announcing (big content update, save/settings incompatibility). **Minor** = new feature or content. **Patch** = bug fix or hotfix.
@@ -19,7 +19,7 @@ Follow [Semantic Versioning](https://semver.org) with its 0.x rules before the f
 Mechanics:
 - Conventional Commit PR titles, squash-merged, with a CI check on titles.
 - **release-please** keeps an open release PR with the next version and a generated `CHANGELOG.md`. Config: `bump-minor-pre-major: true`, `bump-patch-for-minor-pre-major: true`. Milestone releases are forced with a `Release-As: 0.N.0` commit footer.
-- Merging the release PR tags `vX.Y.Z` and publishes a GitHub Release. That triggers the GitHub Pages deploy.
+- Merging the release PR tags `vX.Y.Z` and publishes a GitHub Release. That triggers the itch.io deploy (ADR-0005).
 - The build embeds the version, and the game shows it in a corner. Bug reports should include it.
 
 ## Consequences

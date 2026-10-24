@@ -8,7 +8,7 @@ The game is a small 2D tower defense side project. It should be easy to share, a
 
 ## Decision
 
-Build for the web with TypeScript (strict), Phaser 4 for rendering, input and scenes, Vite for dev and build, and Vitest for tests. Deploy to GitHub Pages.
+Build for the web with TypeScript (strict), Phaser 4 for rendering, input and scenes, Vite for dev and build, and Vitest for tests. Hosting is decided in ADR-0005 (itch.io).
 
 ## Consequences
 

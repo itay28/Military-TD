@@ -13,6 +13,7 @@
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
 | **Leak** | An enemy reaching the Path end. It costs Lives. | escape |
 | **Lives** | How many leaks the player can survive. Defeat at 0. | health, HP (HP is for enemies) |
+| **Wave DPS** | Damage per second during the current wave only: damage dealt this wave ÷ time since the wave started. Per tower or in total. Resets when a wave starts. | |
 | **Scenario** | A declarative game setup plus a script of timed commands, run headlessly by `runScenario()` to test a situation. | fixture, level (for tests) |
 | **Test mode** | The browser game started with `?test=1` (plus `step`, `anim`, `speed` flags), exposing `window.__TD__` for automated UI tests. | debug mode |
 | **Money** | Currency for placing towers. Earned as each enemy's **Reward**. | gold, cash |
