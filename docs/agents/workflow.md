@@ -110,7 +110,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 
 A milestone ends with a release of the next minor version (`0.N.0`) through a `Release-As: 0.N.0` commit footer; see **Milestone release** under **Releasing** below and ADR-0004.
 
-PR titles are checked by the *PR title* workflow (`.github/workflows/pr-title.yml`, rule in `scripts/pr-title.ts`). PRs are squash-merged with the PR title as the commit subject and the PR body as the commit body, so the title is what release-please reads. (Branch protection is off on this private repo, so the check reports but doesn't block; fix a red title before merging.)
+PR titles are checked by the *PR title* workflow (`.github/workflows/pr-title.yml`, rule in `scripts/pr-title.ts`). PRs are squash-merged with the PR title as the commit subject and the PR body as the commit body, so the title is what release-please reads. (`pr-title` isn't a required status check, so a red title doesn't block the merge button; fix it before merging.)
 
 ## Releasing
 - **Release PR:** on every push to `main`, the *Release* workflow (`.github/workflows/release-please.yml`) runs release-please. It keeps one open release PR (`chore(main): release …`) that bumps `package.json`, `package-lock.json` and `.release-please-manifest.json` and updates `CHANGELOG.md` from the commits since the last release.
