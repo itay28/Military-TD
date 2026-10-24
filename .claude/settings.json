@@ -4,5 +4,19 @@
     "mattpocock-skills@claude-plugins-official": true,
     "engineering@anthropic-plugin-directory": false,
     "agent-engineering@anthropic-plugin-directory": false
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/board-status.ts\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }
