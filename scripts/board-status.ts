@@ -130,7 +130,7 @@ const SET_STATUS = `mutation($project: ID!, $item: ID!, $field: ID!, $option: St
 
 /** Resolves the PR a hook call refers to: named in the command, printed by `gh pr create`, or the branch's open PR. */
 async function resolvePr(token: string, named: string | undefined, output: string, cwd: string): Promise<number> {
-  const fromName = named && (/\/pull\/(\d+)/.exec(named)?.[1] ?? (/^\d+$/.test(named) ? named : undefined));
+  const fromName = named && (prFromOutput(named) ?? (/^\d+$/.test(named) ? named : undefined));
   const number = fromName ?? prFromOutput(output);
   if (number) return Number(number);
   const branch = named ?? execFileSync('git', ['branch', '--show-current'], { cwd, encoding: 'utf8' }).trim();
@@ -197,26 +197,22 @@ function report(message: string): void {
 // Hook entry point: `node scripts/board-status.ts`, run by .claude/settings.json after each Bash/PowerShell call.
 // Exits 0 whatever happens: it never blocks the agent, only reports.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const input = JSON.parse(readFileSync(0, 'utf8') || '{}') as HookInput;
-  const call = findPrCommand(input.tool_input?.command ?? '');
-  if (call) {
-    const token = readToken();
-    if (!token) {
+  let call: { pr?: string } | undefined;
+  try {
+    const input = JSON.parse(readFileSync(0, 'utf8') || '{}') as HookInput;
+    call = findPrCommand(input.tool_input?.command ?? '');
+    const token = call && readToken();
+    if (call && !token) {
       report(
         'no project token (GH_PROJECT_TOKEN, GH_PROJECT_TOKEN_FILE or ~/.config/gh-project-token.txt), so the card was not moved. Move it by hand.',
       );
-    } else {
-      try {
-        const pr = await resolvePr(
-          token,
-          call.pr,
-          JSON.stringify(input.tool_response ?? ''),
-          input.cwd ?? process.cwd(),
-        );
-        report(`PR #${pr}: ${(await syncCards(token, pr)).join('; ')}`);
-      } catch (error) {
-        report(`could not sync the board (${(error as Error).message}). Move the card by hand.`);
-      }
+    } else if (call && token) {
+      const output = JSON.stringify(input.tool_response ?? '');
+      const pr = await resolvePr(token, call.pr, output, input.cwd ?? process.cwd());
+      report(`PR #${pr}: ${(await syncCards(token, pr)).join('; ')}`);
     }
+  } catch (error) {
+    // Unreadable input on an unrelated call stays silent; a PR call says what went wrong.
+    if (call) report(`could not sync the board (${(error as Error).message}). Move the card by hand.`);
   }
 }
