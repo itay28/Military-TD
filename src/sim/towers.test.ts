@@ -3,7 +3,7 @@ import { ENEMY_STATS } from '../data/enemies';
 import type { Enemy } from './enemies';
 import { createGame, TICK_MS, type Game } from './game';
 import type { MapData, Tile } from './map';
-import { selectTarget } from './towers';
+import { selectTarget, towerAt } from './towers';
 
 // Path line through tile centers: right along y = 1.5 from x = 0.5 to 3.5, then down x = 3.5 to y = 4.5.
 // Infantry walks 1.5 tiles/s, so tick(1000) puts a fresh enemy at distance 1.5, position (2, 1.5).
@@ -228,5 +228,20 @@ describe('kills', () => {
     game.tick(500);
     game.tick(500);
     expect(seen).toEqual(['fired hp=20', 'fired hp=10', 'fired hp=gone', 'killed left=0']);
+  });
+});
+
+describe('towerAt', () => {
+  it('finds the tower on a tile', () => {
+    const game = newGame();
+    place(game, { col: 2, row: 3 });
+    const id = place(game, { col: 4, row: 1 });
+    expect(towerAt(game.state.towers, { col: 4, row: 1 })?.id).toBe(id);
+  });
+
+  it('returns undefined for a tile with no tower', () => {
+    const game = newGame();
+    place(game, { col: 2, row: 3 });
+    expect(towerAt(game.state.towers, { col: 3, row: 3 })).toBeUndefined();
   });
 });

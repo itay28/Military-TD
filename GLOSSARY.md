@@ -9,6 +9,8 @@
 | **Waypoint** | A tile where the Path turns, or its first or last tile. Consecutive waypoints share a row or a column; the tiles between them are **Path tiles**. | node, corner |
 | **Buildable tile** | A tile where a tower may be placed: not on the Path and not occupied. The map's `isBuildable` checks the first part; placement also checks occupancy. | |
 | **Tower** | A placed defensive unit. The MVP has one kind: **Rifle Nest**. | turret |
+| **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
+| **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
 | **Enemy** | A unit that walks the Path. The MVP has one kind: **Infantry**. | creep, mob |
 | **Wave** | A scheduled group of enemies spawned one after another. | round, level |
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
