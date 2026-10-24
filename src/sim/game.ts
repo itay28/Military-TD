@@ -12,6 +12,8 @@ export const TICK_MS = 1000 / 60;
 export interface GameConfig {
   readonly map: MapData;
   readonly lives: number;
+  /** Money at the start. */
+  readonly money: number;
   readonly waves: readonly WaveData[];
 }
 
@@ -24,6 +26,7 @@ export interface GameState {
   readonly map: GameMap;
   readonly timeMs: number;
   readonly lives: number;
+  readonly money: number;
   /** In spawn order. */
   readonly enemies: readonly Enemy[];
   /** In placement order. */
@@ -39,7 +42,7 @@ export interface GameEvents {
   enemyLeaked: { readonly enemy: Enemy; readonly lives: number };
   /** A tower hit an enemy (hitscan), for tracers: from the tower's tile center to `position`. */
   towerFired: Shot;
-  /** An enemy's HP reached 0 and it was removed. `reward` is the Money it pays. */
+  /** An enemy's HP reached 0 and it was removed. `reward` is the Money it paid, already in `state.money`. */
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
   waveStarted: { readonly waveNumber: number };
   /** Every enemy of the wave has spawned and none is left alive. */
@@ -50,9 +53,9 @@ export interface GameEvents {
   defeat: { readonly waveNumber: number };
 }
 
-/** What a command returns: success, or the reason it was refused (and changed nothing). */
-export type CommandResult<Reason extends string> =
-  { readonly ok: true } | { readonly ok: false; readonly reason: Reason };
+/** What a command returns: success (with any `Value` it reports), or the reason it was refused (and changed nothing). */
+export type CommandResult<Reason extends string, Value extends object = object> =
+  ({ readonly ok: true } & Value) | { readonly ok: false; readonly reason: Reason };
 
 export interface Game {
   readonly state: GameState;
@@ -67,8 +70,15 @@ export interface Game {
    * outside the Build phase (during a wave, after Defeat).
    */
   startWave(): CommandResult<'noWavesLeft' | 'notBuildPhase'>;
-  /** Places a tower on `tile` and returns its id. Money and placement checks come with #9. */
-  placeTower(kind: TowerKind, tile: Tile): number;
+  /**
+   * Places a tower on `tile` for its cost, in the Build or Wave phase, and returns its id.
+   * Refuses, in this order: `gameOver` after Victory or Defeat, `notBuildable` off the grid or on the Path,
+   * `occupied` where a tower stands, `insufficientMoney` when Money is below the cost.
+   */
+  placeTower(
+    kind: TowerKind,
+    tile: Tile,
+  ): CommandResult<'gameOver' | 'notBuildable' | 'occupied' | 'insufficientMoney', { readonly towerId: number }>;
 }
 
 /** Builds a game from data. Throws InvalidMapError when the map is malformed, RangeError for a malformed wave. */
@@ -80,6 +90,7 @@ export function createGame(config: GameConfig): Game {
     map,
     timeMs: 0,
     lives: config.lives,
+    money: config.money,
     enemies: [],
     towers: [],
     phase: 'build',
@@ -122,6 +133,7 @@ export function createGame(config: GameConfig): Game {
       const fired = fireTowers(state.towers, enemies, dtMs);
       state.towers = fired.towers;
       state.enemies = fired.enemies;
+      for (const enemy of fired.kills) state.money += enemy.reward;
       let cleared = false;
       if (state.lives === 0) {
         wave = undefined;
@@ -156,9 +168,16 @@ export function createGame(config: GameConfig): Game {
       return { ok: true };
     },
     placeTower(kind, tile) {
-      const id = nextId++;
-      state.towers.push({ ...TOWER_STATS[kind], id, kind, tile, cooldownMs: 0 });
-      return id;
+      const stats = TOWER_STATS[kind];
+      if (state.phase === 'victory' || state.phase === 'defeat') return { ok: false, reason: 'gameOver' };
+      if (!map.isBuildable(tile)) return { ok: false, reason: 'notBuildable' };
+      if (state.towers.some((tower) => tower.tile.col === tile.col && tower.tile.row === tile.row))
+        return { ok: false, reason: 'occupied' };
+      if (state.money < stats.cost) return { ok: false, reason: 'insufficientMoney' };
+      const towerId = nextId++;
+      state.money -= stats.cost;
+      state.towers.push({ ...stats, id: towerId, kind, tile, cooldownMs: 0 });
+      return { ok: true, towerId };
     },
   };
 }

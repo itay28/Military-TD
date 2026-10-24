@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
 import type { Enemy } from './enemies';
 import { createGame, TICK_MS, type Game } from './game';
-import type { MapData } from './map';
+import type { MapData, Tile } from './map';
 import { selectTarget } from './towers';
 
 // Path line through tile centers: right along y = 1.5 from x = 0.5 to 3.5, then down x = 3.5 to y = 4.5.
@@ -18,21 +18,28 @@ const SMALL: MapData = {
   ],
 };
 
-const newGame = () => createGame({ map: SMALL, lives: 20, waves: [] });
+const newGame = () => createGame({ map: SMALL, lives: 20, money: 100, waves: [] });
+
+/** Places a Rifle Nest and returns its id; fails the test if placement is refused. */
+function place(game: Game, tile: Tile): number {
+  const result = game.placeTower('rifleNest', tile);
+  if (!result.ok) throw new Error(`placeTower refused: ${result.reason}`);
+  return result.towerId;
+}
 
 describe('placeTower', () => {
   it('a placed Rifle Nest has its stats from data and is ready to fire', () => {
     const game = newGame();
-    const id = game.placeTower('rifleNest', { col: 2, row: 2 });
+    const id = place(game, { col: 2, row: 2 });
     expect(game.state.towers).toEqual([
       { id, kind: 'rifleNest', tile: { col: 2, row: 2 }, cost: 50, range: 2.5, fireRate: 2, damage: 10, cooldownMs: 0 },
     ]);
-    expect(game.placeTower('rifleNest', { col: 1, row: 2 })).not.toBe(id);
+    expect(place(game, { col: 1, row: 2 })).not.toBe(id);
   });
 
   it('a tower with nothing in range stays ready, at 0 cooldown', () => {
     const game = newGame();
-    game.placeTower('rifleNest', { col: 5, row: 0 });
+    place(game, { col: 5, row: 0 });
     game.tick(1000);
     expect(game.state.towers[0]!.cooldownMs).toBe(0);
   });
@@ -59,7 +66,7 @@ describe('range', () => {
     const shots = recordShots(game);
     const enemy = game.spawnEnemy('infantry');
     game.tick(1000);
-    const tower = game.placeTower('rifleNest', { col: 0, row: 3 });
+    const tower = place(game, { col: 0, row: 3 });
     game.tick(0);
     expect(shots).toEqual([[tower, enemy]]);
     expect(game.state.enemies[0]!.hp).toBe(20);
@@ -70,7 +77,7 @@ describe('range', () => {
     const shots = recordShots(game);
     game.spawnEnemy('infantry');
     game.tick(1010); // distance 1.515
-    game.placeTower('rifleNest', { col: 0, row: 3 });
+    place(game, { col: 0, row: 3 });
     game.tick(0);
     expect(shots).toEqual([]);
     expect(game.state.enemies[0]!.hp).toBe(30);
@@ -92,7 +99,7 @@ describe('targeting', () => {
   it('with several enemies in range, a tower targets the one furthest along the Path', () => {
     const { game, shots, first } = twoEnemies();
     game.spawnEnemy('infantry'); // a third, at the Path start
-    const tower = game.placeTower('rifleNest', { col: 2, row: 2 }); // center (2.5, 2.5): all three in range
+    const tower = place(game, { col: 2, row: 2 }); // center (2.5, 2.5): all three in range
     game.tick(0);
     expect(shots).toEqual([[tower, first]]);
   });
@@ -100,7 +107,7 @@ describe('targeting', () => {
   it('"first" goes by distance along the Path, not spawn order', () => {
     // Every enemy kind walks at one speed today, so a game can't put a later spawn ahead; build them by hand.
     const game = newGame();
-    game.placeTower('rifleNest', { col: 2, row: 2 });
+    place(game, { col: 2, row: 2 });
     const tower = game.state.towers[0]!;
     const enemy = (enemyId: number, distance: number): Enemy => ({
       ...ENEMY_STATS.infantry,
@@ -116,7 +123,7 @@ describe('targeting', () => {
 
   it('an enemy further along but out of range is not targeted', () => {
     const { game, shots, second } = twoEnemies();
-    const tower = game.placeTower('rifleNest', { col: 0, row: 3 }); // e1 is about 3.0 away, e2 about 2.15
+    const tower = place(game, { col: 0, row: 3 }); // e1 is about 3.0 away, e2 about 2.15
     game.tick(0);
     expect(shots).toEqual([[tower, second]]);
   });
@@ -127,7 +134,7 @@ describe('fire rate', () => {
     const game = newGame();
     const times = recordShotTimes(game);
     for (let i = 0; i < 10; i++) game.spawnEnemy('infantry'); // 300 HP between them: never runs out
-    game.placeTower('rifleNest', { col: 1, row: 2 }); // in range of the whole first 5.5 tiles
+    place(game, { col: 1, row: 2 }); // in range of the whole first 5.5 tiles
     for (let i = 0; i < 180; i++) game.tick(TICK_MS);
     expect(times).toHaveLength(6);
     times.forEach((t, i) => expect(t).toBeCloseTo(TICK_MS + 500 * i, 6));
@@ -137,7 +144,7 @@ describe('fire rate', () => {
     const game = newGame();
     const times = recordShotTimes(game);
     for (let i = 0; i < 10; i++) game.spawnEnemy('infantry');
-    game.placeTower('rifleNest', { col: 1, row: 2 });
+    place(game, { col: 1, row: 2 });
     for (let i = 0; i < 10; i++) game.tick(300);
     // Each shot lands on the first tick at or after it is due (300, then every 500 ms).
     expect(times).toEqual([300, 900, 1500, 1800, 2400, 3000]);
@@ -150,7 +157,7 @@ describe('fire rate', () => {
     const shotTicks: number[] = [];
     let ticks = 0;
     game.events.on('towerFired', () => shotTicks.push(ticks));
-    game.placeTower('rifleNest', { col: 2, row: 4 });
+    place(game, { col: 2, row: 4 });
     game.spawnEnemy('infantry');
     for (ticks = 1; ticks <= 180; ticks++) game.tick(TICK_MS);
     expect(shotTicks).toEqual([149, 179]);
@@ -164,7 +171,7 @@ describe('kills', () => {
     const kills: unknown[] = [];
     game.events.on('enemyKilled', (e) => kills.push(e));
     const id = game.spawnEnemy('infantry');
-    game.placeTower('rifleNest', { col: 2, row: 2 });
+    place(game, { col: 2, row: 2 });
     game.tick(0);
     game.tick(500);
     expect(game.state.enemies[0]!.hp).toBe(10);
@@ -183,11 +190,11 @@ describe('kills', () => {
     const game = newGame();
     const shots = recordShots(game);
     const first = game.spawnEnemy('infantry');
-    const towerA = game.placeTower('rifleNest', { col: 2, row: 2 });
+    const towerA = place(game, { col: 2, row: 2 });
     game.tick(0);
     game.tick(500); // first at 10 HP, distance 0.75
     const second = game.spawnEnemy('infantry');
-    const towerB = game.placeTower('rifleNest', { col: 1, row: 2 }); // both enemies in range of both towers
+    const towerB = place(game, { col: 1, row: 2 }); // both enemies in range of both towers
     game.tick(500);
     expect(shots.slice(2)).toEqual([
       [towerA, first],
@@ -201,7 +208,7 @@ describe('kills', () => {
     const hits: unknown[] = [];
     game.events.on('towerFired', (shot) => hits.push(shot));
     const enemy = game.spawnEnemy('infantry');
-    const tower = game.placeTower('rifleNest', { col: 2, row: 2 });
+    const tower = place(game, { col: 2, row: 2 });
     game.tick(0);
     game.tick(500);
     game.tick(500); // the killing shot, at distance 1.5
@@ -216,7 +223,7 @@ describe('kills', () => {
     );
     game.events.on('enemyKilled', () => seen.push(`killed left=${game.state.enemies.length}`));
     game.spawnEnemy('infantry');
-    game.placeTower('rifleNest', { col: 2, row: 2 });
+    place(game, { col: 2, row: 2 });
     game.tick(0);
     game.tick(500);
     game.tick(500);
