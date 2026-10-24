@@ -48,7 +48,28 @@ Status lives on the **Military-TD Roadmap** project: https://github.com/users/it
 | In review | A PR that closes it is open |
 | Done | Closed |
 
-**Other fields:** Area (`core`, `towers`, `units`, `ui`, `art`, `infra`, matching the `area:*` label), Priority (`P0`–`P2`), Size (`S`/`M`/`L`). Set all three on new issues.
+**Other fields:** Area (`core`, `towers`, `units`, `ui`, `art`, `infra`, matching the `area:*` label), Priority and Size, as defined below. Set all three on new issues.
+
+**Priority**: how much the issue matters to its milestone. Judge it against the milestone, not the whole game.
+
+| Priority | Means |
+| --- | --- |
+| P0 | Urgent: the build, CI, a release or the game is broken, or it blocks most other Ready work. Do it before anything else |
+| P1 | Needed: the milestone can't ship without it |
+| P2 | Wanted: makes the milestone better, but it can ship without it |
+| P3 | Someday: polish or ideas with no milestone commitment. Fine to leave in Backlog indefinitely |
+
+**Size**: how much work one agent session needs, counting tests and docs.
+
+| Size | Means |
+| --- | --- |
+| XS | Minutes: a one-line fix, a typo, a config value |
+| S | Under an hour or two: one small change in one area, a few tests |
+| M | Up to about a day: a feature slice touching a few files, with new tests |
+| L | Several days, or several areas or systems at once. Consider splitting |
+| XL | Too big for one PR. Split into sub-issues before it goes to Ready; never start an XL issue as is |
+
+When unsure between two levels, pick the bigger Size and the less urgent Priority.
 
 **Automations** (project ⋯ → Workflows; all on):
 - Auto-add: open issues in this repo, and sub-issues, land on the board on their own.
