@@ -1,0 +1,10 @@
+dist/
+coverage/
+playwright-report/
+test-results/
+.claude/
+package-lock.json
+# Docs and workflows are hand-formatted.
+*.md
+*.yml
+*.yaml
