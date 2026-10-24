@@ -108,7 +108,15 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 | `feat!:` / `BREAKING CHANGE:` | Breaks saves/settings or a big notable change | minor | major |
 | `test:` `refactor:` `chore:` `ci:` `docs:` | Everything else | none | none |
 
-A milestone ends with a release of the next minor version (`0.N.0`): add a `Release-As: 0.N.0` footer to the last commit, or edit the release-please PR. See ADR-0004.
+A milestone ends with a release of the next minor version (`0.N.0`) through a `Release-As: 0.N.0` commit footer; see **Milestone release** under **Releasing** below and ADR-0004.
+
+PR titles are checked by the *PR title* workflow (`.github/workflows/pr-title.yml`, rule in `scripts/pr-title.ts`). PRs are squash-merged with the PR title as the commit subject and the PR body as the commit body, so the title is what release-please reads. (`pr-title` isn't a required status check, so a red title doesn't block the merge button; fix it before merging.)
 
 ## Releasing
-release-please keeps an open "release PR" that collects changes since the last release and updates `CHANGELOG.md` and the version. Merging it tags `vX.Y.Z`, creates a GitHub Release, and the deploy workflow uploads that version to the restricted itch.io page (ADR-0005). (Set up by #27 and #17; update this section if the real setup differs.)
+- **Release PR:** on every push to `main`, the *Release* workflow (`.github/workflows/release-please.yml`) runs release-please. It keeps one open release PR (`chore(main): release …`) that bumps `package.json`, `package-lock.json` and `.release-please-manifest.json` and updates `CHANGELOG.md` from the commits since the last release.
+- **Release:** merging that PR tags `vX.Y.Z` and publishes a GitHub Release with the same notes. Nothing else releases: ordinary merges only update the release PR.
+- **Milestone release:** to release `0.N.0`, end the body of the milestone's last PR with `Release-As: 0.N.0` as its own final paragraph: after the `🤖 Generated with …` line, with a blank line before it. Squash merge copies the PR body into the commit, and release-please reads `Release-As` only from the commit's last paragraph (the footer). After that merge the release PR switches to `0.N.0`. Editing the release PR's title or body does not change the version; its next run overwrites the edit.
+- **Config:** `release-please-config.json` (release type `node`, `bump-minor-pre-major`, `bump-patch-for-minor-pre-major`, tags without a component) and `.release-please-manifest.json` (the last released version). Guarded by `tests/release-config.test.ts`.
+- **Version in the game:** `vite.config.ts` injects the `package.json` version as `__APP_VERSION__`; `src/data/version.ts` exposes it, and `src/ui/version.ts` writes it into the DOM overlay (`#version`, bottom-right corner; ADR-0003).
+- **Deploy (#17):** add the itch.io upload as a job in `release-please.yml` that `needs: release-please` and runs `if: needs.release-please.outputs.release_created == 'true'`. A Release created with `GITHUB_TOKEN` doesn't start other workflows, so an `on: release` workflow would never run.
+- **One-time setup (maintainer):** Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests**. Optional: add a repo secret `RELEASE_PLEASE_TOKEN` (fine-grained PAT for this repo, Contents and Pull requests read/write) so CI and the PR-title check also run on the release PR. Without it they don't run there, because PRs opened with `GITHUB_TOKEN` don't start workflows.
