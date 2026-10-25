@@ -22,7 +22,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 Milestones are versions (`v0.1.0 — MVP` … `v1.0.0 — Release`). Every task is a sub-issue of one **epic** (parent issue labelled `epic`) and carries the matching `area:*` label (`core`, `towers`, `units`, `ui`, `art`, `infra`). New issues: pick the epic, area label, milestone, and add native "blocked by" dependencies.
 
-The [project board](https://github.com/users/itay28/projects/4) tracks status. Closing, merging and linking a PR move cards automatically; agents move a card to *In progress* when they start and set Area, Priority and Size on new issues. How, and which token: `docs/agents/issue-tracker.md` → **Project board**.
+The [project board](https://github.com/users/itay28/projects/4) tracks status. The *Board sync* Action moves Status from PRs and assignees (assign yourself, open the PR, mark it ready: the card follows); agents set Area, Priority and Size on new issues. How, and which token: `docs/agents/issue-tracker.md` → **Project board**.
 
 ### Tooling
 
@@ -44,7 +44,7 @@ Full process in `docs/agents/workflow.md`. In short:
 6. **Keep the issue current**: comment on the issue at each step (plan, red, green, PR, review). If the idea, flow or scope changes, update the issue description with a dated "Changed:" note.
 7. **Session tracker**: publish an Artifact page from `docs/agents/session-tracker.html` (no design pass) with links to the issue and PR, what and why, the plan, a progress log, and status. Publish it at plan, PR ready, and done. Without the Artifact tool, use a pinned issue comment instead.
 8. **Screenshots for UI changes**: a PR that changes what the player sees embeds screenshots of each touched state, in the PR body and the session tracker (`docs/agents/workflow.md` → **4b**).
-9. **Draft until done, then ready**: PRs are drafts while in progress. Once a PR is complete and checks pass, mark it ready for review (`gh pr ready`). That starts the CI review: address its comment. Make sure the issue's card is *In review*: the board-status hook moves it and reports back; if it couldn't, move it by hand (`docs/agents/issue-tracker.md` → **Project board**). Don't leave a finished PR in draft.
+9. **Draft until done, then ready**: PRs are drafts while in progress. Once a PR is complete and checks pass, mark it ready for review (`gh pr ready`). That starts the CI review: address its comment. The *Board sync* Action moves the card to *In review*; if its run failed, re-run it or move the card by hand (`docs/agents/issue-tracker.md` → **Project board**). Don't leave a finished PR in draft.
 10. **Every PR closes an issue**: the PR title is a Conventional Commit (`feat:`, `fix:`, …; it drives versioning, ADR-0004) and the body says `Closes #n`. No issue yet? Create one first (epic, area label, milestone), then open the PR.
 11. **Git**: work on a branch (`<type>/<issue>-<slug>`). Never push to `main` (it's protected), never force-push, never rewrite pushed history. PRs are squash-merged.
 12. **Token budget**: one issue per session, read only what you need, batch commands (`docs/agents/workflow.md` → **Token budget**).
