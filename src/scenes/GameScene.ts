@@ -6,6 +6,8 @@ import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
 import { setUpGame, type GameSetup } from '../sim/scenario';
 import { towerAt, type Tower } from '../sim/towers';
+import type { TestHooks } from '../testing/api';
+import { frameMs, type TestFlags } from '../testing/flags';
 import { pixelToTile, toPixels, type Pixel } from './coords';
 import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers } from './drawEntities';
 import { drawMap } from './drawMap';
@@ -14,8 +16,6 @@ import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from '
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
 import { createTracers, type Tracers } from './tracers';
-import type { TestHooks } from '../testing/api';
-import { frameMs, type TestFlags } from '../testing/flags';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { createViewSync, type ViewSync } from './viewSync';
@@ -89,6 +89,7 @@ export class GameScene extends Phaser.Scene {
   testHooks(): TestHooks {
     const current = () => this.sim;
     return {
+      // A getter, not a copy: every restart (Restart, loadScenario) replaces this.sim.
       get game() {
         return current();
       },
