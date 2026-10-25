@@ -13,7 +13,7 @@ Three test layers, all automated and all run in CI:
 1. **Unit tests (Vitest)** for sim modules, through their public interfaces.
 2. **Scenario tests (Vitest, headless).** `runScenario()` in `src/sim/scenario.ts` builds any game situation from a declarative description (map, money, lives, pre-placed towers, waves, a script of timed commands, a stop condition). It runs the sim with no rendering, as fast as the CPU allows, and returns the outcome, final state and event log. Named scenarios live in `tests/scenarios/`, and `npm run scenario -- <name> [--json]` runs one from the command line so agents can inspect a game without a browser. Scripted "bot" strategies in scenarios can play whole games, which also supports automated balance checks.
 3. **UI tests (Playwright, headless Chromium)** against the built game. A test mode, turned on with URL flags, makes the browser game deterministic and inspectable:
-   - `?test=1` exposes `window.__TD__` (`state()`, `command()`, `step(ticks)`, `loadScenario(name)`)
+   - `?test=1` exposes `window.__TD__` (`state()`, `command()`, `step(ticks)`, `loadScenario(name)`, and `view()`: what the Game scene draws, such as the range ring, tracers and draw order)
    - `?step=manual` stops the real-time loop; tests advance ticks explicitly
    - `?anim=0` disables cosmetic animation (tweens, fades, effects)
    - `?speed=N` runs the loop N× faster
