@@ -82,18 +82,19 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 
 ### 4b. Screenshots for UI changes
 A PR that changes what the player sees (HUD, menus, overlays, anything a Scene draws) shows the change in screenshots, so a reviewer sees the result without building the game.
-- **What to capture:** each state the change touches, taken from the built game (`npm run build`, then `npx vite preview`): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use one fixed viewport (900 × 560) so later PRs compare like for like.
-- **How:** headless Chrome. `chrome --headless=new --window-size=900,560 --screenshot=<file>.png http://localhost:4173/` captures the opening state; later states need clicks, so drive the page with Playwright (`page.screenshot()`, set up with test mode's `?test=1&step=manual&anim=0`) once #26 lands, or with Chrome's DevTools protocol until then. Look at each image before attaching it.
-- **Where they live:** the `pr-assets` branch, which is never merged, one folder per PR (`<pr-number>/<name>.png`). Images stay off `main`, and GitHub has no API for uploading images to a PR. To add a folder:
+- **What to capture:** each state the change touches, taken from the built game (`npm run build`, then `npm run preview`, which serves it on port 4173): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use a 900 × 560 viewport (the 768 × 480 canvas plus the HUD bar and margins) so later PRs compare like for like.
+- **How:** headless Chrome, which on Windows is at `C:\Program Files\Google\Chrome\Application\chrome.exe`. For the opening state: `chrome.exe --headless=new --window-size=900,560 --virtual-time-budget=3000 --screenshot=<file>.png http://localhost:4173/`. The time budget lets Phaser draw its first frame. Later states need clicks. Use Playwright's `page.screenshot()`, with test mode's URL flags to set up the state, once #26 adds it. Until then, use a short Node script that drives Chrome over its DevTools protocol (`--remote-debugging-port`; Node 24 has `fetch` and `WebSocket` built in) to click and capture. Look at each image before attaching it.
+- **Where they live:** the `pr-assets` branch, one folder per PR (`<pr-number>/<name>.png`). It is never merged, so images stay off `main`; GitHub has no API for uploading images to a PR. To add a folder:
   ```sh
   git fetch origin pr-assets
-  git worktree add --detach .claude/worktrees/pr-assets origin/pr-assets
-  # copy the images into .claude/worktrees/pr-assets/<pr-number>/
-  git -C .claude/worktrees/pr-assets add <pr-number>
-  git -C .claude/worktrees/pr-assets commit -m "docs: screenshots for #<pr-number>"
-  git -C .claude/worktrees/pr-assets push origin HEAD:pr-assets
-  git worktree remove .claude/worktrees/pr-assets
+  git worktree add --detach .claude/worktrees/pr-assets-<pr-number> origin/pr-assets
+  # copy the images into .claude/worktrees/pr-assets-<pr-number>/<pr-number>/
+  git -C .claude/worktrees/pr-assets-<pr-number> add <pr-number>
+  git -C .claude/worktrees/pr-assets-<pr-number> commit -m "docs: screenshots for #<pr-number>"
+  git -C .claude/worktrees/pr-assets-<pr-number> push origin HEAD:pr-assets
+  git worktree remove .claude/worktrees/pr-assets-<pr-number>
   ```
+  If the push is rejected because another PR pushed first, run `git -C <that worktree> pull --rebase origin pr-assets` and push again.
 - **PR body:** a **Screenshots** section embeds them as `![<what to look at>](https://github.com/itay28/Military-TD/blob/pr-assets/<pr-number>/<name>.png?raw=true)`, a table when there are several. The alt text says what the image shows ("Mid-wave: Start Wave disabled").
 - **Session tracker:** embed the same images as `data:` URIs (an Artifact page can't load images from the private repo), with a one-line caption each.
 - **A state you can't capture** (for example one only a test-mode scenario reaches): say so under the screenshots, and name the test that covers it.
