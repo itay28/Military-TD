@@ -50,6 +50,24 @@ describe('createGame', () => {
     expect(game.state.enemies[0]).toMatchObject({ distance: 1.5, position: { x: 2, y: 1.5 } });
   });
 
+  it('a Jeep walks twice as far as Infantry in the same time', () => {
+    const game = newGame();
+    const jeep = game.spawnEnemy('jeep');
+    const infantry = game.spawnEnemy('infantry');
+    game.tick(1000);
+    const byId = (id: number) => game.state.enemies.find((e) => e.id === id);
+    expect(byId(jeep)).toMatchObject({
+      kind: 'jeep',
+      hp: 20,
+      maxHp: 20,
+      speed: 3,
+      distance: 3,
+      reward: 4,
+      leakCost: 1,
+    });
+    expect(byId(infantry)?.distance).toBe(1.5);
+  });
+
   it('an enemy passing a waypoint mid-tick continues on the next segment without overshoot', () => {
     const game = newGame();
     game.spawnEnemy('infantry');

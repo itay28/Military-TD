@@ -14,11 +14,12 @@ export interface EntityPainter extends MapPainter {
 
 // Enemies, towers, ghosts and range rings are drawn around the local origin; the scene positions each one's Graphics.
 
-/** A circle in its kind's color, with an HP bar above it filled in proportion to HP left. */
+/** A circle or square in its kind's color, with an HP bar above it filled in proportion to HP left. */
 export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
-  const { radius, color } = ENEMY_STYLE[enemy.kind];
+  const { shape, radius, color } = ENEMY_STYLE[enemy.kind];
   painter.fillStyle(color);
-  painter.fillCircle(0, 0, radius);
+  if (shape === 'circle') painter.fillCircle(0, 0, radius);
+  else painter.fillRect(-radius, -radius, radius * 2, radius * 2);
 
   const left = -HP_BAR.width / 2;
   const top = -radius - HP_BAR.gap - HP_BAR.height;
