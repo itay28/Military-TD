@@ -11,7 +11,7 @@ on:
   pull_request:
     types: [opened, reopened, edited, ready_for_review, converted_to_draft, closed]
   issues:
-    types: [assigned, reopened]
+    types: [assigned, reopened, closed, labeled, unlabeled, milestoned, demilestoned]
   schedule:
     - cron: '23 */6 * * *'
   workflow_dispatch:

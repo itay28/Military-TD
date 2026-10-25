@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
-// Keeps each issue's card on the project board in step with its PRs and assignees
+// Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule
 // (docs/agents/issue-tracker.md → Project board). Run by .github/workflows/board-sync.yml on
 // every PR or assignment change and on a schedule. Each run reconciles the whole board, so
 // a missed event is fixed by the next one. The decisions are pure functions; the CLI at the
@@ -10,7 +10,12 @@ const OWNER = 'itay28';
 const REPO = 'Military-TD';
 const PROJECT_NUMBER = 4;
 
-export type CardStatus = 'In progress' | 'In review';
+export type CardStatus = 'Backlog' | 'Ready' | 'In progress' | 'In review';
+
+/** The label an issue needs before agents may pick it up (docs/agents/triage-labels.md). */
+const READY_LABEL = 'ready-for-agent';
+/** Labels of issues that track other work rather than being work (see `BoardIssue.tracker`). */
+const TRACKER_LABELS = ['release', 'epic'];
 
 /** A PR and the issues it closes. */
 export interface PullRequest {
@@ -26,8 +31,23 @@ export interface BoardIssue {
   readonly number: number;
   readonly status: string | undefined;
   readonly assigned: boolean;
-  /** Release issues stand in for milestones and move with them (scripts/release-board.ts). */
-  readonly release: boolean;
+  /**
+   * Trackers stand in for other work and keep their own Status: release issues move with their
+   * milestone (scripts/release-board.ts), epics with their sub-issues.
+   */
+  readonly tracker: boolean;
+  /** Labelled `ready-for-agent`. */
+  readonly labelled: boolean;
+  /** Has open native "blocked by" dependencies. */
+  readonly blocked: boolean;
+  readonly milestone: number | null;
+}
+
+/** An open milestone, as the repo query returns it. */
+export interface Milestone {
+  readonly number: number;
+  readonly title: string;
+  readonly dueOn: string | null;
 }
 
 export interface Move {
@@ -57,36 +77,62 @@ export function closingIssues(body: string, linked: readonly number[]): number[]
 }
 
 /**
+ * The milestone agents work on: the earliest due date, else the lowest version in the title
+ * (the same rule as the `promote-ready` skill). Null without open milestones.
+ */
+export function currentMilestone(milestones: readonly Milestone[]): number | null {
+  const dated = milestones.filter((m) => m.dueOn).sort((a, b) => a.dueOn!.localeCompare(b.dueOn!));
+  if (dated[0]) return dated[0].number;
+  const version = (m: Milestone) =>
+    (/v?(\d+)\.(\d+)(?:\.(\d+))?/.exec(m.title)?.slice(1) ?? []).map((x) => Number(x ?? 0));
+  const versioned = milestones.filter((m) => version(m).length);
+  versioned.sort((a, b) => {
+    const [x, y] = [version(a), version(b)];
+    return x[0]! - y[0]! || x[1]! - y[1]! || x[2]! - y[2]!;
+  });
+  return versioned[0]?.number ?? null;
+}
+
+/**
  * The Status an issue's card should have, or undefined to leave it:
  * a PR ready for review (or a stacked PR merged into its parent) → In review; a draft PR, or
- * assigned with no PR → In progress. Done cards and release issues are never moved, and
- * unassigned issues with no PR stay where they are.
+ * assigned with no PR → In progress. With no PR and no assignee, a Backlog or Ready card follows
+ * the Ready rule: current milestone, `ready-for-agent` and no open blockers → Ready, else Backlog.
+ * Done cards and trackers (release issues, epics) are never moved; In progress and In review cards with no PR and
+ * no assignee stay where they are.
  */
 export function desiredStatus(
   issue: BoardIssue,
   prs: readonly PullRequest[],
   defaultBranch = 'main',
+  current: number | null = null,
 ): CardStatus | undefined {
-  if (issue.release || issue.status === 'Done') return undefined;
+  if (issue.tracker || issue.status === 'Done') return undefined;
   const inReview = prs.some(
     (pr) => (pr.state === 'OPEN' && !pr.isDraft) || (pr.state === 'MERGED' && pr.base !== defaultBranch),
   );
   const drafting = prs.some((pr) => pr.state === 'OPEN' && pr.isDraft);
-  const target: CardStatus | undefined = inReview
-    ? 'In review'
-    : drafting || issue.assigned
-      ? 'In progress'
-      : undefined;
+  let target: CardStatus | undefined = inReview ? 'In review' : drafting || issue.assigned ? 'In progress' : undefined;
+  if (!target && (issue.status === undefined || issue.status === 'Backlog' || issue.status === 'Ready')) {
+    const startable = issue.labelled && !issue.blocked && issue.milestone === current;
+    target = startable ? 'Ready' : 'Backlog';
+  }
   return target === issue.status ? undefined : target;
 }
 
 /** The cards to move: each open issue against the PRs that close it. */
-export function planMoves(issues: readonly BoardIssue[], prs: readonly PullRequest[], defaultBranch = 'main'): Move[] {
+export function planMoves(
+  issues: readonly BoardIssue[],
+  prs: readonly PullRequest[],
+  defaultBranch = 'main',
+  current: number | null = null,
+): Move[] {
   return issues.flatMap((issue) => {
     const to = desiredStatus(
       issue,
       prs.filter((pr) => pr.issues.includes(issue.number)),
       defaultBranch,
+      current,
     );
     return to ? [{ issue: issue.number, from: issue.status, to }] : [];
   });
@@ -121,6 +167,8 @@ const BOARD_QUERY = `query($owner: String!, $project: Int!, $cursor: String) {
               repository { nameWithOwner }
               assignees { totalCount }
               labels(first: 20) { nodes { name } }
+              milestone { number }
+              issueDependenciesSummary { blockedBy }
             }
           }
         }
@@ -145,6 +193,8 @@ interface BoardData {
             repository?: { nameWithOwner: string };
             assignees?: { totalCount: number };
             labels?: { nodes: { name: string }[] };
+            milestone?: { number: number } | null;
+            issueDependenciesSummary?: { blockedBy: number } | null;
           } | null;
         }[];
       };
@@ -154,10 +204,12 @@ interface BoardData {
 
 const PR_FIELDS = `nodes { isDraft state baseRefName body closingIssuesReferences(first: 20) { nodes { number } } }`;
 
-// Open PRs, and the latest merged ones (a stacked PR merged into its parent keeps its issue In review).
+// Open PRs, the latest merged ones (a stacked PR merged into its parent keeps its issue In review),
+// and the open milestones (for the Ready rule).
 const PR_QUERY = `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     defaultBranchRef { name }
+    milestones(states: OPEN, first: 50) { nodes { number title dueOn } }
     open: pullRequests(states: OPEN, first: 100) { totalCount ${PR_FIELDS} }
     merged: pullRequests(states: MERGED, first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) { ${PR_FIELDS} }
   }
@@ -174,6 +226,7 @@ interface PrNode {
 interface PrData {
   repository: {
     defaultBranchRef: { name: string };
+    milestones: { nodes: Milestone[] };
     open: { totalCount: number; nodes: PrNode[] };
     merged: { nodes: PrNode[] };
   };
@@ -205,7 +258,10 @@ async function sync(token: string, dryRun: boolean): Promise<void> {
         number: c.number,
         status: node.fieldValueByName?.name,
         assigned: (c.assignees?.totalCount ?? 0) > 0,
-        release: c.labels?.nodes.some((l) => l.name === 'release') ?? false,
+        tracker: c.labels?.nodes.some((l) => TRACKER_LABELS.includes(l.name)) ?? false,
+        labelled: c.labels?.nodes.some((l) => l.name === READY_LABEL) ?? false,
+        blocked: (c.issueDependenciesSummary?.blockedBy ?? 0) > 0,
+        milestone: c.milestone?.number ?? null,
       });
     }
     cursor = project.items.pageInfo.hasNextPage ? project.items.pageInfo.endCursor : null;
@@ -226,7 +282,7 @@ async function sync(token: string, dryRun: boolean): Promise<void> {
     ),
   }));
 
-  const moves = planMoves(issues, prs, repository.defaultBranchRef.name);
+  const moves = planMoves(issues, prs, repository.defaultBranchRef.name, currentMilestone(repository.milestones.nodes));
   if (!moves.length) console.log(`Board in step: ${issues.length} open issues checked, nothing to move.`);
   for (const move of moves) {
     const option = project.field.options.find((o) => o.name === move.to);

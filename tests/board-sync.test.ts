@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { closingIssues, desiredStatus, planMoves, type BoardIssue, type PullRequest } from '../scripts/board-sync';
+import {
+  closingIssues,
+  currentMilestone,
+  desiredStatus,
+  planMoves,
+  type BoardIssue,
+  type PullRequest,
+} from '../scripts/board-sync';
 
 // The board-sync workflow keeps each issue's card in step with its PRs and assignees (docs/agents/issue-tracker.md).
 describe('closingIssues', () => {
@@ -32,8 +39,67 @@ const issue = (over: Partial<BoardIssue> = {}): BoardIssue => ({
   number: 1,
   status: 'Ready',
   assigned: false,
-  release: false,
+  tracker: false,
+  labelled: true,
+  blocked: false,
+  milestone: null,
   ...over,
+});
+
+describe('desiredStatus: the Ready rule (no PR, no assignee)', () => {
+  const current = 2;
+  const startable = issue({ status: 'Backlog', milestone: 2 });
+
+  it('promotes Backlog to Ready: current milestone, ready-for-agent, unblocked', () => {
+    expect(desiredStatus(startable, [], 'main', current)).toBe('Ready');
+    expect(desiredStatus({ ...startable, status: undefined }, [], 'main', current)).toBe('Ready');
+  });
+
+  it('demotes Ready to Backlog when a rule stops holding', () => {
+    const readyCard = { ...startable, status: 'Ready' };
+    expect(desiredStatus({ ...readyCard, blocked: true }, [], 'main', current)).toBe('Backlog');
+    expect(desiredStatus({ ...readyCard, labelled: false }, [], 'main', current)).toBe('Backlog');
+    expect(desiredStatus({ ...readyCard, milestone: 3 }, [], 'main', current)).toBe('Backlog');
+    expect(desiredStatus({ ...readyCard, milestone: null }, [], 'main', current)).toBe('Backlog');
+  });
+
+  it('files an unset card under Backlog when it is not startable', () => {
+    expect(desiredStatus({ ...startable, status: undefined, blocked: true }, [], 'main', current)).toBe('Backlog');
+  });
+
+  it('leaves Backlog and Ready cards that are already right', () => {
+    expect(desiredStatus({ ...startable, blocked: true }, [], 'main', current)).toBeUndefined();
+    expect(desiredStatus({ ...startable, status: 'Ready' }, [], 'main', current)).toBeUndefined();
+  });
+
+  it('lets PRs and assignees win over the Ready rule', () => {
+    expect(desiredStatus({ ...startable, assigned: true }, [], 'main', current)).toBe('In progress');
+    expect(desiredStatus({ ...startable, blocked: true }, [draft], 'main', current)).toBe('In progress');
+  });
+
+  it('never moves In progress / In review cards, Done cards or trackers (release issues, epics) by this rule', () => {
+    expect(desiredStatus({ ...startable, status: 'In progress', blocked: true }, [], 'main', current)).toBeUndefined();
+    expect(desiredStatus({ ...startable, status: 'In review' }, [], 'main', current)).toBeUndefined();
+    expect(desiredStatus({ ...startable, status: 'Done' }, [], 'main', current)).toBeUndefined();
+    expect(desiredStatus({ ...startable, tracker: true, labelled: false }, [], 'main', current)).toBeUndefined();
+  });
+});
+
+describe('currentMilestone', () => {
+  const m = (number: number, title: string, dueOn: string | null = null) => ({ number, title, dueOn });
+
+  it('picks the earliest due date first', () => {
+    expect(currentMilestone([m(2, 'v0.2.0'), m(4, 'v0.3.0', '2026-12-01'), m(6, 'v0.5.0', '2026-11-01')])).toBe(6);
+  });
+
+  it('else the lowest version, compared as numbers', () => {
+    expect(currentMilestone([m(9, 'v0.10.0 — Later'), m(8, 'v0.9.0 — Beta'), m(2, 'v0.2.0 — Combat depth')])).toBe(2);
+    expect(currentMilestone([m(9, 'v0.10.0'), m(8, 'v0.9.0')])).toBe(8);
+  });
+
+  it('is null without open milestones', () => {
+    expect(currentMilestone([])).toBeNull();
+  });
 });
 
 describe('desiredStatus', () => {
@@ -67,9 +133,9 @@ describe('desiredStatus', () => {
     expect(desiredStatus(issue(), [merged], 'main')).toBeUndefined();
   });
 
-  it('never moves Done cards or release issues', () => {
+  it('never moves Done cards or trackers (release issues, epics)', () => {
     expect(desiredStatus(issue({ status: 'Done' }), [ready])).toBeUndefined();
-    expect(desiredStatus(issue({ release: true, assigned: true }), [ready])).toBeUndefined();
+    expect(desiredStatus(issue({ tracker: true, assigned: true }), [ready])).toBeUndefined();
   });
 
   it('leaves unassigned issues with no PR where they are', () => {

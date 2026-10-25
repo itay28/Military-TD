@@ -76,18 +76,21 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 - Item closed, PR merged → *Done*.
 - *Pull request linked to issue* is **off on purpose**: it moves the card when a draft PR is opened, which is too early. No built-in workflow fires on "ready for review".
 
-**Board sync** (`.github/workflows/board-sync.yml` → `scripts/board-sync.ts`): a GitHub Action, so it works the same whether a session runs locally, over Remote Control, in the cloud, or the change comes from the GitHub UI. It runs on every PR open/edit/ready/draft/close, on issue assign/reopen, every 6 hours, and on demand (Actions → *Board sync* → Run workflow). Each run reconciles every open issue on the board:
+**Board sync** (`.github/workflows/board-sync.yml` → `scripts/board-sync.ts`): a GitHub Action, so it works the same whether a session runs locally, over Remote Control, in the cloud, or the change comes from the GitHub UI. It runs on every PR open/edit/ready/draft/close, on issue assign/reopen/close/label/milestone changes, every 6 hours (which also catches "blocked by" edits, which have no event), and on demand (Actions → *Board sync* → Run workflow). Each run reconciles every open issue on the board:
 
 | The issue has | Card goes to |
 | --- | --- |
 | an open PR ready for review, or a stacked PR merged into its parent branch | *In review* |
 | only draft PRs, or no PR but an assignee | *In progress* |
-| no PR, no assignee | stays where it is |
+| no PR, no assignee, card in *Backlog*/*Ready*/none: current milestone + `ready-for-agent` + no open blockers | *Ready* |
+| the same, when any of those three doesn't hold | *Backlog* |
+| no PR, no assignee, card *In progress*/*In review* | stays where it is |
 
-"Closes" means GitHub's link **or** `Closes/Fixes/Resolves #n` in the PR body: GitHub only links PRs that target `main`, so stacked PRs rely on the body. *Done* cards and release issues are never touched. It uses the `PROJECT_TOKEN` secret; a missing token or an API error fails the run, so a board that isn't syncing shows up red. Check by hand: `PROJECT_TOKEN=… node scripts/board-sync.ts --dry-run`.
+The current milestone is the open one with the earliest due date, else the lowest version.
+
+"Closes" means GitHub's link **or** `Closes/Fixes/Resolves #n` in the PR body: GitHub only links PRs that target `main`, so stacked PRs rely on the body. *Done* cards and trackers (release issues, epics) are never touched. It uses the `PROJECT_TOKEN` secret; a missing token or an API error fails the run, so a board that isn't syncing shows up red. Check by hand: `PROJECT_TOKEN=… node scripts/board-sync.ts --dry-run`.
 
 So agents move cards by hand only:
-- **Unblocked** issue: Backlog → *Ready* (`/workflow:promote-ready`).
 - **Release issues**: only if a run warned or failed. Every move is a GitHub Action (see **Milestone release** in `docs/agents/releasing.md`).
 - To fix a card when a *Board sync* run failed; or re-run it.
 
