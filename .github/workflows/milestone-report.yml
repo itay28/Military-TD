@@ -4,7 +4,7 @@ name: Milestone report
 # the milestone report PR `chore: release 0.N.0`: an audit of the milestone in
 # docs/releases/0.N.0.md, with a `Release-As: 0.N.0` footer that switches
 # release-please's release PR to the milestone's version (ADR-0004). Re-running
-# updates the open report PR. Flow: docs/agents/workflow.md → Milestone release.
+# updates the open report PR. Flow: docs/agents/releasing.md → Milestone release.
 # Script and tests: scripts/milestone-report.ts.
 # demilestoned: moving a milestone's last open issue out also finishes it.
 on:

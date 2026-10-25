@@ -1,7 +1,7 @@
 name: Release board
 
 # Each milestone has a release issue that stands in for it on the project board
-# (docs/agents/workflow.md, Milestone release). When the first PR for an issue
+# (docs/agents/releasing.md, Milestone release). When the first PR for an issue
 # in a milestone opens, this moves the milestone's release issue from Backlog or
 # Ready to In progress. Logic and tests: scripts/release-board.ts.
 #

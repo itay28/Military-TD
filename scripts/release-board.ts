@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url';
 
 // Moves a milestone's release issue on the project board and closes it on release
-// (docs/agents/workflow.md, Milestone release). The decisions are pure functions;
+// (docs/agents/releasing.md, Milestone release). The decisions are pure functions;
 // the CLI at the bottom only fetches and writes.
 
 /** 'v0.3.0' → '0.3.0', 'v2.0.0' → '2.0.0'. Patch releases, post-1.0 minors and pre-releases → null. */

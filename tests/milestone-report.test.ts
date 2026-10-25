@@ -15,7 +15,7 @@ import {
   type ReportData,
 } from '../scripts/milestone-report';
 
-// The milestone report PR audits a milestone and triggers its 0.N.0 release (docs/agents/workflow.md → Milestone release).
+// The milestone report PR audits a milestone and triggers its 0.N.0 release (docs/agents/releasing.md → Milestone release).
 const issue = (number: number, over: Partial<MilestoneIssue> = {}): MilestoneIssue => ({
   number,
   title: `Issue ${number}`,
