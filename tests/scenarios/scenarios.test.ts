@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runScenario } from '../../src/sim/scenario';
-import { SCENARIO_DIR, scenarioNames, type ScenarioFile } from './define';
+import type { ScenarioFile } from './define';
+import { SCENARIO_DIR, scenarioNames } from './names';
 
 // Every named scenario, also runnable with `npm run scenario -- <name>`. Listed at run time, not with
 // import.meta.glob: Vitest's module cache keeps an old glob result, so a new scenario file would be skipped.

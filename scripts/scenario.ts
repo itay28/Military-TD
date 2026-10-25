@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import { runnerImport } from 'vite';
 import type { ScenarioEvent, ScenarioResult, runScenario as RunScenario } from '../src/sim/scenario.ts';
-import type { ScenarioFile, scenarioNames as ScenarioNames } from '../tests/scenarios/define.ts';
+import type { ScenarioFile } from '../tests/scenarios/define.ts';
+import type { scenarioNames as ScenarioNames } from '../tests/scenarios/names.ts';
 
 // Runs a named scenario headlessly so an agent can inspect a game without a browser (ADR-0003):
 //   npm run scenario -- <name> [--json]
@@ -55,7 +56,7 @@ async function main(args: string[]): Promise<number> {
     console.error(USAGE);
     return 1;
   }
-  const { scenarioNames } = await load<{ scenarioNames: typeof ScenarioNames }>('tests/scenarios/define.ts');
+  const { scenarioNames } = await load<{ scenarioNames: typeof ScenarioNames }>('tests/scenarios/names.ts');
   const names = scenarioNames();
   if (!names.includes(name)) {
     console.error(`No scenario named "${name}". There are:\n${names.map((n) => `  ${n}`).join('\n')}\n${USAGE}`);

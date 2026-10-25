@@ -31,8 +31,8 @@ export interface ScriptStep {
  */
 export type StopCondition = 'end' | { readonly ticks: number } | { readonly event: keyof GameEvents };
 
-/** A game situation to run headlessly (ADR-0003). Left-out setup takes the MVP game's values. */
-export interface Scenario {
+/** How a game starts. Left-out values take the MVP game's. */
+export interface GameSetup {
   readonly map?: MapData;
   readonly lives?: number;
   readonly money?: number;
@@ -40,6 +40,10 @@ export interface Scenario {
   readonly towers?: readonly TowerPlacement[];
   /** Overrides the game's waves. */
   readonly waves?: readonly WaveData[];
+}
+
+/** A game situation to run headlessly (ADR-0003): a setup, a script, and when to stop. */
+export interface Scenario extends GameSetup {
   readonly script?: readonly ScriptStep[];
   /** A bot that starts the next wave whenever the game is in the Build phase, so a run can play a whole game. */
   readonly autoStartWaves?: boolean;
@@ -90,24 +94,32 @@ const GAME_EVENT_TYPES = Object.keys({
 } satisfies Record<keyof GameEvents, true>) as (keyof GameEvents)[];
 
 /**
- * Builds the game a scenario describes and runs it in fixed ticks, as fast as the CPU allows, until it stops.
- * Throws when the setup is invalid: a malformed map or wave (as `createGame`), a pre-placed tower that can't be placed,
- * or a script step whose `atTick` isn't a whole number ≥ 0.
+ * Builds the game a setup describes, in the Build phase. The Game scene and `runScenario` both start games with it.
+ * Throws for a malformed map or wave (as `createGame`) or a pre-placed tower that can't be placed.
  */
-export function runScenario(scenario: Scenario): ScenarioResult {
-  const towers = scenario.towers ?? [];
+export function setUpGame(setup: GameSetup = {}): Game {
+  const towers = setup.towers ?? [];
   const towersCost = towers.reduce((sum, { kind }) => sum + TOWER_STATS[kind].cost, 0);
   const game = createGame({
-    map: scenario.map ?? MVP_MAP,
-    lives: scenario.lives ?? START_LIVES,
+    map: setup.map ?? MVP_MAP,
+    lives: setup.lives ?? START_LIVES,
     // Pre-placed towers are placed like any other, with their cost added first, so they come free.
-    money: (scenario.money ?? START_MONEY) + towersCost,
-    waves: scenario.waves ?? MVP_WAVES,
+    money: (setup.money ?? START_MONEY) + towersCost,
+    waves: setup.waves ?? MVP_WAVES,
   });
   for (const { kind, tile } of towers) {
     const placed = game.placeTower(kind, tile);
     if (!placed.ok) throw new Error(`Pre-placed ${kind} at ${tileKey(tile)} can't be placed: ${placed.reason}`);
   }
+  return game;
+}
+
+/**
+ * Builds the game a scenario describes and runs it in fixed ticks, as fast as the CPU allows, until it stops.
+ * Throws when the setup is invalid (as `setUpGame`) or a script step's `atTick` isn't a whole number ≥ 0.
+ */
+export function runScenario(scenario: Scenario): ScenarioResult {
+  const game = setUpGame(scenario);
   for (const { atTick } of scenario.script ?? [])
     if (!Number.isInteger(atTick) || atTick < 0)
       throw new RangeError(`script step at tick ${atTick}: atTick must be a whole number of at least 0`);
@@ -148,7 +160,8 @@ export function runScenario(scenario: Scenario): ScenarioResult {
   }
 }
 
-function applyCommand(game: Game, command: ScenarioCommand): CommandOutcome {
+/** Gives `game` a command and returns what it returned. Scenario scripts and test mode's `__TD__.command` use it. */
+export function applyCommand(game: Game, command: ScenarioCommand): CommandOutcome {
   switch (command.type) {
     case 'placeTower':
       return game.placeTower(command.kind, command.tile);

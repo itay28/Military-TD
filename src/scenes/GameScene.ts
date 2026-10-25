@@ -1,12 +1,10 @@
 import Phaser from 'phaser';
 import { FLOATING_TEXT, TRACER } from '../data/display';
-import { MVP_MAP } from '../data/maps';
-import { START_LIVES, START_MONEY } from '../data/start';
 import type { TowerKind } from '../data/towers';
-import { MVP_WAVES } from '../data/waves';
 import type { Enemy } from '../sim/enemies';
-import { createGame, TICK_MS, type Game } from '../sim/game';
+import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
+import { setUpGame, type GameSetup } from '../sim/scenario';
 import { towerAt, type Tower } from '../sim/towers';
 import { pixelToTile, toPixels, type Pixel } from './coords';
 import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers } from './drawEntities';
@@ -16,6 +14,8 @@ import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from '
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
 import { createTracers, type Tracers } from './tracers';
+import type { TestHooks } from '../testing/api';
+import { frameMs, type TestFlags } from '../testing/flags';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { createViewSync, type ViewSync } from './viewSync';
@@ -42,12 +42,20 @@ export interface GameSceneOptions {
   readonly hudRoot: HTMLElement;
   /** The DOM element over the canvas the End screen is drawn in (`#end-screen` in index.html). */
   readonly endScreenRoot: HTMLElement;
+  /** Test mode's URL flags (ADR-0003). */
+  readonly flags: TestFlags;
+  /** Called at the end of every create(), the first game's and each restart's. */
+  readonly onCreate?: () => void;
 }
 
 /** Owns the Simulation, draws it, and advances it on a fixed timestep. */
 export class GameScene extends Phaser.Scene {
   private readonly hudRoot: HTMLElement;
   private readonly endScreenRoot: HTMLElement;
+  private readonly flags: TestFlags;
+  private readonly onCreate: (() => void) | undefined;
+  /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
+  private setup: GameSetup = {};
   private sim!: Game;
   private loop!: FixedStep;
   private hud!: Hud;
@@ -69,10 +77,33 @@ export class GameScene extends Phaser.Scene {
   /** The tower whose range ring is drawn, by id. */
   private hoveredTowerId: number | undefined;
 
-  constructor({ hudRoot, endScreenRoot }: GameSceneOptions) {
+  constructor({ hudRoot, endScreenRoot, flags, onCreate }: GameSceneOptions) {
     super('Game');
     this.hudRoot = hudRoot;
     this.endScreenRoot = endScreenRoot;
+    this.flags = flags;
+    this.onCreate = onCreate;
+  }
+
+  /** What test mode drives this scene through (`window.__TD__`). */
+  testHooks(): TestHooks {
+    const current = () => this.sim;
+    return {
+      get game() {
+        return current();
+      },
+      step: (ticks) => {
+        for (let i = 0; i < ticks; i++) this.tickOnce();
+      },
+      load: (setup) => {
+        setUpGame(setup); // throws for a bad setup before the running game is torn down
+        this.setup = setup;
+        return new Promise((resolve) => {
+          this.events.once(Phaser.Scenes.Events.CREATE, () => resolve());
+          this.scene.restart();
+        });
+      },
+    };
   }
 
   create(): void {
@@ -81,15 +112,13 @@ export class GameScene extends Phaser.Scene {
     this.pointerTile = undefined;
     this.hoveredTowerId = undefined;
     this.ghost = undefined;
-    this.sim = createGame({ map: MVP_MAP, lives: START_LIVES, money: START_MONEY, waves: MVP_WAVES });
+    this.sim = setUpGame(this.setup);
     drawMap(this.add.graphics().setDepth(DEPTH.map), this.sim.state.map);
     this.loop = createFixedStep({
       stepMs: TICK_MS,
-      maxStepsPerFrame: MAX_TICKS_PER_FRAME,
-      step: (dtMs) => {
-        this.previousPositions = snapshotPositions(this.sim.state.enemies);
-        this.sim.tick(dtMs);
-      },
+      // Scaled with ?speed, so the cap doesn't pull a faster loop back to real time.
+      maxStepsPerFrame: MAX_TICKS_PER_FRAME * Math.ceil(this.flags.speed),
+      step: () => this.tickOnce(),
     });
 
     this.enemyViews = createViewSync<Enemy, EnemyView>({
@@ -116,7 +145,8 @@ export class GameScene extends Phaser.Scene {
       destroy: (graphics) => graphics.destroy(),
     });
 
-    this.tracers = createTracers(TRACER.fadeMs);
+    // ?anim=0: zero lifetimes, so tracers and floating texts never show.
+    this.tracers = createTracers(this.flags.anim ? TRACER.fadeMs : 0);
     this.tracerGraphics = this.add.graphics().setDepth(DEPTH.tracers);
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
@@ -130,7 +160,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on('gameout', () => (this.pointerTile = undefined));
 
     this.ghostGraphics = this.add.graphics().setDepth(DEPTH.ghost).setVisible(false);
-    this.floatingTexts = createFloatingTexts(FLOATING_TEXT);
+    this.floatingTexts = createFloatingTexts(this.flags.anim ? FLOATING_TEXT : { ...FLOATING_TEXT, durationMs: 0 });
     this.floatingTextViews = createViewSync<FloatingTextView, Phaser.GameObjects.Text>({
       create: ({ text }) =>
         this.add.text(0, 0, text, FLOATING_TEXT.style).setOrigin(0.5, 1).setDepth(DEPTH.floatingText),
@@ -152,13 +182,20 @@ export class GameScene extends Phaser.Scene {
       this.hud.destroy();
       this.endScreen.destroy();
     });
+    this.onCreate?.();
+  }
+
+  /** One fixed tick of the game, from the real-time loop or test mode's step(). */
+  private tickOnce(): void {
+    this.previousPositions = snapshotPositions(this.sim.state.enemies);
+    this.sim.tick(TICK_MS);
   }
 
   override update(_time: number, deltaMs: number): void {
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
-    this.loop.advance(deltaMs);
+    this.loop.advance(frameMs(this.flags, deltaMs));
     this.hud.update();
     this.endScreen.update();
 
