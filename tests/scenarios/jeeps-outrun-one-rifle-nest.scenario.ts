@@ -8,8 +8,8 @@ export default defineScenario({
   description: 'A burst of Jeeps leaks past one Rifle Nest that stops the same number of Infantry.',
   towers: [{ kind: 'rifleNest', tile: { col: 1, row: 3 } }],
   waves: [
-    { kind: 'infantry', count: 3, spacingMs: 300 },
-    { kind: 'jeep', count: 3, spacingMs: 300 },
+    { groups: [{ kind: 'infantry', count: 3, spacingMs: 300, delayMs: 0 }] },
+    { groups: [{ kind: 'jeep', count: 3, spacingMs: 300, delayMs: 0 }] },
   ],
   script: [
     { atTick: 0, command: { type: 'startWave' } },
