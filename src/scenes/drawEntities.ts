@@ -1,4 +1,4 @@
-import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
+import { AIR_SHADOW, ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
@@ -17,6 +17,10 @@ export interface EntityPainter extends MapPainter {
 /** A circle in its kind's color, with an HP bar above it filled in proportion to HP left. */
 export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   const { radius, color } = ENEMY_STYLE[enemy.kind];
+  if (enemy.layer === 'air') {
+    painter.fillStyle(AIR_SHADOW.color, AIR_SHADOW.alpha);
+    painter.fillCircle(AIR_SHADOW.offsetX, AIR_SHADOW.offsetY, radius);
+  }
   painter.fillStyle(color);
   painter.fillCircle(0, 0, radius);
 

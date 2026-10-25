@@ -19,7 +19,11 @@ export const MAP_STYLE = {
 /** Enemies as circles, by kind (before the v0.4 sprites). Radius in pixels. */
 export const ENEMY_STYLE = {
   infantry: { radius: 9, color: 0x9e3b2c }, // brick red
+  helicopter: { radius: 11, color: 0x3f6f8f }, // steel blue
 } as const satisfies Record<EnemyKind, { radius: number; color: number }>;
+
+/** The shadow under an air enemy, offset in pixels so it reads as flying. */
+export const AIR_SHADOW = { offsetX: 4, offsetY: 10, color: 0x000000, alpha: 0.3 } as const;
 
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the circle. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;

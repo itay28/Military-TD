@@ -26,7 +26,7 @@ const MAX_TICKS_PER_FRAME = 5;
 const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
 
 /** Draw order, back to front. */
-const DEPTH = { map: 0, towers: 1, enemies: 2, tracers: 3, ghost: 4, rangeRing: 5, floatingText: 6 } as const;
+const DEPTH = { map: 0, towers: 1, enemies: 2, air: 3, tracers: 4, ghost: 5, rangeRing: 6, floatingText: 7 } as const;
 
 /** The tower kind a click places. The MVP has one; the v0.2 build bar will pick it. */
 const PLACING: TowerKind = 'rifleNest';
@@ -123,7 +123,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.enemyViews = createViewSync<Enemy, EnemyView>({
-      create: () => ({ graphics: this.add.graphics().setDepth(DEPTH.enemies), hp: Number.NaN }),
+      create: (enemy) => ({
+        graphics: this.add.graphics().setDepth(enemy.layer === 'air' ? DEPTH.air : DEPTH.enemies),
+        hp: Number.NaN,
+      }),
       update: (view, enemy) => {
         if (view.hp !== enemy.hp) {
           view.graphics.clear();

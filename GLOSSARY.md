@@ -13,6 +13,7 @@
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
 | **Enemy** | A unit that walks the Path. The MVP has one kind: **Infantry**. | creep, mob |
+| **Helicopter** | An Enemy on the Air layer. It follows the Path like Infantry but only towers that list `air` in `targets` can hit it. Drawn above ground enemies with a shadow offset below it. Costs 2 Lives if it leaks. | chopper, flyer |
 | **Layer** | Where an enemy moves: **Ground** or **Air**. Each tower lists the layers it can hit (`targets`) and ignores enemies on the others. | domain, altitude |
 | **Armor** | A flat amount an enemy takes off every hit: a hit removes `damage − armor`, but always at least 1 HP. | defense, resistance |
 | **Armor pierce** | How much of the target's Armor a tower's hits ignore (`armorPierce`, 0 by default). It cancels Armor up to its value and never adds damage. | penetration |

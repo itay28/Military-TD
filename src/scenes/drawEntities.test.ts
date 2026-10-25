@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
-import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
+import { AIR_SHADOW, ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
 import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
@@ -73,6 +73,36 @@ describe('drawEnemy', () => {
     drawEnemy(painter, infantry(10)); // a third of 30
     const fill = calls[calls.length - 1];
     expect(fill).toEqual(['fillRect', -HP_BAR.width / 2, barTop, HP_BAR.width / 3, HP_BAR.height]);
+  });
+});
+
+describe('drawEnemy (Helicopter)', () => {
+  const helicopter: Enemy = {
+    ...ENEMY_STATS.helicopter,
+    id: 2,
+    kind: 'helicopter',
+    hp: 60,
+    distance: 0,
+    position: { x: 0.5, y: 0.5 },
+  };
+  const { radius, color } = ENEMY_STYLE.helicopter;
+
+  it('draws a shadow offset below it first, then its body in its own color', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, helicopter);
+    expect(calls.slice(0, 4)).toEqual([
+      ['fillStyle', AIR_SHADOW.color, AIR_SHADOW.alpha],
+      ['fillCircle', AIR_SHADOW.offsetX, AIR_SHADOW.offsetY, radius],
+      ['fillStyle', color],
+      ['fillCircle', 0, 0, radius],
+    ]);
+    expect(color).not.toBe(ENEMY_STYLE.infantry.color);
+  });
+
+  it('gives a ground enemy no shadow', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, infantry(30));
+    expect(calls.some((c) => c[0] === 'fillStyle' && c[1] === AIR_SHADOW.color)).toBe(false);
   });
 });
 
