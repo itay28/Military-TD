@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { damageTaken } from '../sim/combat';
 import { ENEMY_STYLE } from './display';
 import { ENEMY_STATS } from './enemies';
 import { TOWER_STATS } from './towers';
@@ -14,6 +15,8 @@ describe('tank', () => {
   });
 
   it('takes 5 off a Rifle Nest hit', () => {
-    expect(TOWER_STATS.rifleNest.damage - ENEMY_STATS.tank.armor).toBe(5);
+    const { damage } = TOWER_STATS.rifleNest;
+    const { armor, maxHp } = ENEMY_STATS.tank;
+    expect(damageTaken(damage, armor, 0, maxHp)).toBe(5);
   });
 });
