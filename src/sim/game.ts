@@ -62,6 +62,9 @@ export interface GameEvents {
 export type CommandResult<Reason extends string, Value extends object = object> =
   ({ readonly ok: true } & Value) | { readonly ok: false; readonly reason: Reason };
 
+/** Why placeTower refused, in the order it checks. */
+export type PlaceTowerRefusal = 'gameEnded' | 'notBuildable' | 'occupied' | 'insufficientMoney';
+
 export interface Game {
   readonly state: GameState;
   readonly events: Events<GameEvents>;
@@ -80,10 +83,9 @@ export interface Game {
    * Refuses, in this order: `gameEnded` after Victory or Defeat, `notBuildable` off the grid or on the Path,
    * `occupied` where a tower stands, `insufficientMoney` when Money is below the cost.
    */
-  placeTower(
-    kind: TowerKind,
-    tile: Tile,
-  ): CommandResult<'gameEnded' | 'notBuildable' | 'occupied' | 'insufficientMoney', { readonly towerId: number }>;
+  placeTower(kind: TowerKind, tile: Tile): CommandResult<PlaceTowerRefusal, { readonly towerId: number }>;
+  /** Whether `placeTower(kind, tile)` would succeed now, or the reason it would refuse. Changes nothing. */
+  canPlaceTower(kind: TowerKind, tile: Tile): CommandResult<PlaceTowerRefusal>;
 }
 
 /** Builds a game from data. Throws InvalidMapError when the map is malformed, RangeError for a malformed wave. */
@@ -111,6 +113,14 @@ export function createGame(config: GameConfig): Game {
   const createEnemy = (kind: EnemyKind): Enemy => {
     const stats = ENEMY_STATS[kind];
     return { ...stats, id: nextId++, kind, hp: stats.maxHp, distance: 0, position: line.positionAt(0) };
+  };
+
+  const canPlaceTower = (kind: TowerKind, tile: Tile): CommandResult<PlaceTowerRefusal> => {
+    if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' };
+    if (!map.isBuildable(tile)) return { ok: false, reason: 'notBuildable' };
+    if (towerAt(state.towers, tile)) return { ok: false, reason: 'occupied' };
+    if (state.money < TOWER_STATS[kind].cost) return { ok: false, reason: 'insufficientMoney' };
+    return { ok: true };
   };
 
   return {
@@ -175,15 +185,14 @@ export function createGame(config: GameConfig): Game {
       return { ok: true };
     },
     placeTower(kind, tile) {
-      if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' };
-      if (!map.isBuildable(tile)) return { ok: false, reason: 'notBuildable' };
-      if (towerAt(state.towers, tile)) return { ok: false, reason: 'occupied' };
+      const allowed = canPlaceTower(kind, tile);
+      if (!allowed.ok) return allowed;
       const stats = TOWER_STATS[kind];
-      if (state.money < stats.cost) return { ok: false, reason: 'insufficientMoney' };
       const towerId = nextId++;
       state.money -= stats.cost;
       state.towers.push({ ...stats, id: towerId, kind, tile, cooldownMs: 0 });
       return { ok: true, towerId };
     },
+    canPlaceTower,
   };
 }
