@@ -49,14 +49,16 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   painter.fillRect(left, top, (HP_BAR.width * enemy.hp) / enemy.maxHp, HP_BAR.height);
 }
 
-/** A filled square with an outline, in its kind's style. */
+/** A filled square or circle with an outline, in its kind's style. */
 export function drawTower(painter: EntityPainter, tower: Tower): void {
-  const { size, fill, outline, outlineWidth } = TOWER_STYLE[tower.kind];
+  const { shape, size, fill, outline, outlineWidth } = TOWER_STYLE[tower.kind];
   const half = size / 2;
   painter.fillStyle(fill);
-  painter.fillRect(-half, -half, size, size);
+  if (shape === 'circle') painter.fillCircle(0, 0, half);
+  else painter.fillRect(-half, -half, size, size);
   painter.lineStyle(outlineWidth, outline);
-  painter.strokeRect(-half, -half, size, size);
+  if (shape === 'circle') painter.strokeCircle(0, 0, half);
+  else painter.strokeRect(-half, -half, size, size);
 }
 
 /** The circle a tower can hit within. */
@@ -68,10 +70,11 @@ export function drawRangeRing(painter: EntityPainter, tower: Tower): void {
 /** A see-through tower of `kind` and its range ring, green if it can be placed here, red if not. */
 export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: boolean): void {
   const color = placeable ? GHOST.placeable : GHOST.blocked;
-  const { size } = TOWER_STYLE[kind];
+  const { shape, size } = TOWER_STYLE[kind];
   const half = size / 2;
   painter.fillStyle(color, GHOST.fillAlpha);
-  painter.fillRect(-half, -half, size, size);
+  if (shape === 'circle') painter.fillCircle(0, 0, half);
+  else painter.fillRect(-half, -half, size, size);
   painter.lineStyle(GHOST.ringWidth, color, GHOST.ringAlpha);
   painter.strokeCircle(0, 0, TOWER_STATS[kind].range * TILE_PX);
 }

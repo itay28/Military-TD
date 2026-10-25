@@ -31,10 +31,14 @@ export const AIR_SHADOW = { offsetX: 4, offsetY: 10, color: 0x000000, alpha: 0.3
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the circle. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
 
-/** Towers as outlined squares, by kind. Size in pixels, less than a tile so the grid shows around it. */
+/** Towers as outlined shapes, by kind. Size (side or diameter) in pixels, less than a tile so the grid shows around it. */
 export const TOWER_STYLE = {
-  rifleNest: { size: 32, fill: 0x3b4252, outline: 0xe5e1cf, outlineWidth: 2 }, // slate, bone outline
-} as const satisfies Record<TowerKind, { size: number; fill: number; outline: number; outlineWidth: number }>;
+  rifleNest: { shape: 'square', size: 32, fill: 0x3b4252, outline: 0xe5e1cf, outlineWidth: 2 }, // slate, bone outline
+  aaGun: { shape: 'circle', size: 30, fill: 0x8a5a2b, outline: 0xe5e1cf, outlineWidth: 2 }, // rust brown circle, bone outline
+} as const satisfies Record<
+  TowerKind,
+  { shape: 'square' | 'circle'; size: number; fill: number; outline: number; outlineWidth: number }
+>;
 
 /** The range ring shown while the pointer is over a tower. */
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;

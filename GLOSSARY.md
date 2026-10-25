@@ -8,7 +8,8 @@
 | **Path** | The ordered waypoints enemies walk from spawn to exit. Towers can't be built on Path tiles. | road, lane, track |
 | **Waypoint** | A tile where the Path turns, or its first or last tile. Consecutive waypoints share a row or a column; the tiles between them are **Path tiles**. | node, corner |
 | **Buildable tile** | A tile where a tower may be placed: not on the Path and not occupied. The map's `isBuildable` checks the first part; placement also checks occupancy. | |
-| **Tower** | A placed defensive unit. The MVP has one kind: **Rifle Nest**. | turret |
+| **Tower** | A placed defensive unit. Kinds: **Rifle Nest** (hits ground and air) and **AA Gun**. | turret |
+| **AA Gun** | A tower that hits only the Air layer: it never targets or damages ground enemies, even when they are the only ones in range. Cheap rapid fire (cost 75, 4 shots/s, damage 8, range 3). Drawn as a rust-brown circle. | flak, anti-air |
 | **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
+import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from './enemies';
 import { createGame, TICK_MS, type Game } from './game';
 import type { MapData, Tile } from './map';
@@ -320,6 +321,40 @@ describe('armor', () => {
     expect(fired.shots[0]!.hits).toEqual([{ enemyId: 7, damage: 4 }]);
     expect(fired.kills).toEqual([expect.objectContaining({ id: 7, hp: 0 })]);
     expect(fired.enemies).toEqual([]);
+  });
+});
+
+describe('AA Gun', () => {
+  const aaGun = (): Tower => ({
+    ...TOWER_STATS.aaGun,
+    id: 1,
+    kind: 'aaGun',
+    tile: { col: 2, row: 2 },
+    cooldownMs: 0,
+  });
+  const helicopter = (id: number, distance: number): Enemy =>
+    handEnemy(id, distance, {
+      ...ENEMY_STATS.helicopter,
+      kind: 'helicopter',
+      hp: ENEMY_STATS.helicopter.maxHp,
+    });
+
+  it('has the starting numbers from the spec', () => {
+    expect(TOWER_STATS.aaGun).toEqual({ cost: 75, range: 3, fireRate: 4, damage: 8, targets: ['air'] });
+  });
+
+  it('does not fire at ground enemies in range, and stays ready', () => {
+    const ground = [handEnemy(1, 1), handEnemy(2, 2)];
+    const result = fireTowers([aaGun()], ground, 1000);
+    expect(result.shots).toEqual([]);
+    expect(result.enemies).toEqual(ground);
+    expect(result.towers[0]?.cooldownMs).toBe(0);
+  });
+
+  it('shoots a Helicopter that passes a ground enemy further along', () => {
+    const result = fireTowers([aaGun()], [helicopter(1, 1), handEnemy(2, 2)], 0);
+    expect(result.shots.map((s) => s.targetId)).toEqual([1]);
+    expect(result.enemies.find((e) => e.id === 2)?.hp).toBe(ENEMY_STATS.infantry.maxHp);
   });
 });
 
