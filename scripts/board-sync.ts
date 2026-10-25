@@ -1,10 +1,20 @@
 import { pathToFileURL } from 'node:url';
+import {
+  AUTO_AGENT_LABEL,
+  commentNoSize,
+  HOLD_LABEL,
+  planStarts,
+  startIssue,
+  type OpenPr,
+  type Routines,
+  type StartIssue,
+} from './auto-start.ts';
 
 // Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule
 // (docs/agents/issue-tracker.md → Project board). Run by .github/workflows/board-sync.yml on
 // every PR or assignment change and on a schedule. Each run reconciles the whole board, so
 // a missed event is fixed by the next one. The decisions are pure functions; the CLI at the
-// bottom only fetches and writes.
+// bottom only fetches and writes. With AUTO_SPAWN=on it then starts agents (scripts/auto-start.ts).
 
 const OWNER = 'itay28';
 const REPO = 'Military-TD';
@@ -77,23 +87,27 @@ export function closingIssues(body: string, linked: readonly number[]): number[]
 }
 
 /**
- * The milestone agents work on: the earliest due date, else the lowest version in the title
- * (the same rule as the `promote-ready` skill). Null without open milestones.
+ * The open milestones in the order agents work on them: by due date, then the undated ones by the
+ * version in the title (the same rule as the `promote-ready` skill). Milestones with neither come last.
  */
-export function currentMilestone(milestones: readonly Milestone[]): number | null {
+export function milestoneOrder(milestones: readonly Milestone[]): number[] {
   const dated = milestones.filter((m) => m.dueOn).sort((a, b) => a.dueOn!.localeCompare(b.dueOn!));
-  if (dated[0]) return dated[0].number;
   // [major, minor, patch] from a title like 'v0.2.0 — Combat depth'; null when it has no version.
   const version = (m: Milestone): [number, number, number] | null => {
     const match = /v?(\d+)\.(\d+)(?:\.(\d+))?/.exec(m.title);
     return match ? [Number(match[1]), Number(match[2]), Number(match[3] ?? 0)] : null;
   };
-  const versioned = milestones.filter((m) => version(m));
+  const versioned = milestones.filter((m) => !m.dueOn && version(m));
   versioned.sort((a, b) => {
     const [x, y] = [version(a)!, version(b)!];
     return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
   });
-  return versioned[0]?.number ?? null;
+  return [...dated, ...versioned].map((m) => m.number);
+}
+
+/** The milestone agents work on: the first in `milestoneOrder`. Null without open milestones. */
+export function currentMilestone(milestones: readonly Milestone[]): number | null {
+  return milestoneOrder(milestones)[0] ?? null;
 }
 
 /**
@@ -163,6 +177,8 @@ const BOARD_QUERY = `query($owner: String!, $project: Int!, $cursor: String) {
         nodes {
           id
           fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+          size: fieldValueByName(name: "Size") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+          priority: fieldValueByName(name: "Priority") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
           content {
             ... on Issue {
               number
@@ -172,6 +188,7 @@ const BOARD_QUERY = `query($owner: String!, $project: Int!, $cursor: String) {
               labels(first: 20) { nodes { name } }
               milestone { number }
               issueDependenciesSummary { blockedBy }
+              blockedBy(first: 20) { nodes { number state } }
             }
           }
         }
@@ -190,6 +207,8 @@ interface BoardData {
         nodes: {
           id: string;
           fieldValueByName: { name?: string } | null;
+          size: { name?: string } | null;
+          priority: { name?: string } | null;
           content: {
             number?: number;
             state?: string;
@@ -198,6 +217,7 @@ interface BoardData {
             labels?: { nodes: { name: string }[] };
             milestone?: { number: number } | null;
             issueDependenciesSummary?: { blockedBy: number } | null;
+            blockedBy?: { nodes: { number: number; state: string }[] };
           } | null;
         }[];
       };
@@ -205,7 +225,7 @@ interface BoardData {
   };
 }
 
-const PR_FIELDS = `nodes { isDraft state baseRefName body closingIssuesReferences(first: 20) { nodes { number } } }`;
+const PR_FIELDS = `nodes { isDraft state baseRefName headRefName body closingIssuesReferences(first: 20) { nodes { number } } }`;
 
 // Open PRs, the latest merged ones (a stacked PR merged into its parent keeps its issue In review),
 // and the open milestones (for the Ready rule).
@@ -222,6 +242,7 @@ interface PrNode {
   isDraft: boolean;
   state: PullRequest['state'];
   baseRefName: string;
+  headRefName: string;
   body: string;
   closingIssuesReferences: { nodes: { number: number }[] };
 }
@@ -241,9 +262,16 @@ const SET_STATUS = `mutation($project: ID!, $item: ID!, $field: ID!, $option: St
   }
 }`;
 
-async function sync(token: string, dryRun: boolean): Promise<void> {
+/** What auto-start needs beyond a sync: off unless AUTO_SPAWN is `on`. */
+export interface AutoStart {
+  readonly stack: boolean;
+  readonly routines: Routines;
+}
+
+async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undefined): Promise<void> {
   const items = new Map<number, string>();
   const issues: BoardIssue[] = [];
+  const startIssues: StartIssue[] = [];
   let project: BoardData['user']['projectV2'] | undefined;
   let cursor: string | null = null;
   do {
@@ -266,6 +294,15 @@ async function sync(token: string, dryRun: boolean): Promise<void> {
         blocked: (c.issueDependenciesSummary?.blockedBy ?? 0) > 0,
         milestone: c.milestone?.number ?? null,
       });
+      const labels = c.labels?.nodes.map((l) => l.name) ?? [];
+      startIssues.push({
+        ...issues.at(-1)!,
+        hold: labels.includes(HOLD_LABEL),
+        autoAgent: labels.includes(AUTO_AGENT_LABEL),
+        size: node.size?.name,
+        priority: node.priority?.name,
+        blockedBy: c.blockedBy?.nodes.filter((b) => b.state === 'OPEN').map((b) => b.number) ?? [],
+      });
     }
     cursor = project.items.pageInfo.hasNextPage ? project.items.pageInfo.endCursor : null;
   } while (cursor);
@@ -275,17 +312,20 @@ async function sync(token: string, dryRun: boolean): Promise<void> {
     console.log(
       `::warning::${repository.open.totalCount} open PRs, only the first ${repository.open.nodes.length} were read; some cards may not move. Paginate PR_QUERY.`,
     );
-  const prs = [...repository.open.nodes, ...repository.merged.nodes].map((pr): PullRequest => ({
+  const prs = [...repository.open.nodes, ...repository.merged.nodes].map((pr): PullRequest & { head: string } => ({
     isDraft: pr.isDraft,
     state: pr.state,
     base: pr.baseRefName,
+    head: pr.headRefName,
     issues: closingIssues(
       pr.body,
       pr.closingIssuesReferences.nodes.map((i) => i.number),
     ),
   }));
 
-  const moves = planMoves(issues, prs, repository.defaultBranchRef.name, currentMilestone(repository.milestones.nodes));
+  const defaultBranch = repository.defaultBranchRef.name;
+  const order = milestoneOrder(repository.milestones.nodes);
+  const moves = planMoves(issues, prs, defaultBranch, order[0] ?? null);
   if (!moves.length) console.log(`Board in step: ${issues.length} open issues checked, nothing to move.`);
   for (const move of moves) {
     const option = project.field.options.find((o) => o.name === move.to);
@@ -299,10 +339,66 @@ async function sync(token: string, dryRun: boolean): Promise<void> {
       });
     console.log(`#${move.issue}: ${move.from ?? 'no status'} → ${move.to}${dryRun ? ' (dry run)' : ''}`);
   }
+
+  if (!autoStart) return;
+  const moved = new Map(moves.map((m) => [m.issue, m.to]));
+  const openPrs: OpenPr[] = prs.filter((pr) => pr.state === 'OPEN');
+  const plan = planStarts(
+    startIssues.map((i) => ({ ...i, status: moved.get(i.number) ?? i.status })),
+    openPrs,
+    order,
+    { defaultBranch, stack: autoStart.stack },
+  );
+  if (!plan.starts.length) console.log('Auto-start: nothing to start.');
+  // Try every start and comment before failing the run, so one bad fire doesn't block the rest.
+  const failures: string[] = [];
+  for (const start of plan.starts) {
+    const what = `#${start.issue}: start ${start.model} on ${start.base}`;
+    if (dryRun) {
+      console.log(`${what} (dry run)`);
+      continue;
+    }
+    try {
+      await startIssue(start, token, autoStart.routines);
+      console.log(what);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  for (const issue of plan.noSize) {
+    if (dryRun) console.log(`#${issue}: no Size, would ask for one (dry run)`);
+    else if (await commentNoSize(issue, token)) console.log(`#${issue}: no Size, asked for one`);
+  }
+  if (failures.length) throw new Error(failures.join('\n'));
+}
+
+/**
+ * Auto-start's settings from the environment: undefined unless AUTO_SPAWN is `on`. With it on,
+ * a missing routine secret is an error, so a misconfigured auto-start fails loudly.
+ */
+export function autoStartFromEnv(env: Readonly<Record<string, string | undefined>>): AutoStart | undefined {
+  if (env['AUTO_SPAWN']?.trim() !== 'on') return undefined;
+  const read = (name: string) => {
+    const value = env[name]?.trim();
+    if (!value)
+      throw new Error(
+        `AUTO_SPAWN is on but the repo secret ${name} is not set (docs/agents/issue-tracker.md → Auto-start).`,
+      );
+    return value;
+  };
+  return {
+    stack: env['AUTO_STACK']?.trim() === 'on',
+    routines: {
+      sonnet: { url: read('ROUTINE_SONNET_URL'), token: read('ROUTINE_SONNET_TOKEN') },
+      opus: { url: read('ROUTINE_OPUS_URL'), token: read('ROUTINE_OPUS_TOKEN') },
+    },
+  };
 }
 
 // CLI: `node scripts/board-sync.ts [--dry-run]`, with PROJECT_TOKEN (classic PAT, project + repo scopes).
-// A missing token or an API error fails the run, so a board that isn't syncing shows up red.
+// Auto-start reads AUTO_SPAWN, AUTO_STACK and the ROUTINE_* secrets (autoStartFromEnv); --dry-run
+// logs what it would start. A missing token or an API error fails the run, so a board that isn't
+// syncing shows up red.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const token = process.env['PROJECT_TOKEN']?.trim();
   if (!token) {
@@ -313,7 +409,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exitCode = 1;
   } else {
     try {
-      await sync(token, process.argv.includes('--dry-run'));
+      await sync(token, process.argv.includes('--dry-run'), autoStartFromEnv(process.env));
     } catch (error) {
       console.error(error instanceof Error ? error.message : error);
       process.exitCode = 1;
