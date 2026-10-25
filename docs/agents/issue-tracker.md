@@ -98,12 +98,13 @@ The current milestone is the open one with the earliest due date, else the lowes
 - **Off switch:** set `AUTO_SPAWN` to anything but `on`, or add `hold` to one issue. `--dry-run` logs what it would start.
 - **Setup errors:** with `AUTO_SPAWN` on and a `ROUTINE_*` secret missing, the board still syncs but auto-start is skipped and the run goes red.
 
-**Auto-start setup** (maintainer, once, in the browser):
-1. At [claude.ai/code/routines](https://claude.ai/code/routines), create a scheduled task named `implement-sonnet`: model Sonnet, repository `itay28/Military-TD`, your usual cloud environment, connectors removed unless needed, and this prompt: *Read `docs/agents/prompts/implement.md` in the repository and follow it. The issue number and base branch to use are in the `<routine-fire-payload>` block of this message; act on them.*
-2. Trigger: **API** only (no schedule). On **Create**, copy the token (shown once) and the **Fire URL**.
-3. Repeat for `implement-opus` with model Opus.
-4. In GitHub → Settings → Secrets and variables → Actions, add the secrets `ROUTINE_SONNET_URL`, `ROUTINE_SONNET_TOKEN`, `ROUTINE_OPUS_URL`, `ROUTINE_OPUS_TOKEN`; then, under **Variables**, `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack).
-5. Check it: Actions → *Board sync* → Run workflow, and read the "Auto-start" lines in the log. Each start opens a session listed under the task's **History**.
+**Auto-start setup** (maintainer, once, in the browser). The two scheduled tasks `implement-sonnet` (model Sonnet) and `implement-opus` (model Opus) already exist at [claude.ai/code/routines](https://claude.ai/code/routines), disabled. Their prompt is: *Read `docs/agents/prompts/implement.md` in the itay28/Military-TD repository and follow it. The issue number and base branch to use are in the `<routine-fire-payload>` block of this message; act on them.* For each one:
+1. **Edit**: under Repository, add `itay28/Military-TD`; keep your usual cloud environment; add the GitHub connector if your account has one.
+2. **Trigger → + → API**: copy the **Fire URL**, click **Generate token**, and copy the token (shown once).
+3. In GitHub → Settings → Secrets and variables → Actions → **Secrets**, add `ROUTINE_SONNET_URL` / `ROUTINE_SONNET_TOKEN` (or `ROUTINE_OPUS_…`) with those two values. The token can only start that one task: it has no GitHub or account access. Claims and comments use the existing `PROJECT_TOKEN`.
+4. Turn the task on.
+
+Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), and check with Actions → *Board sync* → Run workflow; the log's auto-start lines say what started. Each start opens a session in the task's **History**.
 
 So agents move cards by hand only:
 - **Release issues**: only if a run warned or failed. Every move is a GitHub Action (see **Milestone release** in `docs/agents/releasing.md`).
