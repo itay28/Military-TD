@@ -8,6 +8,7 @@ A military-themed tower defense game that runs in the browser.
 - **Versioning**: SemVer. 0.x until the first public release; each roadmap milestone is a minor version. See [ADR-0004](adr/0004-versioning-and-releases.md).
 - **Hosting**: releases deploy to a restricted itch.io page (the repo is private). See [ADR-0005](adr/0005-host-on-itch-io.md).
 - **Maps**: authored in Tiled, imported and validated by code. See [ADR-0006](adr/0006-tiled-maps.md).
+- **Mechanics**: realistic and readable, with no hard counters: every enemy kind has at least two efficient counters, so no unit is mandatory. See [ADR-0007](adr/0007-realistic-readable-mechanics.md).
 - **Assets**: only CC0 / CC-BY / OFL, every file tracked. See [docs/assets.md](assets.md).
 - **How work gets done**: plan → tests first → implement → verify → PR, using Matt Pocock's skills. See [docs/agents/workflow.md](agents/workflow.md).
 - Vocabulary is in [GLOSSARY.md](../GLOSSARY.md).
