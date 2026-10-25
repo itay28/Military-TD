@@ -8,8 +8,9 @@ export interface FlightPath {
   readonly landsAtMs: number;
 }
 
-/** Where a shell is at sim time `nowMs`: a straight line from `from` to `target`, clamped to the flight. */
+/** Where a shell is at sim time `nowMs`: a straight line from `from` to `target`, clamped to the flight (at `target` if it has none). */
 export function shellPoint({ from, target, firedAtMs, landsAtMs }: FlightPath, nowMs: number): Pixel {
+  if (landsAtMs <= firedAtMs) return target;
   const t = Math.min(1, Math.max(0, (nowMs - firedAtMs) / (landsAtMs - firedAtMs)));
   return { x: from.x + (target.x - from.x) * t, y: from.y + (target.y - from.y) * t };
 }

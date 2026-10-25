@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Enemy } from './enemies';
-import { landShells, type Shell } from './shells';
+import { createShell, landShells, type Shell } from './shells';
+import type { Tower } from './towers';
 
 const enemy = (id: number, x: number, over: Partial<Enemy> = {}): Enemy => ({
   id,
@@ -103,5 +104,53 @@ describe('landShells', () => {
   it('a fast enemy that walked out of the outer ring before landing is not hit', () => {
     const result = landShells([shell(1)], [enemy(1, 12.5), enemy(2, 10.2)], 1000);
     expect(result.landed[0]!.hits.map((h) => h.enemyId)).toEqual([2]);
+  });
+});
+
+describe('createShell', () => {
+  it("copies the tower's hit stats and shell stats, flying from its tile center to the target", () => {
+    const tower: Tower = {
+      id: 7,
+      kind: 'rifleNest',
+      tile: { col: 2, row: 3 },
+      cost: 50,
+      damage: 20,
+      range: 4,
+      fireRate: 0.5,
+      targets: ['ground'],
+      armorPierce: 3,
+      cooldownMs: 0,
+      shell: { flightMs: 800, innerRadius: 0.5, outerRadius: 1.5 },
+    };
+    expect(createShell({ tower, target: { x: 6, y: 1 }, shell: tower.shell! }, 12, 4000)).toEqual({
+      id: 12,
+      towerId: 7,
+      from: { x: 2.5, y: 3.5 },
+      target: { x: 6, y: 1 },
+      firedAtMs: 4000,
+      landsAtMs: 4800,
+      flightMs: 800,
+      innerRadius: 0.5,
+      outerRadius: 1.5,
+      damage: 20,
+      armorPierce: 3,
+      targets: ['ground'],
+    });
+  });
+
+  it('a tower with no armor pierce makes a shell with 0', () => {
+    const tower = {
+      id: 1,
+      kind: 'rifleNest',
+      tile: { col: 0, row: 0 },
+      cost: 1,
+      damage: 1,
+      range: 1,
+      fireRate: 1,
+      targets: ['ground'],
+      cooldownMs: 0,
+    } as const;
+    const shell = { flightMs: 1, innerRadius: 0, outerRadius: 1 };
+    expect(createShell({ tower, target: { x: 0, y: 0 }, shell }, 1, 0).armorPierce).toBe(0);
   });
 });

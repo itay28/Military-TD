@@ -2,8 +2,8 @@ import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { createMap, tileCenter, type GameMap, type MapData, type Position, type Tile } from './map';
-import { landShells, type Shell, type ShellLanding } from './shells';
+import { createMap, type GameMap, type MapData, type Position, type Tile } from './map';
+import { createShell, landShells, type Shell, type ShellLanding } from './shells';
 import { fireTowers, towerAt, type Shot, type Tower } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
@@ -50,7 +50,6 @@ export interface GameEvents {
   enemyLeaked: { readonly enemy: Enemy; readonly lives: number };
   /** A tower hit an enemy (hitscan), for tracers: from the tower's tile center to `position`. */
   towerFired: Shot;
-  /** An enemy's HP reached 0 and it was removed. `reward` is the Money it paid, already in `state.money`. */
   /** A shell tower fired: the shell flies from `from` to `target` and lands after its flight time. */
   shellFired: {
     readonly shellId: number;
@@ -60,6 +59,7 @@ export interface GameEvents {
   };
   /** A shell landed at `position` and damaged `hits` (none if the blast was empty); kills follow as enemyKilled. */
   shellLanded: ShellLanding;
+  /** An enemy's HP reached 0 and it was removed. `reward` is the Money it paid, already in `state.money`. */
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
   waveStarted: { readonly waveNumber: number };
   /** Every enemy of the wave has spawned and none is left alive. */
@@ -166,23 +166,7 @@ export function createGame(config: GameConfig): Game {
       // Shells already in flight land first, on enemies where they now stand; shells fired this tick fly from here.
       const landing = landShells(state.shells, enemies, state.timeMs);
       const fired = fireTowers(state.towers, landing.enemies, dtMs);
-      const launched = fired.launches.map(({ tower, target }): Shell => {
-        const { flightMs, innerRadius, outerRadius } = tower.shell!;
-        return {
-          id: nextId++,
-          towerId: tower.id,
-          from: tileCenter(tower.tile),
-          target,
-          firedAtMs: state.timeMs,
-          landsAtMs: state.timeMs + flightMs,
-          flightMs,
-          innerRadius,
-          outerRadius,
-          damage: tower.damage,
-          armorPierce: tower.armorPierce ?? 0,
-          targets: tower.targets,
-        };
-      });
+      const launched = fired.launches.map((launch) => createShell(launch, nextId++, state.timeMs));
       state.towers = fired.towers;
       state.enemies = fired.enemies;
       state.shells = [...landing.shells, ...launched];

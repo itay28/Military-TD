@@ -47,10 +47,12 @@ export interface Shot {
   readonly hits: readonly Hit[];
 }
 
-/** A shell tower's shot: it fired at `target`, a spot the game turns into a Shell. */
+/** A shell tower's shot: it fired at `target`, a spot the game turns into a Shell (see `createShell`). */
 export interface ShellLaunch {
   readonly tower: Tower;
   readonly target: Position;
+  /** The tower's `shell`, known to be set. */
+  readonly shell: ShellStats;
 }
 
 /** The tower standing on `tile`, if any. */
@@ -97,7 +99,7 @@ export function fireTowers(
     const cooldownMs = tower.cooldownMs - dtMs;
     const target = cooldownMs <= COOLDOWN_EPSILON ? selectTarget(tower, alive) : undefined;
     if (!target) return { ...tower, cooldownMs: Math.max(0, cooldownMs) };
-    if (tower.shell) launches.push({ tower, target: target.position });
+    if (tower.shell) launches.push({ tower, target: target.position, shell: tower.shell });
     else fireDirect(tower, target);
     // A tower that came off cooldown mid-tick fired late; take that time off its next cooldown.
     // One that was already waiting at 0 only now saw a target, so it gets a full cooldown.

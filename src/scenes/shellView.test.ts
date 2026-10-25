@@ -14,6 +14,10 @@ describe('shellPoint', () => {
     expect(shellPoint(SHELL, 900)).toEqual({ x: 0, y: 0 });
     expect(shellPoint(SHELL, 2100)).toEqual({ x: 10, y: 20 });
   });
+
+  it('a shell with no flight time is already at its target', () => {
+    expect(shellPoint({ ...SHELL, landsAtMs: 1000 }, 1000)).toEqual({ x: 10, y: 20 });
+  });
 });
 
 describe('createBlasts', () => {

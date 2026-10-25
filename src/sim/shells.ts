@@ -1,7 +1,7 @@
 import { damageTaken, type Layer } from './combat';
 import type { Enemy } from './enemies';
-import type { Position } from './map';
-import type { Hit } from './towers';
+import { tileCenter, type Position } from './map';
+import type { Hit, ShellLaunch } from './towers';
 
 /** What makes a tower lob shells instead of hitting at once. */
 export interface ShellStats {
@@ -29,6 +29,22 @@ export interface Shell extends ShellStats {
   readonly damage: number;
   readonly armorPierce: number;
   readonly targets: readonly Layer[];
+}
+
+/** The Shell a launch fires at `nowMs`: its tower's hit stats and shell stats, flying from the tower's tile center. */
+export function createShell({ tower, target, shell }: ShellLaunch, id: number, nowMs: number): Shell {
+  return {
+    ...shell,
+    id,
+    towerId: tower.id,
+    from: tileCenter(tower.tile),
+    target,
+    firedAtMs: nowMs,
+    landsAtMs: nowMs + shell.flightMs,
+    damage: tower.damage,
+    armorPierce: tower.armorPierce ?? 0,
+    targets: tower.targets,
+  };
 }
 
 /** One shell's landing: where, and every enemy it damaged. */
