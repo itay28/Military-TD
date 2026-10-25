@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// E2E_PORT lets sessions in parallel worktrees each serve their own build.
+const PORT = Number(process.env['E2E_PORT'] ?? 4173);
 
 // UI tests against the built game in headless Chromium (ADR-0003). `npm run test:e2e`.
 export default defineConfig({
