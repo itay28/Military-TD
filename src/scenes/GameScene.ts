@@ -41,8 +41,8 @@ export class GameScene extends Phaser.Scene {
   private sim!: Game;
   private loop!: FixedStep;
   private hud!: Hud;
-  private enemyViews!: ViewSync<Enemy, EnemyView>;
-  private towerViews!: ViewSync<Tower, Phaser.GameObjects.Graphics>;
+  private enemyViews!: ViewSync<Enemy>;
+  private towerViews!: ViewSync<Tower>;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
   private rangeRing!: Phaser.GameObjects.Graphics;
@@ -70,7 +70,7 @@ export class GameScene extends Phaser.Scene {
       },
     });
 
-    this.enemyViews = createViewSync({
+    this.enemyViews = createViewSync<Enemy, EnemyView>({
       create: () => ({ graphics: this.add.graphics().setDepth(DEPTH.enemies), hp: Number.NaN }),
       update: (view, enemy) => {
         if (view.hp !== enemy.hp) {
@@ -91,7 +91,6 @@ export class GameScene extends Phaser.Scene {
         drawTower(graphics, tower);
         return graphics;
       },
-      update: () => {},
       destroy: (graphics) => graphics.destroy(),
     });
 

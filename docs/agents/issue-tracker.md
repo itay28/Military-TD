@@ -82,7 +82,7 @@ So agents move cards by hand:
 - **Starting work** → *In progress*.
 - **PR marked ready** → *In review*, back to draft → *In progress*: only when the hook didn't (it reports when it couldn't), or when the PR changed outside a local session (GitHub UI, `@claude` in CI).
 - **Unblocked** issue: Backlog → *Ready*.
-- **Release issues**, until #96/#97 automate it (see below).
+- **Release issues**: only if a run warned or failed. Every move is a GitHub Action (see **Milestone release** in `docs/agents/workflow.md`).
 - To fix a card an automation missed.
 
 **Release issues** (label `release`) are the exception to the Status definitions above. Each one stands in for its milestone (milestones can't be cards) and moves with the milestone, not with assignees or closing PRs; see **Milestone release** in `docs/agents/workflow.md`. They have Area `infra` and no Priority or Size (they're trackers, not work), and no `ready-for-agent`, so they never go to *Ready*. The **Releases** view (filter `label:release`) shows them with their Status and Milestone. The other views include them.

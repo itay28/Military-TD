@@ -49,3 +49,27 @@ jobs:
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
     secrets: inherit
+
+  # A milestone release (v0.N.0, vN.0.0) closes the milestone's release issue,
+  # with a comment linking the GitHub Release, and the milestone. The board's
+  # "Item closed" automation moves the card to Done. Patch releases do nothing.
+  # Logic and tests: scripts/release-board.ts.
+  release-issue:
+    name: release-issue
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Close the milestone's release issue and the milestone
+        env:
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release-board.ts release "$TAG"
