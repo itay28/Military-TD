@@ -23,6 +23,8 @@ const rifleNest = (id: number): Tower => ({
   kind: 'rifleNest',
   tile: { col: id, row: 3 },
   cooldownMs: 0,
+  level: 1,
+  spent: 50,
 });
 
 // Tower 1 has dealt 70 damage and 2 kills in all, 35 of it this wave, 10 s in.
@@ -35,13 +37,18 @@ const PLAYED: CombatStats = {
 /** A Game whose towers and stats the test sets directly. */
 const fakeGame = (towers: Tower[], stats: CombatStats = emptyStats()) => {
   const base = createGame({ map: SMALL, money: 100, lives: 20, waves: [] }).state;
-  const game: { state: GameState } = { state: { ...base, towers, stats } };
-  return game satisfies TowerPanelGame;
+  const game: TowerPanelGame & { state: GameState } = {
+    state: { ...base, towers, stats },
+    canUpgradeTower: () => ({ ok: true }),
+    upgradeTower: () => ({ ok: true, level: 2 }),
+  };
+  return game;
 };
 
 let root: HTMLElement;
 const value = (id: string) => root.querySelector<HTMLElement>(`[data-testid="${id}"]`)?.textContent;
 const dialog = () => root.querySelector<HTMLElement>('[role="dialog"]')!;
+const upgradeButton = () => root.querySelector<HTMLButtonElement>('[data-testid="tower-upgrade"]')!;
 const pressEscape = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
 beforeEach(() => {
@@ -154,5 +161,64 @@ describe('Tower panel', () => {
     pressEscape();
     expect(root.children).toHaveLength(0);
     expect(root.hidden).toBe(true);
+  });
+});
+
+describe('Tower panel upgrades', () => {
+  /** A real game with one Rifle Nest placed (id 1), Money left after paying for it. */
+  const gameWithTower = (moneyLeft: number) => {
+    const game = createGame({ map: SMALL, money: 50 + moneyLeft, lives: 20, waves: [] });
+    const placed = game.placeTower('rifleNest', { col: 1, row: 3 });
+    if (!placed.ok) throw new Error(placed.reason);
+    return { game, id: placed.towerId };
+  };
+
+  it('names the next level and its cost on the Upgrade button', () => {
+    const { game, id } = gameWithTower(100);
+    mountTowerPanel(root, game).select(id);
+    expect(upgradeButton().textContent).toBe('Optics (40)');
+    expect(upgradeButton().hidden).toBe(false);
+    expect(upgradeButton().disabled).toBe(false);
+  });
+
+  it('clicking it upgrades the tower, and the panel shows the new level and stats', () => {
+    const { game, id } = gameWithTower(100);
+    mountTowerPanel(root, game).select(id);
+    upgradeButton().click();
+    expect(game.state.money).toBe(60);
+    expect(value('tower-level')).toBe('Level 2');
+    expect(value('tower-range')).toBe('3 tiles');
+    expect(upgradeButton().textContent).toBe('Heavier weapon (70)');
+  });
+
+  it('is disabled, saying why, while the upgrade would be refused', () => {
+    const { game, id } = gameWithTower(39);
+    mountTowerPanel(root, game).select(id);
+    expect(upgradeButton().disabled).toBe(true);
+    expect(upgradeButton().title).toBe('Not enough money');
+    upgradeButton().click();
+    expect(game.state.towers[0]).toMatchObject({ level: 1 });
+  });
+
+  it('enables once Money is enough', () => {
+    const { game, id } = gameWithTower(39);
+    const panel = mountTowerPanel(root, game);
+    panel.select(id);
+    // A kill's Reward would do this; the panel only reads the state.
+    (game.state as { money: number }).money = 40;
+    panel.update();
+    expect(upgradeButton().disabled).toBe(false);
+    expect(upgradeButton().title).toBe('');
+  });
+
+  it('is hidden at the top level', () => {
+    const { game, id } = gameWithTower(110);
+    const panel = mountTowerPanel(root, game);
+    panel.select(id);
+    game.upgradeTower(id);
+    game.upgradeTower(id);
+    panel.update();
+    expect(value('tower-level')).toBe('Level 3');
+    expect(upgradeButton().hidden).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
+import { ENEMY_STYLE, GHOST, HP_BAR, LEVEL_PIP, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
@@ -28,7 +28,7 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   painter.fillRect(left, top, (HP_BAR.width * enemy.hp) / enemy.maxHp, HP_BAR.height);
 }
 
-/** A filled square with an outline, in its kind's style. */
+/** A filled square with an outline, in its kind's style, and a level pip per upgrade along its bottom edge. */
 export function drawTower(painter: EntityPainter, tower: Tower): void {
   const { size, fill, outline, outlineWidth } = TOWER_STYLE[tower.kind];
   const half = size / 2;
@@ -36,6 +36,13 @@ export function drawTower(painter: EntityPainter, tower: Tower): void {
   painter.fillRect(-half, -half, size, size);
   painter.lineStyle(outlineWidth, outline);
   painter.strokeRect(-half, -half, size, size);
+  if (tower.level <= 1) return;
+  const top = half - LEVEL_PIP.inset - LEVEL_PIP.size;
+  painter.fillStyle(LEVEL_PIP.color);
+  for (let i = 0; i < tower.level - 1; i++) {
+    const left = -half + LEVEL_PIP.inset + i * (LEVEL_PIP.size + LEVEL_PIP.gap);
+    painter.fillRect(left, top, LEVEL_PIP.size, LEVEL_PIP.size);
+  }
 }
 
 /** The circle a tower can hit within. */

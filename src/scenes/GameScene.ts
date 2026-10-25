@@ -26,6 +26,8 @@ import { createViewSync, type ViewSync } from './viewSync';
 const MAX_TICKS_PER_FRAME = 5;
 
 const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
+/** What a drawn range ring depends on: the tower, and its range, which an upgrade can change. */
+const ringKey = (tower: Tower): string => `${tower.id}@${tower.range}`;
 
 /** Draw order, back to front. */
 const DEPTH = { map: 0, towers: 1, enemies: 2, tracers: 3, ghost: 4, rangeRing: 5, floatingText: 6 } as const;
@@ -81,10 +83,10 @@ export class GameScene extends Phaser.Scene {
   private previousPositions!: ReadonlyMap<number, Position>;
   /** The tile under the pointer, or undefined when it is off the canvas. */
   private pointerTile: Tile | undefined;
-  /** The tower under the pointer whose range ring is drawn, by id. */
-  private hoveredTowerId: number | undefined;
-  /** The selected tower whose range ring is drawn, by id. */
-  private selectedRingId: number | undefined;
+  /** The tower under the pointer whose range ring is drawn, as its `ringKey`. */
+  private hoveredRingKey: string | undefined;
+  /** The selected tower whose range ring is drawn, as its `ringKey`. */
+  private selectedRingKey: string | undefined;
 
   constructor({ hudRoot, endScreenRoot, towerPanelRoot, flags, onCreate }: GameSceneOptions) {
     super('Game');
@@ -121,8 +123,8 @@ export class GameScene extends Phaser.Scene {
     // Restart reruns create() on this same object. Sim ids start again at 1, so last game's ids must not linger here.
     this.previousPositions = new Map();
     this.pointerTile = undefined;
-    this.hoveredTowerId = undefined;
-    this.selectedRingId = undefined;
+    this.hoveredRingKey = undefined;
+    this.selectedRingKey = undefined;
     this.ghost = undefined;
     this.sim = setUpGame(this.setup);
     drawMap(this.add.graphics().setDepth(DEPTH.map), this.sim.state.map);
@@ -150,11 +152,16 @@ export class GameScene extends Phaser.Scene {
     this.towerViews = createViewSync({
       create: (tower) => {
         const { x, y } = towerCenter(tower);
-        const graphics = this.add.graphics().setDepth(DEPTH.towers).setPosition(x, y);
-        drawTower(graphics, tower);
-        return graphics;
+        return { graphics: this.add.graphics().setDepth(DEPTH.towers).setPosition(x, y), level: 0 };
       },
-      destroy: (graphics) => graphics.destroy(),
+      // Redrawn only when an upgrade changes the level pips.
+      update: (view, tower) => {
+        if (view.level === tower.level) return;
+        view.level = tower.level;
+        view.graphics.clear();
+        drawTower(view.graphics, tower);
+      },
+      destroy: (view) => view.graphics.destroy(),
     });
 
     // ?anim=0: zero lifetimes, so tracers and floating texts never show.
@@ -228,13 +235,13 @@ export class GameScene extends Phaser.Scene {
     drawTracers(this.tracerGraphics, this.tracers.active());
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);
-    this.selectedRingId = this.showRing(this.selectedRing, this.selectedRingId, selected);
+    this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected);
     // Checked every frame, not only on pointer moves, so a tower that appears under a still pointer shows its ring.
     // The selected tower's ring is drawn already.
     const hovered = this.pointerTile && towerAt(towers, this.pointerTile);
-    this.hoveredTowerId = this.showRing(
+    this.hoveredRingKey = this.showRing(
       this.rangeRing,
-      this.hoveredTowerId,
+      this.hoveredRingKey,
       hovered === selected ? undefined : hovered,
     );
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.
@@ -244,20 +251,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Draws the range ring of `tower` on `ring`, or hides it when there is none. `drawnId` is the tower the ring
-   * shows now, so an unchanged ring isn't redrawn. Returns the id it shows after.
+   * Draws the range ring of `tower` on `ring`, or hides it when there is none. `drawnKey` is the `ringKey` of the
+   * ring shown now, so an unchanged ring isn't redrawn. Returns the key it shows after.
    */
   private showRing(
     ring: Phaser.GameObjects.Graphics,
-    drawnId: number | undefined,
+    drawnKey: string | undefined,
     tower: Tower | undefined,
-  ): number | undefined {
-    if (tower?.id === drawnId) return drawnId;
+  ): string | undefined {
+    const key = tower && ringKey(tower);
+    if (key === drawnKey) return drawnKey;
     ring.clear().setVisible(tower !== undefined);
     if (!tower) return undefined;
     const { x, y } = towerCenter(tower);
     drawRangeRing(ring.setPosition(x, y), tower);
-    return tower.id;
+    return key;
   }
 
   /** Draws `ghost` on its tile, or hides it when there is none. */

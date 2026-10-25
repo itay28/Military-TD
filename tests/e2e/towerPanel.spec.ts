@@ -22,6 +22,17 @@ test('clicking a placed tower opens its panel instead of refusing the tile', asy
   expect((await state(page)).towers).toHaveLength(1);
 });
 
+test('Upgrade raises the tower to level 2 and spends its cost', async ({ page }) => {
+  await selectPlacedTower(page);
+  await panel(page).getByRole('button', { name: 'Optics (40)' }).click();
+  await expect(page.getByTestId('tower-level')).toHaveText('Level 2');
+  await expect(panel(page).getByRole('button', { name: 'Heavier weapon (70)' })).toBeVisible();
+  expect(await state(page)).toMatchObject({
+    towers: [{ level: 2 }],
+    money: START_MONEY - TOWER_STATS.rifleNest.cost - 40,
+  });
+});
+
 test('Escape closes the panel', async ({ page }) => {
   await selectPlacedTower(page);
   await expect(panel(page)).toBeVisible();

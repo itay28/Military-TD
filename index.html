@@ -144,7 +144,7 @@
         margin: 0;
         text-align: right;
       }
-      #tower-panel button {
+      #tower-panel button[aria-label='Close'] {
         position: absolute;
         top: 4px;
         right: 4px;
@@ -159,6 +159,26 @@
       }
       #tower-panel button:focus-visible {
         outline: 2px solid #f0c95a;
+      }
+      #tower-panel [data-testid='tower-upgrade'] {
+        display: block;
+        width: 100%;
+        margin-top: 10px;
+        padding: 4px 8px;
+        font: bold 13px monospace;
+        color: #1b1e16;
+        background: #c2a46b;
+        border: 0;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #tower-panel [data-testid='tower-upgrade'][hidden] {
+        display: none;
+      }
+      #tower-panel [data-testid='tower-upgrade']:disabled {
+        color: #8a8670;
+        background: #3b4030;
+        cursor: not-allowed;
       }
       #version {
         position: fixed;

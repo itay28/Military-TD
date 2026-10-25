@@ -4,7 +4,7 @@ import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
 import { createMap, type GameMap, type MapData, type Tile } from './map';
 import { emptyStats, recordShots, resetWave, withWaveElapsed, type CombatStats } from './stats';
-import { fireTowers, towerAt, type Shot, type Tower } from './towers';
+import { fireTowers, nextLevel, towerAt, type Shot, type Tower } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
 /** The one fixed step, in ms. The Game scene and the scenario runner both tick with it. */
@@ -68,6 +68,9 @@ export type CommandResult<Reason extends string, Value extends object = object> 
 /** Why placeTower refused, in the order it checks. */
 export type PlaceTowerRefusal = 'gameEnded' | 'notBuildable' | 'occupied' | 'insufficientMoney';
 
+/** Why upgradeTower refused, in the order it checks. */
+export type UpgradeTowerRefusal = 'gameEnded' | 'noSuchTower' | 'maxLevel' | 'insufficientMoney';
+
 export interface Game {
   readonly state: GameState;
   readonly events: Events<GameEvents>;
@@ -89,6 +92,15 @@ export interface Game {
   placeTower(kind: TowerKind, tile: Tile): CommandResult<PlaceTowerRefusal, { readonly towerId: number }>;
   /** Whether `placeTower(kind, tile)` would succeed now, or the reason it would refuse. Changes nothing. */
   canPlaceTower(kind: TowerKind, tile: Tile): CommandResult<PlaceTowerRefusal>;
+  /**
+   * Raises tower `towerId` one level for that level's cost, in the Build or Wave phase, and returns its new level.
+   * It takes the new level's stats and keeps its tile and cooldown. Refuses, in this order: `gameEnded` after
+   * Victory or Defeat, `noSuchTower` when no standing tower has that id, `maxLevel` at the top level,
+   * `insufficientMoney` when Money is below the cost.
+   */
+  upgradeTower(towerId: number): CommandResult<UpgradeTowerRefusal, { readonly level: number }>;
+  /** Whether `upgradeTower(towerId)` would succeed now, or the reason it would refuse. Changes nothing. */
+  canUpgradeTower(towerId: number): CommandResult<UpgradeTowerRefusal>;
 }
 
 /** Builds a game from data. Throws InvalidMapError when the map is malformed, RangeError for a malformed wave. */
@@ -125,6 +137,17 @@ export function createGame(config: GameConfig): Game {
     if (towerAt(state.towers, tile)) return { ok: false, reason: 'occupied' };
     if (state.money < TOWER_STATS[kind].cost) return { ok: false, reason: 'insufficientMoney' };
     return { ok: true };
+  };
+
+  /** The tower and its next level's stats, or the reason it can't be upgraded. */
+  const checkUpgrade = (towerId: number) => {
+    if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' } as const;
+    const tower = state.towers.find((t) => t.id === towerId);
+    if (!tower) return { ok: false, reason: 'noSuchTower' } as const;
+    const next = nextLevel(tower);
+    if (!next) return { ok: false, reason: 'maxLevel' } as const;
+    if (state.money < next.cost) return { ok: false, reason: 'insufficientMoney' } as const;
+    return { ok: true, tower, next } as const;
   };
 
   return {
@@ -197,9 +220,23 @@ export function createGame(config: GameConfig): Game {
       const stats = TOWER_STATS[kind];
       const towerId = nextId++;
       state.money -= stats.cost;
-      state.towers.push({ ...stats, id: towerId, kind, tile, cooldownMs: 0 });
+      state.towers.push({ ...stats, id: towerId, kind, tile, cooldownMs: 0, level: 1, spent: stats.cost });
       return { ok: true, towerId };
     },
     canPlaceTower,
+    upgradeTower(towerId) {
+      const allowed = checkUpgrade(towerId);
+      if (!allowed.ok) return allowed;
+      const { tower, next } = allowed;
+      const { cost, ...stats } = next;
+      const upgraded: Tower = { ...tower, ...stats, level: tower.level + 1, spent: tower.spent + cost };
+      state.money -= cost;
+      state.towers = state.towers.map((t) => (t.id === towerId ? upgraded : t));
+      return { ok: true, level: upgraded.level };
+    },
+    canUpgradeTower(towerId) {
+      const allowed = checkUpgrade(towerId);
+      return allowed.ok ? { ok: true } : allowed;
+    },
   };
 }
