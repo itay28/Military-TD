@@ -340,21 +340,18 @@ describe('AA Gun', () => {
     });
 
   it('has the starting numbers from the spec', () => {
-    expect(TOWER_STATS.aaGun).toEqual({ cost: 75, range: 3, fireRate: 4, damage: 8, targets: ['air'] });
+    expect(TOWER_STATS.aaGun).toEqual({ cost: 75, range: 3, fireRate: 4, damage: 8, targets: ['ground', 'air'] });
   });
 
-  it('does not fire at ground enemies in range, and stays ready', () => {
-    const ground = [handEnemy(1, 1), handEnemy(2, 2)];
-    const result = fireTowers([aaGun()], ground, 1000);
-    expect(result.shots).toEqual([]);
-    expect(result.enemies).toEqual(ground);
-    expect(result.towers[0]?.cooldownMs).toBe(0);
-  });
-
-  it('shoots a Helicopter that passes a ground enemy further along', () => {
-    const result = fireTowers([aaGun()], [helicopter(1, 1), handEnemy(2, 2)], 0);
+  it('hits ground enemies too (ADR-0007: no hard counters)', () => {
+    const result = fireTowers([aaGun()], [handEnemy(1, 1)], 0);
     expect(result.shots.map((s) => s.targetId)).toEqual([1]);
-    expect(result.enemies.find((e) => e.id === 2)?.hp).toBe(ENEMY_STATS.infantry.maxHp);
+    expect(result.shots[0]?.hits).toEqual([{ enemyId: 1, damage: 8 }]);
+  });
+
+  it('shoots a Helicopter that is further along than a ground enemy', () => {
+    const result = fireTowers([aaGun()], [handEnemy(2, 1), helicopter(1, 2)], 0);
+    expect(result.shots.map((s) => s.targetId)).toEqual([1]);
   });
 });
 
