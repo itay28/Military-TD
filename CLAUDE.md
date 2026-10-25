@@ -4,7 +4,7 @@ A basic military-themed tower defense game.
 
 ## Agent skills
 
-Use **Matt Pocock's skills** (`mattpocock-skills`) for all workflow steps. Don't use overlapping skills from other plugins (`agent-engineering:*`, Anthropic's `engineering:*`), and prefer `mattpocock-skills:code-review` over the built-in `/code-review`. `.claude/settings.json` turns those plugins off for this repo, and the automatic PR review in CI runs `mattpocock-skills:code-review` too. Which skill to use when: `docs/agents/workflow.md`.
+Use **Matt Pocock's skills** (`mattpocock-skills`) for all workflow steps. Don't use overlapping skills from other plugins (`agent-engineering:*`, Anthropic's `engineering:*`), and prefer `mattpocock-skills:code-review` over the built-in `/code-review`. `.claude/settings.json` turns those plugins off for this repo. Code review runs in CI only (`mattpocock-skills:code-review` on Sonnet, when a PR is marked ready), so don't also run it locally. Which skill to use when: `docs/agents/workflow.md`.
 
 ### Issue tracker
 
@@ -42,8 +42,9 @@ Full process in `docs/agents/workflow.md`. In short:
 4. **Rules live in `src/sim`**: no Phaser and no `Math.random`/`Date.now` there (ADR-0002).
 5. **Assets are tracked**: no third-party file gets committed without an entry in `assets/manifest.json` and an allowed license (`docs/assets.md`).
 6. **Keep the issue current**: comment on the issue at each step (plan, red, green, PR, review). If the idea, flow or scope changes, update the issue description with a dated "Changed:" note.
-7. **Session tracker**: at the start of a working session, publish an Artifact page with links to the issue and PR, what and why, the plan, a progress log, and status. Update it as you go. Without the Artifact tool, use a pinned issue comment instead.
+7. **Session tracker**: publish an Artifact page from `docs/agents/session-tracker.html` (no design pass) with links to the issue and PR, what and why, the plan, a progress log, and status. Publish it at plan, PR ready, and done. Without the Artifact tool, use a pinned issue comment instead.
 8. **Screenshots for UI changes**: a PR that changes what the player sees embeds screenshots of each touched state, in the PR body and the session tracker (`docs/agents/workflow.md` → **4b**).
-9. **Draft until done, then ready**: PRs are drafts while in progress. Once a PR is complete and checks pass, mark it ready for review (`gh pr ready`) and make sure the issue's card is *In review*: the board-status hook moves it and reports back; if it couldn't, move it by hand (`docs/agents/issue-tracker.md` → **Project board**). Don't leave a finished PR in draft.
+9. **Draft until done, then ready**: PRs are drafts while in progress. Once a PR is complete and checks pass, mark it ready for review (`gh pr ready`). That starts the CI review: address its comment. Make sure the issue's card is *In review*: the board-status hook moves it and reports back; if it couldn't, move it by hand (`docs/agents/issue-tracker.md` → **Project board**). Don't leave a finished PR in draft.
 10. **Every PR closes an issue**: the PR title is a Conventional Commit (`feat:`, `fix:`, …; it drives versioning, ADR-0004) and the body says `Closes #n`. No issue yet? Create one first (epic, area label, milestone), then open the PR.
 11. **Git**: work on a branch (`<type>/<issue>-<slug>`). Never push to `main` (it's protected), never force-push, never rewrite pushed history. PRs are squash-merged.
+12. **Token budget**: one issue per session, read only what you need, batch commands (`docs/agents/workflow.md` → **Token budget**).

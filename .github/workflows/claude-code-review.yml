@@ -1,11 +1,12 @@
 name: Claude Code Review
 
 # Reviews a PR with Matt Pocock's code-review skill (Standards + Spec axes)
-# and posts the report as one PR comment. Drafts are skipped: the review
-# runs when a PR is opened as ready or marked ready, then on each push.
+# and posts the report as one PR comment. It runs on the user's Claude plan, so
+# it runs once: when a PR is opened as ready or marked ready (drafts are
+# skipped), not on each push. Adding the `review-again` label runs it again.
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+    types: [opened, ready_for_review, reopened, labeled]
 
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
@@ -13,12 +14,15 @@ concurrency:
 
 jobs:
   claude-review:
-    if: github.event.pull_request.draft == false
+    if: >-
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'labeled' || github.event.label.name == 'review-again')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
-      issues: read
+      # Removing the review-again label goes through the issues API.
+      issues: write
       id-token: write
 
     steps:
@@ -27,6 +31,12 @@ jobs:
         with:
           # Full history so the skill can diff against the merge-base with the base branch
           fetch-depth: 0
+
+      - name: Remove the review-again label
+        if: github.event.action == 'labeled'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label review-again
 
       - name: Run Claude Code Review
         id: claude-review
@@ -46,4 +56,4 @@ jobs:
             - Standards sources: CLAUDE.md, docs/agents/workflow.md, docs/adr/, docs/assets.md, GLOSSARY.md.
 
             When the report is ready, post it as a single PR comment with `gh pr comment ${{ github.event.pull_request.number }} --body-file <file>`, starting with the heading "## Code review (mattpocock-skills:code-review)". Don't edit files or push.
-          claude_args: '--allowedTools "Read,Glob,Grep,Task,Agent,Write,Bash(git diff:*),Bash(git log:*),Bash(git rev-parse:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*)"'
+          claude_args: '--model sonnet --allowedTools "Read,Glob,Grep,Task,Agent,Write,Bash(git diff:*),Bash(git log:*),Bash(git rev-parse:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*)"'

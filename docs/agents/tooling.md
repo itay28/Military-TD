@@ -15,6 +15,10 @@ Pitfalls agents have hit in this repo, and the way around each one. Add to this 
 
 - **`import.meta.glob` goes stale in tests.** Vitest's module cache keeps a test file's transformed code, glob results included, until that file changes, so a file added later that matches the glob is silently skipped. List files at run time instead (`readdirSync` plus `await import()`), as `tests/scenarios/scenarios.test.ts` does. `npx vitest --clearCache` clears a stale cache.
 
+## CI review
+
+- **A PR that edits `claude-code-review.yml` gets no review.** `claude-code-action` checks that its workflow file matches the copy on `main` and skips the run otherwise ("Workflow validation failed"), while the check still shows as passed with no PR comment. Say so on the PR; the new config takes effect once it's merged.
+
 ## Git
 
 - Each agent session works in its own worktree under `.claude/worktrees/` (git-ignored). Start new work from `origin/main`: `git fetch origin && git switch -c <type>/<issue>-<slug> origin/main`.

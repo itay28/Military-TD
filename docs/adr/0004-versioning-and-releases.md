@@ -19,7 +19,7 @@ Follow [Semantic Versioning](https://semver.org) with its 0.x rules before the f
 Mechanics:
 - Conventional Commit PR titles, squash-merged, with a CI check on titles.
 - **release-please** keeps an open release PR with the next version and a generated `CHANGELOG.md`. Config: `bump-minor-pre-major: true`, `bump-patch-for-minor-pre-major: true`. Milestone releases are forced with a `Release-As: 0.N.0` commit footer.
-- A milestone release goes through a **milestone report PR** (`chore: release 0.N.0`). It is opened when the milestone's last issue other than its release issue closes, adds an audit of what the milestone delivered (`docs/releases/0.N.0.md`), and carries the `Release-As: 0.N.0` footer. A human reviews and merges it; then merging the release PR ships `v0.N.0`. Each milestone has a **release issue** that tracks it on the project board and closes on the release. The flow is in `docs/agents/workflow.md` → **Milestone release**.
+- A milestone release goes through a **milestone report PR** (`chore: release 0.N.0`). It is opened when the milestone's last issue other than its release issue closes, adds an audit of what the milestone delivered (`docs/releases/0.N.0.md`), and carries the `Release-As: 0.N.0` footer. A human reviews and merges it; then merging the release PR ships `v0.N.0`. Each milestone has a **release issue** that tracks it on the project board and closes on the release. The flow is in `docs/agents/releasing.md` → **Milestone release**.
 - Merging the release PR tags `vX.Y.Z` and publishes a GitHub Release. That triggers the itch.io deploy (ADR-0005).
 - The build embeds the version, and the game shows it in a corner. Bug reports should include it.
 

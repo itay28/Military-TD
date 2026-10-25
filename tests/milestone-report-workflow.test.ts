@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-// Guards the milestone report workflow (docs/agents/workflow.md → Milestone release) so an edit can't
+// Guards the milestone report workflow (docs/agents/releasing.md → Milestone release) so an edit can't
 // silently stop milestones reporting, or let an issue title reach the shell.
 const workflow = readFileSync('.github/workflows/milestone-report.yml', 'utf8');
 const runs = [...workflow.matchAll(/^\s+run: (.+)$/gm)].map((m) => m[1]);

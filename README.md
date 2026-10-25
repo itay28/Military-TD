@@ -53,3 +53,5 @@ Until all three are set, the deploy job fails with a message naming what's missi
 - `GLOSSARY.md`: game vocabulary
 - `docs/adr/`: decisions
 - `docs/agents/workflow.md`: how changes get made
+- `docs/agents/releasing.md`: releases, deploys, milestone close-out
+- `docs/agents/session-tracker.html`: template for each session's tracker page

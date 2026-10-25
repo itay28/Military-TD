@@ -1,0 +1,199 @@
+<!--
+  Session tracker template (docs/agents/workflow.md → 0b). Copy it to your scratch folder, replace every
+  {{PLACEHOLDER}}, and publish it with the Artifact tool (icon "flag"). It already follows the Artifact page
+  rules (title, tokens for both themes, phone width), so no design pass is needed. Publish three times: plan
+  posted, PR ready, session end. Between publishes, add one <li> to the log per step.
+  Status pill: class "pill" (In progress) or "pill done" (In review, Done).
+  Screenshots: one <figure> each, the image as a data: URI (base64 PNG), with a one-line caption.
+-->
+<title>Issue {{N}} {{SHORT NAME}}</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap"
+/>
+<style>
+  /* Layout: one field-report column; status strip on top, then what/why, plan, log, screenshots. */
+  :root {
+    --bg: #f3f1e8;
+    --surface: #e7e4d6;
+    --fg: #23261d;
+    --muted: #63664f;
+    --accent: #6e5a22;
+    --ok: #3f6b2a;
+    --warn: #9a6a12;
+    --display: 'Archivo', 'Arial Narrow', sans-serif;
+    --body: 'IBM Plex Sans', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #1b1e16;
+      --surface: #262a1f;
+      --fg: #e4e0c8;
+      --muted: #a2a58f;
+      --accent: #e0bf6e;
+      --ok: #8fc46b;
+      --warn: #f0c95a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --bg: #1b1e16;
+    --surface: #262a1f;
+    --fg: #e4e0c8;
+    --muted: #a2a58f;
+    --accent: #e0bf6e;
+    --ok: #8fc46b;
+    --warn: #f0c95a;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.6 var(--body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 32px 48px;
+  }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  h1,
+  h2 {
+    font-family: var(--display);
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 {
+    font-size: 30px;
+    font-weight: 800;
+  }
+  h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  p {
+    margin: 0;
+    max-width: 65ch;
+  }
+  a {
+    color: var(--accent);
+  }
+  a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  code {
+    font: 13px var(--mono);
+  }
+  .eyebrow {
+    font: 600 12px var(--mono);
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--surface);
+    border-radius: 4px;
+  }
+  .pill {
+    font: 600 12px var(--mono);
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+    color: var(--warn);
+  }
+  .pill.done {
+    color: var(--ok);
+  }
+  ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .log {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .log li {
+    display: grid;
+    grid-template-columns: 7.5em 1fr;
+    gap: 12px;
+  }
+  .log time {
+    font: 13px var(--mono);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .log span {
+    min-width: 0;
+  }
+  .shots {
+    display: grid;
+    gap: 16px;
+  }
+  figure {
+    margin: 0;
+  }
+  figcaption {
+    font-size: 13px;
+    color: var(--muted);
+  }
+</style>
+<main>
+  <header>
+    <div class="eyebrow">Military-TD · {{MILESTONE}} · {{AREA LABEL}}</div>
+    <h1>{{ISSUE TITLE}}</h1>
+  </header>
+
+  <section class="status" aria-label="Status">
+    <span class="pill">In progress</span>
+    <span>Issue <a href="https://github.com/itay28/Military-TD/issues/{{N}}">#{{N}}</a></span>
+    <span>PR: not opened yet</span>
+    <span>Branch <code>{{BRANCH}}</code></span>
+  </section>
+
+  <section>
+    <h2>What and why</h2>
+    <p>{{TWO OR THREE SENTENCES: WHAT IS BEING BUILT AND WHY}}</p>
+  </section>
+
+  <section>
+    <h2>Plan</h2>
+    <ul>
+      <li>{{ONE LINE PER MODULE OR SEAM}}</li>
+    </ul>
+    <p><a href="{{PLAN COMMENT URL}}">Full plan on the issue</a></p>
+  </section>
+
+  <section>
+    <h2>Progress log</h2>
+    <ol class="log">
+      <li><time>{{MM-DD}} · plan</time><span>Plan posted on the issue.</span></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Open questions</h2>
+    <p>None.</p>
+  </section>
+
+  <section hidden>
+    <h2>Screenshots</h2>
+    <div class="shots"></div>
+  </section>
+</main>
