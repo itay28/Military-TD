@@ -8,7 +8,7 @@
 | **Path** | The ordered waypoints enemies walk from spawn to exit. Towers can't be built on Path tiles. | road, lane, track |
 | **Waypoint** | A tile where the Path turns, or its first or last tile. Consecutive waypoints share a row or a column; the tiles between them are **Path tiles**. | node, corner |
 | **Buildable tile** | A tile where a tower may be placed: not on the Path and not occupied. The map's `isBuildable` checks the first part; placement also checks occupancy. | |
-| **Tower** | A placed defensive unit. The MVP has one kind: **Rifle Nest**. | turret |
+| **Tower** | A placed defensive unit. Kinds: **Rifle Nest**, **Cannon**. | turret |
 | **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
@@ -17,6 +17,8 @@
 | **Armor** | A flat amount an enemy takes off every hit: a hit removes `damage − armor`, but always at least 1 HP. | defense, resistance |
 | **Armor pierce** | How much of the target's Armor a tower's hits ignore (`armorPierce`, 0 by default). It cancels Armor up to its value and never adds damage. | penetration |
 | **Hit** | What one shot did to one enemy: the HP it actually removed, after Armor and no more than the enemy had left. A shot lists its hits (one for a direct-fire tower). | |
+| **Splash** | A shot's area effect (`splashRadius`, in tiles): besides the target, every enemy the tower can hit within the radius of the target's position takes the full damage, less its own Armor. No falloff. A shot's hits list the target first. | blast, AoE |
+| **Cannon** | A tower with Splash: slow, hits ground enemies only (`targets: ['ground']`). | artillery, mortar |
 | **Wave** | A scheduled group of enemies spawned one after another. | round, level |
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
 | **Victory / Defeat** | How a game ends: the last wave cleared with Lives left / Lives reaching 0. Either one stops the Simulation. | win, game over |

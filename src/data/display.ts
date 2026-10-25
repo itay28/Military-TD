@@ -27,6 +27,7 @@ export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha:
 /** Towers as outlined squares, by kind. Size in pixels, less than a tile so the grid shows around it. */
 export const TOWER_STYLE = {
   rifleNest: { size: 32, fill: 0x3b4252, outline: 0xe5e1cf, outlineWidth: 2 }, // slate, bone outline
+  cannon: { size: 36, fill: 0x6b4f2a, outline: 0xf0b429, outlineWidth: 3 }, // bronze, amber outline
 } as const satisfies Record<TowerKind, { size: number; fill: number; outline: number; outlineWidth: number }>;
 
 /** The range ring shown while the pointer is over a tower. */
@@ -58,6 +59,9 @@ export const PLACEMENT_REFUSAL_TEXT = {
 
 /** The line drawn for each hit, from the tower to the target. */
 export const TRACER = { color: 0xffe9a0, width: 2, fadeMs: 80 } as const;
+
+/** The circle drawn at a splash shot's target. Lifetime in real ms; the radius comes from the tower. */
+export const SPLASH = { color: 0xf0b429, fillAlpha: 0.35, lifetimeMs: 200 } as const;
 
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;

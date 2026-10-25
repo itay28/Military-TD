@@ -16,6 +16,8 @@ export interface TowerStats {
   readonly targets: readonly Layer[];
   /** Armor it ignores per hit; 0 when left out. */
   readonly armorPierce?: number;
+  /** In tiles: a shot also hits every enemy it can target within this distance (inclusive) of the target; none when left out. */
+  readonly splashRadius?: number;
 }
 
 /** A placed tower. Its stats are copied from its kind when it is placed. */
@@ -69,7 +71,8 @@ export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | u
 
 /**
  * Counts each tower's cooldown down by `dtMs`; a ready tower with a target hits it once,
- * for `damage` less the target's armor (see `damageTaken`).
+ * for `damage` less the target's armor (see `damageTaken`);
+ * with a `splashRadius`, it hits every enemy it can target near the target the same way.
  * Towers act in order, and an enemy at 0 HP is removed at once, so later towers retarget.
  * Time past the end of a cooldown carries into the next, so the fire rate holds at any tick size;
  * an idle tower waits at 0, ready.
@@ -86,20 +89,29 @@ export function fireTowers(
     const cooldownMs = tower.cooldownMs - dtMs;
     const target = cooldownMs <= COOLDOWN_EPSILON ? selectTarget(tower, alive) : undefined;
     if (!target) return { ...tower, cooldownMs: Math.max(0, cooldownMs) };
-    const damage = damageTaken(tower.damage, target.armor, tower.armorPierce ?? 0, target.hp);
-    shots.push({
-      towerId: tower.id,
-      targetId: target.id,
-      position: target.position,
-      hits: [{ enemyId: target.id, damage }],
-    });
-    const hit = { ...target, hp: target.hp - damage };
-    if (hit.hp === 0) {
-      kills.push(hit);
-      alive = alive.filter((enemy) => enemy.id !== hit.id);
-    } else {
-      alive = alive.map((enemy) => (enemy.id === hit.id ? hit : enemy));
+    const splashed =
+      tower.splashRadius === undefined
+        ? []
+        : alive.filter(
+            (enemy) =>
+              enemy.id !== target.id &&
+              tower.targets.includes(enemy.layer) &&
+              Math.hypot(enemy.position.x - target.position.x, enemy.position.y - target.position.y) <=
+                tower.splashRadius!,
+          );
+    const hits: Hit[] = [];
+    for (const enemy of [target, ...splashed]) {
+      const damage = damageTaken(tower.damage, enemy.armor, tower.armorPierce ?? 0, enemy.hp);
+      hits.push({ enemyId: enemy.id, damage });
+      const hurt = { ...enemy, hp: enemy.hp - damage };
+      if (hurt.hp === 0) {
+        kills.push(hurt);
+        alive = alive.filter((other) => other.id !== hurt.id);
+      } else {
+        alive = alive.map((other) => (other.id === hurt.id ? hurt : other));
+      }
     }
+    shots.push({ towerId: tower.id, targetId: target.id, position: target.position, hits });
     // A tower that came off cooldown mid-tick fired late; take that time off its next cooldown.
     // One that was already waiting at 0 only now saw a target, so it gets a full cooldown.
     const lateMs = tower.cooldownMs > 0 ? Math.max(0, -cooldownMs) : 0;

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { FLOATING_TEXT, TRACER } from '../data/display';
+import { FLOATING_TEXT, SPLASH, TILE_PX, TRACER } from '../data/display';
 import type { TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
@@ -9,12 +9,13 @@ import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import { pixelToTile, toPixels, type Pixel } from './coords';
-import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers } from './drawEntities';
+import { drawEnemy, drawGhost, drawRangeRing, drawSplashes, drawTower, drawTracers } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
+import { createSplashes, type Splashes } from './splashes';
 import { createTracers, type Tracers } from './tracers';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
@@ -64,6 +65,8 @@ export class GameScene extends Phaser.Scene {
   private towerViews!: ViewSync<Tower>;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
+  private splashes!: Splashes;
+  private splashGraphics!: Phaser.GameObjects.Graphics;
   private rangeRing!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
   /** The ghost last drawn, so it is redrawn only when its tile or colour changes. */
@@ -152,8 +155,11 @@ export class GameScene extends Phaser.Scene {
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
       if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position));
+      if (tower?.splashRadius) this.splashes.add(toPixels(shot.position), tower.splashRadius * TILE_PX);
     });
 
+    this.splashes = createSplashes(this.flags.anim ? SPLASH.lifetimeMs : 0);
+    this.splashGraphics = this.add.graphics().setDepth(DEPTH.tracers);
     this.rangeRing = this.add.graphics().setDepth(DEPTH.rangeRing).setVisible(false);
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       this.pointerTile = pixelToTile({ x: pointer.worldX, y: pointer.worldY });
@@ -195,6 +201,7 @@ export class GameScene extends Phaser.Scene {
   override update(_time: number, deltaMs: number): void {
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
+    this.splashes.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     this.loop.advance(frameMs(this.flags, deltaMs));
     this.hud.update();
@@ -205,6 +212,8 @@ export class GameScene extends Phaser.Scene {
     this.enemyViews.sync(enemies);
     this.tracerGraphics.clear();
     drawTracers(this.tracerGraphics, this.tracers.active());
+    this.splashGraphics.clear();
+    drawSplashes(this.splashGraphics, this.splashes.active());
     // Checked every frame, not only on pointer moves, so a tower that appears under a still pointer shows its ring.
     this.hover(this.pointerTile && towerAt(towers, this.pointerTile));
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.

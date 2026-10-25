@@ -1,6 +1,7 @@
-import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
+import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, SPLASH, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
+import type { SplashCircle } from './splashes';
 import type { Tower } from '../sim/towers';
 import type { MapPainter } from './drawMap';
 import type { TracerLine } from './tracers';
@@ -53,6 +54,14 @@ export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: bo
   painter.fillRect(-half, -half, size, size);
   painter.lineStyle(GHOST.ringWidth, color, GHOST.ringAlpha);
   painter.strokeCircle(0, 0, TOWER_STATS[kind].range * TILE_PX);
+}
+
+/** Each splash as a filled circle in canvas pixels, at its current alpha. */
+export function drawSplashes(painter: EntityPainter, splashes: readonly SplashCircle[]): void {
+  for (const { at, radius, alpha } of splashes) {
+    painter.fillStyle(SPLASH.color, SPLASH.fillAlpha * alpha);
+    painter.fillCircle(at.x, at.y, radius);
+  }
 }
 
 /** Each tracer as a line in canvas pixels, at its current alpha. */
