@@ -11,7 +11,10 @@ export default defineScenario({
   expectations({ outcome, finalState, events }, expect) {
     expect(outcome).toBe('victory');
     // 30 HP at 10 per shot: three hits, then the kill.
-    expect(events.filter((e) => e.type === 'towerFired')).toHaveLength(3);
+    const shots = events.filter((e) => e.type === 'towerFired');
+    expect(shots).toHaveLength(3);
+    // Infantry has no armor, so each hit removes the full 10.
+    for (const shot of shots) expect(shot.hits).toEqual([{ enemyId: shot.targetId, damage: 10 }]);
     expect(events.filter((e) => e.type === 'enemyKilled')).toHaveLength(1);
     expect(events.some((e) => e.type === 'enemyLeaked')).toBe(false);
     expect(finalState.lives).toBe(START_LIVES);

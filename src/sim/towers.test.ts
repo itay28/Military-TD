@@ -3,7 +3,7 @@ import { ENEMY_STATS } from '../data/enemies';
 import type { Enemy } from './enemies';
 import { createGame, TICK_MS, type Game } from './game';
 import type { MapData, Tile } from './map';
-import { selectTarget, towerAt } from './towers';
+import { fireTowers, selectTarget, towerAt, type Tower } from './towers';
 
 // Path line through tile centers: right along y = 1.5 from x = 0.5 to 3.5, then down x = 3.5 to y = 4.5.
 // Infantry walks 1.5 tiles/s, so tick(1000) puts a fresh enemy at distance 1.5, position (2, 1.5).
@@ -32,7 +32,17 @@ describe('placeTower', () => {
     const game = newGame();
     const id = place(game, { col: 2, row: 2 });
     expect(game.state.towers).toEqual([
-      { id, kind: 'rifleNest', tile: { col: 2, row: 2 }, cost: 50, range: 2.5, fireRate: 2, damage: 10, cooldownMs: 0 },
+      {
+        id,
+        kind: 'rifleNest',
+        tile: { col: 2, row: 2 },
+        cost: 50,
+        range: 2.5,
+        fireRate: 2,
+        damage: 10,
+        targets: ['ground', 'air'],
+        cooldownMs: 0,
+      },
     ]);
     expect(place(game, { col: 1, row: 2 })).not.toBe(id);
   });
@@ -212,7 +222,12 @@ describe('kills', () => {
     game.tick(0);
     game.tick(500);
     game.tick(500); // the killing shot, at distance 1.5
-    expect(hits.at(-1)).toEqual({ towerId: tower, targetId: enemy, position: { x: 2, y: 1.5 } });
+    expect(hits.at(-1)).toEqual({
+      towerId: tower,
+      targetId: enemy,
+      position: { x: 2, y: 1.5 },
+      hits: [{ enemyId: enemy, damage: 10 }],
+    });
   });
 
   it('towerFired and enemyKilled listeners see the settled state of the tick', () => {
@@ -228,6 +243,73 @@ describe('kills', () => {
     game.tick(500);
     game.tick(500);
     expect(seen).toEqual(['fired hp=20', 'fired hp=10', 'fired hp=gone', 'killed left=0']);
+  });
+});
+
+// No data kind is ground-only, armored or airborne yet, so these build towers and enemies by hand.
+// The tower stands on tile (2, 2), center (2.5, 2.5); enemies sit on y = 1.5, all within its 2.5 range.
+const handTower = (stats: Partial<Tower> = {}): Tower => ({
+  id: 1,
+  kind: 'rifleNest',
+  tile: { col: 2, row: 2 },
+  cost: 50,
+  range: 2.5,
+  fireRate: 2,
+  damage: 10,
+  targets: ['ground', 'air'],
+  cooldownMs: 0,
+  ...stats,
+});
+
+const handEnemy = (id: number, distance: number, stats: Partial<Enemy> = {}): Enemy => ({
+  ...ENEMY_STATS.infantry,
+  id,
+  kind: 'infantry',
+  hp: ENEMY_STATS.infantry.maxHp,
+  distance,
+  position: { x: 0.5 + distance, y: 1.5 },
+  ...stats,
+});
+
+describe('layers', () => {
+  it('a ground-only tower ignores an air enemy further along and picks the ground one behind it', () => {
+    const tower = handTower({ targets: ['ground'] });
+    const enemies = [handEnemy(1, 1), handEnemy(2, 2, { layer: 'air' })];
+    expect(selectTarget(tower, enemies)?.id).toBe(1);
+  });
+
+  it('a ground-only tower with only air enemies in range has no target', () => {
+    const tower = handTower({ targets: ['ground'] });
+    const enemies = [handEnemy(1, 1, { layer: 'air' }), handEnemy(2, 2, { layer: 'air' })];
+    expect(selectTarget(tower, enemies)).toBeUndefined();
+  });
+
+  it('a tower that hits both layers picks "first" across both', () => {
+    const tower = handTower({ targets: ['ground', 'air'] });
+    expect(selectTarget(tower, [handEnemy(1, 1), handEnemy(2, 2, { layer: 'air' })])?.id).toBe(2);
+    expect(selectTarget(tower, [handEnemy(1, 2), handEnemy(2, 1, { layer: 'air' })])?.id).toBe(1);
+  });
+});
+
+describe('armor', () => {
+  it("an armored enemy takes damage − armor per hit, and the shot's hit reports it", () => {
+    const fired = fireTowers([handTower({ damage: 10 })], [handEnemy(7, 1, { armor: 3 })], 0);
+    expect(fired.enemies).toEqual([expect.objectContaining({ id: 7, hp: 23 })]);
+    expect(fired.shots).toEqual([
+      { towerId: 1, targetId: 7, position: { x: 1.5, y: 1.5 }, hits: [{ enemyId: 7, damage: 7 }] },
+    ]);
+  });
+
+  it('armor pierce cancels armor up to its value', () => {
+    const fired = fireTowers([handTower({ damage: 10, armorPierce: 2 })], [handEnemy(7, 1, { armor: 3 })], 0);
+    expect(fired.shots[0]!.hits).toEqual([{ enemyId: 7, damage: 9 }]);
+  });
+
+  it('a killing hit reports only the HP that was left', () => {
+    const fired = fireTowers([handTower({ damage: 10 })], [handEnemy(7, 1, { hp: 4 })], 0);
+    expect(fired.shots[0]!.hits).toEqual([{ enemyId: 7, damage: 4 }]);
+    expect(fired.kills).toEqual([expect.objectContaining({ id: 7, hp: 0 })]);
+    expect(fired.enemies).toEqual([]);
   });
 });
 
