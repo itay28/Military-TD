@@ -237,6 +237,28 @@ describe('startIssue: claim, then fire', () => {
     await expect(startIssue(start, 'gh-token', routines, fetchFn)).rejects.toThrow();
     expect(calls(fetchFn).some((c) => c.includes('fire.example'))).toBe(false);
   });
+
+  it('removes the assignee again when adding the label fails', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string, init: RequestInit) =>
+      init.method === 'POST' && url.endsWith('/labels') ? new Response('nope', { status: 422 }) : ok(),
+    );
+    await expect(startIssue(start, 'gh-token', routines, fetchFn)).rejects.toThrow(/#12/);
+    expect(calls(fetchFn)).toContain(`DELETE ${api}/assignees`);
+    expect(calls(fetchFn).some((c) => c.includes('fire.example'))).toBe(false);
+  });
+
+  it('still reports the fire error when un-claiming fails too', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string, init: RequestInit) =>
+      url.startsWith('https://fire.example')
+        ? new Response('fire broke', { status: 500 })
+        : init.method === 'DELETE'
+          ? new Response('gone', { status: 500 })
+          : ok(),
+    );
+    const failure = startIssue(start, 'gh-token', routines, fetchFn);
+    await expect(failure).rejects.toThrow(/fire broke/);
+    await expect(failure).rejects.toThrow(/un-claiming failed/);
+  });
 });
 
 describe('commentNoSize', () => {

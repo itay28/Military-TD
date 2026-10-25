@@ -341,6 +341,9 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   }
 
   if (!autoStart) return;
+  // An unread open PR could close an issue that would then be started a second time.
+  if (repository.open.totalCount > repository.open.nodes.length)
+    throw new Error('Auto-start skipped: not every open PR was read (see the warning above). Paginate PR_QUERY.');
   const moved = new Map(moves.map((m) => [m.issue, m.to]));
   const openPrs: OpenPr[] = prs.filter((pr) => pr.state === 'OPEN');
   const plan = planStarts(

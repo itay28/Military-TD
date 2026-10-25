@@ -175,9 +175,9 @@ export const fireText = (start: Start) =>
 
 /**
  * Claim the issue (assign the maintainer, add `auto-agent`), then fire the implement task for its
- * model. The claim comes first so a second Board sync run can't start it again. If the fire
- * fails, the claim is undone and the error rethrown, so the issue is startable next run and the
- * run goes red.
+ * model. The claim comes first so a second Board sync run can't start it again. If any step
+ * fails, whatever part of the claim went through is undone and the error rethrown, so the issue
+ * is startable next run and the run goes red.
  */
 export async function startIssue(
   start: Start,
@@ -186,10 +186,10 @@ export async function startIssue(
   fetchFn: Fetch = fetch,
 ): Promise<void> {
   const n = start.issue;
-  await github(fetchFn, token, 'POST', `${n}/assignees`, { assignees: [MAINTAINER] });
-  await github(fetchFn, token, 'POST', `${n}/labels`, { labels: [AUTO_AGENT_LABEL] });
   const routine = routines[start.model];
   try {
+    await github(fetchFn, token, 'POST', `${n}/assignees`, { assignees: [MAINTAINER] });
+    await github(fetchFn, token, 'POST', `${n}/labels`, { labels: [AUTO_AGENT_LABEL] });
     const response = await fetchFn(routine.url, {
       method: 'POST',
       headers: {
@@ -200,11 +200,16 @@ export async function startIssue(
       },
       body: JSON.stringify({ text: fireText(start) }),
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status} ${await response.text()}`);
+    if (!response.ok) throw new Error(`fire: HTTP ${response.status} ${await response.text()}`);
   } catch (error) {
-    await github(fetchFn, token, 'DELETE', `${n}/assignees`, { assignees: [MAINTAINER] });
-    await github(fetchFn, token, 'DELETE', `${n}/labels/${AUTO_AGENT_LABEL}`);
-    throw new Error(`#${n}: firing the ${start.model} implement task failed, un-claimed: ${String(error)}`, {
+    // Undo whatever part of the claim went through; the original error is the one reported.
+    const undo = await Promise.allSettled([
+      github(fetchFn, token, 'DELETE', `${n}/assignees`, { assignees: [MAINTAINER] }),
+      github(fetchFn, token, 'DELETE', `${n}/labels/${AUTO_AGENT_LABEL}`),
+    ]);
+    const undoErrors = undo.flatMap((r) => (r.status === 'rejected' ? [String(r.reason)] : []));
+    const unclaimed = undoErrors.length ? `un-claiming failed (${undoErrors.join('; ')})` : 'un-claimed';
+    throw new Error(`#${n}: starting the ${start.model} implement task failed, ${unclaimed}: ${String(error)}`, {
       cause: error,
     });
   }
