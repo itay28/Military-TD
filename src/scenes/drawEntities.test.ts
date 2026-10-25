@@ -57,6 +57,17 @@ describe('drawEnemy', () => {
     ]);
   });
 
+  it('draws a Jeep as a square in its own color', () => {
+    const { painter, calls } = recordingPainter();
+    const { radius: r, color: c } = ENEMY_STYLE.jeep;
+    drawEnemy(painter, { ...infantry(20), ...ENEMY_STATS.jeep, kind: 'jeep', hp: 20 });
+    expect(calls.slice(0, 2)).toEqual([
+      ['fillStyle', c],
+      ['fillRect', -r, -r, r * 2, r * 2],
+    ]);
+    expect(c).not.toBe(color);
+  });
+
   it('draws a full HP bar centered above the circle at max HP', () => {
     const { painter, calls } = recordingPainter();
     drawEnemy(painter, infantry(30));

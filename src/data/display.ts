@@ -16,10 +16,11 @@ export const MAP_STYLE = {
   grid: { color: 0x000000, alpha: 0.15, width: 1 },
 } as const;
 
-/** Enemies as circles, by kind (before the v0.4 sprites). Radius in pixels. */
+/** Enemies as filled shapes, by kind (before the v0.4 sprites). Radius in pixels: a circle's radius, or half a square's side. */
 export const ENEMY_STYLE = {
-  infantry: { radius: 9, color: 0x9e3b2c }, // brick red
-} as const satisfies Record<EnemyKind, { radius: number; color: number }>;
+  infantry: { shape: 'circle', radius: 9, color: 0x9e3b2c }, // brick red
+  jeep: { shape: 'square', radius: 7, color: 0x6b7d3a }, // olive drab
+} as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number }>;
 
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the circle. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
