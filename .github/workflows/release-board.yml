@@ -1,0 +1,34 @@
+name: Release board
+
+# Each milestone has a release issue that stands in for it on the project board
+# (docs/agents/workflow.md, Milestone release). When the first PR for an issue
+# in a milestone opens, this moves the milestone's release issue from Backlog or
+# Ready to In progress. Logic and tests: scripts/release-board.ts.
+#
+# GITHUB_TOKEN can't edit a user-owned project, so this uses the PROJECT_TOKEN
+# secret (classic PAT, project + repo scopes). Without it, the run warns and passes.
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  release-issue:
+    name: release-issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Start the milestone's release issue
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: node scripts/release-board.ts pr "$PR_NUMBER"

@@ -48,7 +48,7 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # Without PROJECT_TOKEN (#97) the board move is skipped with a warning.
+      # Without PROJECT_TOKEN (as in release-board.yml) the board move is skipped with a warning.
       - name: Open or update the report PR
         env:
           MILESTONE: ${{ inputs.milestone || github.event.milestone.number || github.event.issue.milestone.number }}
