@@ -47,7 +47,8 @@ Every working session gets a **session tracker**: a live page that follows the w
   - **what** is being built and **why** (the goal, in two or three sentences);
   - the plan (from step 1);
   - a short progress log with timestamps;
-  - current status and any blockers or open questions.
+  - current status and any blockers or open questions;
+  - for UI changes, the screenshots from step 4b.
 - **Updates:** update it at each milestone of the session (plan agreed, tests red, tests green, PR opened, review done), and link it in the first progress comment on the issue.
 
 ### 1. Plan (comment on the issue)
@@ -79,10 +80,28 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 - For gameplay changes, also run the relevant scenario with `npm run scenario -- <name>` and read the outcome.
 - `mattpocock-skills:code-review` against `main` before marking the PR ready.
 
+### 4b. Screenshots for UI changes
+A PR that changes what the player sees (HUD, menus, overlays, anything a Scene draws) shows the change in screenshots, so a reviewer sees the result without building the game.
+- **What to capture:** each state the change touches, taken from the built game (`npm run build`, then `npx vite preview`): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use one fixed viewport (900 × 560) so later PRs compare like for like.
+- **How:** headless Chrome. `chrome --headless=new --window-size=900,560 --screenshot=<file>.png http://localhost:4173/` captures the opening state; later states need clicks, so drive the page with Playwright (`page.screenshot()`, set up with test mode's `?test=1&step=manual&anim=0`) once #26 lands, or with Chrome's DevTools protocol until then. Look at each image before attaching it.
+- **Where they live:** the `pr-assets` branch, which is never merged, one folder per PR (`<pr-number>/<name>.png`). Images stay off `main`, and GitHub has no API for uploading images to a PR. To add a folder:
+  ```sh
+  git fetch origin pr-assets
+  git worktree add --detach .claude/worktrees/pr-assets origin/pr-assets
+  # copy the images into .claude/worktrees/pr-assets/<pr-number>/
+  git -C .claude/worktrees/pr-assets add <pr-number>
+  git -C .claude/worktrees/pr-assets commit -m "docs: screenshots for #<pr-number>"
+  git -C .claude/worktrees/pr-assets push origin HEAD:pr-assets
+  git worktree remove .claude/worktrees/pr-assets
+  ```
+- **PR body:** a **Screenshots** section embeds them as `![<what to look at>](https://github.com/itay28/Military-TD/blob/pr-assets/<pr-number>/<name>.png?raw=true)`, a table when there are several. The alt text says what the image shows ("Mid-wave: Start Wave disabled").
+- **Session tracker:** embed the same images as `data:` URIs (an Artifact page can't load images from the private repo), with a one-line caption each.
+- **A state you can't capture** (for example one only a test-mode scenario reaches): say so under the screenshots, and name the test that covers it.
+
 ### 5. PR
 - Branch: `<type>/<issue>-<slug>`, e.g. `feat/8-tower-targeting`.
 - PR title in Conventional Commit form (it becomes the squash commit and drives the version bump): `feat: tower targeting and firing`.
-- Body via the `pr` skill, with `Closes #<n>` and the template checklist.
+- Body via the `pr` skill, with `Closes #<n>` and the template checklist, plus screenshots for UI changes (step 4b).
 - **Draft vs ready:** open the PR as a draft while work is still in progress. As soon as it's complete (acceptance criteria met, checks green, review done), mark it ready for review (`gh pr ready <n>`), make sure the issue's card is *In review* (the board-status hook usually does it), and say so on the issue. Never leave a finished PR in draft.
 - **Automatic review:** marking the PR ready starts the *Claude Code Review* workflow, which runs `mattpocock-skills:code-review` and posts a Standards / Spec report as a PR comment. It runs again on each push while the PR is ready, and skips drafts. Address its findings or say on the PR why not.
 - **Board:** the card moves to *In review* when the PR is marked ready, not when it is opened, and back to *In progress* if the PR is converted to a draft. In local sessions the board-status hook makes these moves after `gh pr ready`; check its report, and move the card by hand if it couldn't. Without the project token (e.g. `@claude` in CI), say on the issue which card needs moving (see `docs/agents/issue-tracker.md` → **Project board**). Merging the PR (or closing the issue) moves it to *Done* automatically.
@@ -92,6 +111,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 - [ ] Acceptance criteria met
 - [ ] Issue has progress comments; description updated if the idea changed
 - [ ] Session tracker shows the final status and the PR link
+- [ ] UI changes: screenshots in the PR body and the session tracker (step 4b)
 - [ ] Tests written first, now passing; new behaviour covered at the right layer
 - [ ] `npm run check` green locally and in CI (plus e2e if UI changed)
 - [ ] No game rules outside `src/sim`; no Phaser in `src/sim`
