@@ -25,6 +25,12 @@ describe('board sync workflow', () => {
     expect(yaml).toMatch(/^concurrency:\n {2}group: board-sync\n {2}cancel-in-progress: false\n/m);
   });
 
+  it('skips fork PRs, which get no secrets', () => {
+    expect(yaml).toContain(
+      "    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork\n",
+    );
+  });
+
   it('runs the sync with the project token from secrets', () => {
     expect(runsOf(yaml)).toEqual(['node scripts/board-sync.ts']);
     expect(yaml).toContain('PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}');

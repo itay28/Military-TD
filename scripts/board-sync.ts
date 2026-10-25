@@ -158,7 +158,7 @@ const PR_FIELDS = `nodes { isDraft state baseRefName body closingIssuesReference
 const PR_QUERY = `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     defaultBranchRef { name }
-    open: pullRequests(states: OPEN, first: 100) { ${PR_FIELDS} }
+    open: pullRequests(states: OPEN, first: 100) { totalCount ${PR_FIELDS} }
     merged: pullRequests(states: MERGED, first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) { ${PR_FIELDS} }
   }
 }`;
@@ -172,7 +172,11 @@ interface PrNode {
 }
 
 interface PrData {
-  repository: { defaultBranchRef: { name: string }; open: { nodes: PrNode[] }; merged: { nodes: PrNode[] } };
+  repository: {
+    defaultBranchRef: { name: string };
+    open: { totalCount: number; nodes: PrNode[] };
+    merged: { nodes: PrNode[] };
+  };
 }
 
 const SET_STATUS = `mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
@@ -208,6 +212,10 @@ async function sync(token: string, dryRun: boolean): Promise<void> {
   } while (cursor);
 
   const { repository } = await graphql<PrData>(token, PR_QUERY, { owner: OWNER, name: REPO });
+  if (repository.open.totalCount > repository.open.nodes.length)
+    console.log(
+      `::warning::${repository.open.totalCount} open PRs, only the first ${repository.open.nodes.length} were read; some cards may not move. Paginate PR_QUERY.`,
+    );
   const prs = [...repository.open.nodes, ...repository.merged.nodes].map((pr): PullRequest => ({
     isDraft: pr.isDraft,
     state: pr.state,

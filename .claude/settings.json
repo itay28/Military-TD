@@ -2,8 +2,12 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "enabledPlugins": {
     "mattpocock-skills@claude-plugins-official": true,
+    "workflow@itay28-skills": true,
     "engineering@anthropic-plugin-directory": false,
     "agent-engineering@anthropic-plugin-directory": false
+  },
+  "extraKnownMarketplaces": {
+    "itay28-skills": { "source": { "source": "github", "repo": "itay28/claude-skills" } }
   },
   "hooks": {
     "SessionStart": [

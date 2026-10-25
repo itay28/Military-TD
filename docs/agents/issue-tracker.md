@@ -87,7 +87,7 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 "Closes" means GitHub's link **or** `Closes/Fixes/Resolves #n` in the PR body: GitHub only links PRs that target `main`, so stacked PRs rely on the body. *Done* cards and release issues are never touched. It uses the `PROJECT_TOKEN` secret; a missing token or an API error fails the run, so a board that isn't syncing shows up red. Check by hand: `PROJECT_TOKEN=… node scripts/board-sync.ts --dry-run`.
 
 So agents move cards by hand only:
-- **Unblocked** issue: Backlog → *Ready* (`/promote-ready`).
+- **Unblocked** issue: Backlog → *Ready* (`/workflow:promote-ready`).
 - **Release issues**: only if a run warned or failed. Every move is a GitHub Action (see **Milestone release** in `docs/agents/releasing.md`).
 - To fix a card when a *Board sync* run failed; or re-run it.
 

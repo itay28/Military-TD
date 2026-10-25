@@ -9,13 +9,17 @@ Sessions run locally (this PC), over Remote Control or `claude --bg` (also this 
 | | Local / Remote Control | Cloud session | GitHub Actions |
 | --- | --- | --- | --- |
 | Repo settings, hooks, plugins in `.claude/settings.json` | yes | yes | `@claude` only |
-| Personal skills (`~/.claude/skills`) | yes | only if published as a plugin | no |
+| Workflow skills: plugin `workflow@itay28-skills` (private repo `itay28/claude-skills`) | yes (user scope, every repo) | yes through the repo settings, if the session can clone the private repo | no |
 | `GH_TOKEN`: repo-scoped fine-grained PAT | `gh auth login` | the cloud environment's env vars | `github.token` |
 | `PROJECT_TOKEN`: classic PAT, `project` + `repo` | user env var `GH_PROJECT_TOKEN`, or `~/.config/gh-project-token.txt` (only to set fields on new issues) | the cloud environment's env vars (same use) | repo secret `PROJECT_TOKEN` (Board sync, release board) |
 
 Same names everywhere, each environment reading its own store; tokens never go in the repo. Prefer a separate token per environment, so one can be revoked without breaking the others.
 
-**Local only:** `claude --bg` and the `/spawn-sessions` skill that uses it; the Windows notes below.
+**Local only:** `claude --bg` and the skills that use it (`/workflow:spawn-sessions`, `/workflow:stack-next`); the Windows notes below.
+
+**Skills:** change them in `itay28/claude-skills`, push, then `/plugin marketplace update itay28-skills`. Don't copy skills into `~/.claude/skills`: cloud sessions can't see that folder.
+
+**Git remote:** Military-TD pushes over HTTPS with Git Credential Manager. Windows' own `ssh` has no GitHub host key here, so `git@github.com:` remotes fail with "Host key verification failed".
 
 ## Windows and PowerShell
 

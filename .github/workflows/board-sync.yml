@@ -27,6 +27,8 @@ permissions:
 jobs:
   board-sync:
     name: board-sync
+    # Fork PRs get no secrets; the next scheduled sweep covers them.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
