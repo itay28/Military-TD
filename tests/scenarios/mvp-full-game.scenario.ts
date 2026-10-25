@@ -16,5 +16,12 @@ export default defineScenario({
     expect(outcome).toBe('victory');
     expect(events.filter((e) => e.type === 'enemyKilled')).toHaveLength(8);
     expect(finalState.lives).toBe(START_LIVES);
+    // Per-tower damage and kills add up to the overall figures.
+    const { total, towers } = finalState.stats;
+    const sum = (key: 'damage' | 'kills') => Object.values(towers).reduce((acc, t) => acc + t.total[key], 0);
+    expect(total.damage).toBeGreaterThan(0);
+    expect(sum('damage')).toBe(total.damage);
+    expect(sum('kills')).toBe(total.kills);
+    expect(total.kills).toBe(8);
   },
 });
