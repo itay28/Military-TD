@@ -172,7 +172,10 @@ export async function github(
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  if (!response.ok) throw new Error(`${method} ${path}: HTTP ${response.status} ${await response.text()}`);
+  if (!response.ok)
+    throw Object.assign(new Error(`${method} ${path}: HTTP ${response.status} ${await response.text()}`), {
+      status: response.status,
+    });
   return response;
 }
 

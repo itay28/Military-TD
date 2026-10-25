@@ -154,6 +154,14 @@ describe('decide: steward rounds', () => {
     );
   });
 
+  it('treats both footer wordings as agent comments', () => {
+    const withFooter = {
+      ...maintainer(5),
+      body: 'Done.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)',
+    };
+    expect(kind(pr({ comments: [review(60), agent(DONE_MARKER, 30), withFooter] }))).toBe('merge');
+  });
+
   it('numbers the round, counting rounds since the latest maintainer comment', () => {
     const red = { checks: [{ name: 'ci', state: 'failure' as const }] };
     const done = (m: number) => [action(ROUND_MARKER, m + 5), agent(DONE_MARKER, m)];
@@ -268,6 +276,12 @@ describe('act', () => {
     ]);
     const { body } = JSON.parse(fetchFn.mock.calls[2]![1].body as string) as { body: string };
     expect(body).toContain('Review required');
+  });
+
+  it('leaves the PR for the next run when its head moved before the merge', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => new Response('{"message":"Head branch was modified"}', { status: 409 }));
+    await act(pr(), { kind: 'merge' }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`PUT ${api}/pulls/7/merge`]);
   });
 
   it('only logs when its switch is off', async () => {
