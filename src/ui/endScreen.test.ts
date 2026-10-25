@@ -130,4 +130,13 @@ describe('End screen', () => {
     oldButton.click();
     expect(restarts).toBe(0);
   });
+
+  it('update() after destroy() leaves the overlay hidden', () => {
+    const game = newGame(1);
+    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    playWave(game);
+    end.destroy();
+    end.update();
+    expect(root.hidden).toBe(true);
+  });
 });

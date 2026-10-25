@@ -11,7 +11,7 @@ export interface EndScreenOptions {
 export interface EndScreen {
   /** Shows the overlay once the game is over; call once per frame. Writes only when it opens. */
   update(): void;
-  /** Removes the overlay's elements and hides it; Restart does nothing after this. */
+  /** Removes the overlay's elements and hides it; Restart and update() do nothing after this. */
   destroy(): void;
 }
 
@@ -37,11 +37,12 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
   dialog.append(heading, wavesSurvived, restart);
   root.append(dialog);
   root.hidden = true;
+  let destroyed = false;
 
   // The result can't change once the game is over (ticks stop), so it is written once, when the overlay opens.
   const update = () => {
     const { phase, wavesCleared, totalWaves } = game.state;
-    if (!root.hidden || !isGameOver(phase)) return;
+    if (destroyed || !root.hidden || !isGameOver(phase)) return;
     heading.textContent = phase === 'victory' ? 'Victory' : 'Defeat';
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
     root.hidden = false;
@@ -51,6 +52,7 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
   return {
     update,
     destroy() {
+      destroyed = true;
       restart.removeEventListener('click', onClick);
       root.replaceChildren();
       root.hidden = true;
