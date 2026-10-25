@@ -1,0 +1,22 @@
+name: tmp set size and priority
+on:
+  push:
+    branches: [chore/set-size-priority]
+permissions:
+  contents: read
+jobs:
+  set:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Dry run
+        run: node tmp-board/set-size-priority.mjs --dry-run
+        env:
+          GH_PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      - name: Apply
+        run: node tmp-board/set-size-priority.mjs
+        env:
+          GH_PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
