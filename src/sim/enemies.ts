@@ -1,4 +1,5 @@
 import type { EnemyKind } from '../data/enemies';
+import type { Layer } from './combat';
 import type { Position } from './map';
 
 export interface EnemyStats {
@@ -9,6 +10,9 @@ export interface EnemyStats {
   readonly reward: number;
   /** Lives lost when it leaks. */
   readonly leakCost: number;
+  /** Flat amount taken off each hit (at least 1 HP still gets through). */
+  readonly armor: number;
+  readonly layer: Layer;
 }
 
 /** An enemy on the Path. Its stats are copied from its kind when it spawns. */

@@ -1,4 +1,5 @@
 import type { TowerKind } from '../data/towers';
+import { damageTaken, type Layer } from './combat';
 import type { Enemy } from './enemies';
 import { tileCenter, type Position, type Tile } from './map';
 
@@ -9,8 +10,12 @@ export interface TowerStats {
   readonly range: number;
   /** Shots per second. */
   readonly fireRate: number;
-  /** HP taken per shot. */
+  /** HP taken per shot, before armor. */
   readonly damage: number;
+  /** The layers it can hit. */
+  readonly targets: readonly Layer[];
+  /** Armor it ignores per hit; 0 when left out. */
+  readonly armorPierce?: number;
 }
 
 /** A placed tower. Its stats are copied from its kind when it is placed. */
@@ -22,12 +27,21 @@ export interface Tower extends TowerStats {
   readonly cooldownMs: number;
 }
 
-/** One hit: `towerId` shot `targetId`. */
+/** What a shot did to one enemy. */
+export interface Hit {
+  readonly enemyId: number;
+  /** HP actually removed: after armor, and no more than it had left. */
+  readonly damage: number;
+}
+
+/** One shot: `towerId` fired at `targetId`. */
 export interface Shot {
   readonly towerId: number;
   readonly targetId: number;
   /** Where the target was when hit, for the tracer's end even if the shot killed it. */
   readonly position: Position;
+  /** Every enemy the shot damaged; one for a direct-fire tower. */
+  readonly hits: readonly Hit[];
 }
 
 /** The tower standing on `tile`, if any. */
@@ -39,13 +53,14 @@ export function towerAt(towers: readonly Tower[], { col, row }: Tile): Tower | u
 const COOLDOWN_EPSILON = 1e-9;
 
 /**
- * The enemy in range (inclusive, from the tile center) furthest along the Path ("first").
+ * The enemy on a layer the tower hits and in range (inclusive, from the tile center) furthest along the Path ("first").
  * Ties go to the one earlier in `enemies`, i.e. spawned first.
  */
 export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | undefined {
   const center = tileCenter(tower.tile);
   let target: Enemy | undefined;
   for (const enemy of enemies) {
+    if (!tower.targets.includes(enemy.layer)) continue;
     const inRange = Math.hypot(enemy.position.x - center.x, enemy.position.y - center.y) <= tower.range;
     if (inRange && (!target || enemy.distance > target.distance)) target = enemy;
   }
@@ -53,7 +68,8 @@ export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | u
 }
 
 /**
- * Counts each tower's cooldown down by `dtMs`; a ready tower with a target hits it once for `damage`.
+ * Counts each tower's cooldown down by `dtMs`; a ready tower with a target hits it once,
+ * for `damage` less the target's armor (see `damageTaken`).
  * Towers act in order, and an enemy at 0 HP is removed at once, so later towers retarget.
  * Time past the end of a cooldown carries into the next, so the fire rate holds at any tick size;
  * an idle tower waits at 0, ready.
@@ -70,8 +86,14 @@ export function fireTowers(
     const cooldownMs = tower.cooldownMs - dtMs;
     const target = cooldownMs <= COOLDOWN_EPSILON ? selectTarget(tower, alive) : undefined;
     if (!target) return { ...tower, cooldownMs: Math.max(0, cooldownMs) };
-    shots.push({ towerId: tower.id, targetId: target.id, position: target.position });
-    const hit = { ...target, hp: Math.max(0, target.hp - tower.damage) };
+    const damage = damageTaken(tower.damage, target.armor, tower.armorPierce ?? 0, target.hp);
+    shots.push({
+      towerId: tower.id,
+      targetId: target.id,
+      position: target.position,
+      hits: [{ enemyId: target.id, damage }],
+    });
+    const hit = { ...target, hp: target.hp - damage };
     if (hit.hp === 0) {
       kills.push(hit);
       alive = alive.filter((enemy) => enemy.id !== hit.id);
