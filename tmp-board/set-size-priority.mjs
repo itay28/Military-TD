@@ -36,6 +36,9 @@ const PLAN = {
 };
 
 const DRY = process.argv.includes('--dry-run');
+process.on('uncaughtException', (e) => { console.log('::error::' + String(e?.message ?? e).slice(0, 900)); process.exit(1); });
+const lines = [];
+const log = (m) => { console.log(m); lines.push(m); };
 
 function readToken() {
   const env = process.env.GH_PROJECT_TOKEN?.trim();
@@ -44,7 +47,7 @@ function readToken() {
   try { return readFileSync(file, 'utf8').trim(); } catch { return ''; }
 }
 const token = readToken();
-if (!token) { console.error('No project token found (GH_PROJECT_TOKEN or ~/.config/gh-project-token.txt).'); process.exit(1); }
+if (!token) { console.log("::error::" + 'No project token found (GH_PROJECT_TOKEN or ~/.config/gh-project-token.txt).'); process.exit(1); }
 
 async function gql(query, variables = {}) {
   const res = await fetch('https://api.github.com/graphql', {
@@ -98,13 +101,14 @@ const SET = `mutation($p: ID!, $i: ID!, $f: ID!, $o: String!) {
 let changed = 0, same = 0;
 for (const [num, [p, s]] of Object.entries(PLAN)) {
   const item = items.get(Number(num));
-  if (!item) { console.warn(`#${num}: not on the board, skipped`); continue; }
+  if (!item) { log(`#${num}: not on the board, skipped`); continue; }
   for (const [f, want] of [[priority, p], [size, s]]) {
     const opt = option(f, want);
     if (item.cur[f.id] === opt.name) { same++; continue; }
-    console.log(`#${num} ${f.name}: ${item.cur[f.id] ?? '(empty)'} -> ${opt.name}`);
+    log(`#${num} ${f.name}: ${item.cur[f.id] ?? '(empty)'} -> ${opt.name}`);
     if (!DRY) await gql(SET, { p: project.id, i: item.id, f: f.id, o: opt.id });
     changed++;
   }
 }
-console.log(`${DRY ? 'Would change' : 'Changed'} ${changed} values; ${same} already right.`);
+log(`${DRY ? 'Would change' : 'Changed'} ${changed} values; ${same} already right.`);
+console.log(`::notice title=${DRY ? 'dry run' : 'applied'}::` + lines.join(' | ').slice(0, 3800));
