@@ -39,7 +39,7 @@ Full process in `docs/agents/workflow.md`. In short:
 1. **Plan first**: post the plan (interfaces, seams, test list) on the issue before coding.
 2. **Tests first**: write failing tests, then implement (red → green → refactor). Use the `tdd` skill.
 3. **Agent-verifiable**: every behaviour is checked by unit tests, headless scenarios (`npm run scenario`), or Playwright e2e. Never rely on a human playing (ADR-0003).
-4. **Rules live in `src/sim`**: no Phaser and no `Math.random`/`Date.now` there (ADR-0002).
+4. **Rules live in `src/sim`**: no Phaser and no `Math.random`/`Date.now` there (ADR-0002). Mechanics are realistic and readable, with no hard counters (ADR-0007).
 5. **Assets are tracked**: no third-party file gets committed without an entry in `assets/manifest.json` and an allowed license (`docs/assets.md`).
 6. **Keep the issue current**: comment on the issue at each step (plan, red, green, PR, review). If the idea, flow or scope changes, update the issue description with a dated "Changed:" note.
 7. **Session tracker**: publish an Artifact page from `docs/agents/session-tracker.html` (no design pass) with links to the issue and PR, what and why, the plan, a progress log, and status. Publish it at plan, PR ready, and done. Without the Artifact tool, use a pinned issue comment instead.
