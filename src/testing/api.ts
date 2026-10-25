@@ -1,3 +1,4 @@
+import type { Pixel } from '../scenes/coords';
 import type { Game, GameState } from '../sim/game';
 import { applyCommand, type CommandOutcome, type GameSetup, type ScenarioCommand } from '../sim/scenario';
 
@@ -8,6 +9,8 @@ export interface TestHooks {
   step(ticks: number): void;
   /** Restarts the scene with a new game built from `setup`; resolves once it's running. */
   load(setup: GameSetup): Promise<void>;
+  /** What the scene draws now, read from its display objects. */
+  view(): TestView;
 }
 
 /** Named scenarios' setups, loaded on demand. */
@@ -15,6 +18,16 @@ export type ScenarioLoaders = Readonly<Record<string, () => Promise<GameSetup>>>
 
 /** The game state without the map (which has methods), so it survives `page.evaluate`. */
 export type TestState = Omit<GameState, 'map'>;
+
+/** What the Game scene draws now, in canvas pixels, read from its display objects. */
+export interface TestView {
+  /** The range ring of the tower under the pointer. `towerId` is null when no tower is hovered. */
+  readonly rangeRing: { readonly visible: boolean; readonly towerId: number | null; readonly center: Pixel };
+  /** The tracers drawn on the next frame, each from a tower to where its shot hit. */
+  readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
+  /** Each display object's layer (`map`, `towers`, `enemies`, …), back to front as Phaser renders them; repeats collapsed. */
+  readonly drawOrder: readonly string[];
+}
 
 /** `window.__TD__` with `?test=1` (ADR-0003). */
 export interface TestApi {
@@ -29,6 +42,8 @@ export interface TestApi {
    * Its script and stop condition don't run: the test drives the game from there. Rejects for an unknown name.
    */
   loadScenario(name: string): Promise<void>;
+  /** A copy of what the Game scene draws now. It changes on the next frame; tracers fade on frame time even when paused. */
+  view(): TestView;
 }
 
 declare global {
@@ -57,5 +72,6 @@ export function createTestApi(hooks: TestHooks, scenarios: ScenarioLoaders): Tes
       if (!load) throw new Error(`No scenario named "${name}". There are: ${Object.keys(scenarios).sort().join(', ')}`);
       await hooks.load(await load());
     },
+    view: () => structuredClone(hooks.view()),
   };
 }

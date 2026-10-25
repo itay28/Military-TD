@@ -7,7 +7,7 @@ export default defineScenario({
     { kind: 'rifleNest', tile: { col: 1, row: 0 } },
     { kind: 'rifleNest', tile: { col: 2, row: 0 } },
   ],
-  waves: [{ kind: 'tank', count: 1, spacingMs: 0 }],
+  waves: [{ groups: [{ kind: 'tank', count: 1, spacingMs: 0, delayMs: 0 }] }],
   script: [{ atTick: 0, command: { type: 'startWave' } }],
   until: 'end',
   expectations({ finalState, events }, expect) {
