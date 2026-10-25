@@ -34,6 +34,13 @@ describe('tower levels', () => {
     }
   });
 
+  // Optics push the max range out; the dead zone inside a minimum range (Mortar, #31) stays where it was.
+  it.each(KINDS)('%s: upgrades never change the minimum range', (kind) => {
+    const minRange = (stats: object) => ('minRange' in stats ? stats.minRange : undefined);
+    const [first, ...rest] = towerLevels(kind);
+    for (const level of rest) expect(minRange(level)).toBe(minRange(first!));
+  });
+
   it.each(KINDS)('%s: every level above 1 has a name', (kind) => {
     for (let level = 2; level <= towerLevels(kind).length; level++) expect(LEVEL_NAME[level]).toBeTruthy();
   });
