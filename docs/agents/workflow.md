@@ -35,7 +35,7 @@ How every change gets made, by agents and humans alike. The rules are short; fol
 
 ### 0. Pick
 - Pick an open issue in the **current milestone** with `ready-for-agent`, no open blockers, and no assignee. The order in `docs/PLAN.md` helps.
-- Assign yourself. Move it to *In progress* on the project board (see **Project board** in `docs/agents/issue-tracker.md`).
+- Assign yourself. *Board sync* then moves the card to *In progress* (see **Project board** in `docs/agents/issue-tracker.md`).
 - No issue for the work yet? Create one first, under the right epic with its area label and milestone. Every PR closes an issue.
 - `needs-triage` issues get planned first (step 1, via `/triage` or `/grill-with-docs`), then relabelled `ready-for-agent`. Don't implement them directly.
 
@@ -104,9 +104,9 @@ A PR that changes what the player sees (HUD, menus, overlays, anything a Scene d
 - Branch: `<type>/<issue>-<slug>`, e.g. `feat/8-tower-targeting`.
 - PR title in Conventional Commit form (it becomes the squash commit and drives the version bump): `feat: tower targeting and firing`.
 - Body via the `pr` skill, with `Closes #<n>` and the template checklist, plus screenshots for UI changes (step 4b).
-- **Draft vs ready:** open the PR as a draft while work is still in progress. As soon as it's complete (acceptance criteria met, checks green, review done), mark it ready for review (`gh pr ready <n>`), make sure the issue's card is *In review* (the board-status hook usually does it), and say so on the issue. Never leave a finished PR in draft.
+- **Draft vs ready:** open the PR as a draft while work is still in progress. As soon as it's complete (acceptance criteria met, checks green, review done), mark it ready for review (`gh pr ready <n>`), and say so on the issue (*Board sync* moves the card to *In review*). Never leave a finished PR in draft.
 - **Review:** the *Claude Code Review* workflow is the one code review. Don't run `code-review` locally as well. It runs `mattpocock-skills:code-review` on Sonnet when a PR is opened as ready or marked ready, and posts a Standards / Spec report as a PR comment. Drafts are skipped, and pushes don't re-run it. Wait for the comment (`gh pr checks <n> --watch`, then `gh pr view <n> --comments`), then address its findings or say on the PR why not. To get a second review after substantial fixes, add the `review-again` label (`gh pr edit <n> --add-label review-again`); the run removes it.
-- **Board:** the card moves to *In review* when the PR is marked ready, not when it is opened, and back to *In progress* if the PR is converted to a draft. In local sessions the board-status hook makes these moves after `gh pr ready`; check its report, and move the card by hand if it couldn't. Without the project token (e.g. `@claude` in CI), say on the issue which card needs moving (see `docs/agents/issue-tracker.md` → **Project board**). Merging the PR (or closing the issue) moves it to *Done* automatically.
+- **Board:** the *Board sync* Action moves the card to *In review* when the PR is marked ready, not when it is opened, and back to *In progress* if the PR is converted to a draft. It runs the same for every environment and for changes made in the GitHub UI. If its run fails, re-run it or move the card by hand (see `docs/agents/issue-tracker.md` → **Project board**). Merging the PR (or closing the issue) moves it to *Done* automatically. Keep `Closes #<n>` in the body even for stacked PRs: it's how their cards move.
 - Squash-merge when CI is green. Never push to `main` directly.
 
 ## Token budget

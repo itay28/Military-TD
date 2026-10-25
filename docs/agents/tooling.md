@@ -2,6 +2,25 @@
 
 Pitfalls agents have hit in this repo, and the way around each one. Add to this file when you hit a new one.
 
+## Environments
+
+Sessions run locally (this PC), over Remote Control or `claude --bg` (also this PC), and in the cloud (claude.ai/code, `@claude` in GitHub Actions). They follow the same flow because anything with side effects runs in GitHub Actions, not in the client: board moves (*Board sync*), releases, the CI review. The `SessionStart` hook runs `npm run doctor` and tells the agent what this environment is missing (node version, `node_modules`, `gh` and its login).
+
+| | Local / Remote Control | Cloud session | GitHub Actions |
+| --- | --- | --- | --- |
+| Repo settings, hooks, plugins in `.claude/settings.json` | yes | yes | `@claude` only |
+| Workflow skills: plugin `workflow@itay28-skills` (private repo `itay28/claude-skills`) | yes (user scope, every repo) | yes through the repo settings, if the session can clone the private repo | no |
+| `GH_TOKEN`: repo-scoped fine-grained PAT | `gh auth login` | the cloud environment's env vars | `github.token` |
+| `PROJECT_TOKEN`: classic PAT, `project` + `repo` | user env var `GH_PROJECT_TOKEN`, or `~/.config/gh-project-token.txt` (only to set fields on new issues) | the cloud environment's env vars (same use) | repo secret `PROJECT_TOKEN` (Board sync, release board) |
+
+Same names everywhere, each environment reading its own store; tokens never go in the repo. Prefer a separate token per environment, so one can be revoked without breaking the others.
+
+**Local only:** `claude --bg` and the skills that use it (`/workflow:spawn-sessions`, `/workflow:stack-next`); the Windows notes below.
+
+**Skills:** change them in `itay28/claude-skills`, push, then `/plugin marketplace update itay28-skills`. Don't copy skills into `~/.claude/skills`: cloud sessions can't see that folder.
+
+**Git remote:** Military-TD pushes over HTTPS with Git Credential Manager. Windows' own `ssh` has no GitHub host key here, so `git@github.com:` remotes fail with "Host key verification failed".
+
 ## Windows and PowerShell
 
 - **BOM breaks `Closes #n`.** Windows PowerShell 5.1 writes UTF-8 *with* a byte-order mark (`Set-Content -Encoding utf8`, `Out-File`, `>`). If a PR body file starts with a BOM, GitHub doesn't see the `Closes #n` on the first line and the issue isn't linked, with no error. Write body files with the editor's Write tool, Bash, or Node (all write no BOM), then pass `--body-file <path>`. To check a PR's link: `gh pr view <n> --json closingIssuesReferences`.
