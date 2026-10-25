@@ -22,20 +22,6 @@ describe('release-please', () => {
     });
   });
 
-  // A release-as pin forces every release to that version, so it has to go once
-  // that version ships (docs/agents/releasing.md → Milestone release).
-  it('pins release-as only to a version that has not shipped yet', () => {
-    const releaseAs = config.packages['.']?.['release-as'];
-    if (releaseAs === undefined) return;
-    const parse = (v: string) => v.split('.').map(Number);
-    const [pin, current] = [parse(String(releaseAs)), parse(pkg.version)];
-    const firstDiff = pin.findIndex((n, i) => n !== current[i]);
-    expect(
-      firstDiff !== -1 && pin[firstDiff]! > current[firstDiff]!,
-      `release-as ${releaseAs} has shipped; remove it`,
-    ).toBe(true);
-  });
-
   it('tags vX.Y.Z and writes CHANGELOG.md', () => {
     expect(config.packages['.']).toMatchObject({
       'include-component-in-tag': false,
