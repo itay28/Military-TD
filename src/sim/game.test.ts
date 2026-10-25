@@ -21,8 +21,8 @@ const INFANTRY = { kind: 'infantry', hp: 30, maxHp: 30, speed: 1.5, reward: 5, l
 
 // Two short waves: 2 Infantry 1000 ms apart, then 3 Infantry 500 ms apart.
 const TWO_WAVES: readonly WaveData[] = [
-  { kind: 'infantry', count: 2, spacingMs: 1000 },
-  { kind: 'infantry', count: 3, spacingMs: 500 },
+  { groups: [{ kind: 'infantry', count: 2, spacingMs: 1000, delayMs: 0 }] },
+  { groups: [{ kind: 'infantry', count: 3, spacingMs: 500, delayMs: 0 }] },
 ];
 
 const newGame = (lives = 20, waves = TWO_WAVES) => createGame({ map: SMALL, lives, money: 100, waves });
@@ -203,7 +203,7 @@ describe('waves and phases', () => {
   });
 
   it("a wave isn't cleared while spawns remain, even with no enemy alive", () => {
-    const game = newGame(20, [{ kind: 'infantry', count: 2, spacingMs: 5000 }]);
+    const game = newGame(20, [{ groups: [{ kind: 'infantry', count: 2, spacingMs: 5000, delayMs: 0 }] }]);
     game.startWave();
     game.tick(4500); // the first leaked at 4000; the second is due at 5000
     expect(game.state.enemies).toEqual([]);
@@ -224,7 +224,7 @@ describe('waves and phases', () => {
   });
 
   it('a tower killing the last enemy of a wave clears it', () => {
-    const game = newGame(20, [{ kind: 'infantry', count: 1, spacingMs: 0 }, TWO_WAVES[0]!]);
+    const game = newGame(20, [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }, TWO_WAVES[0]!]);
     const seen: string[] = [];
     game.events.on('enemyKilled', () => seen.push('enemyKilled'));
     game.events.on('waveCleared', () => seen.push('waveCleared'));
@@ -264,7 +264,7 @@ describe('waves and phases', () => {
   });
 
   it('startWave fails with noWavesLeft after victory', () => {
-    const game = newGame(20, [{ kind: 'infantry', count: 1, spacingMs: 0 }]);
+    const game = newGame(20, [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }]);
     game.startWave();
     game.tick(4000);
     expect(game.state.phase).toBe('victory');
@@ -298,7 +298,7 @@ describe('waves and phases', () => {
   });
 
   it("the last enemy leaking the last Life is a defeat, and the wave isn't cleared", () => {
-    const game = newGame(2, [{ kind: 'infantry', count: 2, spacingMs: 1000 }]);
+    const game = newGame(2, [{ groups: [{ kind: 'infantry', count: 2, spacingMs: 1000, delayMs: 0 }] }]);
     const seen: string[] = [];
     game.events.on('waveCleared', () => seen.push('waveCleared'));
     game.events.on('victory', () => seen.push('victory'));
@@ -309,15 +309,8 @@ describe('waves and phases', () => {
     expect(seen).toEqual(['defeat']);
   });
 
-  it.each([
-    ['count 0', { count: 0 }],
-    ['a fractional count', { count: 2.5 }],
-    ['a negative spacing', { spacingMs: -1 }],
-    ['an infinite spacing', { spacingMs: Number.POSITIVE_INFINITY }],
-    ['a NaN spacing', { spacingMs: Number.NaN }],
-  ])('createGame rejects a wave with %s', (_, bad) => {
-    const waves = [TWO_WAVES[0]!, { ...TWO_WAVES[1]!, ...bad }];
-    expect(() => newGame(20, waves)).toThrow(RangeError);
+  it('createGame rejects a malformed wave with RangeError (rules: validateWaves)', () => {
+    expect(() => newGame(20, [TWO_WAVES[0]!, { groups: [] }])).toThrow(RangeError);
   });
 
   it('the MVP wave with no towers: all 8 Infantry leak, 12 Lives left, victory', () => {

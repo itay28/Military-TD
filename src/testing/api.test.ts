@@ -6,7 +6,7 @@ import { setUpGame, type GameSetup } from '../sim/scenario';
 import { createTestApi, type ScenarioLoaders, type TestHooks } from './api';
 
 const BUILDABLE = { col: 1, row: 3 };
-const ONE_INFANTRY: GameSetup = { waves: [{ kind: 'infantry', count: 1, spacingMs: 0 }] };
+const ONE_INFANTRY: GameSetup = { waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }] };
 
 /** Hooks over a real game, as the Game scene gives them. */
 function fakeHooks(setup: GameSetup = {}): TestHooks & { load: ReturnType<typeof vi.fn> } {
