@@ -17,7 +17,7 @@ const SMALL: MapData = {
   ],
 };
 
-const ONE_INFANTRY = [{ kind: 'infantry', count: 1, spacingMs: 0 }] as const;
+const ONE_INFANTRY = [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }] as const;
 
 describe('runScenario', () => {
   it('uses the MVP map, Lives, Money and waves when the scenario leaves them out', () => {
@@ -86,7 +86,7 @@ describe('runScenario', () => {
     const result = runScenario({
       map: SMALL,
       lives: 1,
-      waves: [{ kind: 'infantry', count: 3, spacingMs: 100 }],
+      waves: [{ groups: [{ kind: 'infantry', count: 3, spacingMs: 100, delayMs: 0 }] }],
       script: [{ atTick: 0, command: { type: 'startWave' } }],
       until: 'end',
     });
@@ -108,7 +108,7 @@ describe('runScenario', () => {
   it('until { event } stops at the end of the tick that emitted it', () => {
     const result = runScenario({
       map: SMALL,
-      waves: [{ kind: 'infantry', count: 3, spacingMs: 1000 }],
+      waves: [{ groups: [{ kind: 'infantry', count: 3, spacingMs: 1000, delayMs: 0 }] }],
       script: [{ atTick: 0, command: { type: 'startWave' } }],
       until: { event: 'enemyLeaked' },
     });
@@ -163,8 +163,8 @@ describe('runScenario', () => {
     const result = runScenario({
       map: SMALL,
       waves: [
-        { kind: 'infantry', count: 1, spacingMs: 0 },
-        { kind: 'infantry', count: 2, spacingMs: 500 },
+        { groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] },
+        { groups: [{ kind: 'infantry', count: 2, spacingMs: 500, delayMs: 0 }] },
       ],
       autoStartWaves: true,
       until: 'end',
