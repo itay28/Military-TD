@@ -38,3 +38,15 @@ describe('board sync workflow', () => {
     expect(yaml).toContain('PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}');
   });
 });
+
+describe('board sync workflow: auto-start', () => {
+  it('passes the auto-start switches from repo variables', () => {
+    expect(yaml).toContain('AUTO_SPAWN: ${{ vars.AUTO_SPAWN }}');
+    expect(yaml).toContain('AUTO_STACK: ${{ vars.AUTO_STACK }}');
+  });
+
+  it('passes both routine triggers from secrets', () => {
+    for (const name of ['ROUTINE_SONNET_URL', 'ROUTINE_SONNET_TOKEN', 'ROUTINE_OPUS_URL', 'ROUTINE_OPUS_TOKEN'])
+      expect(yaml).toContain(`${name}: \${{ secrets.${name} }}`);
+  });
+});

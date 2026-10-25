@@ -7,6 +7,10 @@ name: Board sync
 #
 # GITHUB_TOKEN can't edit a user-owned project, so this uses the PROJECT_TOKEN
 # secret (classic PAT, project + repo scopes). Without it, the run fails.
+#
+# Auto-start: with the repo variable AUTO_SPAWN set to `on`, each run then claims startable
+# issues and fires the implement scheduled task (scripts/auto-start.ts; AUTO_STACK=on also
+# starts stacked issues). The ROUTINE_* secrets are the tasks' API trigger URLs and tokens.
 on:
   pull_request:
     types: [opened, reopened, edited, ready_for_review, converted_to_draft, closed]
@@ -42,4 +46,10 @@ jobs:
       - name: Sync the board
         env:
           PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          AUTO_SPAWN: ${{ vars.AUTO_SPAWN }}
+          AUTO_STACK: ${{ vars.AUTO_STACK }}
+          ROUTINE_SONNET_URL: ${{ secrets.ROUTINE_SONNET_URL }}
+          ROUTINE_SONNET_TOKEN: ${{ secrets.ROUTINE_SONNET_TOKEN }}
+          ROUTINE_OPUS_URL: ${{ secrets.ROUTINE_OPUS_URL }}
+          ROUTINE_OPUS_TOKEN: ${{ secrets.ROUTINE_OPUS_TOKEN }}
         run: node scripts/board-sync.ts
