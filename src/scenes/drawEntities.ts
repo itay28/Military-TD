@@ -1,7 +1,7 @@
 import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, SHELL, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
-import type { Tower } from '../sim/towers';
+import type { Tower, TowerStats } from '../sim/towers';
 import type { MapPainter } from './drawMap';
 import type { Pixel } from './coords';
 import type { BlastCircle } from './shellView';
@@ -30,31 +30,39 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   painter.fillRect(left, top, (HP_BAR.width * enemy.hp) / enemy.maxHp, HP_BAR.height);
 }
 
-/** A filled square with an outline, in its kind's style. */
+/** A filled shape with an outline, in its kind's style. */
 export function drawTower(painter: EntityPainter, tower: Tower): void {
-  const { size, fill, outline, outlineWidth } = TOWER_STYLE[tower.kind];
+  const { shape, size, fill, outline, outlineWidth } = TOWER_STYLE[tower.kind];
   const half = size / 2;
   painter.fillStyle(fill);
-  painter.fillRect(-half, -half, size, size);
+  if (shape === 'circle') painter.fillCircle(0, 0, half);
+  else painter.fillRect(-half, -half, size, size);
   painter.lineStyle(outlineWidth, outline);
-  painter.strokeRect(-half, -half, size, size);
+  if (shape === 'circle') painter.strokeCircle(0, 0, half);
+  else painter.strokeRect(-half, -half, size, size);
 }
 
-/** The circle a tower can hit within. */
+/** The range rings' radii in pixels: the range, then the minimum range (the dead zone's edge) if there is one. */
+export function rangeRingRadii({ range, minRange }: TowerStats): number[] {
+  return minRange === undefined ? [range * TILE_PX] : [range * TILE_PX, minRange * TILE_PX];
+}
+
+/** The circle a tower can hit within, and the dead zone inside it if it has a minimum range. */
 export function drawRangeRing(painter: EntityPainter, tower: Tower): void {
   painter.lineStyle(RANGE_RING.width, RANGE_RING.color, RANGE_RING.alpha);
-  painter.strokeCircle(0, 0, tower.range * TILE_PX);
+  for (const radius of rangeRingRadii(tower)) painter.strokeCircle(0, 0, radius);
 }
 
-/** A see-through tower of `kind` and its range ring, green if it can be placed here, red if not. */
+/** A see-through tower of `kind` and its range rings, green if it can be placed here, red if not. */
 export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: boolean): void {
   const color = placeable ? GHOST.placeable : GHOST.blocked;
-  const { size } = TOWER_STYLE[kind];
+  const { shape, size } = TOWER_STYLE[kind];
   const half = size / 2;
   painter.fillStyle(color, GHOST.fillAlpha);
-  painter.fillRect(-half, -half, size, size);
+  if (shape === 'circle') painter.fillCircle(0, 0, half);
+  else painter.fillRect(-half, -half, size, size);
   painter.lineStyle(GHOST.ringWidth, color, GHOST.ringAlpha);
-  painter.strokeCircle(0, 0, TOWER_STATS[kind].range * TILE_PX);
+  for (const radius of rangeRingRadii(TOWER_STATS[kind])) painter.strokeCircle(0, 0, radius);
 }
 
 /** Each tracer as a line in canvas pixels, at its current alpha. */

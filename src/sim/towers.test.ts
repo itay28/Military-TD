@@ -47,6 +47,24 @@ describe('placeTower', () => {
     expect(place(game, { col: 1, row: 2 })).not.toBe(id);
   });
 
+  it('a placed Mortar has its stats from data: long range, a minimum range, ground only, and shells', () => {
+    const game = createGame({ map: SMALL, lives: 20, money: 200, waves: [] });
+    const result = game.placeTower('mortar', { col: 5, row: 4 });
+    expect(result.ok).toBe(true);
+    expect(game.state.money).toBe(75);
+    expect(game.state.towers).toEqual([
+      expect.objectContaining({
+        kind: 'mortar',
+        range: 5,
+        minRange: 1.5,
+        fireRate: 1 / 3,
+        damage: 40,
+        targets: ['ground'],
+        shell: { flightMs: 1000, innerRadius: 0.6, outerRadius: 1.25 },
+      }),
+    ]);
+  });
+
   it('a tower with nothing in range stays ready, at 0 cooldown', () => {
     const game = newGame();
     place(game, { col: 5, row: 0 });
@@ -288,6 +306,29 @@ describe('layers', () => {
     const tower = handTower({ targets: ['ground', 'air'] });
     expect(selectTarget(tower, [handEnemy(1, 1), handEnemy(2, 2, { layer: 'air' })])?.id).toBe(2);
     expect(selectTarget(tower, [handEnemy(1, 2), handEnemy(2, 1, { layer: 'air' })])?.id).toBe(1);
+  });
+});
+
+describe('minimum range', () => {
+  // A 1.5-tile dead zone around the center (2.5, 2.5); each enemy stands straight above it, `gap` tiles away.
+  const tower = handTower({ range: 5, minRange: 1.5 });
+  const above = (id: number, gap: number, distance: number) =>
+    handEnemy(id, distance, { position: { x: 2.5, y: 2.5 - gap } });
+
+  it('an enemy inside the minimum range is never picked, even when it is furthest along', () => {
+    expect(selectTarget(tower, [above(1, 2, 1), above(2, 1, 5)])?.id).toBe(1);
+  });
+
+  it('an enemy exactly at the minimum range is not picked', () => {
+    expect(selectTarget(tower, [above(1, 1.5, 1)])).toBeUndefined();
+  });
+
+  it('an enemy just past the minimum range is picked', () => {
+    expect(selectTarget(tower, [above(1, 1.51, 1)])?.id).toBe(1);
+  });
+
+  it('with only enemies inside the minimum range, there is no target', () => {
+    expect(selectTarget(tower, [above(1, 0, 1), above(2, 1, 2)])).toBeUndefined();
   });
 });
 
