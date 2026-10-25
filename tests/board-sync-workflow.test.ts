@@ -12,8 +12,10 @@ describe('board sync workflow', () => {
     );
   });
 
-  it('runs when an issue is assigned or reopened', () => {
-    expect(yaml).toMatch(/^ {2}issues:\n {4}types: \[assigned, reopened\]\n/m);
+  it('runs on every issue change the Ready rule depends on: assignee, blocker closed, label, milestone', () => {
+    expect(yaml).toMatch(
+      /^ {2}issues:\n {4}types: \[assigned, reopened, closed, labeled, unlabeled, milestoned, demilestoned\]\n/m,
+    );
   });
 
   it('also sweeps on a schedule and on demand, to fix any card that drifted', () => {
