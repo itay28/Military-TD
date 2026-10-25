@@ -90,7 +90,7 @@ From v0.3.0: Boot → Main menu (Play, Settings, Credits) → Level select → G
 
 1. **Build phase.** The player places towers on buildable tiles (not on the Path) if they have enough Money.
 2. The player presses **Start Wave**.
-3. **Wave phase.** Enemies spawn at the Path start, one every `spacing` ms, and walk along the Path's waypoints.
+3. **Wave phase.** Enemies spawn at the Path start in wave groups (each with its own kind, count, spacing and start delay, running in parallel) and walk along the Path's waypoints.
 4. Each tower targets the in-range enemy furthest along the Path ("first") and fires on a cooldown. Each hit deals damage instantly (hitscan) and is drawn as a short tracer line.
 5. When an enemy's HP reaches 0 it dies and the player gets its **Reward**. An enemy that reaches the Path end **leaks** and costs Lives.
 6. When every enemy in the wave has died or leaked, the wave is cleared and play returns to the Build phase. Placing towers is also allowed during a wave.

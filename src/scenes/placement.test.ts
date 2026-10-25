@@ -16,7 +16,12 @@ const SMALL: MapData = {
 };
 
 const newGame = (money = 100, lives = 20) =>
-  createGame({ map: SMALL, lives, money, waves: [{ kind: 'infantry', count: 1, spacingMs: 0 }] });
+  createGame({
+    map: SMALL,
+    lives,
+    money,
+    waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }],
+  });
 
 const EMPTY = { col: 2, row: 2 };
 const PATH = { col: 2, row: 1 };
