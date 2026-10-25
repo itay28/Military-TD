@@ -2,8 +2,8 @@ import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { emptyStats, recordShots, resetWave, withWaveElapsed, type CombatStats } from './stats';
 import { createMap, type GameMap, type MapData, type Tile } from './map';
+import { emptyStats, recordShots, resetWave, withWaveElapsed, type CombatStats } from './stats';
 import { fireTowers, towerAt, type Shot, type Tower } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
