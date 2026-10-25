@@ -6,9 +6,10 @@ name: Milestone report
 # release-please's release PR to the milestone's version (ADR-0004). Re-running
 # updates the open report PR. Flow: docs/agents/workflow.md → Milestone release.
 # Script and tests: scripts/milestone-report.ts.
+# demilestoned: moving a milestone's last open issue out also finishes it.
 on:
   issues:
-    types: [closed]
+    types: [closed, demilestoned]
   workflow_dispatch:
     inputs:
       milestone:
@@ -16,9 +17,12 @@ on:
         required: true
         type: number
 
-# Reports run one at a time, so two issues closing together can't open two PRs.
+# One run at a time per milestone, so two issues closing together can't open
+# two PRs. A newer queued run replaces an older one; each regenerates the
+# whole report. The milestone: the dispatch input, the one an issue left
+# (demilestoned), or the closed issue's.
 concurrency:
-  group: milestone-report
+  group: milestone-report-${{ inputs.milestone || github.event.milestone.number || github.event.issue.milestone.number }}
   cancel-in-progress: false
 
 permissions:
@@ -29,7 +33,7 @@ permissions:
 jobs:
   milestone-report:
     name: milestone-report
-    if: github.event_name == 'workflow_dispatch' || (github.event.issue.milestone && !contains(github.event.issue.labels.*.name, 'release'))
+    if: github.event_name == 'workflow_dispatch' || ((github.event.milestone || github.event.issue.milestone) && !contains(github.event.issue.labels.*.name, 'release'))
     runs-on: ubuntu-latest
     steps:
       # Optional PAT secret, as in the Release workflow: with it, CI runs on the
@@ -47,7 +51,7 @@ jobs:
       # Without PROJECT_TOKEN (#97) the board move is skipped with a warning.
       - name: Open or update the report PR
         env:
-          MILESTONE: ${{ inputs.milestone || github.event.issue.milestone.number }}
+          MILESTONE: ${{ inputs.milestone || github.event.milestone.number || github.event.issue.milestone.number }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}

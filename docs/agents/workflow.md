@@ -133,19 +133,20 @@ Milestones can't be cards on the project board, so each milestone has a **releas
 
 **When is a milestone done?** When every issue in it is closed **except its release issue**. The release issue stays open until the release, so anything that checks whether a milestone is done (the report workflow, a human) ignores issues labelled `release`.
 
-**The milestone report PR.** When the milestone's last other issue closes, the *Milestone report* workflow (`.github/workflows/milestone-report.yml`, running `scripts/milestone-report.ts`) opens the milestone report PR from the branch `chore/release-0.N.0`:
+**The milestone report PR.** When the milestone's last other issue closes or is moved out of it, the *Milestone report* workflow (`.github/workflows/milestone-report.yml`, running `scripts/milestone-report.ts`) opens the milestone report PR from the branch `chore/release-0.N.0`:
 - Title `chore: release 0.N.0`. It adds `docs/releases/0.N.0.md`, an audit of the milestone: **Planned** (every issue in it, with its outcome), **Delivered** (closed as completed, with the merged PRs that closed them), **Skipped** (closed as not planned or duplicate), **Moved out** (removed from the milestone during it and not back), **Added** (PRs merged since the previous milestone's release tag `vX.Y.0` that don't close an issue in the milestone; release-please's own release PRs are left out), and an empty **Notes** section. Patch tags in between don't count: the milestone started at the previous milestone's release.
 - The body says `Refs #<release issue>`, not `Closes`: the release issue closes on the release itself. This is the one exception to "every PR closes an issue".
 - The body ends with `Release-As: 0.N.0` as its own final paragraph: after the `🤖 Generated with …` line, with a blank line before it. Squash merge copies the PR body into the commit, and release-please reads `Release-As` only from the commit's last paragraph (the footer).
 - If a report PR for the milestone is already open, the workflow commits the regenerated report to its branch instead (no force-push), keeping the Notes section and the PR body as they are. It can be re-run by hand: **Actions → Milestone report → Run workflow** with the milestone number. It does nothing when the milestone isn't done, `v0.N.0` is already tagged, or the report PR was already merged.
-- It moves the release issue to *In review* with the `PROJECT_TOKEN` secret (#97). Without the secret, or if the move fails, the run still opens the PR and ends with a warning: move the card by hand.
+- When it opens the PR, it moves the release issue to *In review* with the `PROJECT_TOKEN` secret (#97). Updates leave the card alone. Without the secret, or if the move fails, the run still opens the PR and ends with a warning: move the card by hand.
+- Runs are queued one at a time per milestone; each one regenerates the whole report.
 - It pushes and opens the PR with `RELEASE_PLEASE_TOKEN` when that secret exists, so CI runs on the report PR (see **Releasing** → one-time setup); otherwise with `GITHUB_TOKEN`, and CI doesn't start there.
 - Preview the report for any milestone, done or not, without changing anything: `DRY_RUN=1 GITHUB_REPOSITORY=itay28/Military-TD MILESTONE=<n> node scripts/milestone-report.ts` (needs `gh` logged in). Guarded by `tests/milestone-report.test.ts` and `tests/milestone-report-workflow.test.ts`.
 
 **What the human decides.**
 1. **Is the milestone really done?** Read the audit. Anything missing gets reopened, or moved to a later milestone on purpose; the report updates when the milestone closes out again.
 2. **Notes:** write the Notes section of `docs/releases/0.N.0.md` on the report PR's branch (highlights, known issues, anything the changelog doesn't say).
-3. **Merge the report PR.** release-please's release PR then switches to `0.N.0`. Editing the release PR's title or body does not change the version; its next run overwrites the edit.
+3. **Merge the report PR.** In the squash dialog, check the commit message still ends with `Release-As: 0.N.0` as its own paragraph. GitHub may add `Co-authored-by:` lines for the bot's commits after it; delete them, or release-please won't read the footer. release-please's release PR then switches to `0.N.0`. Editing the release PR's title or body does not change the version; its next run overwrites the edit.
 4. **Merge the release PR** when you want to ship. That tags `v0.N.0` and publishes the GitHub Release, and #97 closes the release issue and the milestone.
 
 For `v1.0.0` it's the same, with `Release-As: 1.0.0`.

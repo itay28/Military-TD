@@ -4,30 +4,31 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-/** One issue in a milestone, as the report needs it. */
-export interface MilestoneIssue {
+/** An issue or PR, as the report links it. */
+export interface Ref {
   number: number;
   title: string;
   url: string;
+}
+
+/** One issue in a milestone, as the report needs it. */
+export interface MilestoneIssue extends Ref {
   state: 'open' | 'closed';
   stateReason: 'completed' | 'not_planned' | 'duplicate' | 'reopened' | null;
   labels: string[];
   /** Merged PRs that closed it. */
-  closedBy: PrRef[];
-}
-
-export interface PrRef {
-  number: number;
-  title: string;
-  url: string;
+  closedBy: Ref[];
 }
 
 /** An issue removed from the milestone while it ran, and the milestone it is in now. */
-export interface MovedIssue {
-  number: number;
+export interface MovedIssue extends Ref {
+  nowIn: string | null;
+}
+
+/** A milestone, as the report and PR body link it. */
+export interface MilestoneLink {
   title: string;
   url: string;
-  nowIn: string | null;
 }
 
 /** A `repository.milestone.issues` node from the GraphQL query in `fetchMilestone`. */
@@ -38,7 +39,7 @@ export interface IssueNode {
   state: string;
   stateReason: string | null;
   labels: { nodes: { name: string }[] };
-  closedByPullRequestsReferences: { nodes: (PrRef & { merged: boolean })[] };
+  closedByPullRequestsReferences: { nodes: (Ref & { merged: boolean })[] };
 }
 
 /** An entry from `GET /repos/{owner}/{repo}/issues/events`. */
@@ -55,12 +56,12 @@ export interface IssueEvent {
 }
 
 /** A PR from `gh pr list --state merged --json number,title,url,mergedAt,closingIssuesReferences`. */
-export interface MergedPr extends PrRef {
+export interface MergedPr extends Ref {
   mergedAt: string;
   closingIssuesReferences: { number: number }[];
 }
 
-const prRef = ({ number, title, url }: PrRef): PrRef => ({ number, title, url });
+const toRef = ({ number, title, url }: Ref): Ref => ({ number, title, url });
 
 export function parseMilestoneIssues(nodes: IssueNode[]): MilestoneIssue[] {
   return [...nodes]
@@ -72,7 +73,7 @@ export function parseMilestoneIssues(nodes: IssueNode[]): MilestoneIssue[] {
       state: node.state === 'OPEN' ? 'open' : 'closed',
       stateReason: (node.stateReason?.toLowerCase() ?? null) as MilestoneIssue['stateReason'],
       labels: node.labels.nodes.map((label) => label.name),
-      closedBy: node.closedByPullRequestsReferences.nodes.filter((pr) => pr.merged).map(prRef),
+      closedBy: node.closedByPullRequestsReferences.nodes.filter((pr) => pr.merged).map(toRef),
     }));
 }
 
@@ -97,14 +98,14 @@ export function movedOut(events: IssueEvent[], milestoneTitle: string, inMilesto
  * previous release; null for all of history) that close no milestone issue. release-please's own
  * release PRs are bookkeeping and left out.
  */
-export function addedPrs(prs: MergedPr[], milestoneIssues: number[], since: string | null): PrRef[] {
+export function addedPrs(prs: MergedPr[], milestoneIssues: number[], since: string | null): Ref[] {
   const after = since === null ? -Infinity : Date.parse(since);
   return prs
     .filter((pr) => Date.parse(pr.mergedAt) > after)
     .filter((pr) => !pr.title.startsWith('chore(main): release '))
     .filter((pr) => !pr.closingIssuesReferences.some((ref) => milestoneIssues.includes(ref.number)))
     .sort((a, b) => Date.parse(a.mergedAt) - Date.parse(b.mergedAt))
-    .map(prRef);
+    .map(toRef);
 }
 
 const RELEASE_LABEL = 'release';
@@ -144,10 +145,10 @@ export function isMilestoneDone(issues: MilestoneIssue[]): boolean {
 
 export interface ReportData {
   version: string;
-  milestone: { title: string; url: string };
+  milestone: MilestoneLink;
   issues: MilestoneIssue[];
   movedOut: MovedIssue[];
-  added: PrRef[];
+  added: Ref[];
   /** The previous release tag Added counts from; null for all of history. */
   since: string | null;
 }
@@ -156,9 +157,9 @@ const NOTES_HEADING = '## Notes';
 const NOTES_PLACEHOLDER =
   "<!-- For the reviewer: highlights, known issues, anything the changelog doesn't say. Kept when this report is regenerated. -->";
 
-const escape = (text: string): string => text.replace(/[[\]\\]/g, (c) => `\\${c}`);
-const link = (ref: { number: number; title: string; url: string }): string =>
-  `[#${ref.number} ${escape(ref.title)}](${ref.url})`;
+const escapeMarkdown = (text: string): string => text.replace(/[[\]\\]/g, (c) => `\\${c}`);
+const link = (ref: Ref): string => `[#${ref.number} ${escapeMarkdown(ref.title)}](${ref.url})`;
+const milestoneLink = (milestone: MilestoneLink): string => `[${escapeMarkdown(milestone.title)}](${milestone.url})`;
 const list = (lines: string[]): string => (lines.length ? lines.join('\n') : 'None.');
 const isSkipped = (issue: MilestoneIssue): boolean =>
   issue.stateReason === 'not_planned' || issue.stateReason === 'duplicate';
@@ -176,7 +177,7 @@ export function buildReport(data: ReportData, notes?: string): string {
   return (
     [
       `# Release ${data.version}`,
-      `Audit of the milestone [${escape(data.milestone.title)}](${data.milestone.url}), written by the Milestone report workflow` +
+      `Audit of the milestone ${milestoneLink(data.milestone)}, written by the Milestone report workflow` +
         `${release ? `. Release issue: ${link(release)}` : ''}. **Added** counts PRs merged ${since}.`,
       '## Planned',
       list(planned.map((issue) => `- ${link(issue)}: ${outcome(issue)}`)),
@@ -218,19 +219,20 @@ export function reportPrTitle(version: string): string {
  */
 export function reportPrBody(args: {
   version: string;
-  milestone: { title: string; url: string };
+  milestone: MilestoneLink;
   releaseIssue: number;
   runUrl: string;
 }): string {
   const { version, milestone, releaseIssue, runUrl } = args;
   return (
     [
-      `Audit of the milestone [${milestone.title}](${milestone.url}) in \`docs/releases/${version}.md\`. Merging this PR switches release-please's release PR to ${version}.`,
+      `Audit of the milestone ${milestoneLink(milestone)} in \`docs/releases/${version}.md\`. Merging this PR switches release-please's release PR to ${version}.`,
       `Refs #${releaseIssue}`,
       [
         '**Before merging:**',
         '- [ ] Read the audit. Reopen anything missing, or move it to a later milestone on purpose; the report updates when the milestone closes out again.',
         '- [ ] Write the Notes section of the report.',
+        `- [ ] In the squash dialog, check the commit message still ends with \`Release-As: ${version}\` as its own paragraph. Delete any Co-authored-by lines GitHub added after it, or release-please won't see it.`,
       ].join('\n'),
       `🤖 Generated with the [Milestone report](${runUrl}) workflow`,
       `Release-As: ${version}`,
@@ -282,13 +284,14 @@ const ghJson = <T>(args: string[], token?: string): T => JSON.parse(run('gh', ar
 const notice = (message: string): void => console.log(`::notice::${message}`);
 const warning = (message: string): void => console.log(`::warning::${message}`);
 
-function fetchMilestone(repo: string, number: number): { title: string; url: string; issues: MilestoneIssue[] } {
+function fetchMilestone(repo: string, number: number): MilestoneLink & { issues: MilestoneIssue[] } {
   const [owner = '', name = ''] = repo.split('/');
   const nodes: IssueNode[] = [];
   let after: string | undefined;
   for (;;) {
-    const args = ['api', 'graphql', '-f', `query=${MILESTONE_QUERY}`, '-F', `owner=${owner}`, '-F', `name=${name}`];
-    args.push('-F', `number=${number}`, ...(after ? ['-F', `after=${after}`] : []));
+    // -f sends strings as is; -F would turn `true`, numbers or `@file` into something else. Only number is typed.
+    const args = ['api', 'graphql', '-f', `query=${MILESTONE_QUERY}`, '-f', `owner=${owner}`, '-f', `name=${name}`];
+    args.push('-F', `number=${number}`, ...(after ? ['-f', `after=${after}`] : []));
     const milestone = ghJson<MilestonePage>(args).data.repository.milestone;
     if (!milestone) throw new Error(`Milestone ${number} not found in ${repo}.`);
     nodes.push(...milestone.issues.nodes);
@@ -344,7 +347,7 @@ function main(): void {
   const repo = process.env['GITHUB_REPOSITORY'] ?? '';
   const number = Number(process.env['MILESTONE']);
   const runUrl = process.env['RUN_URL'] ?? `https://github.com/${repo}/actions`;
-  const dryRun = Boolean(process.env['DRY_RUN']);
+  const dryRun = process.env['DRY_RUN'] === '1';
   if (!repo || !Number.isInteger(number) || number < 1) {
     throw new Error('Set GITHUB_REPOSITORY (owner/name) and MILESTONE (the milestone number).');
   }
@@ -410,11 +413,12 @@ function main(): void {
     added: addedPrs(merged, inMilestone, sinceDate),
     since,
   };
-  const body = reportPrBody({ version, milestone: data.milestone, releaseIssue: release?.number ?? 0, runUrl });
+  const body = release && reportPrBody({ version, milestone: data.milestone, releaseIssue: release.number, runUrl });
   if (dryRun) {
-    console.log(`${title}\n\n${body}\n---\n${buildReport(data)}`);
+    console.log(`${title}\n\n${body ?? '(No open release issue, so no PR body.)'}\n---\n${buildReport(data)}`);
     return;
   }
+  if (!release || !body) return; // Only a dry run gets here without a release issue (isMilestoneDone).
 
   // Reuse the report branch if it exists, so the human's Notes survive and nothing is force-pushed.
   const branch = `chore/release-${version}`;
@@ -441,6 +445,7 @@ function main(): void {
   const prToken = process.env['PR_TOKEN'];
   const open = ghJson<{ url: string }[]>(['pr', 'list', '--head', branch, '--state', 'open', '--json', 'url']);
   if (open[0]) {
+    // The card moved when the PR opened; a human may have moved it since, so leave it alone.
     notice(`Updated the report PR: ${open[0].url}`);
   } else {
     const bodyFile = join(tmpdir(), `milestone-report-${version}.md`);
@@ -451,8 +456,8 @@ function main(): void {
       prToken,
     );
     notice(`Opened the report PR: ${url}`);
+    moveToInReview(release.url, process.env['PROJECT_TOKEN']);
   }
-  if (release) moveToInReview(release.url, process.env['PROJECT_TOKEN']);
 }
 
 // CI entry point: `MILESTONE=<n> node scripts/milestone-report.ts`, run by .github/workflows/milestone-report.yml.

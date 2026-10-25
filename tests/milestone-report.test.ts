@@ -249,6 +249,21 @@ describe('report PR', () => {
     expect(paragraphs.at(-1)).toBe('Release-As: 0.1.0');
     expect(paragraphs.at(-2)).toMatch(/^🤖 Generated with /);
   });
+
+  // GitHub can append Co-authored-by trailers to a squash commit, which would bury the footer.
+  it('asks the merger to keep Release-As as the last paragraph of the squash commit', () => {
+    expect(body).toMatch(/^- \[ \] .*squash.*`Release-As: 0\.1\.0`.*Co-authored-by/im);
+  });
+
+  it('escapes the milestone title in its link', () => {
+    const odd = reportPrBody({
+      version: '0.1.0',
+      milestone: { title: 'v0.1.0 [MVP]', url: 'https://github.com/itay28/Military-TD/milestone/1' },
+      releaseIssue: 101,
+      runUrl: 'https://github.com/itay28/Military-TD/actions/runs/1',
+    });
+    expect(odd).toContain('[v0.1.0 \\[MVP\\]](https://github.com/itay28/Military-TD/milestone/1)');
+  });
 });
 
 describe('previousReleaseTag', () => {
