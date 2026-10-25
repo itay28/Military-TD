@@ -2,7 +2,8 @@ import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { createMap, type GameMap, type MapData, type Tile } from './map';
+import { createMap, tileCenter, type GameMap, type MapData, type Position, type Tile } from './map';
+import { landShells, type Shell, type ShellLanding } from './shells';
 import { fireTowers, towerAt, type Shot, type Tower } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
@@ -34,6 +35,8 @@ export interface GameState {
   readonly enemies: readonly Enemy[];
   /** In placement order. */
   readonly towers: readonly Tower[];
+  /** Shells in flight, in fire order. */
+  readonly shells: readonly Shell[];
   readonly phase: Phase;
   /** The latest started wave, counting from 1; 0 before the first. */
   readonly waveNumber: number;
@@ -48,6 +51,15 @@ export interface GameEvents {
   /** A tower hit an enemy (hitscan), for tracers: from the tower's tile center to `position`. */
   towerFired: Shot;
   /** An enemy's HP reached 0 and it was removed. `reward` is the Money it paid, already in `state.money`. */
+  /** A shell tower fired: the shell flies from `from` to `target` and lands after its flight time. */
+  shellFired: {
+    readonly shellId: number;
+    readonly towerId: number;
+    readonly from: Position;
+    readonly target: Position;
+  };
+  /** A shell landed at `position` and damaged `hits` (none if the blast was empty); kills follow as enemyKilled. */
+  shellLanded: ShellLanding;
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
   waveStarted: { readonly waveNumber: number };
   /** Every enemy of the wave has spawned and none is left alive. */
@@ -93,13 +105,18 @@ export function createGame(config: GameConfig): Game {
   const map = createMap(config.map);
   validateWaves(config.waves);
   const line = createPathLine(map.waypointPositions);
-  const state: { -readonly [K in keyof GameState]: GameState[K] } & { enemies: Enemy[]; towers: Tower[] } = {
+  const state: { -readonly [K in keyof GameState]: GameState[K] } & {
+    enemies: Enemy[];
+    towers: Tower[];
+    shells: Shell[];
+  } = {
     map,
     timeMs: 0,
     lives: config.lives,
     money: config.money,
     enemies: [],
     towers: [],
+    shells: [],
     phase: 'build',
     waveNumber: 0,
     wavesCleared: 0,
@@ -146,24 +163,55 @@ export function createGame(config: GameConfig): Game {
         state.lives = Math.max(0, state.lives - enemy.leakCost);
         return { enemy, lives: state.lives };
       });
-      const fired = fireTowers(state.towers, enemies, dtMs);
+      // Shells already in flight land first, on enemies where they now stand; shells fired this tick fly from here.
+      const landing = landShells(state.shells, enemies, state.timeMs);
+      const fired = fireTowers(state.towers, landing.enemies, dtMs);
+      const launched = fired.launches.map(({ tower, target }): Shell => {
+        const { flightMs, innerRadius, outerRadius } = tower.shell!;
+        return {
+          id: nextId++,
+          towerId: tower.id,
+          from: tileCenter(tower.tile),
+          target,
+          firedAtMs: state.timeMs,
+          landsAtMs: state.timeMs + flightMs,
+          flightMs,
+          innerRadius,
+          outerRadius,
+          damage: tower.damage,
+          armorPierce: tower.armorPierce ?? 0,
+          targets: tower.targets,
+        };
+      });
       state.towers = fired.towers;
       state.enemies = fired.enemies;
-      for (const enemy of fired.kills) state.money += enemy.reward;
+      state.shells = [...landing.shells, ...launched];
+      const kills = [...landing.kills, ...fired.kills];
+      for (const enemy of kills) state.money += enemy.reward;
       let cleared = false;
       if (state.lives === 0) {
         wave = undefined;
         state.phase = 'defeat';
+        state.shells = [];
       } else if (wave?.schedule.finished && state.enemies.length === 0) {
         cleared = true;
         wave = undefined;
         state.wavesCleared++;
         state.phase = state.waveNumber === state.totalWaves ? 'victory' : 'build';
+        if (state.phase === 'victory') state.shells = [];
       }
       // Emit once the state is settled, so listeners read this tick's state.
       for (const leak of leaks) emitter.emit('enemyLeaked', leak);
+      for (const shell of launched)
+        emitter.emit('shellFired', {
+          shellId: shell.id,
+          towerId: shell.towerId,
+          from: shell.from,
+          target: shell.target,
+        });
       for (const shot of fired.shots) emitter.emit('towerFired', shot);
-      for (const enemy of fired.kills) emitter.emit('enemyKilled', { enemy, reward: enemy.reward });
+      for (const landed of landing.landed) emitter.emit('shellLanded', landed);
+      for (const enemy of kills) emitter.emit('enemyKilled', { enemy, reward: enemy.reward });
       if (cleared) emitter.emit('waveCleared', { waveNumber: state.waveNumber });
       if (state.phase === 'victory') emitter.emit('victory', { lives: state.lives });
       if (state.phase === 'defeat') emitter.emit('defeat', { waveNumber: state.waveNumber });
