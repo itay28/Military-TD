@@ -1,6 +1,6 @@
 {
   "name": "military-td",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "A basic military-themed tower defense game.",
   "type": "module",
