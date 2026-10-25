@@ -41,6 +41,19 @@ describe('diagnose', () => {
     ]);
   });
 
+  it('in the cloud, is ready when GitHub REST reaches the repository', () => {
+    expect(diagnose({ ...healthy, environment: 'cloud', gh: 'rest-ok' })).toEqual({
+      problems: [],
+      summary: 'doctor (cloud): ready',
+    });
+  });
+
+  it('in the cloud, says how to attach the repository when GitHub refuses it', () => {
+    expect(diagnose({ ...healthy, environment: 'cloud', gh: 'no-access' }).problems).toEqual([
+      'no GitHub access to itay28/Military-TD: attach the repository to this routine or session (claude.ai/code/routines → Edit → Repository); stop and report, nothing else will work',
+    ]);
+  });
+
   it('lists every problem in the summary', () => {
     const { summary } = diagnose({ ...healthy, nodeModules: false, gh: 'missing' });
     expect(summary).toBe(

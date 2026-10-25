@@ -14,8 +14,11 @@ export interface Facts {
   /** The major version in `.nvmrc`, if there is one. */
   readonly wantedNode: string | undefined;
   readonly nodeModules: boolean;
-  readonly gh: 'logged-in' | 'logged-out' | 'missing';
+  /** Locally `gh auth status`; in the cloud, whether `gh api` (REST through the proxy) reaches the repository. */
+  readonly gh: 'logged-in' | 'logged-out' | 'missing' | 'rest-ok' | 'no-access';
 }
+
+const REPO = 'itay28/Military-TD';
 
 /** The problems in `facts`, and a one-line summary for the agent. */
 export function diagnose(facts: Facts): { problems: string[]; summary: string } {
@@ -26,6 +29,10 @@ export function diagnose(facts: Facts): { problems: string[]; summary: string } 
   if (!facts.nodeModules) problems.push('node_modules missing: run `npm ci` before tests');
   if (facts.gh === 'missing') problems.push('gh not found: issue and PR steps need it (GitHub CLI)');
   if (facts.gh === 'logged-out') problems.push('gh is not logged in: run `gh auth login`, or set GH_TOKEN');
+  if (facts.gh === 'no-access')
+    problems.push(
+      `no GitHub access to ${REPO}: attach the repository to this routine or session (claude.ai/code/routines → Edit → Repository); stop and report, nothing else will work`,
+    );
   const head = `doctor (${facts.environment})`;
   const summary = problems.length
     ? `${head}: ${problems.length} problem${problems.length > 1 ? 's' : ''}. ${problems.join('; ')}`
@@ -48,6 +55,17 @@ function ghState(): Facts['gh'] {
   return 'missing';
 }
 
+// In the cloud, `gh auth status` always fails (the proxy injects the token), but REST works when the
+// repository is attached to the session; GraphQL never does (docs/agents/workflow.md → Cloud sessions).
+function cloudGhState(): Facts['gh'] {
+  try {
+    execFileSync('gh', ['api', `repos/${REPO}`, '--silent'], { stdio: 'ignore', timeout: 15_000 });
+    return 'rest-ok';
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'no-access';
+  }
+}
+
 function gatherFacts(root: string): Facts {
   let wantedNode: string | undefined;
   try {
@@ -55,12 +73,13 @@ function gatherFacts(root: string): Facts {
   } catch {
     wantedNode = undefined;
   }
+  const environment = process.env['CLAUDE_CODE_REMOTE'] === 'true' ? 'cloud' : 'local';
   return {
-    environment: process.env['CLAUDE_CODE_REMOTE'] === 'true' ? 'cloud' : 'local',
+    environment,
     node: process.version,
     wantedNode,
     nodeModules: existsSync(join(root, 'node_modules')),
-    gh: ghState(),
+    gh: environment === 'cloud' ? cloudGhState() : ghState(),
   };
 }
 

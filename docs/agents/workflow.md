@@ -2,7 +2,7 @@
 
 How every change gets made, by agents and humans alike. The rules are short; follow them in order.
 
-**Skills:** this repo uses **Matt Pocock's skills only** (`mattpocock-skills`, from github.com/mattpocock/skills). Don't use skills from other plugins that cover the same ground (e.g. `agent-engineering:*`, or `engineering:*` from Anthropic's engineering plugin), and prefer `mattpocock-skills:code-review` over the built-in `/code-review`.
+**Skills:** this repo uses **Matt Pocock's skills only** (`mattpocock-skills`, from github.com/mattpocock/skills). Don't use skills from other plugins that cover the same ground (e.g. `agent-engineering:*`, or `engineering:*` from Anthropic's engineering plugin), and prefer `mattpocock-skills:code-review` over the built-in `/code-review`. Cloud sessions don't get plugins, so `tdd`, `pr` and `diagnosing-bugs` are also vendored in `.claude/skills/` (see **Cloud sessions**).
 
 ## Ground rules
 
@@ -108,6 +108,16 @@ A PR that changes what the player sees (HUD, menus, overlays, anything a Scene d
 - **Review:** the *Claude Code Review* workflow is the one code review. Don't run `code-review` locally as well. It runs `mattpocock-skills:code-review` on Sonnet when a PR is opened as ready or marked ready, and posts a Standards / Spec report as a PR comment. Drafts are skipped, and pushes don't re-run it. Wait for the comment (`gh pr checks <n> --watch`, then `gh pr view <n> --comments`), then address its findings or say on the PR why not. To get a second review after substantial fixes, add the `review-again` label (`gh pr edit <n> --add-label review-again`); the run removes it.
 - **Board:** the *Board sync* Action moves the card to *In review* when the PR is marked ready, not when it is opened, and back to *In progress* if the PR is converted to a draft. It runs the same for every environment and for changes made in the GitHub UI. If its run fails, re-run it or move the card by hand (see `docs/agents/issue-tracker.md` → **Project board**). Merging the PR (or closing the issue) moves it to *Done* automatically. Keep `Closes #<n>` in the body even for stacked PRs: it's how their cards move.
 - Squash-merge when CI is green. Never push to `main` directly.
+
+## Cloud sessions
+
+Agents also run in cloud sessions: claude.ai/code, and the auto-start and PR steward routines (`docs/agents/prompts/`). The steps above are the same. These things differ (environment table: `docs/agents/tooling.md` → **Environments**):
+- **Doctor first.** The `SessionStart` hook runs `npm run doctor`. In the cloud it checks that `gh api` reaches `itay28/Military-TD`. If it reports *no GitHub access*, the repository isn't attached to the routine or session. Stop and report it (a push notification from a routine): nothing else will work, and only the maintainer can attach it in the browser.
+- **GitHub: REST only.** Use the built-in GitHub tools, or `gh api repos/itay28/Military-TD/...`. GraphQL is blocked, so `gh pr`, `gh issue` and `gh project` don't work. For review threads, auto-merge and draft/ready, the proxy's REST routes are `/repos/{owner}/{repo}/pulls/{n}/ccr/review_threads`, `.../ccr/comments/{id}/resolve`, `.../ccr/auto_merge` and `.../ccr/ready_for_review`.
+- **Board:** never move cards. *Board sync* does it from PR and issue events.
+- **Skills:** no plugins. `tdd`, `pr` and `diagnosing-bugs` come from `.claude/skills/` (vendored, `.claude/skills/README.md`). `code-review` stays in CI.
+- **Questions:** ask on the issue, add `needs-info` (that pushes to the maintainer's phone), and move on. Never guess.
+- **Merging:** never merge by hand. The *PR steward* merges a PR once it's green, the review is answered and the threads are resolved.
 
 ## Token budget
 
