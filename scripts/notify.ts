@@ -92,6 +92,13 @@ export function stewardSummary(comments: { body?: string | null }[]): string | n
   return latest?.body ? latest.body.replace(STUCK_MARKER, '').trim() : null;
 }
 
+/** The pages to fetch for a PR's latest comments: the last one and the one before, since the steward posts
+ * its summary right before the label. */
+export function lastCommentPages(comments: number, perPage: number): number[] {
+  const last = Math.max(1, Math.ceil(comments / perPage));
+  return last > 1 ? [last - 1, last] : [last];
+}
+
 /** Posts a push to the ntfy topic. Fails loudly without a topic or on an error response. */
 export async function send(topic: string | undefined, push: Push, fetcher: typeof fetch = fetch): Promise<void> {
   if (!topic) throw new Error('NTFY_TOPIC is not set: add the repo secret (docs/agents/issue-tracker.md → Hand-off).');
@@ -132,9 +139,7 @@ interface ApiIssue {
 
 async function pushPr(number: number): Promise<Push> {
   const pr = await get<ApiIssue>(`/issues/${number}`);
-  // The summary is posted right before the label, so it's on the last page or the one before.
-  const last = Math.max(1, Math.ceil(pr.comments / 100));
-  const pages = last > 1 ? [last - 1, last] : [last];
+  const pages = lastCommentPages(pr.comments, 100);
   const comments = (
     await Promise.all(
       pages.map((p) => get<{ body?: string | null }[]>(`/issues/${number}/comments?per_page=100&page=${p}`)),

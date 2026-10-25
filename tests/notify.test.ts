@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   STUCK_MARKER,
+  lastCommentPages,
   pushFor,
   questionMessage,
   releaseMessage,
@@ -111,6 +112,18 @@ describe('stewardSummary', () => {
 
   it('is null without a marked comment', () => {
     expect(stewardSummary([comment('Nothing here.')])).toBeNull();
+  });
+});
+
+describe('lastCommentPages', () => {
+  it.each([
+    [0, [1]],
+    [1, [1]],
+    [100, [1]],
+    [101, [1, 2]],
+    [250, [2, 3]],
+  ])('%i comments → pages %j', (comments, pages) => {
+    expect(lastCommentPages(comments, 100)).toEqual(pages);
   });
 });
 
