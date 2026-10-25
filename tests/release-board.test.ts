@@ -69,7 +69,7 @@ describe('releaseToClose', () => {
 
   it("a milestone release closes the milestone's release issue and the milestone", () => {
     expect(releaseToClose('v0.1.0', milestones, releaseIssues)).toEqual({
-      milestone: 1,
+      milestoneNumber: 1,
       closeMilestone: true,
       issues: [101],
     });
@@ -85,7 +85,7 @@ describe('releaseToClose', () => {
 
   it("doesn't close a milestone that is already closed", () => {
     expect(releaseToClose('v1.0.0', milestones, releaseIssues)).toEqual({
-      milestone: 5,
+      milestoneNumber: 5,
       closeMilestone: false,
       issues: [110],
     });

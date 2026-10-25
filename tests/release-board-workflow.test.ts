@@ -1,10 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 // Guards the workflows that move release issues on the board (#97), so an edit can't silently stop them.
-const read = (path: string): string => (existsSync(path) ? readFileSync(path, 'utf8') : '');
-const board = read('.github/workflows/release-board.yml');
-const release = read('.github/workflows/release-please.yml');
+const board = readFileSync('.github/workflows/release-board.yml', 'utf8');
+const release = readFileSync('.github/workflows/release-please.yml', 'utf8');
 const runsOf = (yaml: string) => [...yaml.matchAll(/^\s+run: (.+)$/gm)].map((m) => m[1]);
 
 describe('release board workflow', () => {
@@ -20,9 +19,12 @@ describe('release board workflow', () => {
 });
 
 describe('release workflow: release issue job', () => {
-  // The job is the last one in the file.
-  const start = release.indexOf('\n  release-issue:\n');
-  const job = start > 0 ? release.slice(start) : '';
+  // From the job's header to the next job's header (or the end of the file).
+  const job = /\n {2}release-issue:\n(?:(?! {2}\S).*\n?)*/.exec(release)?.[0] ?? '';
+
+  it('can close issues and milestones (workflow-level issues: write)', () => {
+    expect(release).toMatch(/^permissions:\n(?: {2}.*\n)*? {2}issues: write\n/m);
+  });
 
   it('runs after release-please, only when it created a release', () => {
     expect(job).toContain('    needs: release-please\n');

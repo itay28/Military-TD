@@ -13,10 +13,22 @@ export function milestoneVersion(tag: string): string | null {
   return milestone ? `${major}.${minor}.${patch}` : null;
 }
 
+/** An issue a PR closes, with its milestone's number. */
+export interface ClosingIssue {
+  number: number;
+  milestone: number | null;
+}
+
+/** An open issue labelled `release`, standing in for its milestone on the board. */
+export interface ReleaseIssue {
+  number: number;
+  milestone: number;
+}
+
 /** Release issues to move to In progress: those of the closing issues' milestones still in Backlog or Ready. */
 export function releaseIssuesToStart(
-  closing: { number: number; milestone: number | null }[],
-  releaseIssues: { number: number; milestone: number; status: string | null }[],
+  closing: ClosingIssue[],
+  releaseIssues: (ReleaseIssue & { status: string | null })[],
 ): number[] {
   const milestones = new Set(closing.map((i) => i.milestone));
   return releaseIssues
@@ -34,15 +46,15 @@ export interface Milestone {
 export function releaseToClose(
   tag: string,
   milestones: Milestone[],
-  releaseIssues: { number: number; milestone: number }[],
-): { milestone: number; closeMilestone: boolean; issues: number[] } | null {
+  releaseIssues: ReleaseIssue[],
+): { milestoneNumber: number; closeMilestone: boolean; issues: number[] } | null {
   const version = milestoneVersion(tag);
   if (!version) return null;
   // Milestone titles are the version, optionally followed by a name: 'v0.1.0 — MVP'.
   const milestone = milestones.find((m) => m.title === `v${version}` || m.title.startsWith(`v${version} `));
   if (!milestone) return null;
   return {
-    milestone: milestone.number,
+    milestoneNumber: milestone.number,
     closeMilestone: milestone.state === 'open',
     issues: releaseIssues.filter((i) => i.milestone === milestone.number).map((i) => i.number),
   };
@@ -55,8 +67,14 @@ export function releaseToClose(
 
 const PROJECT_NUMBER = 4;
 const API = 'https://api.github.com';
-const dryRun = Boolean(process.env['DRY_RUN']);
+const dryRun = process.env['DRY_RUN'] === '1';
 const [owner, name] = (process.env['GITHUB_REPOSITORY'] ?? 'itay28/Military-TD').split('/') as [string, string];
+
+/** Logs one change and makes it, or only logs it on a dry run. */
+async function change(description: string, write: () => Promise<unknown>): Promise<void> {
+  console.log(dryRun ? `${description} (dry run)` : description);
+  if (!dryRun) await write();
+}
 
 async function request<T>(token: string, method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${API}${path}`, {
@@ -142,10 +160,15 @@ async function startReleaseIssues(pr: number): Promise<void> {
       const item = i.projectItems.nodes.find((n) => n.project.id === project.id);
       return { number: i.number, milestone: i.milestone!.number, status: item?.status?.name ?? null, item: item?.id };
     });
-  const closing = data.repository.pullRequest.closingIssuesReferences.nodes.map((i) => ({
+  const closing: ClosingIssue[] = data.repository.pullRequest.closingIssuesReferences.nodes.map((i) => ({
     number: i.number,
     milestone: i.milestone?.number ?? null,
   }));
+  for (const r of releaseIssues) {
+    if (!r.item && closing.some((i) => i.milestone === r.milestone)) {
+      console.log(`::warning::Release issue #${r.number} is not on project ${PROJECT_NUMBER}; add it to the board.`);
+    }
+  }
 
   const toStart = releaseIssuesToStart(closing, releaseIssues);
   if (toStart.length === 0) {
@@ -156,14 +179,14 @@ async function startReleaseIssues(pr: number): Promise<void> {
   if (!inProgress) throw new Error('The board has no "In progress" status.');
   for (const number of toStart) {
     const issue = releaseIssues.find((r) => r.number === number)!;
-    console.log(`PR #${pr}: release issue #${number}: ${issue.status} → In progress${dryRun ? ' (dry run)' : ''}`);
-    if (dryRun) continue;
-    await graphql(token, SET_STATUS, {
-      project: project.id,
-      item: issue.item,
-      field: project.field.id,
-      option: inProgress.id,
-    });
+    await change(`PR #${pr}: release issue #${number}: ${issue.status} → In progress`, () =>
+      graphql(token, SET_STATUS, {
+        project: project.id,
+        item: issue.item,
+        field: project.field.id,
+        option: inProgress.id,
+      }),
+    );
   }
 }
 
@@ -181,26 +204,29 @@ async function closeReleaseIssues(tag: string): Promise<void> {
     'GET',
     `${repo}/issues?labels=release&state=open&per_page=100`,
   );
-  const releaseIssues = issues
+  const releaseIssues: ReleaseIssue[] = issues
     .filter((i) => !i.pull_request && i.milestone)
     .map((i) => ({ number: i.number, milestone: i.milestone!.number }));
 
-  const plan = releaseToClose(tag, milestones, releaseIssues);
-  if (!plan) {
+  const toClose = releaseToClose(tag, milestones, releaseIssues);
+  if (!toClose) {
     console.log(`::warning::No milestone is titled after ${tag}; nothing closed.`);
     return;
   }
   const releaseUrl = `${process.env['GITHUB_SERVER_URL'] ?? 'https://github.com'}/${owner}/${name}/releases/tag/${tag}`;
-  const note = dryRun ? ' (dry run)' : '';
-  for (const number of plan.issues) {
-    console.log(`${tag}: closing release issue #${number}${note}`);
-    if (dryRun) continue;
-    await request(token, 'POST', `${repo}/issues/${number}/comments`, { body: `Released in [${tag}](${releaseUrl}).` });
-    await request(token, 'PATCH', `${repo}/issues/${number}`, { state: 'closed', state_reason: 'completed' });
+  for (const number of toClose.issues) {
+    // Comment first: a re-run after a failed close may comment twice, but never closes without the link.
+    await change(`${tag}: closing release issue #${number}`, async () => {
+      await request(token, 'POST', `${repo}/issues/${number}/comments`, {
+        body: `Released in [${tag}](${releaseUrl}).`,
+      });
+      await request(token, 'PATCH', `${repo}/issues/${number}`, { state: 'closed', state_reason: 'completed' });
+    });
   }
-  if (plan.closeMilestone) {
-    console.log(`${tag}: closing milestone ${plan.milestone}${note}`);
-    if (!dryRun) await request(token, 'PATCH', `${repo}/milestones/${plan.milestone}`, { state: 'closed' });
+  if (toClose.closeMilestone) {
+    await change(`${tag}: closing milestone ${toClose.milestoneNumber}`, () =>
+      request(token, 'PATCH', `${repo}/milestones/${toClose.milestoneNumber}`, { state: 'closed' }),
+    );
   }
 }
 
