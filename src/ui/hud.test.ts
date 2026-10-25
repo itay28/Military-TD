@@ -30,6 +30,12 @@ const newGame = (lives = 20): Game =>
     ],
   });
 
+/** Starts the next wave and lets its one Infantry leak, which clears the wave. */
+const playWave = (game: Game) => {
+  game.startWave();
+  game.tick(LEAK_MS);
+};
+
 let root: HTMLElement;
 const byTestId = (id: string) => root.querySelector<HTMLElement>(`[data-testid="${id}"]`);
 
@@ -49,8 +55,7 @@ describe('HUD', () => {
   it('Lives drop on the next update after a leak', () => {
     const game = newGame();
     const hud = mountHud(root, game);
-    game.startWave();
-    game.tick(LEAK_MS);
+    playWave(game);
     hud.update();
     expect(byTestId('hud-lives')?.textContent).toBe('Lives 19');
   });
@@ -103,10 +108,8 @@ describe('HUD', () => {
     it('is disabled after Victory', () => {
       const game = newGame();
       const hud = mountHud(root, game);
-      for (let i = 0; i < 2; i++) {
-        game.startWave();
-        game.tick(LEAK_MS);
-      }
+      playWave(game);
+      playWave(game);
       hud.update();
       expect(game.state.phase).toBe('victory');
       expect(button()?.disabled).toBe(true);
@@ -115,55 +118,51 @@ describe('HUD', () => {
     it('is disabled after Defeat', () => {
       const game = newGame(1);
       const hud = mountHud(root, game);
-      game.startWave();
-      game.tick(LEAK_MS);
+      playWave(game);
       hud.update();
       expect(game.state.phase).toBe('defeat');
       expect(button()?.disabled).toBe(true);
     });
   });
 
+  // The banner is a live region: it stays in place and only its text changes, so screen readers announce it.
   describe('Wave cleared banner', () => {
     const banner = () => root.querySelector<HTMLElement>('[role="status"][data-testid="wave-banner"]');
 
-    it('is hidden at first', () => {
+    it('is an empty, visible status region at first', () => {
       mountHud(root, newGame());
-      expect(banner()?.hidden).toBe(true);
+      expect(banner()?.hidden).toBe(false);
+      expect(banner()?.textContent).toBe('');
     });
 
     it('shows "Wave N cleared" when a wave is cleared', () => {
       const game = newGame();
       const hud = mountHud(root, game);
-      game.startWave();
-      game.tick(LEAK_MS);
+      playWave(game);
       hud.update();
-      expect(banner()?.hidden).toBe(false);
       expect(banner()?.textContent).toBe('Wave 1 cleared');
     });
 
-    it('hides after WAVE_BANNER_MS of sim time', () => {
+    it('empties after WAVE_BANNER_MS of sim time', () => {
       const game = newGame();
       const hud = mountHud(root, game);
-      game.startWave();
-      game.tick(LEAK_MS);
+      playWave(game);
       game.tick(WAVE_BANNER_MS - 1);
       hud.update();
-      expect(banner()?.hidden).toBe(false);
+      expect(banner()?.textContent).toBe('Wave 1 cleared');
       game.tick(1);
       hud.update();
-      expect(banner()?.hidden).toBe(true);
+      expect(banner()?.textContent).toBe('');
     });
 
     it("doesn't stay up once the game is over", () => {
       const game = newGame();
       const hud = mountHud(root, game);
-      for (let i = 0; i < 2; i++) {
-        game.startWave();
-        game.tick(LEAK_MS);
-      }
+      playWave(game);
+      playWave(game);
       hud.update();
       expect(game.state.phase).toBe('victory');
-      expect(banner()?.hidden).toBe(true);
+      expect(banner()?.textContent).toBe('');
     });
   });
 
@@ -187,8 +186,7 @@ describe('HUD', () => {
     const hud = mountHud(root, game);
     hud.destroy();
     expect(root.children).toHaveLength(0);
-    game.startWave();
-    game.tick(LEAK_MS);
+    playWave(game);
     expect(root.children).toHaveLength(0);
     expect(root.textContent).toBe('');
   });

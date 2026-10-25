@@ -11,7 +11,7 @@
         height: 100%;
         background: #1b1e16;
       }
-      /* The HUD is a bar above the canvas, never on top of the map (ADR-0003). */
+      /* The HUD is DOM, not Phaser text (ADR-0003), in a bar above the canvas so it never covers the map. */
       #app {
         display: flex;
         flex-direction: column;
@@ -30,7 +30,7 @@
         font: 16px monospace;
         color: #e4e0c8;
       }
-      #hud [data-testid='wave-banner'] {
+      #hud .hud-banner {
         color: #f0c95a;
         font-weight: bold;
       }
