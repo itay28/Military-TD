@@ -25,8 +25,8 @@ const newGame = (lives = 20): Game =>
     money: 100,
     lives,
     waves: [
-      { kind: 'infantry', count: 1, spacingMs: 100 },
-      { kind: 'infantry', count: 1, spacingMs: 100 },
+      { groups: [{ kind: 'infantry', count: 1, spacingMs: 100, delayMs: 0 }] },
+      { groups: [{ kind: 'infantry', count: 1, spacingMs: 100, delayMs: 0 }] },
     ],
   });
 
