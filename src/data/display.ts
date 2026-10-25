@@ -58,10 +58,13 @@ export const PLACEMENT_REFUSAL_TEXT = {
 } as const satisfies Record<PlaceTowerRefusal, string>;
 
 /** The line drawn for each hit, from the tower to the target. */
-export const TRACER = { color: 0xffe9a0, width: 2, fadeMs: 80 } as const;
+export const TRACER = { fadeMs: 80 } as const;
 
-/** The circle drawn at a splash shot's target. Lifetime in real ms; the radius comes from the tower. */
-export const SPLASH = { color: 0xf0b429, fillAlpha: 0.35, lifetimeMs: 200 } as const;
+/** Tracer line by tower kind: heavier for heavier guns. Width in pixels. */
+export const TRACER_STYLE = {
+  rifleNest: { color: 0xffe9a0, width: 2 },
+  cannon: { color: 0xffb347, width: 4 },
+} as const satisfies Record<TowerKind, { color: number; width: number }>;
 
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
