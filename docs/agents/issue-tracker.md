@@ -110,13 +110,15 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), an
 
 | The PR | Steward does |
 | --- | --- |
-| draft, from a fork, labelled `hold`, release-please's release PR (merging it publishes a release), or `needs-you` with no maintainer comment since the hand-off | nothing |
+| draft, from a fork, labelled `hold`, or `needs-you` with no maintainer comment since the hand-off | nothing |
 | mergeability still computing, a round in flight (no done marker yet, under 3 h old), or checks running (CI, CI review) | waits |
 | a conflict, a failing check, a CI review or maintainer comment newer than the last done marker, or unresolved review threads | fires a **round** of the `pr-steward` task, which fixes what it can and ends with a `<!-- pr-steward:done -->` comment |
 | the same, after 3 rounds since the latest maintainer comment | hands off: `needs-you` label + a summary comment |
 | only behind its base | merges the base in itself (no agent, not a round) |
 | no CI review comment yet | waits (add `review-again` to request one) |
+| closes an issue that is still blocked by open issues, or labelled `needs-info` | waits |
 | green, review answered, threads resolved, targets `main` | squash-merges it with the PR title (+ ` (#n)`) and body; if GitHub refuses, hands off |
+| release-please's release PR | no rounds and no review needed: merges once its checks are green (merging publishes the release, and the release push tells you) |
 
 - Stacked PRs are stewarded but merged only once GitHub retargets them to `main` (after their parent merges).
 - Checks that don't test the code are ignored: `board-sync`, `release-issue`, and `claude-review` (the review counts by its comment).

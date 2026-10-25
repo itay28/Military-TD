@@ -58,6 +58,7 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
     { name: 'claude-review', state: 'success' },
   ],
   unresolvedThreads: 0,
+  closes: [{ number: 3, blocked: false, needsInfo: false }],
   comments: [review(60), agent(DONE_MARKER, 30)],
   ...over,
 });
@@ -74,11 +75,12 @@ describe('decide: skip', () => {
     expect(kind(pr({ labels: ['hold'] }))).toBe('skip');
   });
 
-  it('leaves release PRs to the maintainer: merging one publishes a release', () => {
-    expect(decide(pr({ head: 'release-please--branches--main' }), now)).toMatchObject({
-      kind: 'skip',
-      why: expect.stringMatching(/release/),
-    });
+  it('merges a release PR once CI is green, with no review or steward rounds', () => {
+    const release = pr({ head: 'release-please--branches--main', comments: [] });
+    expect(kind(release)).toBe('merge');
+    expect(kind({ ...release, comments: [review(10)] })).toBe('merge');
+    expect(kind({ ...release, checks: [{ name: 'ci', state: 'failure' }] })).toBe('wait');
+    expect(kind({ ...release, checks: [] })).toBe('wait');
   });
 
   it('skips a handed-off PR until the maintainer comments', () => {
@@ -187,6 +189,17 @@ describe('decide: update and merge', () => {
 
   it('merges a green PR whose review is answered and threads resolved', () => {
     expect(kind(pr())).toBe('merge');
+  });
+
+  it('does not merge while an issue it closes is blocked or has an open question', () => {
+    expect(decide(pr({ closes: [{ number: 3, blocked: true, needsInfo: false }] }), now)).toMatchObject({
+      kind: 'wait',
+      why: expect.stringMatching(/#3.*blocked/),
+    });
+    expect(decide(pr({ closes: [{ number: 3, blocked: false, needsInfo: true }] }), now)).toMatchObject({
+      kind: 'wait',
+      why: expect.stringMatching(/#3.*needs-info/),
+    });
   });
 
   it('leaves stacked PRs for after their parent merges', () => {
