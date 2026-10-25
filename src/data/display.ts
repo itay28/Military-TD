@@ -22,7 +22,7 @@ export const ENEMY_STYLE = {
   jeep: { shape: 'square', radius: 7, color: 0x6b7d3a }, // olive drab
 } as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number }>;
 
-/** The HP bar above each enemy. `gap` is the space between the bar and the top of the circle. */
+/** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
 
 /** Towers as outlined squares, by kind. Size in pixels, less than a tile so the grid shows around it. */

@@ -68,7 +68,7 @@ describe('drawEnemy', () => {
     expect(c).not.toBe(color);
   });
 
-  it('draws a full HP bar centered above the circle at max HP', () => {
+  it('draws a full HP bar centered above the shape at max HP', () => {
     const { painter, calls } = recordingPainter();
     drawEnemy(painter, infantry(30));
     expect(calls.slice(2)).toEqual([
