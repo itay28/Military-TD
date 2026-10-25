@@ -29,10 +29,13 @@ export function createFloatingTexts({ durationMs, risePx }: { durationMs: number
       for (const text of texts) text.ageMs += dtMs;
       texts = texts.filter((text) => text.ageMs < durationMs);
     },
+    // Filtered here too, so a duration of 0 (?anim=0) never shows a text added since the last advance.
     active: () =>
-      texts.map(({ id, text, at, ageMs }) => {
-        const progress = ageMs / durationMs;
-        return { id, text, x: at.x, y: at.y - risePx * progress, alpha: 1 - progress };
-      }),
+      texts
+        .filter((text) => text.ageMs < durationMs)
+        .map(({ id, text, at, ageMs }) => {
+          const progress = ageMs / durationMs;
+          return { id, text, x: at.x, y: at.y - risePx * progress, alpha: 1 - progress };
+        }),
   };
 }

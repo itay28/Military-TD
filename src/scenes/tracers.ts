@@ -26,6 +26,10 @@ export function createTracers(fadeMs: number): Tracers {
       for (const tracer of tracers) tracer.ageMs += dtMs;
       tracers = tracers.filter((tracer) => tracer.ageMs < fadeMs);
     },
-    active: () => tracers.map(({ from, to, ageMs }) => ({ from, to, alpha: 1 - ageMs / fadeMs })),
+    // Filtered here too, so a fade time of 0 (?anim=0) never shows a tracer added since the last advance.
+    active: () =>
+      tracers
+        .filter((tracer) => tracer.ageMs < fadeMs)
+        .map(({ from, to, ageMs }) => ({ from, to, alpha: 1 - ageMs / fadeMs })),
   };
 }

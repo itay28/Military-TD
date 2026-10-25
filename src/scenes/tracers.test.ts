@@ -35,4 +35,10 @@ describe('createTracers', () => {
     tracers.advance(40);
     expect(tracers.active()).toEqual([{ from: TO, to: FROM, alpha: 0.5 }]);
   });
+
+  it('never shows a tracer with no fade time, for ?anim=0', () => {
+    const tracers = createTracers(0);
+    tracers.add(FROM, TO);
+    expect(tracers.active()).toEqual([]);
+  });
 });

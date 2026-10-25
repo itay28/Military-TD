@@ -3,7 +3,7 @@ import { MVP_MAP } from '../data/maps';
 import { START_LIVES, START_MONEY } from '../data/start';
 import { TICK_MS } from './game';
 import type { MapData } from './map';
-import { runScenario } from './scenario';
+import { runScenario, setUpGame } from './scenario';
 
 // Path line through tile centers: right 3, then down 3. 6 tiles long, so an Infantry (1.5 tiles/s) leaks after 4 s.
 const SMALL: MapData = {
@@ -197,5 +197,37 @@ describe('runScenario', () => {
     });
     expect(finalState.enemies).toHaveLength(1);
     expect(finalState.enemies[0]?.distance).toBeCloseTo(1.5);
+  });
+});
+
+describe('setUpGame', () => {
+  it('with no setup, builds the MVP game in the Build phase', () => {
+    const { state } = setUpGame();
+    expect(state.map.id).toBe(MVP_MAP.id);
+    expect(state.lives).toBe(START_LIVES);
+    expect(state.money).toBe(START_MONEY);
+    expect(state.phase).toBe('build');
+    expect(state.towers).toEqual([]);
+  });
+
+  it('takes the setup of a scenario, its pre-placed towers free', () => {
+    const { state } = setUpGame({
+      map: SMALL,
+      lives: 3,
+      money: 7,
+      towers: [{ kind: 'rifleNest', tile: { col: 1, row: 2 } }],
+      waves: ONE_INFANTRY,
+    });
+    expect(state.map.id).toBe('small');
+    expect(state.lives).toBe(3);
+    expect(state.money).toBe(7);
+    expect(state.towers.map((t) => t.tile)).toEqual([{ col: 1, row: 2 }]);
+    expect(state.totalWaves).toBe(1);
+  });
+
+  it('throws for a pre-placed tower that cannot be placed', () => {
+    expect(() => setUpGame({ map: SMALL, towers: [{ kind: 'rifleNest', tile: { col: 1, row: 1 } }] })).toThrow(
+      /1,1.*notBuildable/,
+    );
   });
 });

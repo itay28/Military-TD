@@ -21,6 +21,7 @@ npm run dev        # dev server with hot reload at http://localhost:5173
 | `npm run build`     | Typecheck, then build the game into `dist/`                      |
 | `npm run preview`   | Serve the built `dist/` locally                                  |
 | `npm test`          | Run the Vitest tests once (`npm run test:watch` to keep running) |
+| `npm run test:e2e`  | Playwright UI tests on the built game, in headless Chromium      |
 | `npm run lint`      | ESLint                                                           |
 | `npm run typecheck` | TypeScript, no output                                            |
 | `npm run format`    | Format code and config with Prettier                             |

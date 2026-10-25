@@ -1,6 +1,7 @@
-import { readdirSync } from 'node:fs';
 import type { ExpectStatic } from 'vitest';
 import type { Scenario, ScenarioResult } from '../../src/sim/scenario';
+
+// No Node imports here: test mode bundles the scenario files into the game for `__TD__.loadScenario` (ADR-0003).
 
 /** A named scenario file's default export: the scenario, what it shows, and what Vitest checks about its run. */
 export interface ScenarioFile extends Scenario {
@@ -11,14 +12,3 @@ export interface ScenarioFile extends Scenario {
 }
 
 export const defineScenario = (scenario: ScenarioFile): ScenarioFile => scenario;
-
-/** Where named scenarios live: `<name>.scenario.ts`. */
-export const SCENARIO_DIR = import.meta.dirname;
-
-/** The named scenarios, sorted. */
-export function scenarioNames(): string[] {
-  return readdirSync(SCENARIO_DIR)
-    .filter((file) => file.endsWith('.scenario.ts'))
-    .map((file) => file.slice(0, -'.scenario.ts'.length))
-    .sort();
-}

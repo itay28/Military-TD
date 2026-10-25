@@ -37,4 +37,10 @@ describe('createFloatingTexts', () => {
     expect(second).toMatchObject({ text: 'second', alpha: expect.closeTo(0.9) });
     expect(first?.id).not.toBe(second?.id);
   });
+
+  it('never shows a text with no duration, for ?anim=0', () => {
+    const texts = createFloatingTexts({ durationMs: 0, risePx: 40 });
+    texts.add('hidden', AT);
+    expect(texts.active()).toEqual([]);
+  });
 });
