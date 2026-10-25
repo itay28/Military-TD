@@ -33,6 +33,7 @@ const playWave = (game: Game) => {
 };
 
 let root: HTMLElement;
+const byTestId = (id: string) => root.querySelector<HTMLElement>(`[data-testid="${id}"]`);
 const dialog = () => root.querySelector<HTMLElement>('[role="dialog"]');
 const restart = () => root.querySelector<HTMLButtonElement>('button[data-testid="restart"]');
 
@@ -62,7 +63,7 @@ describe('End screen', () => {
     expect(game.state.phase).toBe('victory');
     expect(root.hidden).toBe(false);
     expect(dialog()?.querySelector('h2')?.textContent).toBe('Victory');
-    expect(dialog()?.querySelector('[data-testid="waves-survived"]')?.textContent).toBe('Waves survived 3 / 3');
+    expect(byTestId('waves-survived')?.textContent).toBe('Waves survived 3 / 3');
   });
 
   it('after Defeat shows "Defeat" and the waves cleared before it', () => {
@@ -74,7 +75,7 @@ describe('End screen', () => {
     expect(game.state.phase).toBe('defeat');
     expect(root.hidden).toBe(false);
     expect(dialog()?.querySelector('h2')?.textContent).toBe('Defeat');
-    expect(dialog()?.querySelector('[data-testid="waves-survived"]')?.textContent).toBe('Waves survived 1 / 3');
+    expect(byTestId('waves-survived')?.textContent).toBe('Waves survived 1 / 3');
   });
 
   it('is a modal dialog labelled by its heading, and focuses Restart when it opens', () => {
@@ -116,13 +117,17 @@ describe('End screen', () => {
     return Promise.resolve().then(() => expect(writes).toEqual([]));
   });
 
-  it('destroy() empties and hides the overlay', () => {
+  it('destroy() empties and hides the overlay, and a later click on the old button does nothing', () => {
     const game = newGame(1);
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    let restarts = 0;
+    const end = mountEndScreen(root, game, { onRestart: () => restarts++ });
     playWave(game);
     end.update();
+    const oldButton = restart()!;
     end.destroy();
     expect(root.children).toHaveLength(0);
     expect(root.hidden).toBe(true);
+    oldButton.click();
+    expect(restarts).toBe(0);
   });
 });

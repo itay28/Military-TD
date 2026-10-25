@@ -20,6 +20,9 @@ export interface GameConfig {
 /** Build phase between waves, Wave phase while one runs; Victory and Defeat end the game. */
 export type Phase = 'build' | 'wave' | 'victory' | 'defeat';
 
+/** Whether the game has ended, in Victory or Defeat. */
+export const isGameOver = (phase: Phase): boolean => phase === 'victory' || phase === 'defeat';
+
 /** The live game state, read-only to callers. Read it through `game.state` each time: arrays are replaced on tick. */
 export interface GameState {
   /** The validated map, for drawing and placement checks. */
@@ -116,7 +119,7 @@ export function createGame(config: GameConfig): Game {
     tick(dtMs) {
       if (!Number.isFinite(dtMs) || dtMs < 0)
         throw new RangeError(`tick(dtMs): ${dtMs} is not a finite, non-negative time`);
-      if (state.phase === 'victory' || state.phase === 'defeat') return;
+      if (isGameOver(state.phase)) return;
       state.timeMs += dtMs;
       const { walking, leaked } = walkEnemies(state.enemies, line, dtMs);
       const enemies = [...walking];
@@ -172,7 +175,7 @@ export function createGame(config: GameConfig): Game {
       return { ok: true };
     },
     placeTower(kind, tile) {
-      if (state.phase === 'victory' || state.phase === 'defeat') return { ok: false, reason: 'gameEnded' };
+      if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' };
       if (!map.isBuildable(tile)) return { ok: false, reason: 'notBuildable' };
       if (towerAt(state.towers, tile)) return { ok: false, reason: 'occupied' };
       const stats = TOWER_STATS[kind];

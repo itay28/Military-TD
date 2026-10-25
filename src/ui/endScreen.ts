@@ -1,4 +1,4 @@
-import type { Game } from '../sim/game';
+import { isGameOver, type Game } from '../sim/game';
 
 /** The parts of the Game the End screen reads. */
 export type EndScreenGame = Pick<Game, 'state'>;
@@ -11,7 +11,7 @@ export interface EndScreenOptions {
 export interface EndScreen {
   /** Shows the overlay once the game is over; call once per frame. Writes only when it opens. */
   update(): void;
-  /** Removes the overlay's elements and hides it. */
+  /** Removes the overlay's elements and hides it; Restart does nothing after this. */
   destroy(): void;
 }
 
@@ -32,7 +32,8 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
   restart.type = 'button';
   restart.dataset.testid = 'restart';
   restart.textContent = 'Restart';
-  restart.addEventListener('click', () => onRestart());
+  const onClick = () => onRestart();
+  restart.addEventListener('click', onClick);
   dialog.append(heading, wavesSurvived, restart);
   root.append(dialog);
   root.hidden = true;
@@ -40,7 +41,7 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
   // The result can't change once the game is over (ticks stop), so it is written once, when the overlay opens.
   const update = () => {
     const { phase, wavesCleared, totalWaves } = game.state;
-    if (!root.hidden || (phase !== 'victory' && phase !== 'defeat')) return;
+    if (!root.hidden || !isGameOver(phase)) return;
     heading.textContent = phase === 'victory' ? 'Victory' : 'Defeat';
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
     root.hidden = false;
@@ -50,6 +51,7 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
   return {
     update,
     destroy() {
+      restart.removeEventListener('click', onClick);
       root.replaceChildren();
       root.hidden = true;
     },
