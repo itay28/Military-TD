@@ -46,6 +46,8 @@ Milestones can't be cards on the project board, so each milestone has a **releas
 
 For `v1.0.0` it's the same, with `Release-As: 1.0.0`.
 
+**Footer lost?** If the report PR merged but the release PR didn't switch (check the squash commit on `main`: `Co-authored-by:` lines after `Release-As` hide it), pin the version instead: a PR that adds `"release-as": "0.N.0"` to the package in `release-please-config.json`. Once `v0.N.0` ships, remove the pin in another PR, or every later release is forced to that version too. `tests/release-config.test.ts` fails while a pin names a version that has already shipped.
+
 **When a run warns or fails**, do its step by hand: a *Release board* or *Milestone report* run that warned about a missing `PROJECT_TOKEN` (move the card; see **Project board** in `docs/agents/issue-tracker.md`), or a failed `release-issue` job (close the release issue and the milestone with a comment linking the GitHub Release).
 
 **New milestone?** Create its release issue at the same time, as above, in *Backlog*.
