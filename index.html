@@ -54,6 +54,57 @@
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
       }
+      /* The End screen covers the canvas, so the map takes no clicks while it's open. */
+      #stage {
+        position: relative;
+      }
+      #end-screen {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(27 30 22 / 0.72);
+        font: 16px monospace;
+        color: #e4e0c8;
+      }
+      /* `display: flex` above would otherwise override the hidden attribute. */
+      #end-screen[hidden] {
+        display: none;
+      }
+      #end-screen [role='dialog'] {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        padding: 24px 40px;
+        background: #262a1f;
+        border: 2px solid #c2a46b;
+        border-radius: 4px;
+      }
+      #end-screen h2 {
+        margin: 0;
+        font-size: 32px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #f0c95a;
+      }
+      #end-screen p {
+        margin: 0;
+      }
+      #end-screen button {
+        padding: 6px 22px;
+        font: bold 16px monospace;
+        color: #1b1e16;
+        background: #c2a46b;
+        border: 0;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #end-screen button:focus-visible {
+        outline: 2px solid #f0c95a;
+        outline-offset: 2px;
+      }
       #version {
         position: fixed;
         right: 6px;
@@ -67,7 +118,10 @@
   <body>
     <div id="app">
       <div id="hud"></div>
-      <div id="game"></div>
+      <div id="stage">
+        <div id="game"></div>
+        <div id="end-screen" hidden></div>
+      </div>
     </div>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>

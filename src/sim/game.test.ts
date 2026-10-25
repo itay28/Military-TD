@@ -333,3 +333,35 @@ describe('waves and phases', () => {
     expect(game.state).toMatchObject({ phase: 'victory', lives: 12, waveNumber: 1, totalWaves: 1 });
   });
 });
+
+// The End screen's "waves survived".
+describe('waves cleared', () => {
+  it('a new game has cleared 0 waves', () => {
+    expect(newGame().state.wavesCleared).toBe(0);
+  });
+
+  it('clearing a wave adds 1', () => {
+    const game = newGame();
+    game.startWave();
+    game.tick(5000); // both Infantry leak by 5000
+    expect(game.state).toMatchObject({ phase: 'build', wavesCleared: 1 });
+  });
+
+  it('after Victory it is every wave', () => {
+    const game = newGame();
+    game.startWave();
+    game.tick(5000);
+    game.startWave();
+    game.tick(5000);
+    expect(game.state).toMatchObject({ phase: 'victory', wavesCleared: 2, totalWaves: 2 });
+  });
+
+  it("after Defeat it doesn't count the wave that was lost", () => {
+    const game = newGame(3);
+    game.startWave();
+    game.tick(5000); // 2 leaks: 1 Life left
+    game.startWave();
+    game.tick(4000); // the first Infantry of wave 2 leaks
+    expect(game.state).toMatchObject({ phase: 'defeat', waveNumber: 2, wavesCleared: 1 });
+  });
+});

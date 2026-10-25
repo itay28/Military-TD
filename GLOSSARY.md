@@ -15,6 +15,7 @@
 | **Wave** | A scheduled group of enemies spawned one after another. | round, level |
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
 | **Victory / Defeat** | How a game ends: the last wave cleared with Lives left / Lives reaching 0. Either one stops the Simulation. | win, game over |
+| **End screen** | The overlay over the map once the game ends: Victory or Defeat, the waves survived (waves cleared), and **Restart**, which starts a fresh game. | game over screen |
 | **Leak** | An enemy reaching the Path end. It costs Lives. | escape |
 | **Lives** | How many leaks the player can survive. Defeat at 0. | health, HP (HP is for enemies) |
 | **Wave DPS** | Damage per second during the current wave only: damage dealt this wave ÷ time since the wave started. Per tower or in total. Resets when a wave starts. | |

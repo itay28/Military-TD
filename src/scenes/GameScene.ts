@@ -13,6 +13,7 @@ import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { createTracers, type Tracers } from './tracers';
+import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { createViewSync, type ViewSync } from './viewSync';
 
@@ -33,32 +34,41 @@ interface EnemyView {
 export interface GameSceneOptions {
   /** The DOM element the HUD is drawn in (`#hud` in index.html). */
   readonly hudRoot: HTMLElement;
+  /** The DOM element over the canvas the End screen is drawn in (`#end-screen` in index.html). */
+  readonly endScreenRoot: HTMLElement;
 }
 
 /** Owns the Simulation, draws it, and advances it on a fixed timestep. */
 export class GameScene extends Phaser.Scene {
   private readonly hudRoot: HTMLElement;
+  private readonly endScreenRoot: HTMLElement;
   private sim!: Game;
   private loop!: FixedStep;
   private hud!: Hud;
+  private endScreen!: EndScreen;
   private enemyViews!: ViewSync<Enemy>;
   private towerViews!: ViewSync<Tower>;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
   private rangeRing!: Phaser.GameObjects.Graphics;
   /** Enemy positions before the latest tick, to interpolate from. */
-  private previousPositions: ReadonlyMap<number, Position> = new Map();
+  private previousPositions!: ReadonlyMap<number, Position>;
   /** The tile under the pointer, or undefined when it is off the canvas. */
   private pointerTile: Tile | undefined;
   /** The tower whose range ring is drawn, by id. */
   private hoveredTowerId: number | undefined;
 
-  constructor({ hudRoot }: GameSceneOptions) {
+  constructor({ hudRoot, endScreenRoot }: GameSceneOptions) {
     super('Game');
     this.hudRoot = hudRoot;
+    this.endScreenRoot = endScreenRoot;
   }
 
   create(): void {
+    // Restart reruns create() on this same object. Sim ids start again at 1, so last game's ids must not linger here.
+    this.previousPositions = new Map();
+    this.pointerTile = undefined;
+    this.hoveredTowerId = undefined;
     this.sim = createGame({ map: MVP_MAP, lives: START_LIVES, money: START_MONEY, waves: MVP_WAVES });
     drawMap(this.add.graphics().setDepth(DEPTH.map), this.sim.state.map);
     this.loop = createFixedStep({
@@ -108,7 +118,12 @@ export class GameScene extends Phaser.Scene {
     this.input.on('gameout', () => (this.pointerTile = undefined));
 
     this.hud = mountHud(this.hudRoot, this.sim);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.hud.destroy());
+    // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
+    this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.hud.destroy();
+      this.endScreen.destroy();
+    });
   }
 
   override update(_time: number, deltaMs: number): void {
@@ -116,6 +131,7 @@ export class GameScene extends Phaser.Scene {
     this.tracers.advance(deltaMs);
     this.loop.advance(deltaMs);
     this.hud.update();
+    this.endScreen.update();
 
     const { enemies, towers } = this.sim.state;
     this.towerViews.sync(towers);

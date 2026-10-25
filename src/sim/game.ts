@@ -34,6 +34,8 @@ export interface GameState {
   readonly phase: Phase;
   /** The latest started wave, counting from 1; 0 before the first. */
   readonly waveNumber: number;
+  /** Waves cleared so far: every wave after Victory, the waves before the lost one after Defeat. */
+  readonly wavesCleared: number;
   readonly totalWaves: number;
 }
 
@@ -95,6 +97,7 @@ export function createGame(config: GameConfig): Game {
     towers: [],
     phase: 'build',
     waveNumber: 0,
+    wavesCleared: 0,
     totalWaves: config.waves.length,
   };
   const emitter = createEmitter<GameEvents>();
@@ -141,6 +144,7 @@ export function createGame(config: GameConfig): Game {
       } else if (wave?.schedule.finished && state.enemies.length === 0) {
         cleared = true;
         wave = undefined;
+        state.wavesCleared++;
         state.phase = state.waveNumber === state.totalWaves ? 'victory' : 'build';
       }
       // Emit once the state is settled, so listeners read this tick's state.
