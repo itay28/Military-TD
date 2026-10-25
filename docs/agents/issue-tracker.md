@@ -147,6 +147,27 @@ gh project item-edit --project-id <project-id> --id <item-id> \
 
 `gh project view 4 --owner itay28 --format json` gives the project id.
 
+## Hand-off
+
+The maintainer isn't watching the board. They get an [ntfy](https://ntfy.sh) phone push when they're needed, and the **Needs you** board view (filter `label:needs-you,needs-info`) lists what's waiting on them.
+
+| Push | When | Clicks through to |
+| --- | --- | --- |
+| *Military-TD vX.Y.Z released*, with the changelog link | release-please publishes a release (`notify` job in `release-please.yml`) | the GitHub Release |
+| *PR #n is stuck*, with the steward's summary | a PR gets `needs-you`: the PR steward gave up after 3 rounds | the PR |
+| *Question on #n*, with the issue title | an issue gets `needs-info`: an agent asked a question (`docs/agents/prompts/implement.md`) | the issue |
+
+- **Labels:** `needs-you` goes on a stuck PR, `needs-info` on an issue with an open question. Removing the label takes the item out of the view. `hold` on the item means no push.
+- **Steward summary:** the PR steward posts its summary as a PR comment that starts with `<!-- pr-steward:stuck -->`, then adds `needs-you`. The push carries the latest such comment, or the PR title when there's none.
+- **How:** `.github/workflows/notify.yml` runs on those labels; logic and tests in `scripts/notify.ts`. Labels added with `GITHUB_TOKEN` don't start workflows, so an Action that labels that way runs `node scripts/notify.ts pr <n>` (or `issue <n>`) itself. A missing `NTFY_TOPIC` secret or an ntfy error fails the run.
+
+**Hand-off setup** (maintainer, once):
+1. Pick a long random topic name (it's the only secret: anyone who knows it can read and send), e.g. `openssl rand -hex 16` → `mtd-<hex>`.
+2. GitHub → Settings → Secrets and variables → Actions → **Secrets**: add `NTFY_TOPIC` with that name.
+3. Install the ntfy app (Android or iOS), tap **+**, and subscribe to that topic on `ntfy.sh`.
+4. Project board → **New view** (table) named **Needs you**, filter `label:needs-you,needs-info`.
+5. Check: Actions → *Notify* runs when you add `needs-info` to a test issue; the phone shows *Question on #n*.
+
 ## Wayfinding operations
 
 Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets.
