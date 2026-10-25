@@ -63,6 +63,11 @@ describe('desiredStatus: the Ready rule (no PR, no assignee)', () => {
     expect(desiredStatus({ ...readyCard, milestone: null }, [], 'main', current)).toBe('Backlog');
   });
 
+  it('makes nothing Ready when there is no open milestone', () => {
+    expect(desiredStatus({ ...startable, milestone: null }, [], 'main', null)).toBeUndefined();
+    expect(desiredStatus({ ...startable, milestone: null, status: 'Ready' }, [], 'main', null)).toBe('Backlog');
+  });
+
   it('files an unset card under Backlog when it is not startable', () => {
     expect(desiredStatus({ ...startable, status: undefined, blocked: true }, [], 'main', current)).toBe('Backlog');
   });
@@ -130,7 +135,7 @@ describe('desiredStatus', () => {
 
   it('ignores a PR merged into main (closing the issue moves it to Done)', () => {
     const merged: PullRequest = { ...ready, state: 'MERGED' };
-    expect(desiredStatus(issue(), [merged], 'main')).toBeUndefined();
+    expect(desiredStatus(issue({ status: 'In review' }), [merged], 'main')).toBeUndefined();
   });
 
   it('never moves Done cards or trackers (release issues, epics)', () => {
@@ -138,8 +143,8 @@ describe('desiredStatus', () => {
     expect(desiredStatus(issue({ tracker: true, assigned: true }), [ready])).toBeUndefined();
   });
 
-  it('leaves unassigned issues with no PR where they are', () => {
-    expect(desiredStatus(issue(), [])).toBeUndefined();
+  it('leaves In progress and In review cards with no PR and no assignee where they are', () => {
+    expect(desiredStatus(issue({ status: 'In review' }), [])).toBeUndefined();
     expect(desiredStatus(issue({ status: 'In progress' }), [])).toBeUndefined();
   });
 

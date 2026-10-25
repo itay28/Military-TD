@@ -83,12 +83,15 @@ export function closingIssues(body: string, linked: readonly number[]): number[]
 export function currentMilestone(milestones: readonly Milestone[]): number | null {
   const dated = milestones.filter((m) => m.dueOn).sort((a, b) => a.dueOn!.localeCompare(b.dueOn!));
   if (dated[0]) return dated[0].number;
-  const version = (m: Milestone) =>
-    (/v?(\d+)\.(\d+)(?:\.(\d+))?/.exec(m.title)?.slice(1) ?? []).map((x) => Number(x ?? 0));
-  const versioned = milestones.filter((m) => version(m).length);
+  // [major, minor, patch] from a title like 'v0.2.0 — Combat depth'; null when it has no version.
+  const version = (m: Milestone): [number, number, number] | null => {
+    const match = /v?(\d+)\.(\d+)(?:\.(\d+))?/.exec(m.title);
+    return match ? [Number(match[1]), Number(match[2]), Number(match[3] ?? 0)] : null;
+  };
+  const versioned = milestones.filter((m) => version(m));
   versioned.sort((a, b) => {
-    const [x, y] = [version(a), version(b)];
-    return x[0]! - y[0]! || x[1]! - y[1]! || x[2]! - y[2]!;
+    const [x, y] = [version(a)!, version(b)!];
+    return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
   });
   return versioned[0]?.number ?? null;
 }
@@ -98,8 +101,8 @@ export function currentMilestone(milestones: readonly Milestone[]): number | nul
  * a PR ready for review (or a stacked PR merged into its parent) → In review; a draft PR, or
  * assigned with no PR → In progress. With no PR and no assignee, a Backlog or Ready card follows
  * the Ready rule: current milestone, `ready-for-agent` and no open blockers → Ready, else Backlog.
- * Done cards and trackers (release issues, epics) are never moved; In progress and In review cards with no PR and
- * no assignee stay where they are.
+ * Without an open milestone nothing is Ready. Done cards and trackers (release issues, epics)
+ * are never moved; In progress and In review cards with no PR and no assignee stay put.
  */
 export function desiredStatus(
   issue: BoardIssue,
@@ -114,7 +117,7 @@ export function desiredStatus(
   const drafting = prs.some((pr) => pr.state === 'OPEN' && pr.isDraft);
   let target: CardStatus | undefined = inReview ? 'In review' : drafting || issue.assigned ? 'In progress' : undefined;
   if (!target && (issue.status === undefined || issue.status === 'Backlog' || issue.status === 'Ready')) {
-    const startable = issue.labelled && !issue.blocked && issue.milestone === current;
+    const startable = current !== null && issue.milestone === current && issue.labelled && !issue.blocked;
     target = startable ? 'Ready' : 'Backlog';
   }
   return target === issue.status ? undefined : target;
