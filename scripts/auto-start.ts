@@ -3,7 +3,7 @@
 // pure; startIssue and commentNoSize are the only calls with side effects, and take `fetch` so
 // tests can mock it. Run from scripts/board-sync.ts when the repo variable AUTO_SPAWN is `on`.
 
-const ISSUES_API = 'https://api.github.com/repos/itay28/Military-TD/issues';
+const REPO_API = 'https://api.github.com/repos/itay28/Military-TD';
 /** Who claimed issues are assigned to: the agents act through the maintainer's GitHub identity. */
 const MAINTAINER = 'itay28';
 /** Marks the issues auto-start claimed, so the cap counts only those. */
@@ -153,10 +153,17 @@ export interface Routine {
 }
 export type Routines = Readonly<Record<Model, Routine>>;
 
-type Fetch = (url: string, init: RequestInit) => Promise<Response>;
+export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 
-async function github(fetchFn: Fetch, token: string, method: string, path: string, body?: unknown): Promise<Response> {
-  const response = await fetchFn(`${ISSUES_API}/${path}`, {
+/** A GitHub REST call on this repo (`path` like `issues/12/labels`); throws on an error status. */
+export async function github(
+  fetchFn: Fetch,
+  token: string,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<Response> {
+  const response = await fetchFn(`${REPO_API}/${path}`, {
     method,
     headers: {
       Authorization: `bearer ${token}`,
@@ -165,8 +172,31 @@ async function github(fetchFn: Fetch, token: string, method: string, path: strin
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  if (!response.ok) throw new Error(`${method} issues/${path}: HTTP ${response.status} ${await response.text()}`);
+  if (!response.ok)
+    throw Object.assign(new Error(`${method} ${path}: HTTP ${response.status} ${await response.text()}`), {
+      status: response.status,
+    });
   return response;
+}
+
+/**
+ * Start a run of a scheduled task through its API trigger. Returns the new session's URL when
+ * the response names one; throws on an error status.
+ */
+export async function fireRoutine(routine: Routine, text: string, fetchFn: Fetch = fetch): Promise<string | undefined> {
+  const response = await fetchFn(routine.url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${routine.token}`,
+      'anthropic-beta': FIRE_BETA,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text }),
+  });
+  if (!response.ok) throw new Error(`fire: HTTP ${response.status} ${await response.text()}`);
+  const body = (await response.json().catch(() => ({}))) as { claude_code_session_url?: string };
+  return body.claude_code_session_url;
 }
 
 /** The fire `text`: what the implement prompt (docs/agents/prompts/implement.md) reads. */
@@ -188,24 +218,14 @@ export async function startIssue(
   const n = start.issue;
   const routine = routines[start.model];
   try {
-    await github(fetchFn, token, 'POST', `${n}/assignees`, { assignees: [MAINTAINER] });
-    await github(fetchFn, token, 'POST', `${n}/labels`, { labels: [AUTO_AGENT_LABEL] });
-    const response = await fetchFn(routine.url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${routine.token}`,
-        'anthropic-beta': FIRE_BETA,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ text: fireText(start) }),
-    });
-    if (!response.ok) throw new Error(`fire: HTTP ${response.status} ${await response.text()}`);
+    await github(fetchFn, token, 'POST', `issues/${n}/assignees`, { assignees: [MAINTAINER] });
+    await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [AUTO_AGENT_LABEL] });
+    await fireRoutine(routine, fireText(start), fetchFn);
   } catch (error) {
     // Undo whatever part of the claim went through; the original error is the one reported.
     const undo = await Promise.allSettled([
-      github(fetchFn, token, 'DELETE', `${n}/assignees`, { assignees: [MAINTAINER] }),
-      github(fetchFn, token, 'DELETE', `${n}/labels/${AUTO_AGENT_LABEL}`),
+      github(fetchFn, token, 'DELETE', `issues/${n}/assignees`, { assignees: [MAINTAINER] }),
+      github(fetchFn, token, 'DELETE', `issues/${n}/labels/${AUTO_AGENT_LABEL}`),
     ]);
     const undoErrors = undo.flatMap((r) => (r.status === 'rejected' ? [String(r.reason)] : []));
     const unclaimed = undoErrors.length ? `un-claiming failed (${undoErrors.join('; ')})` : 'un-claimed';
@@ -217,11 +237,11 @@ export async function startIssue(
 
 /** Ask for a Size on an issue auto-start skipped for lacking one; once. True if it commented. */
 export async function commentNoSize(issue: number, token: string, fetchFn: Fetch = fetch): Promise<boolean> {
-  const comments = (await (await github(fetchFn, token, 'GET', `${issue}/comments?per_page=100`)).json()) as {
+  const comments = (await (await github(fetchFn, token, 'GET', `issues/${issue}/comments?per_page=100`)).json()) as {
     body?: string;
   }[];
   if (comments.some((c) => c.body?.includes(NO_SIZE_MARKER))) return false;
-  await github(fetchFn, token, 'POST', `${issue}/comments`, {
+  await github(fetchFn, token, 'POST', `issues/${issue}/comments`, {
     body:
       'Auto-start skipped this issue: it has no **Size** on the project board. ' +
       'Set Size (XS–L) and the next *Board sync* run can start it (docs/agents/issue-tracker.md → Auto-start).\n\n' +

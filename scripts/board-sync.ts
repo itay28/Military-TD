@@ -155,7 +155,7 @@ export function planMoves(
   });
 }
 
-async function graphql<T>(token: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
+export async function graphql<T>(token: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
   const response = await fetch('https://api.github.com/graphql', {
     method: 'POST',
     headers: { Authorization: `bearer ${token}`, 'Content-Type': 'application/json' },
