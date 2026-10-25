@@ -7,9 +7,15 @@ import { createGame, TICK_MS, type CommandResult, type Game, type GameEvents, ty
 import { tileKey, type MapData, type Tile } from './map';
 import type { WaveData } from './waves';
 
+/** A tower kind on a tile, as placed by a command or before a run. */
+export interface TowerPlacement {
+  readonly kind: TowerKind;
+  readonly tile: Tile;
+}
+
 /** A command a scenario script can give, the same as a player (or a test) would. */
 export type ScenarioCommand =
-  | { readonly type: 'placeTower'; readonly kind: TowerKind; readonly tile: Tile }
+  | ({ readonly type: 'placeTower' } & TowerPlacement)
   | { readonly type: 'startWave' }
   | { readonly type: 'spawnEnemy'; readonly kind: EnemyKind };
 
@@ -31,7 +37,7 @@ export interface Scenario {
   readonly lives?: number;
   readonly money?: number;
   /** Placed before the first tick, free: they don't come out of `money`. */
-  readonly towers?: readonly { readonly kind: TowerKind; readonly tile: Tile }[];
+  readonly towers?: readonly TowerPlacement[];
   /** Overrides the game's waves. */
   readonly waves?: readonly WaveData[];
   readonly script?: readonly ScriptStep[];
@@ -42,7 +48,7 @@ export interface Scenario {
   readonly maxTicks?: number;
 }
 
-const DEFAULT_MAX_TICKS = 60 * 60 * 60;
+export const DEFAULT_MAX_TICKS = Math.round((60 * 60 * 1000) / TICK_MS);
 
 /** `victory` or `defeat` when the game ended; `stopped` when `until` was met first; `timeout` at `maxTicks`. */
 export type ScenarioOutcome = 'victory' | 'defeat' | 'stopped' | 'timeout';
@@ -108,32 +114,33 @@ export function runScenario(scenario: Scenario): ScenarioResult {
   const events: ScenarioEvent[] = [];
   let ticks = 0;
   const { until, maxTicks = DEFAULT_MAX_TICKS } = scenario;
-  let untilEventFired = false;
+  const stopEvent = typeof until === 'object' && 'event' in until ? until.event : undefined;
+  const stopTicks = typeof until === 'object' && 'ticks' in until ? until.ticks : Infinity;
+  let stopEventFired = false;
   for (const type of GAME_EVENT_TYPES)
     game.events.on(type, (event) => {
       events.push({ tick: ticks, type, ...event } as ScenarioEvent);
-      if (typeof until === 'object' && 'event' in until && until.event === type) untilEventFired = true;
+      if (type === stopEvent) stopEventFired = true;
     });
-  const script = [...(scenario.script ?? [])].sort((a, b) => a.atTick - b.atTick);
-  let nextStep = 0;
+  const script = scenario.script ?? [];
 
   const outcome = (): ScenarioOutcome | undefined => {
     const { phase } = game.state;
     if (phase === 'victory' || phase === 'defeat') return phase;
-    if (untilEventFired || (typeof until === 'object' && 'ticks' in until && ticks >= until.ticks)) return 'stopped';
+    if (stopEventFired || ticks >= stopTicks) return 'stopped';
     if (ticks >= maxTicks) return 'timeout';
     return undefined;
   };
-  const command = (command: ScenarioCommand) => {
+  const issue = (command: ScenarioCommand) => {
     // Log the command ahead of the events it causes (startWave emits waveStarted).
     const at = events.length;
-    const result = run(game, command);
+    const result = applyCommand(game, command);
     events.splice(at, 0, { tick: ticks, type: 'command', command, result });
   };
   for (;;) {
-    for (let step = script[nextStep]; step && step.atTick <= ticks; step = script[++nextStep]) command(step.command);
+    for (const step of script) if (step.atTick === ticks) issue(step.command);
     const { phase, waveNumber, totalWaves } = game.state;
-    if (scenario.autoStartWaves && phase === 'build' && waveNumber < totalWaves) command({ type: 'startWave' });
+    if (scenario.autoStartWaves && phase === 'build' && waveNumber < totalWaves) issue({ type: 'startWave' });
     const done = outcome();
     if (done) return { outcome: done, finalState: game.state, events, ticks };
     ticks++; // first, so events from this tick carry its number
@@ -141,7 +148,7 @@ export function runScenario(scenario: Scenario): ScenarioResult {
   }
 }
 
-function run(game: Game, command: ScenarioCommand): CommandOutcome {
+function applyCommand(game: Game, command: ScenarioCommand): CommandOutcome {
   switch (command.type) {
     case 'placeTower':
       return game.placeTower(command.kind, command.tile);

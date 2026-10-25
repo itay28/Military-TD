@@ -17,17 +17,18 @@ async function load<T>(path: string): Promise<T> {
 /** One line per event; an enemy shows as `kind#id` instead of its whole state. */
 function describeEvent(event: ScenarioEvent): string {
   const { tick, type, ...rest } = event;
+  const at = String(tick).padStart(6);
   if (event.type === 'command') {
     const { type: command, ...args } = event.command;
     const result = event.result.ok ? 'ok' : `refused: ${event.result.reason}`;
-    return `${String(tick).padStart(6)}  command ${command} ${Object.keys(args).length ? JSON.stringify(args) + ' ' : ''}→ ${result}`;
+    return `${at}  command ${command} ${Object.keys(args).length ? JSON.stringify(args) + ' ' : ''}→ ${result}`;
   }
   const details = Object.entries(rest).map(([key, value]) => {
     if (key === 'enemy' && value && typeof value === 'object' && 'kind' in value && 'id' in value)
       return `enemy=${String(value.kind)}#${String(value.id)}`;
     return `${key}=${JSON.stringify(value)}`;
   });
-  return `${String(tick).padStart(6)}  ${type} ${details.join(' ')}`;
+  return `${at}  ${type} ${details.join(' ')}`;
 }
 
 function summary(name: string, scenario: ScenarioFile, result: ScenarioResult, tickMs: number): string {

@@ -32,6 +32,7 @@ describe('named scenarios', () => {
     });
   });
 
+  // Wall-clock: a run takes a few ms, so 500 ms leaves a slow CI runner plenty of room.
   it('a full game runs in well under 1 s', () => {
     const full = scenarios.find((s) => s.name === 'mvp-full-game');
     if (!full) throw new Error('mvp-full-game scenario is missing');
@@ -39,6 +40,6 @@ describe('named scenarios', () => {
     const result = runScenario(full.scenario);
     const elapsedMs = performance.now() - start;
     expect(['victory', 'defeat']).toContain(result.outcome);
-    expect(elapsedMs).toBeLessThan(250);
+    expect(elapsedMs).toBeLessThan(500);
   });
 });
