@@ -2,8 +2,8 @@ import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { createMap, tileKey, type GameMap, type MapData, type Tile } from './map';
-import { fireTowers, type Shot, type Tower } from './towers';
+import { createMap, type GameMap, type MapData, type Tile } from './map';
+import { fireTowers, towerAt, type Shot, type Tower } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
 /** The one fixed step, in ms. The Game scene and the scenario runner both tick with it. */
@@ -170,7 +170,7 @@ export function createGame(config: GameConfig): Game {
     placeTower(kind, tile) {
       if (state.phase === 'victory' || state.phase === 'defeat') return { ok: false, reason: 'gameEnded' };
       if (!map.isBuildable(tile)) return { ok: false, reason: 'notBuildable' };
-      if (state.towers.some((tower) => tileKey(tower.tile) === tileKey(tile))) return { ok: false, reason: 'occupied' };
+      if (towerAt(state.towers, tile)) return { ok: false, reason: 'occupied' };
       const stats = TOWER_STATS[kind];
       if (state.money < stats.cost) return { ok: false, reason: 'insufficientMoney' };
       const towerId = nextId++;

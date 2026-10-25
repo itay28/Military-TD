@@ -11,6 +11,8 @@ export interface FixedStepOptions {
 export interface FixedStep {
   /** Adds a frame's real elapsed time and runs the whole steps that fit. Returns how many ran. */
   advance(frameDeltaMs: number): number;
+  /** Time left over after the last advance, as a fraction of a step in [0, 1). Renderers interpolate by it. */
+  readonly alpha: number;
 }
 
 /**
@@ -33,6 +35,10 @@ export function createFixedStep({ stepMs, maxStepsPerFrame, step }: FixedStepOpt
       }
       if (fitsAStep()) accumulatedMs = 0;
       return steps;
+    },
+    get alpha() {
+      // The float tolerance can leave the accumulator a hair below 0.
+      return Math.max(0, accumulatedMs) / stepMs;
     },
   };
 }
