@@ -25,7 +25,7 @@ const TWO_WAVES: readonly WaveData[] = [
   { kind: 'infantry', count: 3, spacingMs: 500 },
 ];
 
-const newGame = (lives = 20, waves = TWO_WAVES) => createGame({ map: SMALL, lives, waves });
+const newGame = (lives = 20, waves = TWO_WAVES) => createGame({ map: SMALL, lives, money: 100, waves });
 
 describe('createGame', () => {
   it('a new game has the configured Lives, no enemies, and time 0', () => {
@@ -73,14 +73,14 @@ describe('createGame', () => {
   });
 
   it('builds the map from data and exposes it on state', () => {
-    const game = createGame({ map: MVP_MAP, lives: 20, waves: [] });
+    const game = createGame({ map: MVP_MAP, lives: 20, money: 100, waves: [] });
     expect(game.state.map.id).toBe('mvp');
     expect(game.state.map.isPath({ col: 0, row: 2 })).toBe(true);
   });
 
   it('throws InvalidMapError for a malformed map', () => {
     const map = { ...MVP_MAP, waypoints: [{ col: 0, row: 0 }] };
-    expect(() => createGame({ map, lives: 20, waves: [] })).toThrow(InvalidMapError);
+    expect(() => createGame({ map, lives: 20, money: 100, waves: [] })).toThrow(InvalidMapError);
   });
 
   it('the fixed step is 1/60 s', () => {
@@ -98,7 +98,7 @@ describe('createGame', () => {
 
 describe('leaking', () => {
   it('Infantry leaks on the MVP map after exactly 1160 ticks (29 tiles at 1.5 tiles/s)', () => {
-    const game = createGame({ map: MVP_MAP, lives: 20, waves: [] });
+    const game = createGame({ map: MVP_MAP, lives: 20, money: 100, waves: [] });
     game.spawnEnemy('infantry');
     for (let i = 0; i < 1159; i++) game.tick(TICK_MS);
     expect(game.state.enemies).toHaveLength(1);
@@ -321,7 +321,7 @@ describe('waves and phases', () => {
   });
 
   it('the MVP wave with no towers: all 8 Infantry leak, 12 Lives left, victory', () => {
-    const game = createGame({ map: MVP_MAP, lives: 20, waves: MVP_WAVES });
+    const game = createGame({ map: MVP_MAP, lives: 20, money: 100, waves: MVP_WAVES });
     let leaks = 0;
     game.events.on('enemyLeaked', () => leaks++);
     game.startWave();

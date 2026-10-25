@@ -45,4 +45,19 @@ describe('createFixedStep', () => {
     loop.advance(40);
     expect(steps).toEqual([STEP, STEP]);
   });
+
+  it('reports the leftover time as a fraction of a step, for interpolating between steps', () => {
+    const { loop } = setup();
+    expect(loop.alpha).toBe(0);
+    loop.advance(STEP * 1.25);
+    expect(loop.alpha).toBeCloseTo(0.25);
+    loop.advance(STEP * 0.5);
+    expect(loop.alpha).toBeCloseTo(0.75);
+  });
+
+  it('resets alpha to 0 when a stall drops the backlog', () => {
+    const { loop } = setup(5);
+    loop.advance(1000);
+    expect(loop.alpha).toBe(0);
+  });
 });
