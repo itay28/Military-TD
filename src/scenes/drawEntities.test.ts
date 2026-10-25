@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
-import { AIR_SHADOW, ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
+import {
+  AIR_SHADOW,
+  ENEMY_STYLE,
+  GHOST,
+  HP_BAR,
+  RANGE_RING,
+  ROTOR,
+  TILE_PX,
+  TOWER_STYLE,
+  TRACER,
+} from '../data/display';
 import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
@@ -97,6 +107,23 @@ describe('drawEnemy (Helicopter)', () => {
       ['fillCircle', 0, 0, radius],
     ]);
     expect(color).not.toBe(ENEMY_STYLE.infantry.color);
+  });
+
+  it('draws an X rotor over its body, before the HP bar', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, helicopter);
+    const s = ENEMY_STYLE.helicopter.rotor;
+    expect(calls.slice(4, 7)).toEqual([
+      ['lineStyle', ROTOR.width, ROTOR.color],
+      ['lineBetween', -s, -s, s, s],
+      ['lineBetween', -s, s, s, -s],
+    ]);
+  });
+
+  it('gives a ground enemy no rotor', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, infantry(30));
+    expect(calls.some((c) => c[0] === 'lineBetween')).toBe(false);
   });
 
   it('gives a ground enemy no shadow', () => {

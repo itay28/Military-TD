@@ -19,8 +19,11 @@ export const MAP_STYLE = {
 /** Enemies as circles, by kind (before the v0.4 sprites). Radius in pixels. */
 export const ENEMY_STYLE = {
   infantry: { radius: 9, color: 0x9e3b2c }, // brick red
-  helicopter: { radius: 11, color: 0x3f6f8f }, // steel blue
-} as const satisfies Record<EnemyKind, { radius: number; color: number }>;
+  helicopter: { radius: 11, color: 0x3f6f8f, rotor: 12 }, // steel blue, X rotor reaching 12 px along each axis
+} as const satisfies Record<EnemyKind, { radius: number; color: number; rotor?: number }>;
+
+/** The X drawn over a rotor kind. */
+export const ROTOR = { color: 0xe5e1cf, width: 2 } as const;
 
 /** The shadow under an air enemy, offset in pixels so it reads as flying. */
 export const AIR_SHADOW = { offsetX: 4, offsetY: 10, color: 0x000000, alpha: 0.3 } as const;
