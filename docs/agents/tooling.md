@@ -8,6 +8,8 @@ Pitfalls agents have hit in this repo, and the way around each one. Add to this 
 - **Quotes in `gh api graphql`.** PowerShell 5.1 mangles double quotes inside native-command arguments, so inline GraphQL queries break. Put the query in a file and pass `-F query=@<file>`, or call `gh` from a small Node script with `execFileSync` (arguments are passed as-is).
 - **Multi-line text.** Don't build issue or PR bodies inline in PowerShell; use `--body-file` as above.
 - **A stopped `vite preview` keeps its port.** Stopping the background task that ran `npx vite preview` kills `npx` but not the `node vite.js preview` child, so the next preview fails with "Port 4173 is already in use", and the old server keeps serving. Find the process with `Get-NetTCPConnection -LocalPort 4173 -State Listen`, check its command line (`Get-CimInstance Win32_Process -Filter "ProcessId=<id>"`), and stop it with `Stop-Process`.
+- **Headless Chrome over DevTools: `--window-size` isn't the viewport.** With `--remote-debugging-port`, the headless window keeps room for browser chrome, so `--window-size=900,560` gives a viewport about 95 px shorter and screenshots cut off the bottom of the canvas. Set the viewport with `Emulation.setDeviceMetricsOverride` (`width: 900, height: 560, deviceScaleFactor: 1, mobile: false`) before navigating. The one-shot `--screenshot` command isn't affected.
+- **Counting live objects with `Runtime.queryObjects` keeps them alive.** The array it returns holds every instance it found until its object group is released, so the next count includes objects that were already destroyed and looks like a leak. Pass an `objectGroup` to the calls and call `Runtime.releaseObjectGroup` after reading the count.
 
 ## Vitest
 

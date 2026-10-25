@@ -12,6 +12,8 @@ const hudRoot = document.getElementById('hud');
 if (!hudRoot) throw new Error('index.html has no #hud element');
 // Same width as the canvas, so the bar lines up with the map above it.
 hudRoot.style.width = `${CANVAS_WIDTH}px`;
+const endScreenRoot = document.getElementById('end-screen');
+if (!endScreenRoot) throw new Error('index.html has no #end-screen element');
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -19,5 +21,5 @@ new Phaser.Game({
   width: CANVAS_WIDTH,
   height: CANVAS_HEIGHT,
   backgroundColor: '#2f3a24',
-  scene: [BootScene, new GameScene({ hudRoot })],
+  scene: [BootScene, new GameScene({ hudRoot, endScreenRoot })],
 });

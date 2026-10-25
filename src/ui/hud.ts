@@ -1,5 +1,5 @@
 import { WAVE_BANNER_MS } from '../data/display';
-import type { Game } from '../sim/game';
+import { isGameOver, type Game } from '../sim/game';
 
 /** The parts of the Game the HUD reads and commands. */
 export type HudGame = Pick<Game, 'state' | 'events' | 'startWave'>;
@@ -53,7 +53,7 @@ export function mountHud(root: HTMLElement, game: HudGame): Hud {
     setText(wave, `Wave ${state.waveNumber} / ${state.totalWaves}`);
     setDisabled(startWave, state.phase !== 'build');
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
-    const showBanner = state.timeMs < bannerUntilMs && (state.phase === 'build' || state.phase === 'wave');
+    const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
     setText(banner, showBanner ? bannerText : '');
   };
   const offWaveCleared = game.events.on('waveCleared', ({ waveNumber }) => {

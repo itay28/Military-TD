@@ -20,6 +20,9 @@ export interface GameConfig {
 /** Build phase between waves, Wave phase while one runs; Victory and Defeat end the game. */
 export type Phase = 'build' | 'wave' | 'victory' | 'defeat';
 
+/** Whether the game has ended, in Victory or Defeat. */
+export const isGameOver = (phase: Phase): boolean => phase === 'victory' || phase === 'defeat';
+
 /** The live game state, read-only to callers. Read it through `game.state` each time: arrays are replaced on tick. */
 export interface GameState {
   /** The validated map, for drawing and placement checks. */
@@ -34,6 +37,8 @@ export interface GameState {
   readonly phase: Phase;
   /** The latest started wave, counting from 1; 0 before the first. */
   readonly waveNumber: number;
+  /** Waves cleared so far: every wave after Victory, the waves before the lost one after Defeat. */
+  readonly wavesCleared: number;
   readonly totalWaves: number;
 }
 
@@ -97,6 +102,7 @@ export function createGame(config: GameConfig): Game {
     towers: [],
     phase: 'build',
     waveNumber: 0,
+    wavesCleared: 0,
     totalWaves: config.waves.length,
   };
   const emitter = createEmitter<GameEvents>();
@@ -110,7 +116,7 @@ export function createGame(config: GameConfig): Game {
   };
 
   const canPlaceTower = (kind: TowerKind, tile: Tile): CommandResult<PlaceTowerRefusal> => {
-    if (state.phase === 'victory' || state.phase === 'defeat') return { ok: false, reason: 'gameEnded' };
+    if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' };
     if (!map.isBuildable(tile)) return { ok: false, reason: 'notBuildable' };
     if (towerAt(state.towers, tile)) return { ok: false, reason: 'occupied' };
     if (state.money < TOWER_STATS[kind].cost) return { ok: false, reason: 'insufficientMoney' };
@@ -123,7 +129,7 @@ export function createGame(config: GameConfig): Game {
     tick(dtMs) {
       if (!Number.isFinite(dtMs) || dtMs < 0)
         throw new RangeError(`tick(dtMs): ${dtMs} is not a finite, non-negative time`);
-      if (state.phase === 'victory' || state.phase === 'defeat') return;
+      if (isGameOver(state.phase)) return;
       state.timeMs += dtMs;
       const { walking, leaked } = walkEnemies(state.enemies, line, dtMs);
       const enemies = [...walking];
@@ -151,6 +157,7 @@ export function createGame(config: GameConfig): Game {
       } else if (wave?.schedule.finished && state.enemies.length === 0) {
         cleared = true;
         wave = undefined;
+        state.wavesCleared++;
         state.phase = state.waveNumber === state.totalWaves ? 'victory' : 'build';
       }
       // Emit once the state is settled, so listeners read this tick's state.
