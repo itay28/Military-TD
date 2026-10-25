@@ -408,10 +408,24 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     );
     process.exitCode = 1;
   } else {
+    // A misconfigured auto-start still fails the run, but only after the board is synced.
+    let autoStart: AutoStart | undefined;
+    let setupError: unknown;
     try {
-      await sync(token, process.argv.includes('--dry-run'), autoStartFromEnv(process.env));
+      autoStart = autoStartFromEnv(process.env);
+    } catch (error) {
+      setupError = error;
+    }
+    try {
+      await sync(token, process.argv.includes('--dry-run'), autoStart);
     } catch (error) {
       console.error(error instanceof Error ? error.message : error);
+      process.exitCode = 1;
+    }
+    if (setupError) {
+      console.log(
+        `::error::${setupError instanceof Error ? setupError.message : String(setupError)} Auto-start was skipped.`,
+      );
       process.exitCode = 1;
     }
   }

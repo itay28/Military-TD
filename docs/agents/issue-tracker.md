@@ -96,6 +96,7 @@ The current milestone is the open one with the earliest due date, else the lowes
 - **Claim, then fire:** assign `itay28`, add `auto-agent`, then fire the implement scheduled task (XS/S → `ROUTINE_SONNET_*`, M/L → `ROUTINE_OPUS_*`) with the issue number and base branch. If the fire fails, the claim is undone and the run goes red. The task follows `docs/agents/prompts/implement.md`.
 - **No Size:** one comment on the issue asking for one; it starts once Size is set. XL never starts: split it.
 - **Off switch:** set `AUTO_SPAWN` to anything but `on`, or add `hold` to one issue. `--dry-run` logs what it would start.
+- **Setup errors:** with `AUTO_SPAWN` on and a `ROUTINE_*` secret missing, the board still syncs but auto-start is skipped and the run goes red.
 
 **Auto-start setup** (maintainer, once, in the browser):
 1. At [claude.ai/code/routines](https://claude.ai/code/routines), create a scheduled task named `implement-sonnet`: model Sonnet, repository `itay28/Military-TD`, your usual cloud environment, connectors removed unless needed, and this prompt: *Read `docs/agents/prompts/implement.md` in the repository and follow it. The issue number and base branch to use are in the `<routine-fire-payload>` block of this message; act on them.*
