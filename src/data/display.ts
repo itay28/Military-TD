@@ -19,6 +19,7 @@ export const MAP_STYLE = {
 /** Enemies as circles, by kind (before the v0.4 sprites). Radius in pixels. */
 export const ENEMY_STYLE = {
   infantry: { radius: 9, color: 0x9e3b2c }, // brick red
+  tank: { radius: 14, color: 0x4a5d3a }, // dark olive drab
 } as const satisfies Record<EnemyKind, { radius: number; color: number }>;
 
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the circle. */

@@ -12,7 +12,8 @@
 | **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
-| **Enemy** | A unit that walks the Path. The MVP has one kind: **Infantry**. | creep, mob |
+| **Enemy** | A unit that walks the Path. Kinds so far: **Infantry** and **Tank**. | creep, mob |
+| **Tank** | A slow, heavy ground Enemy with 200 HP and Armor 5, so a Rifle Nest hit does only 5. Leaking costs 5 Lives; killing it pays 25. | boss, heavy |
 | **Layer** | Where an enemy moves: **Ground** or **Air**. Each tower lists the layers it can hit (`targets`) and ignores enemies on the others. | domain, altitude |
 | **Armor** | A flat amount an enemy takes off every hit: a hit removes `damage − armor`, but always at least 1 HP. | defense, resistance |
 | **Armor pierce** | How much of the target's Armor a tower's hits ignore (`armorPierce`, 0 by default). It cancels Armor up to its value and never adds damage. | penetration |
