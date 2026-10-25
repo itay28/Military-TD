@@ -83,7 +83,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 
 ### 4b. Screenshots for UI changes
 A PR that changes what the player sees (HUD, menus, overlays, anything a Scene draws) shows the change in screenshots, so a reviewer sees the result without building the game.
-- **What to capture:** each state the change touches, taken from the built game (`npm run build`, then `npm run preview`, which serves it on port 4173): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use a 900 × 560 viewport (the 768 × 480 canvas plus the HUD bar and margins) so later PRs compare like for like.
+- **What to capture:** each state the change touches, taken from the built game (`npm run build`, then `npm run preview`, which serves it on port 4173): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use a 900 × 560 viewport (the 768 × 480 canvas plus the HUD above it, the build bar beside it and margins) so later PRs compare like for like.
 - **How:** a throwaway Playwright script or spec, kept out of the commit, that opens the game with `openGame(page)` (`tests/e2e/helpers.ts`), sets up the state through the page and `window.__TD__` (`clickTile`, `loadScenario`, `step`), and calls `page.screenshot({ path })`. The config's 900 × 560 viewport applies. `npx playwright test <file>` builds and serves the game for you. Look at each image before attaching it.
 - **Where they live:** the `pr-assets` branch, one folder per PR (`<pr-number>/<name>.png`). It is never merged, so images stay off `main`; GitHub has no API for uploading images to a PR. To add a folder:
   ```sh

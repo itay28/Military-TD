@@ -16,6 +16,7 @@ import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from '
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
 import { createTracers, type Tracers } from './tracers';
+import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { createViewSync, type ViewSync } from './viewSync';
@@ -28,9 +29,6 @@ const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
 /** Draw order, back to front. */
 const DEPTH = { map: 0, towers: 1, enemies: 2, tracers: 3, ghost: 4, rangeRing: 5, floatingText: 6 } as const;
 
-/** The tower kind a click places. The MVP has one; the v0.2 build bar will pick it. */
-const PLACING: TowerKind = 'rifleNest';
-
 interface EnemyView {
   readonly graphics: Phaser.GameObjects.Graphics;
   /** The HP last drawn, so the bar is redrawn only when it changes. */
@@ -40,6 +38,8 @@ interface EnemyView {
 export interface GameSceneOptions {
   /** The DOM element the HUD is drawn in (`#hud` in index.html). */
   readonly hudRoot: HTMLElement;
+  /** The DOM element right of the canvas the build bar is drawn in (`#build-bar` in index.html). */
+  readonly buildBarRoot: HTMLElement;
   /** The DOM element over the canvas the End screen is drawn in (`#end-screen` in index.html). */
   readonly endScreenRoot: HTMLElement;
   /** Test mode's URL flags (ADR-0003). */
@@ -51,6 +51,7 @@ export interface GameSceneOptions {
 /** Owns the Simulation, draws it, and advances it on a fixed timestep. */
 export class GameScene extends Phaser.Scene {
   private readonly hudRoot: HTMLElement;
+  private readonly buildBarRoot: HTMLElement;
   private readonly endScreenRoot: HTMLElement;
   private readonly flags: TestFlags;
   private readonly onCreate: (() => void) | undefined;
@@ -59,6 +60,7 @@ export class GameScene extends Phaser.Scene {
   private sim!: Game;
   private loop!: FixedStep;
   private hud!: Hud;
+  private buildBar!: BuildBar;
   private endScreen!: EndScreen;
   private enemyViews!: ViewSync<Enemy>;
   private towerViews!: ViewSync<Tower>;
@@ -66,8 +68,8 @@ export class GameScene extends Phaser.Scene {
   private tracerGraphics!: Phaser.GameObjects.Graphics;
   private rangeRing!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
-  /** The ghost last drawn, so it is redrawn only when its tile or colour changes. */
-  private ghost: Ghost | undefined;
+  /** The ghost last drawn, and its kind, so it is redrawn only when its tile, colour or kind changes. */
+  private ghost: (Ghost & { readonly kind: TowerKind }) | undefined;
   private floatingTexts!: FloatingTexts;
   private floatingTextViews!: ViewSync<FloatingTextView>;
   /** Enemy positions before the latest tick, to interpolate from. */
@@ -77,9 +79,10 @@ export class GameScene extends Phaser.Scene {
   /** The tower whose range ring is drawn, by id. */
   private hoveredTowerId: number | undefined;
 
-  constructor({ hudRoot, endScreenRoot, flags, onCreate }: GameSceneOptions) {
+  constructor({ hudRoot, buildBarRoot, endScreenRoot, flags, onCreate }: GameSceneOptions) {
     super('Game');
     this.hudRoot = hudRoot;
+    this.buildBarRoot = buildBarRoot;
     this.endScreenRoot = endScreenRoot;
     this.flags = flags;
     this.onCreate = onCreate;
@@ -172,15 +175,17 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 0) return;
       const at = { x: pointer.worldX, y: pointer.worldY };
-      const refusal = placeAt(this.sim, PLACING, pixelToTile(at));
+      const refusal = placeAt(this.sim, this.buildBar.selected, pixelToTile(at));
       if (refusal) this.floatingTexts.add(refusal, at);
     });
 
     this.hud = mountHud(this.hudRoot, this.sim);
+    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.hud.destroy();
+      this.buildBar.destroy();
       this.endScreen.destroy();
     });
     this.onCreate?.();
@@ -198,6 +203,7 @@ export class GameScene extends Phaser.Scene {
     this.floatingTexts.advance(deltaMs);
     this.loop.advance(frameMs(this.flags, deltaMs));
     this.hud.update();
+    this.buildBar.update();
     this.endScreen.update();
 
     const { enemies, towers } = this.sim.state;
@@ -208,7 +214,7 @@ export class GameScene extends Phaser.Scene {
     // Checked every frame, not only on pointer moves, so a tower that appears under a still pointer shows its ring.
     this.hover(this.pointerTile && towerAt(towers, this.pointerTile));
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.
-    this.showGhost(ghostAt(this.sim, PLACING, this.pointerTile));
+    this.showGhost(this.buildBar.selected, ghostAt(this.sim, this.buildBar.selected, this.pointerTile));
     this.floatingTextViews.sync(this.floatingTexts.active());
   }
 
@@ -222,17 +228,19 @@ export class GameScene extends Phaser.Scene {
     drawRangeRing(this.rangeRing.setPosition(x, y), tower);
   }
 
-  /** Draws `ghost` on its tile, or hides it when there is none. */
-  private showGhost(ghost: Ghost | undefined): void {
-    const unchanged =
-      ghost?.tile.col === this.ghost?.tile.col &&
-      ghost?.tile.row === this.ghost?.tile.row &&
-      ghost?.placeable === this.ghost?.placeable;
+  /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none. */
+  private showGhost(kind: TowerKind, ghost: Ghost | undefined): void {
+    const unchanged = ghost
+      ? kind === this.ghost?.kind &&
+        ghost.tile.col === this.ghost.tile.col &&
+        ghost.tile.row === this.ghost.tile.row &&
+        ghost.placeable === this.ghost.placeable
+      : this.ghost === undefined;
     if (unchanged) return;
-    this.ghost = ghost;
+    this.ghost = ghost && { ...ghost, kind };
     this.ghostGraphics.clear().setVisible(ghost !== undefined);
     if (!ghost) return;
     const { x, y } = toPixels(tileCenter(ghost.tile));
-    drawGhost(this.ghostGraphics.setPosition(x, y), PLACING, ghost.placeable);
+    drawGhost(this.ghostGraphics.setPosition(x, y), kind, ghost.placeable);
   }
 }

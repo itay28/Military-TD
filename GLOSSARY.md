@@ -11,6 +11,7 @@
 | **Tower** | A placed defensive unit. The MVP has one kind: **Rifle Nest**. | turret |
 | **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
+| **Build bar** | The column of tower buttons right of the map, one per kind, with icon, cost and hotkey (`1`…`n`). The **selected kind** is the one a click on the map places and the Ghost shows. A kind the player can't afford is greyed out. | toolbar, shop |
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
 | **Enemy** | A unit that walks the Path. The MVP has one kind: **Infantry**. | creep, mob |
 | **Wave** | A scheduled group of enemies spawned one after another. | round, level |

@@ -14,7 +14,7 @@ export default defineConfig({
   snapshotPathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}',
   use: {
     baseURL: `http://localhost:${PORT}`,
-    // The 768 × 480 canvas plus the HUD bar and margins, as in workflow.md → 4b.
+    // The 768 × 480 canvas plus the HUD above it, the build bar beside it and margins, as in workflow.md → 4b.
     viewport: { width: 900, height: 560 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

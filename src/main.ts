@@ -15,12 +15,15 @@ const hudRoot = document.getElementById('hud');
 if (!hudRoot) throw new Error('index.html has no #hud element');
 // Same width as the canvas, so the bar lines up with the map above it.
 hudRoot.style.width = `${CANVAS_WIDTH}px`;
+const buildBarRoot = document.getElementById('build-bar');
+if (!buildBarRoot) throw new Error('index.html has no #build-bar element');
 const endScreenRoot = document.getElementById('end-screen');
 if (!endScreenRoot) throw new Error('index.html has no #end-screen element');
 
 const flags = parseTestFlags(window.location.search);
 const gameScene = new GameScene({
   hudRoot,
+  buildBarRoot,
   endScreenRoot,
   flags,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
