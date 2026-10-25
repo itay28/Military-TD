@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
-import { ENEMY_STYLE, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
+import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
 import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
-import { drawEnemy, drawRangeRing, drawTower, drawTracers, type EntityPainter } from './drawEntities';
+import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers, type EntityPainter } from './drawEntities';
 
 type Call = [string, ...number[]];
 
@@ -115,5 +115,28 @@ describe('drawTracers', () => {
       ['lineStyle', TRACER.width, TRACER.color, 0.5],
       ['lineBetween', 5, 5, 6, 7],
     ]);
+  });
+});
+
+describe('drawGhost', () => {
+  const { size } = TOWER_STYLE.rifleNest;
+  const half = size / 2;
+  const ghostCalls = (color: number) => [
+    ['fillStyle', color, GHOST.fillAlpha],
+    ['fillRect', -half, -half, size, size],
+    ['lineStyle', GHOST.ringWidth, color, GHOST.ringAlpha],
+    ['strokeCircle', 0, 0, 2.5 * TILE_PX],
+  ];
+
+  it('draws a see-through tower square and its range ring in green where placement would succeed', () => {
+    const { painter, calls } = recordingPainter();
+    drawGhost(painter, 'rifleNest', true);
+    expect(calls).toEqual(ghostCalls(GHOST.placeable));
+  });
+
+  it('draws them in red where placement would be refused', () => {
+    const { painter, calls } = recordingPainter();
+    drawGhost(painter, 'rifleNest', false);
+    expect(calls).toEqual(ghostCalls(GHOST.blocked));
   });
 });

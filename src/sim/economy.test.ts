@@ -58,9 +58,10 @@ describe('Money', () => {
 });
 
 describe('placeTower refusals', () => {
-  /** Places a tower expecting `reason`, and checks that nothing changed. */
+  /** Places a tower expecting `reason` (which canPlaceTower predicts), and checks that nothing changed. */
   function expectRefused(game: Game, tile: { col: number; row: number }, reason: string) {
     const before = { money: game.state.money, towers: game.state.towers };
+    expect(game.canPlaceTower('rifleNest', tile)).toEqual({ ok: false, reason });
     expect(game.placeTower('rifleNest', tile)).toEqual({ ok: false, reason });
     expect(game.state.money).toBe(before.money);
     expect(game.state.towers).toEqual(before.towers);
@@ -112,5 +113,19 @@ describe('placeTower refusals', () => {
     runWave(game);
     expect(game.state.phase).toBe('defeat');
     expectRefused(game, { col: 4, row: 4 }, 'gameEnded');
+  });
+});
+
+describe('canPlaceTower', () => {
+  it('says yes on an empty buildable tile with enough Money, and places nothing', () => {
+    const game = newGame(50);
+    expect(game.canPlaceTower('rifleNest', { col: 2, row: 2 })).toEqual({ ok: true });
+    expect(game.state).toMatchObject({ money: 50, towers: [] });
+  });
+
+  it('says yes during a wave', () => {
+    const game = newGame(100, [{ kind: 'infantry', count: 3, spacingMs: 1000 }]);
+    game.startWave();
+    expect(game.canPlaceTower('rifleNest', { col: 2, row: 2 })).toEqual({ ok: true });
   });
 });

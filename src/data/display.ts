@@ -1,3 +1,4 @@
+import type { PlaceTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
 import type { TowerKind } from './towers';
@@ -30,6 +31,30 @@ export const TOWER_STYLE = {
 
 /** The range ring shown while the pointer is over a tower. */
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
+
+/** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */
+export const GHOST = {
+  placeable: 0x6fcf4f,
+  blocked: 0xe0533d,
+  fillAlpha: 0.35,
+  ringAlpha: 0.8,
+  ringWidth: 1,
+} as const;
+
+/** The message that floats up from a refused click. */
+export const FLOATING_TEXT = {
+  durationMs: 900,
+  risePx: 24,
+  style: { fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 },
+} as const;
+
+/** What a refused placement says. */
+export const PLACEMENT_REFUSAL_TEXT = {
+  gameEnded: 'Game over',
+  notBuildable: "Can't build here",
+  occupied: 'Tile occupied',
+  insufficientMoney: 'Not enough money',
+} as const satisfies Record<PlaceTowerRefusal, string>;
 
 /** The line drawn for each hit, from the tower to the target. */
 export const TRACER = { color: 0xffe9a0, width: 2, fadeMs: 80 } as const;
