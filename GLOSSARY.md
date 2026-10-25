@@ -8,7 +8,8 @@
 | **Path** | The ordered waypoints enemies walk from spawn to exit. Towers can't be built on Path tiles. | road, lane, track |
 | **Waypoint** | A tile where the Path turns, or its first or last tile. Consecutive waypoints share a row or a column; the tiles between them are **Path tiles**. | node, corner |
 | **Buildable tile** | A tile where a tower may be placed: not on the Path and not occupied. The map's `isBuildable` checks the first part; placement also checks occupancy. | |
-| **Tower** | A placed defensive unit. The MVP has one kind: **Rifle Nest**. | turret |
+| **Tower** | A placed defensive unit. Kinds: **Rifle Nest**, **Cannon**. | turret |
+| **Cannon** | An anti-tank gun: slow-firing, ground only, one target, high damage, and Armor pierce enough for a Tank. Wasteful against Infantry: most of each hit is overkill. | artillery, AT gun |
 | **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
 | **Build bar** | The column of tower buttons right of the map, one per kind, with icon, cost and hotkey (`1`…`n`). The **selected kind** is the one a click on the map places and the Ghost shows. A kind the player can't afford is greyed out. | toolbar, shop |

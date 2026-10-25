@@ -1,4 +1,4 @@
-import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER } from '../data/display';
+import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER_STYLE } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
@@ -55,10 +55,10 @@ export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: bo
   painter.strokeCircle(0, 0, TOWER_STATS[kind].range * TILE_PX);
 }
 
-/** Each tracer as a line in canvas pixels, at its current alpha. */
+/** Each tracer as a line in canvas pixels, in its tower's style, at its current alpha. */
 export function drawTracers(painter: EntityPainter, tracers: readonly TracerLine[]): void {
-  for (const { from, to, alpha } of tracers) {
-    painter.lineStyle(TRACER.width, TRACER.color, alpha);
+  for (const { from, to, kind, alpha } of tracers) {
+    painter.lineStyle(TRACER_STYLE[kind].width, TRACER_STYLE[kind].color, alpha);
     painter.lineBetween(from.x, from.y, to.x, to.y);
   }
 }
