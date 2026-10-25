@@ -36,6 +36,8 @@ export interface ShellLanding {
   readonly shellId: number;
   readonly towerId: number;
   readonly position: Position;
+  /** The blast's outer ring, for drawing it. */
+  readonly outerRadius: number;
   readonly hits: readonly Hit[];
 }
 
@@ -74,7 +76,13 @@ export function landShells(
       kills.push(hit);
       return [];
     });
-    landed.push({ shellId: shell.id, towerId: shell.towerId, position: shell.target, hits });
+    landed.push({
+      shellId: shell.id,
+      towerId: shell.towerId,
+      position: shell.target,
+      outerRadius: shell.outerRadius,
+      hits,
+    });
   }
   return { shells: inFlight, enemies: alive, landed, kills };
 }

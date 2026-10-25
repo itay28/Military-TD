@@ -17,6 +17,8 @@
 | **Armor** | A flat amount an enemy takes off every hit: a hit removes `damage − armor`, but always at least 1 HP. | defense, resistance |
 | **Armor pierce** | How much of the target's Armor a tower's hits ignore (`armorPierce`, 0 by default). It cancels Armor up to its value and never adds damage. | penetration |
 | **Hit** | What one shot did to one enemy: the HP it actually removed, after Armor and no more than the enemy had left. A shot lists its hits (one for a direct-fire tower). | |
+| **Shell** | What a shell tower (`shell` in its stats, e.g. the Mortar) fires instead of hitting at once. It flies for `flightMs` to the spot where its target stood when fired (no leading), then lands and splashes. It still lands if its tower is gone, and is cleared when the game ends. Not an enemy: it never holds up a wave. | projectile, bullet |
+| **Splash** | A landed Shell's damage in two rings around the landing point: enemies within the **inner ring** (`innerRadius`) take the full damage, those within the **outer ring** (`outerRadius`) half, rounded down; each less Armor. Only layers the tower targets are hit. Fast enemies can leave the blast; slow ones and tight groups get hit (ADR-0007). | AoE, blast radius |
 | **Wave** | A scheduled group of enemies spawned one after another. | round, level |
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
 | **Victory / Defeat** | How a game ends: the last wave cleared with Lives left / Lives reaching 0. Either one stops the Simulation. | win, game over |

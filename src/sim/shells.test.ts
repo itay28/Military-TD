@@ -44,7 +44,7 @@ describe('landShells', () => {
   it('a shell lands at landsAtMs, at the position it was aimed at', () => {
     const result = landShells([shell(1)], [], 1000);
     expect(result.shells).toEqual([]);
-    expect(result.landed).toEqual([{ shellId: 1, towerId: 1, position: { x: 10, y: 0 }, hits: [] }]);
+    expect(result.landed).toEqual([{ shellId: 1, towerId: 1, position: { x: 10, y: 0 }, outerRadius: 2, hits: [] }]);
   });
 
   it('full damage inside the inner ring, half in the outer ring, none outside', () => {
