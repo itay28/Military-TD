@@ -253,8 +253,9 @@ describe('act', () => {
   it('hands off as stuck: needs-you label and a summary with the marker', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await act(pr(), { kind: 'stuck', reasons: ['ci'] }, 'gh-token', settings, fetchFn);
-    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/labels`, `POST ${api}/issues/7/comments`]);
-    const { body } = JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string };
+    // The summary comes first: the needs-you push (scripts/notify.ts) reads it when the label lands.
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
+    const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
     expect(body).toContain(STUCK_MARKER);
   });
 
@@ -284,10 +285,10 @@ describe('act', () => {
     await act(pr(), { kind: 'merge' }, 'gh-token', settings, fetchFn);
     expect(calls(fetchFn)).toEqual([
       `PUT ${api}/pulls/7/merge`,
-      `POST ${api}/issues/7/labels`,
       `POST ${api}/issues/7/comments`,
+      `POST ${api}/issues/7/labels`,
     ]);
-    const { body } = JSON.parse(fetchFn.mock.calls[2]![1].body as string) as { body: string };
+    const { body } = JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string };
     expect(body).toContain('Review required');
   });
 

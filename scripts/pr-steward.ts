@@ -194,10 +194,11 @@ export const stewardText = (pr: StewardPr, reasons: readonly Reason[], round: nu
   `PR: #${pr.number}\nBranch base: ${pr.base}\nReasons: ${reasons.join(', ')}\nRound: ${round} of ${MAX_ROUNDS}\nRepository: itay28/Military-TD`;
 
 async function handOff(pr: StewardPr, summary: string, token: string, fetchFn: Fetch): Promise<void> {
-  await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [NEEDS_YOU_LABEL] });
+  // Summary first: the needs-you push (scripts/notify.ts) reads it when the label lands.
   await github(fetchFn, token, 'POST', `issues/${pr.number}/comments`, {
     body: `**PR steward: handing this PR to you.** ${summary}\n\nComment on the PR to give it ${MAX_ROUNDS} more steward rounds, or fix it yourself.\n\n${STUCK_MARKER}`,
   });
+  await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [NEEDS_YOU_LABEL] });
 }
 
 /** Whether a decision's switch is on: AUTO_MERGE for merging, AUTO_STEWARD for the rest. */
