@@ -30,6 +30,11 @@ export default defineConfig(
         'error',
         { object: 'Math', property: 'random', message: 'Use the seeded RNG in src/sim/rng.ts (ADR-0003).' },
         { object: 'Date', property: 'now', message: 'The sim advances only through tick(dtMs) (ADR-0002).' },
+        {
+          object: 'performance',
+          property: 'now',
+          message: 'The sim advances only through tick(dtMs) (ADR-0002).',
+        },
       ],
     },
   },
