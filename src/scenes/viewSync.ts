@@ -1,5 +1,5 @@
 export interface ViewSyncOptions<E, V> {
-  /** Makes the view for an entity seen for the first time. `update` runs on it right after. */
+  /** Makes the view for an entity seen for the first time. `update`, if given, runs on it right after. */
   create(entity: E): V;
   /** Brings a view in line with its entity; runs on every sync. Leave it out for views that never change. */
   update?(view: V, entity: E): void;
