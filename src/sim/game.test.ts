@@ -358,3 +358,46 @@ describe('waves cleared', () => {
     expect(game.state).toMatchObject({ phase: 'defeat', waveNumber: 2, wavesCleared: 1 });
   });
 });
+
+describe('combat stats', () => {
+  const run = (game: ReturnType<typeof newGame>, ticks: number) => {
+    for (let i = 0; i < ticks; i++) game.tick(TICK_MS);
+  };
+  const tower = (game: ReturnType<typeof newGame>) => game.placeTower('rifleNest', { col: 2, row: 2 });
+
+  it('records a tower hit and the wave elapsed time', () => {
+    const game = newGame();
+    const placed = tower(game);
+    game.startWave();
+    run(game, 600);
+    const { stats } = game.state;
+    const id = placed.ok ? placed.towerId : -1;
+    expect(stats.total.damage).toBeGreaterThan(0);
+    expect(stats.towers[id]!.total).toEqual(stats.total);
+    expect(stats.wave.elapsedMs).toBeGreaterThan(0);
+  });
+
+  it('wave figures freeze once a wave is cleared and reset on the next wave', () => {
+    const game = newGame();
+    tower(game);
+    game.startWave();
+    while (game.state.phase === 'wave') game.tick(TICK_MS);
+    const frozen = game.state.stats;
+    expect(frozen.wave.damage).toBeGreaterThan(0);
+    run(game, 120);
+    expect(game.state.stats).toEqual(frozen);
+    game.startWave();
+    expect(game.state.stats.wave).toEqual({ damage: 0, kills: 0, elapsedMs: 0 });
+    expect(game.state.stats.total).toEqual(frozen.total);
+  });
+
+  it('wave figures freeze on Defeat', () => {
+    const game = newGame(1);
+    game.startWave();
+    while (game.state.phase === 'wave') game.tick(TICK_MS);
+    expect(game.state.phase).toBe('defeat');
+    const frozen = game.state.stats.wave.elapsedMs;
+    game.tick(1000);
+    expect(game.state.stats.wave.elapsedMs).toBe(frozen);
+  });
+});
