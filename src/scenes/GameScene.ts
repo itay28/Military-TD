@@ -201,6 +201,10 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
+    this.sim.events.on('towerSold', ({ tile, refund }) =>
+      this.floatingTexts.add(`+${refund}`, toPixels(tileCenter(tile))),
+    );
+
     this.hud = mountHud(this.hudRoot, this.sim);
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });

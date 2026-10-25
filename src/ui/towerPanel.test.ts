@@ -41,6 +41,8 @@ const fakeGame = (towers: Tower[], stats: CombatStats = emptyStats()) => {
     state: { ...base, towers, stats },
     canUpgradeTower: () => ({ ok: true }),
     upgradeTower: () => ({ ok: true, level: 2 }),
+    sellTower: () => ({ ok: true, refund: 35 }),
+    canSellTower: () => ({ ok: true }),
   };
   return game;
 };
@@ -220,5 +222,22 @@ describe('Tower panel upgrades', () => {
     panel.update();
     expect(value('tower-level')).toBe('Level 3');
     expect(upgradeButton().hidden).toBe(true);
+  });
+});
+
+describe('Tower panel Sell button', () => {
+  it('shows the refund, sells the tower and closes the panel', () => {
+    const game = createGame({ map: SMALL, money: 100, lives: 20, waves: [] });
+    const placed = game.placeTower('rifleNest', { col: 1, row: 3 });
+    if (!placed.ok) throw new Error(placed.reason);
+    const panel = mountTowerPanel(root, game);
+    panel.select(placed.towerId);
+    const button = root.querySelector<HTMLButtonElement>('[data-testid="tower-sell"]')!;
+    expect(button.textContent).toBe('Sell (+35)');
+    button.click();
+    expect(game.state.towers).toEqual([]);
+    expect(game.state.money).toBe(85);
+    expect(panel.selectedId).toBeUndefined();
+    expect(root.hidden).toBe(true);
   });
 });

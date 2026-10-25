@@ -1,5 +1,5 @@
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
-import { TOWER_STATS, type TowerKind } from '../data/towers';
+import { SELL_REFUND, TOWER_STATS, type TowerKind } from '../data/towers';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
 import { createMap, type GameMap, type MapData, type Tile } from './map';
@@ -52,6 +52,8 @@ export interface GameEvents {
   towerFired: Shot;
   /** An enemy's HP reached 0 and it was removed. `reward` is the Money it paid, already in `state.money`. */
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
+  /** A tower was sold from `tile`. `refund` is the Money it gave back, already in `state.money`. */
+  towerSold: { readonly towerId: number; readonly tile: Tile; readonly refund: number };
   waveStarted: { readonly waveNumber: number };
   /** Every enemy of the wave has spawned and none is left alive. */
   waveCleared: { readonly waveNumber: number };
@@ -70,6 +72,9 @@ export type PlaceTowerRefusal = 'gameEnded' | 'notBuildable' | 'occupied' | 'ins
 
 /** Why upgradeTower refused, in the order it checks. */
 export type UpgradeTowerRefusal = 'gameEnded' | 'noSuchTower' | 'maxLevel' | 'insufficientMoney';
+
+/** Why sellTower refused, in the order it checks. */
+export type SellTowerRefusal = 'gameEnded' | 'noSuchTower';
 
 export interface Game {
   readonly state: GameState;
@@ -101,6 +106,14 @@ export interface Game {
   upgradeTower(towerId: number): CommandResult<UpgradeTowerRefusal, { readonly level: number }>;
   /** Whether `upgradeTower(towerId)` would succeed now, or the reason it would refuse. Changes nothing. */
   canUpgradeTower(towerId: number): CommandResult<UpgradeTowerRefusal>;
+  /**
+   * Removes tower `towerId` and refunds `floor(SELL_REFUND × spent)`, in the Build or Wave phase; its tile is
+   * buildable again. Refuses, in this order: `gameEnded` after Victory or Defeat, `noSuchTower` when no standing
+   * tower has that id.
+   */
+  sellTower(towerId: number): CommandResult<SellTowerRefusal, { readonly refund: number }>;
+  /** Whether `sellTower(towerId)` would succeed now, or the reason it would refuse. Changes nothing. */
+  canSellTower(towerId: number): CommandResult<SellTowerRefusal>;
 }
 
 /** Builds a game from data. Throws InvalidMapError when the map is malformed, RangeError for a malformed wave. */
@@ -148,6 +161,13 @@ export function createGame(config: GameConfig): Game {
     if (!next) return { ok: false, reason: 'maxLevel' } as const;
     if (state.money < next.cost) return { ok: false, reason: 'insufficientMoney' } as const;
     return { ok: true, tower, next } as const;
+  };
+
+  const checkSell = (towerId: number) => {
+    if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' } as const;
+    const tower = state.towers.find((t) => t.id === towerId);
+    if (!tower) return { ok: false, reason: 'noSuchTower' } as const;
+    return { ok: true, tower } as const;
   };
 
   return {
@@ -236,6 +256,19 @@ export function createGame(config: GameConfig): Game {
     },
     canUpgradeTower(towerId) {
       const allowed = checkUpgrade(towerId);
+      return allowed.ok ? { ok: true } : allowed;
+    },
+    sellTower(towerId) {
+      const allowed = checkSell(towerId);
+      if (!allowed.ok) return allowed;
+      const refund = Math.floor(SELL_REFUND * allowed.tower.spent);
+      state.towers = state.towers.filter((t) => t.id !== towerId);
+      state.money += refund;
+      emitter.emit('towerSold', { towerId, tile: allowed.tower.tile, refund });
+      return { ok: true, refund };
+    },
+    canSellTower(towerId) {
+      const allowed = checkSell(towerId);
       return allowed.ok ? { ok: true } : allowed;
     },
   };

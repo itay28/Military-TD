@@ -17,6 +17,7 @@ export interface TowerPlacement {
 export type ScenarioCommand =
   | ({ readonly type: 'placeTower' } & TowerPlacement)
   | { readonly type: 'upgradeTower'; readonly towerId: number }
+  | { readonly type: 'sellTower'; readonly towerId: number }
   | { readonly type: 'startWave' }
   | { readonly type: 'spawnEnemy'; readonly kind: EnemyKind };
 
@@ -60,11 +61,11 @@ export type ScenarioOutcome = 'victory' | 'defeat' | 'stopped' | 'timeout';
 
 /**
  * What a scenario command returned: `towerId` for a placed tower, `level` for an upgraded one,
- * `enemyId` for a spawned enemy.
+ * `refund` for a sold one, `enemyId` for a spawned enemy.
  */
 export type CommandOutcome = CommandResult<
   string,
-  { readonly towerId?: number; readonly level?: number; readonly enemyId?: number }
+  { readonly towerId?: number; readonly level?: number; readonly refund?: number; readonly enemyId?: number }
 >;
 
 /**
@@ -94,6 +95,7 @@ const GAME_EVENT_TYPES = Object.keys({
   enemyLeaked: true,
   towerFired: true,
   enemyKilled: true,
+  towerSold: true,
   waveStarted: true,
   waveCleared: true,
   victory: true,
@@ -174,6 +176,8 @@ export function applyCommand(game: Game, command: ScenarioCommand): CommandOutco
       return game.placeTower(command.kind, command.tile);
     case 'upgradeTower':
       return game.upgradeTower(command.towerId);
+    case 'sellTower':
+      return game.sellTower(command.towerId);
     case 'startWave':
       return game.startWave();
     case 'spawnEnemy':

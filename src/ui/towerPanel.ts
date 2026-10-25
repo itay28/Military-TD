@@ -1,10 +1,11 @@
 import { LAYER_NAME, LEVEL_NAME, TOWER_NAME, UPGRADE_REFUSAL_TEXT } from '../data/display';
+import { SELL_REFUND } from '../data/towers';
 import type { Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
 
 /** The parts of the Game the tower panel reads, and the upgrade command its button gives. */
-export type TowerPanelGame = Pick<Game, 'state' | 'upgradeTower' | 'canUpgradeTower'>;
+export type TowerPanelGame = Pick<Game, 'state' | 'upgradeTower' | 'canUpgradeTower' | 'sellTower' | 'canSellTower'>;
 
 export interface TowerPanel {
   /** The selected tower's id, or undefined when none is. */
@@ -55,7 +56,10 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
   const upgrade = doc.createElement('button');
   upgrade.type = 'button';
   upgrade.dataset.testid = 'tower-upgrade';
-  dialog.append(heading, close, level, list, upgrade);
+  const sell = doc.createElement('button');
+  sell.type = 'button';
+  sell.dataset.testid = 'tower-sell';
+  dialog.append(heading, close, level, list, upgrade, sell);
   root.append(dialog);
   root.hidden = true;
   let selectedId: number | undefined;
@@ -87,6 +91,7 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
     setText(dps, waveDps(figures?.wave.damage ?? 0, stats.wave.elapsedMs).toFixed(1));
     setText(totalDamage, String(figures?.total.damage ?? 0));
     setText(kills, String(figures?.total.kills ?? 0));
+    setText(sell, `Sell (+${Math.floor(SELL_REFUND * tower.spent)})`);
     // The sim decides whether the upgrade is allowed; the panel only names it and shows why not.
     const next = nextLevel(tower);
     setHidden(upgrade, !next);
@@ -108,11 +113,17 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
     game.upgradeTower(selectedId);
     update();
   };
+  const onSell = () => {
+    if (selectedId === undefined) return;
+    game.sellTower(selectedId);
+    update(); // the tower is gone, so this closes the panel
+  };
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && selectedId !== undefined) select(undefined);
   };
   close.addEventListener('click', onClose);
   upgrade.addEventListener('click', onUpgrade);
+  sell.addEventListener('click', onSell);
   doc.addEventListener('keydown', onKeyDown);
   return {
     get selectedId() {
@@ -125,6 +136,7 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
       selectedId = undefined;
       close.removeEventListener('click', onClose);
       upgrade.removeEventListener('click', onUpgrade);
+      sell.removeEventListener('click', onSell);
       doc.removeEventListener('keydown', onKeyDown);
       root.replaceChildren();
       root.hidden = true;
