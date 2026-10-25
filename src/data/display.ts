@@ -1,3 +1,4 @@
+import type { Layer } from '../sim/combat';
 import type { PlaceTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
@@ -29,7 +30,15 @@ export const TOWER_STYLE = {
   rifleNest: { size: 32, fill: 0x3b4252, outline: 0xe5e1cf, outlineWidth: 2 }, // slate, bone outline
 } as const satisfies Record<TowerKind, { size: number; fill: number; outline: number; outlineWidth: number }>;
 
-/** The range ring shown while the pointer is over a tower. */
+/** What the player calls each tower kind. */
+export const TOWER_NAME = {
+  rifleNest: 'Rifle Nest',
+} as const satisfies Record<TowerKind, string>;
+
+/** What the tower panel calls each layer a tower can hit. */
+export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Record<Layer, string>;
+
+/** The range ring shown while the pointer is over a tower, or while it is selected. */
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
 
 /** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */

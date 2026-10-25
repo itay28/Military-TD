@@ -17,11 +17,14 @@ if (!hudRoot) throw new Error('index.html has no #hud element');
 hudRoot.style.width = `${CANVAS_WIDTH}px`;
 const endScreenRoot = document.getElementById('end-screen');
 if (!endScreenRoot) throw new Error('index.html has no #end-screen element');
+const towerPanelRoot = document.getElementById('tower-panel');
+if (!towerPanelRoot) throw new Error('index.html has no #tower-panel element');
 
 const flags = parseTestFlags(window.location.search);
 const gameScene = new GameScene({
   hudRoot,
   endScreenRoot,
+  towerPanelRoot,
   flags,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {
