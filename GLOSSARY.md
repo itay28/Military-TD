@@ -11,6 +11,7 @@
 | **Tower** | A placed defensive unit. The MVP has one kind: **Rifle Nest**. | turret |
 | **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
+| **Build bar** | The column of tower buttons right of the map, one per kind, with icon, cost and hotkey (`1`…`n`). The **selected kind** is the one a click on the map places and the Ghost shows. A kind the player can't afford is greyed out. | toolbar, shop |
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
 | **Enemy** | A unit that walks the Path. The MVP has one kind: **Infantry**. | creep, mob |
 | **Helicopter** | An Enemy on the Air layer. It follows the Path like Infantry but only towers that list `air` in `targets` can hit it. Drawn above ground enemies with a shadow offset below it. Costs 2 Lives if it leaks. | chopper, flyer |
@@ -18,7 +19,8 @@
 | **Armor** | A flat amount an enemy takes off every hit: a hit removes `damage − armor`, but always at least 1 HP. | defense, resistance |
 | **Armor pierce** | How much of the target's Armor a tower's hits ignore (`armorPierce`, 0 by default). It cancels Armor up to its value and never adds damage. | penetration |
 | **Hit** | What one shot did to one enemy: the HP it actually removed, after Armor and no more than the enemy had left. A shot lists its hits (one for a direct-fire tower). | |
-| **Wave** | A scheduled group of enemies spawned one after another. | round, level |
+| **Wave** | A scheduled set of enemies, made of one or more wave groups that spawn in parallel. Cleared when every group has spawned and no enemy is left. | round, level |
+| **Wave group** | Part of a wave: a number of enemies of one kind, the first a delay after the wave starts, then one every spacing. | squad |
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
 | **Victory / Defeat** | How a game ends: the last wave cleared with Lives left / Lives reaching 0. Either one stops the Simulation. | win, game over |
 | **End screen** | The overlay over the map once the game ends: Victory or Defeat, the waves survived (waves cleared), and **Restart**, which starts a fresh game. | game over screen |

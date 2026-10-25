@@ -3,7 +3,7 @@ import { defineScenario } from './define';
 export default defineScenario({
   description: 'A Rifle Nest can hit air, so it damages a Helicopter flying past.',
   towers: [{ kind: 'rifleNest', tile: { col: 1, row: 3 } }],
-  waves: [{ kind: 'helicopter', count: 1, spacingMs: 0 }],
+  waves: [{ groups: [{ kind: 'helicopter', count: 1, spacingMs: 0, delayMs: 0 }] }],
   script: [{ atTick: 0, command: { type: 'startWave' } }],
   until: 'end',
   expectations({ events }, expect) {

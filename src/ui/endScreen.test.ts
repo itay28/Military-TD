@@ -23,7 +23,9 @@ const newGame = (lives = 20): Game =>
     map: SMALL,
     money: 100,
     lives,
-    waves: Array.from({ length: 3 }, () => ({ kind: 'infantry' as const, count: 1, spacingMs: 100 })),
+    waves: Array.from({ length: 3 }, () => ({
+      groups: [{ kind: 'infantry' as const, count: 1, spacingMs: 100, delayMs: 0 }],
+    })),
   });
 
 /** Starts the next wave and lets its one Infantry leak, which clears the wave (or loses the game). */
