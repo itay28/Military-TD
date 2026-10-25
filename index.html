@@ -11,11 +11,48 @@
         height: 100%;
         background: #1b1e16;
       }
-      #game {
+      /* The HUD is DOM, not Phaser text (ADR-0003), in a bar above the canvas so it never covers the map. */
+      #app {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: safe center; /* on a short window, scroll instead of clipping the HUD off the top */
+        gap: 6px;
+        height: 100%;
+      }
+      #hud {
         display: flex;
         align-items: center;
-        justify-content: center;
-        height: 100%;
+        gap: 20px;
+        box-sizing: border-box;
+        min-height: 36px;
+        padding: 0 8px;
+        font: 16px monospace;
+        color: #e4e0c8;
+      }
+      #hud .hud-banner {
+        color: #f0c95a;
+        font-weight: bold;
+      }
+      #hud button {
+        margin-left: auto;
+        order: 1;
+        padding: 4px 14px;
+        font: bold 15px monospace;
+        color: #1b1e16;
+        background: #c2a46b;
+        border: 0;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #hud button:disabled {
+        background: #5e6350;
+        color: #a2a58f;
+        cursor: default;
+      }
+      #hud button:focus-visible {
+        outline: 2px solid #f0c95a;
+        outline-offset: 2px;
       }
       #version {
         position: fixed;
@@ -28,7 +65,10 @@
     </style>
   </head>
   <body>
-    <div id="game"></div>
+    <div id="app">
+      <div id="hud"></div>
+      <div id="game"></div>
+    </div>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

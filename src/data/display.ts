@@ -33,3 +33,6 @@ export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
 
 /** The line drawn for each hit, from the tower to the target. */
 export const TRACER = { color: 0xffe9a0, width: 2, fadeMs: 80 } as const;
+
+/** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
+export const WAVE_BANNER_MS = 2000;

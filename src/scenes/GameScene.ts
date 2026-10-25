@@ -13,6 +13,7 @@ import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { createTracers, type Tracers } from './tracers';
+import { mountHud, type Hud } from '../ui/hud';
 import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
@@ -29,10 +30,17 @@ interface EnemyView {
   hp: number;
 }
 
+export interface GameSceneOptions {
+  /** The DOM element the HUD is drawn in (`#hud` in index.html). */
+  readonly hudRoot: HTMLElement;
+}
+
 /** Owns the Simulation, draws it, and advances it on a fixed timestep. */
 export class GameScene extends Phaser.Scene {
+  private readonly hudRoot: HTMLElement;
   private sim!: Game;
   private loop!: FixedStep;
+  private hud!: Hud;
   private enemyViews!: ViewSync<Enemy>;
   private towerViews!: ViewSync<Tower>;
   private tracers!: Tracers;
@@ -45,8 +53,9 @@ export class GameScene extends Phaser.Scene {
   /** The tower whose range ring is drawn, by id. */
   private hoveredTowerId: number | undefined;
 
-  constructor() {
+  constructor({ hudRoot }: GameSceneOptions) {
     super('Game');
+    this.hudRoot = hudRoot;
   }
 
   create(): void {
@@ -97,12 +106,16 @@ export class GameScene extends Phaser.Scene {
       this.pointerTile = pixelToTile({ x: pointer.worldX, y: pointer.worldY });
     });
     this.input.on('gameout', () => (this.pointerTile = undefined));
+
+    this.hud = mountHud(this.hudRoot, this.sim);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.hud.destroy());
   }
 
   override update(_time: number, deltaMs: number): void {
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
     this.loop.advance(deltaMs);
+    this.hud.update();
 
     const { enemies, towers } = this.sim.state;
     this.towerViews.sync(towers);
