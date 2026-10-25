@@ -106,7 +106,7 @@ From v0.3.0: Boot → Main menu (Play, Settings, Credits) → Level select → G
 
 ```
 src/
-  sim/        Pure TS, deterministic, no Phaser, no Math.random/Date.now. Unit + scenario tested.
+  sim/        Pure TS, deterministic, no Phaser, no Math.random/Date.now/performance.now. Unit + scenario tested.
     game.ts     createGame(config) → { tick(dtMs), placeTower(kind, tile), startWave(), state, events }
     map.ts      grid, path waypoints, buildable tiles
     enemies.ts  movement along the path, leaking

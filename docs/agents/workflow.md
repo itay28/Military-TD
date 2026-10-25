@@ -69,6 +69,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 - Pick the cheapest layer that proves the behaviour (see ADR-0003):
   - **Unit** (Vitest) for one sim module.
   - **Scenario** (`tests/scenarios/*.scenario.ts`) for game situations: setup → run headless → assert outcome and events.
+    A file is `export default defineScenario({ description, ...setup, script, until, expectations(result, expect) { ... } })` (`tests/scenarios/define.ts`; setup and stop conditions: `Scenario` in `src/sim/scenario.ts`). `tests/scenarios/scenarios.test.ts` runs every file, checks its expectations and that two runs give the same event log. `npm run scenario -- <name>` prints the outcome, final Lives/Money and a timeline; add `--json` (with `npm run -s`) for the full run.
   - **E2E** (Playwright, `tests/e2e`) for anything the player sees or clicks.
 
 ### 3. Implement

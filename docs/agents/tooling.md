@@ -9,6 +9,10 @@ Pitfalls agents have hit in this repo, and the way around each one. Add to this 
 - **Multi-line text.** Don't build issue or PR bodies inline in PowerShell; use `--body-file` as above.
 - **A stopped `vite preview` keeps its port.** Stopping the background task that ran `npx vite preview` kills `npx` but not the `node vite.js preview` child, so the next preview fails with "Port 4173 is already in use", and the old server keeps serving. Find the process with `Get-NetTCPConnection -LocalPort 4173 -State Listen`, check its command line (`Get-CimInstance Win32_Process -Filter "ProcessId=<id>"`), and stop it with `Stop-Process`.
 
+## Vitest
+
+- **`import.meta.glob` goes stale in tests.** Vitest's module cache keeps a test file's transformed code, glob results included, until that file changes, so a file added later that matches the glob is silently skipped. List files at run time instead (`readdirSync` plus `await import()`), as `tests/scenarios/scenarios.test.ts` does. `npx vitest --clearCache` clears a stale cache.
+
 ## Git
 
 - Each agent session works in its own worktree under `.claude/worktrees/` (git-ignored). Start new work from `origin/main`: `git fetch origin && git switch -c <type>/<issue>-<slug> origin/main`.

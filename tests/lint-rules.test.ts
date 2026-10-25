@@ -20,6 +20,11 @@ describe('lint rules', () => {
     expect(ids.filter((id) => id === 'no-restricted-properties')).toHaveLength(2);
   });
 
+  it('performance.now in src/sim is a lint error', async () => {
+    const ids = await ruleIdsFor('export const x = performance.now();\n', 'src/sim/example.ts');
+    expect(ids).toContain('no-restricted-properties');
+  });
+
   it('importing phaser from src/scenes is allowed', async () => {
     const ids = await ruleIdsFor("import Phaser from 'phaser';\nexport const x = Phaser;\n", 'src/scenes/example.ts');
     expect(ids).toEqual([]);
