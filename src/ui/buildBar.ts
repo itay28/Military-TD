@@ -53,7 +53,7 @@ export function mountBuildBar<K extends string>(
   grid.style.gridTemplateColumns = `repeat(${BUILD_BAR_COLUMNS}, 1fr)`;
   root.append(grid);
 
-  const buttons = options.map((option, i) => {
+  const entries = options.map((option, i) => {
     const hotkey = String(i + 1);
     const button = doc.createElement('button');
     button.type = 'button';
@@ -72,7 +72,7 @@ export function mountBuildBar<K extends string>(
     button.append(icon, cost, key);
     button.addEventListener('click', () => select(option));
     grid.append(button);
-    return button;
+    return { option, button };
   });
 
   let selected = first;
@@ -85,13 +85,12 @@ export function mountBuildBar<K extends string>(
 
   // Runs every frame, so it touches the DOM only when a value changed.
   const update = () => {
-    options.forEach((option, i) => {
-      const button = buttons[i]!;
+    for (const { option, button } of entries) {
       const disabled = !affordable(option);
       if (button.disabled !== disabled) button.disabled = disabled;
       const pressed = String(option === selected);
       if (button.getAttribute('aria-pressed') !== pressed) button.setAttribute('aria-pressed', pressed);
-    });
+    }
   };
 
   const onKey = (event: KeyboardEvent) => {
