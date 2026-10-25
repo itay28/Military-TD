@@ -50,7 +50,7 @@ export const FLOATING_TEXT = {
 
 /** What a refused placement says. */
 export const PLACEMENT_REFUSAL_TEXT = {
-  gameEnded: 'Game over',
+  gameEnded: 'The game has ended',
   notBuildable: "Can't build here",
   occupied: 'Tile occupied',
   insufficientMoney: 'Not enough money',

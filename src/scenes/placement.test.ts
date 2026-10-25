@@ -62,6 +62,15 @@ describe('placeAt', () => {
     expect(game.state.towers.map((t) => t.tile)).toEqual([EMPTY]);
   });
 
+  it('places during a wave too', () => {
+    const game = newGame();
+    game.startWave();
+    expect(game.state.phase).toBe('wave');
+    expect(ghostAt(game, 'rifleNest', EMPTY)).toEqual({ tile: EMPTY, placeable: true });
+    expect(placeAt(game, 'rifleNest', EMPTY)).toBeUndefined();
+    expect(game.state.towers).toHaveLength(1);
+  });
+
   it('says why when the sim refuses', () => {
     expect(placeAt(newGame(49), 'rifleNest', EMPTY)).toBe('Not enough money');
     expect(placeAt(newGame(), 'rifleNest', PATH)).toBe("Can't build here");
