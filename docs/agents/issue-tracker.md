@@ -76,18 +76,24 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 - Item closed, PR merged → *Done*.
 - *Pull request linked to issue* is **off on purpose**: it moves the card when a draft PR is opened, which is too early. No built-in workflow fires on "ready for review".
 
-**Board-status hook** (`.claude/settings.json` → `scripts/board-status.ts`): in local Claude Code sessions, after `gh pr ready` (or `--undo`) or a non-draft `gh pr create`, it moves the cards of the issues the PR closes: *In review* when the PR is ready, *In progress* when it's a draft. It never touches *Done* or *Backlog* cards and never blocks a command. It reports what it did, or why it couldn't, as context to the agent. Token: `GH_PROJECT_TOKEN`, the file named by `GH_PROJECT_TOKEN_FILE`, or `~/.config/gh-project-token.txt`.
+**Board sync** (`.github/workflows/board-sync.yml` → `scripts/board-sync.ts`): a GitHub Action, so it works the same whether a session runs locally, over Remote Control, in the cloud, or the change comes from the GitHub UI. It runs on every PR open/edit/ready/draft/close, on issue assign/reopen, every 6 hours, and on demand (Actions → *Board sync* → Run workflow). Each run reconciles every open issue on the board:
 
-So agents move cards by hand:
-- **Starting work** → *In progress*.
-- **PR marked ready** → *In review*, back to draft → *In progress*: only when the hook didn't (it reports when it couldn't), or when the PR changed outside a local session (GitHub UI, `@claude` in CI).
-- **Unblocked** issue: Backlog → *Ready*.
+| The issue has | Card goes to |
+| --- | --- |
+| an open PR ready for review, or a stacked PR merged into its parent branch | *In review* |
+| only draft PRs, or no PR but an assignee | *In progress* |
+| no PR, no assignee | stays where it is |
+
+"Closes" means GitHub's link **or** `Closes/Fixes/Resolves #n` in the PR body: GitHub only links PRs that target `main`, so stacked PRs rely on the body. *Done* cards and release issues are never touched. It uses the `PROJECT_TOKEN` secret; a missing token or an API error fails the run, so a board that isn't syncing shows up red. Check by hand: `PROJECT_TOKEN=… node scripts/board-sync.ts --dry-run`.
+
+So agents move cards by hand only:
+- **Unblocked** issue: Backlog → *Ready* (`/promote-ready`).
 - **Release issues**: only if a run warned or failed. Every move is a GitHub Action (see **Milestone release** in `docs/agents/releasing.md`).
-- To fix a card an automation missed.
+- To fix a card when a *Board sync* run failed; or re-run it.
 
 **Release issues** (label `release`) are the exception to the Status definitions above. Each one stands in for its milestone (milestones can't be cards) and moves with the milestone, not with assignees or closing PRs; see **Milestone release** in `docs/agents/releasing.md`. They have Area `infra` and no Priority or Size (they're trackers, not work), and no `ready-for-agent`, so they never go to *Ready*. The **Releases** view (filter `label:release`) shows them with their Status and Milestone. The other views include them.
 
-**Token:** the repo's `gh` login is a fine-grained token scoped to this repo, and fine-grained tokens can't edit user-owned Projects. Board edits need a classic token with `project` and `repo` scopes, passed only for that call via `GH_TOKEN`. Never print or commit it. If you don't have one, ask the human; don't skip the board update silently. (`@claude` in GitHub Actions has no such token: say on the issue which card needs moving.)
+**Token:** the repo's `gh` login is a fine-grained token scoped to this repo, and fine-grained tokens can't edit user-owned Projects. Board edits need a classic token with `project` and `repo` scopes, passed only for that call via `GH_TOKEN`. Never print or commit it. If you don't have one, ask the human; don't skip the board update silently. Status moves don't need it any more (*Board sync* does them); setting Area, Priority and Size on new issues still does. Where each environment gets it: `docs/agents/tooling.md` → **Environments**.
 
 ```sh
 # with GH_TOKEN set to the classic token
