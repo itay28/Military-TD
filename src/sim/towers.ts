@@ -1,4 +1,4 @@
-import type { TowerKind } from '../data/towers';
+import { TOWER_LEVELS, TOWER_STATS, type TowerKind } from '../data/towers';
 import { damageTaken, type Layer } from './combat';
 import type { Enemy } from './enemies';
 import { tileCenter, type Position, type Tile } from './map';
@@ -21,13 +21,30 @@ export interface TowerStats {
   readonly shell?: ShellStats;
 }
 
-/** A placed tower. Its stats are copied from its kind when it is placed. */
+/**
+ * A placed tower. Its stats are copied from its kind's level when it is placed or upgraded;
+ * `cost` stays what it cost to place.
+ */
 export interface Tower extends TowerStats {
   readonly id: number;
   readonly kind: TowerKind;
   readonly tile: Tile;
   /** Time until it can fire again; 0 when ready. */
   readonly cooldownMs: number;
+  /** 1 when placed; each upgrade adds 1, up to `towerLevels(kind).length`. */
+  readonly level: number;
+  /** Money put into it: its cost plus every upgrade's. */
+  readonly spent: number;
+}
+
+/** Every level's stats for `kind`, level 1 (`TOWER_STATS`) first. */
+export function towerLevels(kind: TowerKind): readonly TowerStats[] {
+  return [TOWER_STATS[kind], ...TOWER_LEVELS[kind]];
+}
+
+/** The stats of the level after the tower's, or undefined at the top level. */
+export function nextLevel(tower: Tower): TowerStats | undefined {
+  return towerLevels(tower.kind)[tower.level];
 }
 
 /** What a shot did to one enemy. */

@@ -43,6 +43,8 @@ describe('placeTower', () => {
         damage: 10,
         targets: ['ground', 'air'],
         cooldownMs: 0,
+        level: 1,
+        spent: 50,
       },
     ]);
     expect(place(game, { col: 1, row: 2 })).not.toBe(id);
@@ -259,6 +261,8 @@ const handTower = (stats: Partial<Tower> = {}): Tower => ({
   damage: 10,
   targets: ['ground', 'air'],
   cooldownMs: 0,
+  level: 1,
+  spent: 50,
   ...stats,
 });
 
@@ -331,6 +335,8 @@ describe('AA Gun', () => {
     kind: 'aaGun',
     tile: { col: 2, row: 2 },
     cooldownMs: 0,
+    level: 1,
+    spent: 75,
   });
   const helicopter = (id: number, distance: number): Enemy =>
     handEnemy(id, distance, {

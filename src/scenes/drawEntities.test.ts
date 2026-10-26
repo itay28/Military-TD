@@ -5,6 +5,7 @@ import {
   ENEMY_STYLE,
   GHOST,
   HP_BAR,
+  LEVEL_PIP,
   RANGE_RING,
   ROTOR,
   SHELL,
@@ -62,6 +63,8 @@ const rifleNest = (id: number, col: number, row: number): Tower => ({
   kind: 'rifleNest',
   tile: { col, row },
   cooldownMs: 0,
+  level: 1,
+  spent: 50,
 });
 
 describe('drawEnemy', () => {
@@ -167,12 +170,33 @@ describe('drawTower', () => {
       ['strokeRect', -half, -half, size, size],
     ]);
   });
+
+  it('adds one level pip per upgrade, in a row along the bottom edge', () => {
+    const { painter, calls } = recordingPainter();
+    drawTower(painter, { ...rifleNest(1, 0, 0), level: 3 });
+    const { size: pip, gap, inset, color } = LEVEL_PIP;
+    const half = TOWER_STYLE.rifleNest.size / 2;
+    const top = half - inset - pip;
+    expect(calls.slice(4)).toEqual([
+      ['fillStyle', color],
+      ['fillRect', -half + inset, top, pip, pip],
+      ['fillRect', -half + inset + pip + gap, top, pip, pip],
+    ]);
+  });
 });
 
 describe('drawTower for the AA Gun', () => {
   it('draws a circle, not a square, in its own colour', () => {
     const { painter, calls } = recordingPainter();
-    drawTower(painter, { ...TOWER_STATS.aaGun, id: 1, kind: 'aaGun', tile: { col: 0, row: 0 }, cooldownMs: 0 });
+    drawTower(painter, {
+      ...TOWER_STATS.aaGun,
+      id: 1,
+      kind: 'aaGun',
+      tile: { col: 0, row: 0 },
+      cooldownMs: 0,
+      level: 1,
+      spent: 75,
+    });
     const { size, fill, outline, outlineWidth } = TOWER_STYLE.aaGun;
     expect(fill).not.toBe(TOWER_STYLE.rifleNest.fill);
     expect(calls).toEqual([

@@ -3,6 +3,7 @@ import {
   ENEMY_STYLE,
   GHOST,
   HP_BAR,
+  LEVEL_PIP,
   RANGE_RING,
   ROTOR,
   SHELL,
@@ -53,7 +54,7 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   painter.fillRect(left, top, (HP_BAR.width * enemy.hp) / enemy.maxHp, HP_BAR.height);
 }
 
-/** A filled square or circle with an outline, in its kind's style. */
+/** A filled square or circle with an outline, in its kind's style, and a level pip per upgrade along its bottom edge. */
 export function drawTower(painter: EntityPainter, tower: Tower): void {
   const { shape, size, fill, outline, outlineWidth } = TOWER_STYLE[tower.kind];
   const half = size / 2;
@@ -63,6 +64,13 @@ export function drawTower(painter: EntityPainter, tower: Tower): void {
   painter.lineStyle(outlineWidth, outline);
   if (shape === 'circle') painter.strokeCircle(0, 0, half);
   else painter.strokeRect(-half, -half, size, size);
+  if (tower.level <= 1) return;
+  const top = half - LEVEL_PIP.inset - LEVEL_PIP.size;
+  painter.fillStyle(LEVEL_PIP.color);
+  for (let i = 0; i < tower.level - 1; i++) {
+    const left = -half + LEVEL_PIP.inset + i * (LEVEL_PIP.size + LEVEL_PIP.gap);
+    painter.fillRect(left, top, LEVEL_PIP.size, LEVEL_PIP.size);
+  }
 }
 
 /** The circle a tower can hit within. */
