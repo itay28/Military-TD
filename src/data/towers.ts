@@ -5,6 +5,15 @@ export const TOWER_STATS = {
   rifleNest: { cost: 50, range: 2.5, fireRate: 2, damage: 10, targets: ['ground', 'air'] },
   aaGun: { cost: 75, range: 3, fireRate: 4, damage: 8, targets: ['air', 'ground'] },
   cannon: { cost: 100, range: 3, fireRate: 0.5, damage: 60, armorPierce: 5, targets: ['ground'] },
+  mortar: {
+    cost: 125,
+    range: 5,
+    minRange: 1.5,
+    fireRate: 1 / 3,
+    damage: 40,
+    targets: ['ground'],
+    shell: { flightMs: 1000, innerRadius: 0.6, outerRadius: 1.25 },
+  },
 } as const satisfies Record<string, TowerStats>;
 
 export type TowerKind = keyof typeof TOWER_STATS;
@@ -32,5 +41,9 @@ export const TOWER_LEVELS = {
   cannon: [
     { cost: 80, range: 3.5, fireRate: 0.5, damage: 60, armorPierce: 5, targets: ['ground'] },
     { cost: 140, range: 3.5, fireRate: 0.625, damage: 96, armorPierce: 5, targets: ['ground'] },
+  ],
+  mortar: [
+    { ...TOWER_STATS.mortar, cost: 100, range: 5.5 },
+    { ...TOWER_STATS.mortar, cost: 175, range: 5.5, fireRate: 0.625 / 1.5, damage: 64 },
   ],
 } as const satisfies Record<TowerKind, readonly TowerStats[]>;

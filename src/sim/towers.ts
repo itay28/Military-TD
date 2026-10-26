@@ -9,6 +9,8 @@ export interface TowerStats {
   readonly cost: number;
   /** In tiles, from the tower's tile center. */
   readonly range: number;
+  /** In tiles: the dead zone around the tile center it can't fire into (exclusive); none when left out. */
+  readonly minRange?: number;
   /** Shots per second. */
   readonly fireRate: number;
   /** HP taken per shot, before armor. */
@@ -84,6 +86,7 @@ const COOLDOWN_EPSILON = 1e-9;
 
 /**
  * The enemy on a layer the tower hits and in range (inclusive, from the tile center) furthest along the Path ("first").
+ * An enemy at or inside the tower's `minRange` isn't a target.
  * Ties go to the one earlier in `enemies`, i.e. spawned first.
  */
 export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | undefined {
@@ -91,7 +94,8 @@ export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | u
   let target: Enemy | undefined;
   for (const enemy of enemies) {
     if (!tower.targets.includes(enemy.layer)) continue;
-    const inRange = Math.hypot(enemy.position.x - center.x, enemy.position.y - center.y) <= tower.range;
+    const gap = Math.hypot(enemy.position.x - center.x, enemy.position.y - center.y);
+    const inRange = gap <= tower.range && (tower.minRange === undefined || gap > tower.minRange);
     if (inRange && (!target || enemy.distance > target.distance)) target = enemy;
   }
   return target;
