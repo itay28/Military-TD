@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
-import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER_STYLE } from '../data/display';
+import { ENEMY_STYLE, GHOST, HP_BAR, RANGE_RING, SHELL, TILE_PX, TOWER_STYLE, TRACER_STYLE } from '../data/display';
 import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
-import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers, type EntityPainter } from './drawEntities';
+import {
+  drawBlasts,
+  drawEnemy,
+  drawGhost,
+  drawRangeRing,
+  drawShells,
+  drawTower,
+  drawTracers,
+  type EntityPainter,
+} from './drawEntities';
 
 type Call = [string, ...number[]];
 
@@ -154,5 +163,27 @@ describe('drawGhost', () => {
     const { painter, calls } = recordingPainter();
     drawGhost(painter, 'rifleNest', false);
     expect(calls).toEqual(ghostCalls(GHOST.blocked));
+  });
+});
+
+describe('drawShells', () => {
+  it('draws a dot per shell', () => {
+    const { painter, calls } = recordingPainter();
+    drawShells(painter, [{ x: 10, y: 20 }]);
+    expect(calls).toEqual([
+      ['fillStyle', SHELL.color],
+      ['fillCircle', 10, 20, SHELL.radius],
+    ]);
+  });
+});
+
+describe('drawBlasts', () => {
+  it('draws a circle outline per blast, at its alpha', () => {
+    const { painter, calls } = recordingPainter();
+    drawBlasts(painter, [{ center: { x: 10, y: 20 }, radius: 48, alpha: 0.5 }]);
+    expect(calls).toEqual([
+      ['lineStyle', SHELL.blastWidth, SHELL.blastColor, 0.5],
+      ['strokeCircle', 10, 20, 48],
+    ]);
   });
 });

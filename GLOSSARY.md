@@ -14,12 +14,15 @@
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
 | **Build bar** | The column of tower buttons right of the map, one per kind, with icon, cost and hotkey (`1`…`n`). The **selected kind** is the one a click on the map places and the Ghost shows. A kind the player can't afford is greyed out. | toolbar, shop |
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
-| **Enemy** | A unit that walks the Path. Kinds: **Infantry**, **Jeep**. | creep, mob |
+| **Enemy** | A unit that walks the Path. Kinds: **Infantry**, **Jeep**, **Tank**. | creep, mob |
 | **Jeep** | A fast, light ground enemy: 20 HP, 3 tiles/s (twice Infantry), no armor. Tests tower fire rate and coverage, and outruns slow shots. | car, scout |
+| **Tank** | A slow, heavy ground Enemy with 200 HP and Armor 5, so a Rifle Nest hit does only 5. Leaking costs 5 Lives; killing it pays 25. | boss, heavy |
 | **Layer** | Where an enemy moves: **Ground** or **Air**. Each tower lists the layers it can hit (`targets`) and ignores enemies on the others. | domain, altitude |
 | **Armor** | A flat amount an enemy takes off every hit: a hit removes `damage − armor`, but always at least 1 HP. | defense, resistance |
 | **Armor pierce** | How much of the target's Armor a tower's hits ignore (`armorPierce`, 0 by default). It cancels Armor up to its value and never adds damage. | penetration |
 | **Hit** | What one shot did to one enemy: the HP it actually removed, after Armor and no more than the enemy had left. A shot lists its hits (one for a direct-fire tower). | |
+| **Shell** | What a shell tower (`shell` in its stats, e.g. the Mortar) fires instead of hitting at once. It flies for `flightMs` to the spot where its target stood when fired (no leading), then lands and splashes. It still lands if its tower is gone, and is cleared when the game ends. Not an enemy: it never holds up a wave. | projectile, bullet |
+| **Splash** | A landed Shell's damage in two rings around the landing point: enemies within the **inner ring** (`innerRadius`) take the full damage, those within the **outer ring** (`outerRadius`) half, rounded down; each less Armor. Only layers the tower targets are hit. Fast enemies can leave the blast; slow ones and tight groups get hit (ADR-0007). | AoE, blast radius |
 | **Wave** | A scheduled set of enemies, made of one or more wave groups that spawn in parallel. Cleared when every group has spawned and no enemy is left. | round, level |
 | **Wave group** | Part of a wave: a number of enemies of one kind, the first a delay after the wave starts, then one every spacing. | squad |
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
