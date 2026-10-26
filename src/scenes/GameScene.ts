@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { CAMERA, FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
-import type { TowerKind } from '../data/towers';
+import { CAMERA, DISMANTLE, FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
+import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
@@ -10,7 +10,16 @@ import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import { clampView, fitView, panBy, screenToWorld, zoomAt, type CameraBounds, type CameraView } from './camera';
 import { pixelToTile, toPixels, type Pixel } from './coords';
-import { drawBlasts, drawEnemy, drawGhost, drawRangeRing, drawShells, drawTower, drawTracers } from './drawEntities';
+import {
+  drawBlasts,
+  drawDismantleRing,
+  drawEnemy,
+  drawGhost,
+  drawRangeRing,
+  drawShells,
+  drawTower,
+  drawTracers,
+} from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { createGestures, type Gesture, type Gestures } from './gestures';
@@ -204,16 +213,27 @@ export class GameScene extends Phaser.Scene {
     this.towerViews = createViewSync({
       create: (tower) => {
         const { x, y } = towerCenter(tower);
-        return { graphics: onLayer(this.add.graphics(), 'towers').setPosition(x, y), level: 0 };
+        return {
+          graphics: onLayer(this.add.graphics(), 'towers').setPosition(x, y),
+          level: 0,
+          ring: onLayer(this.add.graphics(), 'towers').setPosition(x, y),
+        };
       },
-      // Redrawn only when an upgrade changes the level pips.
+      // Redrawn only when an upgrade changes the level pips; a dismantling tower is faded, with a shrinking ring.
       update: (view, tower) => {
+        const dismantling = tower.dismantleMs !== undefined;
+        view.graphics.setAlpha(dismantling ? DISMANTLE.alpha : 1);
+        view.ring.clear();
+        if (dismantling) drawDismantleRing(view.ring, tower.dismantleMs! / DISMANTLE_MS);
         if (view.level === tower.level) return;
         view.level = tower.level;
         view.graphics.clear();
         drawTower(view.graphics, tower);
       },
-      destroy: (view) => view.graphics.destroy(),
+      destroy: (view) => {
+        view.graphics.destroy();
+        view.ring.destroy();
+      },
     });
 
     // ?anim=0: zero lifetimes, so tracers and floating texts never show.
@@ -243,6 +263,10 @@ export class GameScene extends Phaser.Scene {
       destroy: (view) => view.destroy(),
     });
     this.setUpCamera();
+
+    this.sim.events.on('towerSold', ({ tile, refund }) =>
+      this.floatingTexts.add(`+${refund}`, toPixels(tileCenter(tile))),
+    );
 
     this.hud = mountHud(this.hudRoot, this.sim);
     this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());

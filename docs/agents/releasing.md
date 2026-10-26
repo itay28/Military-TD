@@ -5,6 +5,7 @@ How versions are cut, deployed, and how milestones close. Issue work doesn't nee
 ## Release PR and deploy
 - **Release PR:** on every push to `main`, the *Release* workflow (`.github/workflows/release-please.yml`) runs release-please. It keeps one open release PR (`chore(main): release …`) that bumps `package.json`, `package-lock.json` and `.release-please-manifest.json` and updates `CHANGELOG.md` from the commits since the last release.
 - **Release:** merging that PR tags `vX.Y.Z` and publishes a GitHub Release with the same notes. Nothing else releases: ordinary merges only update the release PR.
+- **Who merges it:** the *PR steward* (`docs/agents/issue-tracker.md` → **PR steward**) merges the release PR only when its version is the current milestone's (`0.N.0`), so a milestone ships by itself once its report PR has merged (see **Milestone release**). A patch version (`0.1.2`) waits. Merge it by hand to ship a patch release at any time. To keep the steward off a release PR, add `hold`.
 - **Config:** `release-please-config.json` (release type `node`, `bump-minor-pre-major`, `bump-patch-for-minor-pre-major`, tags without a component) and `.release-please-manifest.json` (the last released version). Guarded by `tests/release-config.test.ts`.
 - **Version in the game:** `vite.config.ts` injects the `package.json` version as `__APP_VERSION__`; `src/data/version.ts` exposes it, and `src/ui/version.ts` writes it into the DOM overlay (`#version`, bottom-right corner; ADR-0003).
 - **Deploy:** after a release, the `deploy` job in `release-please.yml` (`needs: release-please`, `if: needs.release-please.outputs.release_created == 'true'`) calls the reusable `.github/workflows/deploy.yml`, which builds the tag, runs `node scripts/itch-build.ts dist` and pushes `dist/` to itch.io with butler (ADR-0005). A Release created with `GITHUB_TOKEN` doesn't start other workflows, so don't use an `on: release` trigger. Redeploy a tag with **Actions → Deploy → Run workflow**. Setup and access: README → **Playing builds (itch.io)**. Guarded by `tests/deploy-workflow.test.ts`. The deploy runs inside the Release workflow, so a failed deploy turns that run red (the release is already out), and the next push to main waits in the `release-please` concurrency group until the deploy ends.
@@ -38,11 +39,16 @@ Milestones can't be cards on the project board, so each milestone has a **releas
 - It pushes and opens the PR with `RELEASE_PLEASE_TOKEN` when that secret exists, so CI runs on the report PR (see **Release PR and deploy** → one-time setup); otherwise with `GITHUB_TOKEN`, and CI doesn't start there.
 - Preview the report for any milestone, done or not, without changing anything: `DRY_RUN=1 GITHUB_REPOSITORY=itay28/Military-TD MILESTONE=<n> node scripts/milestone-report.ts` (needs `gh` logged in). Guarded by `tests/milestone-report.test.ts` and `tests/milestone-report-workflow.test.ts`.
 
-**What the human decides.**
+**The steward ships it (#187).** With `AUTO_MERGE` on, the *PR steward* takes it from here, with no human step:
+1. **It merges the report PR** once `0.N.0` is the current milestone's version, the milestone is done (only its release issue is open), the body's last paragraph is `Release-As: 0.N.0`, and its checks are green. It doesn't wait for the CI review. The squash commit message is the PR body, passed explicitly, so the footer stays last and no `Co-authored-by:` lines follow it. release-please's release PR then switches to `0.N.0`. Editing the release PR's title or body does not change the version; its next run overwrites the edit.
+2. **It merges the release PR** once that shows `0.N.0` and its checks are green. That tags `v0.N.0` and publishes the GitHub Release, and the `release-issue` job closes the release issue and the milestone.
+
+**What the human can still decide.** Add `hold` to the report PR to stop the steward, then:
 1. **Is the milestone really done?** Read the audit. Anything missing gets reopened, or moved to a later milestone on purpose; the report updates when the milestone closes out again.
 2. **Notes:** write the Notes section of `docs/releases/0.N.0.md` on the report PR's branch (highlights, known issues, anything the changelog doesn't say).
-3. **Merge the report PR.** In the squash dialog, check the commit message still ends with `Release-As: 0.N.0` as its own paragraph. GitHub may add `Co-authored-by:` lines for the bot's commits after it; delete them, or release-please won't read the footer. release-please's release PR then switches to `0.N.0`. Editing the release PR's title or body does not change the version; its next run overwrites the edit.
-4. **Merge the release PR** when you want to ship. That tags `v0.N.0` and publishes the GitHub Release, and the `release-issue` job closes the release issue and the milestone.
+3. **Remove `hold`** to let the steward merge both PRs, or merge them yourself. In the squash dialog, check the commit message still ends with `Release-As: 0.N.0` as its own paragraph: GitHub may add `Co-authored-by:` lines for the bot's commits after it; delete them, or release-please won't read the footer.
+
+**Releasing early.** A patch release: merge the open release PR by hand. A milestone release before every issue is done: move the leftover issues to a later milestone; the report PR then opens and the steward ships it.
 
 For `v1.0.0` it's the same, with `Release-As: 1.0.0`.
 
