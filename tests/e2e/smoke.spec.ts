@@ -52,3 +52,25 @@ test('Restart after the game ends starts a fresh game', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Start Wave' })).toBeEnabled();
   expect(await state(page)).toMatchObject({ phase: 'build', towers: [], enemies: [], timeMs: 0 });
 });
+
+// From #53: the DPS readout is dashes before a wave, live during it, and keeps the figure after it.
+test('the DPS readout shows the wave figure and keeps it after the wave clears', async ({ page }) => {
+  await openGame(page);
+  const dps = page.getByTestId('hud-dps');
+  await expect(dps).toHaveText('DPS –');
+
+  await selectKind(page);
+  await clickTile(page, BESIDE_PATH);
+  await page.getByRole('button', { name: 'Start Wave' }).click();
+  for (let i = 0; i < 100 && (await state(page)).stats.total.kills === 0; i++)
+    await page.evaluate(() => window.__TD__!.step(10));
+  expect((await state(page)).stats.total.kills).toBeGreaterThan(0);
+  await expect(dps).toHaveText(/^DPS [1-9]\d*$/);
+
+  let now = await state(page);
+  while (now.phase === 'wave') now = await page.evaluate(() => window.__TD__!.step(60));
+  const figure = await dps.textContent();
+  expect(figure).toMatch(/^DPS [1-9]\d*$/);
+  await page.evaluate(() => window.__TD__!.step(600));
+  await expect(dps).toHaveText(figure!);
+});
