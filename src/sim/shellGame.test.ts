@@ -27,7 +27,7 @@ const LINE = {
     { col: 9, row: 1 },
   ],
 };
-const ONE_INFANTRY = [{ kind: 'infantry' as const, count: 1, spacingMs: 1000 }];
+const ONE_INFANTRY = [{ groups: [{ kind: 'infantry' as const, count: 1, spacingMs: 1000, delayMs: 0 }] }];
 
 function newGame(lives = 20, waves = ONE_INFANTRY) {
   const game = createGame({ map: LINE, lives, money: 100, waves });

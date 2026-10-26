@@ -40,6 +40,20 @@ export const TOWER_STYLE = {
   mortar: { shape: 'circle', size: 34, fill: 0x4a3f2a, outline: 0xd9b45a, outlineWidth: 2 }, // dug-in brown pit, brass rim
 } as const satisfies Record<TowerKind, TowerStyle>;
 
+/** Kinds planned for v0.2 (#29, #30), so their names are ready when they land. */
+type PlannedTowerKind = 'cannon' | 'aaGun';
+
+/** What the player calls each tower kind. Every kind needs one. */
+export const TOWER_NAMES = {
+  rifleNest: 'Rifle Nest',
+  cannon: 'Cannon',
+  aaGun: 'AA Gun',
+  mortar: 'Mortar',
+} as const satisfies Record<TowerKind | PlannedTowerKind, string>;
+
+/** The build bar right of the canvas shows its tower buttons in this many columns. */
+export const BUILD_BAR_COLUMNS = 2;
+
 /** The range ring shown while the pointer is over a tower, with an inner ring at its minimum range if it has one. */
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
 

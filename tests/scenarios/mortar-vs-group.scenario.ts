@@ -19,7 +19,7 @@ export default defineScenario({
   description: 'One Mortar shell lands on a tight group of Infantry: full damage in the inner ring, half in the outer.',
   map: STRAIGHT,
   towers: [{ kind: 'mortar', tile: { col: 10, row: 4 } }],
-  waves: [{ kind: 'infantry', count: 5, spacingMs: 400 }],
+  waves: [{ groups: [{ kind: 'infantry', count: 5, spacingMs: 400, delayMs: 0 }] }],
   script: [{ atTick: 0, command: { type: 'startWave' } }],
   until: { event: 'shellLanded' },
   expectations({ events, finalState }, expect) {
