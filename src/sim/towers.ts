@@ -32,6 +32,8 @@ export interface Tower extends TowerStats {
   readonly level: number;
   /** Money put into it: its cost plus every upgrade's. */
   readonly spent: number;
+  /** Time left until a sold tower is gone; undefined while it stands. A dismantling tower doesn't fire. */
+  readonly dismantleMs?: number;
 }
 
 /** Every level's stats for `kind`, level 1 (`TOWER_STATS`) first. */
@@ -87,7 +89,7 @@ export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | u
 /**
  * Counts each tower's cooldown down by `dtMs`; a ready tower with a target hits it once,
  * for `damage` less the target's armor (see `damageTaken`).
- * Towers act in order, and an enemy at 0 HP is removed at once, so later towers retarget.
+ * A dismantling tower does neither. Towers act in order, and an enemy at 0 HP is removed at once, so later towers retarget.
  * Time past the end of a cooldown carries into the next, so the fire rate holds at any tick size;
  * an idle tower waits at 0, ready.
  */
@@ -100,6 +102,7 @@ export function fireTowers(
   const shots: Shot[] = [];
   const kills: Enemy[] = [];
   const nextTowers = towers.map((tower) => {
+    if (tower.dismantleMs !== undefined) return tower;
     const cooldownMs = tower.cooldownMs - dtMs;
     const target = cooldownMs <= COOLDOWN_EPSILON ? selectTarget(tower, alive) : undefined;
     if (!target) return { ...tower, cooldownMs: Math.max(0, cooldownMs) };

@@ -1,5 +1,4 @@
 import { LAYER_NAME, LEVEL_NAME, TOWER_NAME, UPGRADE_REFUSAL_TEXT } from '../data/display';
-import { SELL_REFUND } from '../data/towers';
 import type { Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
@@ -91,7 +90,10 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
     setText(dps, waveDps(figures?.wave.damage ?? 0, stats.wave.elapsedMs).toFixed(1));
     setText(totalDamage, String(figures?.total.damage ?? 0));
     setText(kills, String(figures?.total.kills ?? 0));
-    setText(sell, `Sell (+${Math.floor(SELL_REFUND * tower.spent)})`);
+    // The sim decides what selling pays and whether it is allowed (not while already dismantling).
+    const sale = game.canSellTower(tower.id);
+    setText(sell, sale.ok ? `Sell (+${sale.refund})` : sale.reason === 'dismantling' ? 'Dismantling…' : 'Sell');
+    if (sell.disabled === sale.ok) sell.disabled = !sale.ok;
     // The sim decides whether the upgrade is allowed; the panel only names it and shows why not.
     const next = nextLevel(tower);
     setHidden(upgrade, !next);
@@ -116,7 +118,7 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
   const onSell = () => {
     if (selectedId === undefined) return;
     game.sellTower(selectedId);
-    update(); // the tower is gone, so this closes the panel
+    update(); // now dismantling; the panel closes once the tower is gone
   };
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && selectedId !== undefined) select(undefined);

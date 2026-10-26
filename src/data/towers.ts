@@ -7,6 +7,9 @@ export const TOWER_STATS = {
 
 export type TowerKind = keyof typeof TOWER_STATS;
 
+/** How long selling a tower takes, in ms: it stops firing at once and the refund comes when this is up. */
+export const DISMANTLE_MS = 2000;
+
 /** The share of a tower's `spent` (placement plus upgrades) that selling it gives back, rounded down. */
 export const SELL_REFUND = 0.7;
 

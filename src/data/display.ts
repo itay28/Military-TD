@@ -45,6 +45,9 @@ export const LEVEL_PIP = { size: 4, gap: 3, inset: 4, color: 0xe5e1cf } as const
 export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Record<Layer, string>;
 
 /** The range ring shown while the pointer is over a tower, or while it is selected. */
+/** A dismantling tower is drawn at `alpha`, with a ring that shrinks from `radius` px to nothing as the time runs out. */
+export const DISMANTLE = { alpha: 0.4, color: 0xe5e1cf, radius: 28, width: 2 } as const;
+
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
 
 /** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */
@@ -75,6 +78,7 @@ export const PLACEMENT_REFUSAL_TEXT = {
 export const UPGRADE_REFUSAL_TEXT = {
   gameEnded: 'The game has ended',
   noSuchTower: 'The tower is gone',
+  dismantling: 'Being dismantled',
   maxLevel: 'Top level',
   insufficientMoney: 'Not enough money',
 } as const satisfies Record<UpgradeTowerRefusal, string>;
