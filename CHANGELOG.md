@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/itay28/Military-TD/compare/v0.1.2...v0.1.3) (2026-10-26)
+
+
+### Bug Fixes
+
+* steward doesn't count rounds spent on conflicts from a moved base ([#184](https://github.com/itay28/Military-TD/issues/184)) ([1e1ecaf](https://github.com/itay28/Military-TD/commit/1e1ecaf35438404fedeff5af2a9cdbef21ef7845))
+
 ## [0.1.2](https://github.com/itay28/Military-TD/compare/v0.1.1...v0.1.2) (2026-10-26)
 
 
