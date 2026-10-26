@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
 import { currentMilestone, graphql, milestoneOrder } from './board-sync.ts';
-import { releaseVersion } from './milestone-report.ts';
+import { isMilestoneDone, releaseVersion } from './milestone-report.ts';
 
 // The PR steward (docs/agents/issue-tracker.md → PR steward, ADR-0008): run by
 // .github/workflows/pr-steward.yml after CI and the CI review, on PR comments and reviews, on a
@@ -27,8 +27,6 @@ const RELEASE_BRANCH = 'release-please--';
 const RELEASE_TITLE = /^chore\(main\): release (\d+\.\d+\.\d+)$/;
 /** The milestone report PR's branch (scripts/milestone-report.ts): `chore/release-0.2.0`. */
 const REPORT_BRANCH = /^chore\/release-(\d+\.\d+\.\d+)$/;
-/** Labels the milestone's release issue, which stays open until the release ships. */
-const RELEASE_LABEL = 'release';
 const NEEDS_YOU_LABEL = 'needs-you';
 /** Rounds a PR gets before it's handed off; a maintainer comment gives it fresh ones (#165). */
 export const MAX_ROUNDS = 3;
@@ -134,8 +132,8 @@ const isMaintainer = (c: PrComment) =>
   !c.body.includes('<!-- pr-steward:');
 
 /**
- * What to do with one open PR (release and milestone report PRs: see decideRelease). In order: skip drafts, forks, `hold`, and `needs-you` PRs the
- * maintainer hasn't answered; wait while mergeability is unknown or a round is in flight; fire a
+ * What to do with one open PR. In order: skip drafts, forks, `hold`, and `needs-you` PRs the
+ * maintainer hasn't answered; hand release and milestone report PRs to decideRelease / decideReport; wait while mergeability is unknown or a round is in flight; fire a
  * round for a conflict, a failed check, an unanswered CI review or maintainer comment, or
  * unresolved threads (hand off as stuck after MAX_ROUNDS); update a PR that is only behind; wait
  * for running checks and the CI review; then merge, if it targets the default branch, no issue it
@@ -152,7 +150,7 @@ export function decide(
   if (pr.labels.includes(HOLD_LABEL)) return { kind: 'skip', why: HOLD_LABEL };
   if (pr.head.startsWith(RELEASE_BRANCH)) return decideRelease(pr, current);
   const report = REPORT_BRANCH.exec(pr.head)?.[1];
-  if (report) return decideRelease(pr, current, report);
+  if (report) return decideReport(pr, current, report);
   const checks = currentChecks(pr.checks);
 
   // The time of the latest comment matching `test`, or 0.
@@ -225,36 +223,53 @@ const lastParagraph = (text: string) =>
     .at(-1)
     ?.trim();
 
-/**
- * release-please's PR and the milestone report PR are generated, so no agent works on them and the
- * CI review doesn't hold them. They ship the current milestone only (#187): release-please's PR
- * merges when its version is the milestone's, so patch releases wait for the maintainer to merge
- * them by hand; the report PR (`report` is its version) merges once the milestone is done and its
- * body ends with the `Release-As` footer. Either merges once its checks are green (some must have
- * run), is brought up to date when behind, and otherwise waits.
- */
-function decideRelease(pr: StewardPr, current: CurrentMilestone | null, report?: string): Decision {
-  const name = report ? 'report PR' : 'release PR';
-  const version = report ?? RELEASE_TITLE.exec(pr.title)?.[1];
-  const milestone = current && releaseVersion(current.title);
-  if (!version) return { kind: 'wait', why: `${name}: no version in its title` };
-  if (!current || version !== milestone)
-    return {
-      kind: 'wait',
-      why: `${name} ${version}: ${current ? `ships with ${current.title}` : 'no open milestone'}; merge it by hand to release now`,
-    };
-  if (report) {
-    if (!current.done) return { kind: 'wait', why: `${name} ${version}: ${current.title} still has open issues` };
-    if (lastParagraph(pr.body) !== `Release-As: ${version}`)
-      return { kind: 'wait', why: `${name} ${version}: its body doesn't end with Release-As: ${version}` };
-  }
+/** The version release-please's PR or the milestone report PR ships, against the current milestone's. */
+function wrongVersion(name: string, version: string, current: CurrentMilestone | null): Decision | null {
+  if (current && version === releaseVersion(current.title)) return null;
+  return {
+    kind: 'wait',
+    why: `${name} ${version}: ${current ? `ships with ${current.title}` : 'no open milestone'}; merge it by hand to release now`,
+  };
+}
+
+/** A generated PR merges once its checks are green (some must have run), and is brought up to date when behind. */
+function whenGreen(pr: StewardPr, name: string, unmergeable: string): Decision {
   const relevant = currentChecks(pr.checks).filter((c) => !IGNORED_CHECKS.includes(c.name));
-  if (pr.mergeable !== 'MERGEABLE')
-    return { kind: 'wait', why: `${name}: ${report ? 'not mergeable' : 'waiting for release-please to refresh it'}` };
+  if (pr.mergeable !== 'MERGEABLE') return { kind: 'wait', why: `${name}: ${unmergeable}` };
   if (!relevant.length) return { kind: 'wait', why: `${name}: no checks ran on it` };
   if (relevant.some((c) => c.state !== 'success')) return { kind: 'wait', why: `${name}: checks running or failing` };
   if (pr.behind) return { kind: 'update' };
   return { kind: 'merge' };
+}
+
+/**
+ * release-please's PR is generated, so no agent works on it and the CI review doesn't hold it. It
+ * ships the current milestone only (#187): it merges when its version is the milestone's, so a
+ * patch release waits for the maintainer to merge it by hand.
+ */
+function decideRelease(pr: StewardPr, current: CurrentMilestone | null): Decision {
+  const version = RELEASE_TITLE.exec(pr.title)?.[1];
+  if (!version) return { kind: 'wait', why: 'release PR: no version in its title' };
+  return (
+    wrongVersion('release PR', version, current) ??
+    whenGreen(pr, 'release PR', 'waiting for release-please to refresh it')
+  );
+}
+
+/**
+ * The milestone report PR (scripts/milestone-report.ts) is generated too (#187): it merges once its
+ * version is the current milestone's, the milestone is done and its body ends with the `Release-As`
+ * footer. Merging it switches release-please's PR to the milestone's version.
+ */
+function decideReport(pr: StewardPr, current: CurrentMilestone | null, version: string): Decision {
+  const name = `report PR ${version}`;
+  const wrong = wrongVersion('report PR', version, current);
+  if (wrong) return wrong;
+  if (!current) return { kind: 'wait', why: `${name}: no open milestone` };
+  if (!current.done) return { kind: 'wait', why: `${name}: ${current.title} still has open issues` };
+  if (lastParagraph(pr.body) !== `Release-As: ${version}`)
+    return { kind: 'wait', why: `${name}: its body doesn't end with Release-As: ${version}` };
+  return whenGreen(pr, 'report PR', 'not mergeable');
 }
 
 /** AUTO_STEWARD fires rounds and updates branches; AUTO_MERGE merges. */
@@ -503,7 +518,7 @@ export function toStewardPr(node: PrNode): StewardPr {
 
 /** From a milestone's open issues: only its release issue is left. A truncated list (more pages) is never done. */
 export const milestoneDone = (open: readonly { labels: { nodes: { name: string }[] } }[], truncated = false): boolean =>
-  !truncated && open.length > 0 && open.every((i) => i.labels.nodes.some((l) => l.name === RELEASE_LABEL));
+  !truncated && isMilestoneDone(open.map((i) => ({ state: 'open', labels: i.labels.nodes.map((l) => l.name) })));
 
 async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun: boolean): Promise<void> {
   const { repository } = await graphql<PrData>(token, PR_QUERY, { owner: 'itay28', name: 'Military-TD' });
