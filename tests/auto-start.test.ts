@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
+import { HANDOFF_MARKER as NOTIFY_HANDOFF_MARKER } from '../scripts/notify';
 import {
   AUTO_AGENT_LABEL,
   HANDOFF_MARKER,
@@ -365,5 +366,11 @@ describe('autoStartFromEnv: the AUTO_SPAWN switch', () => {
     expect(() => autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', ROUTINE_OPUS_TOKEN: '' })).toThrow(
       /ROUTINE_OPUS_TOKEN/,
     );
+  });
+});
+
+describe('HANDOFF_MARKER', () => {
+  it('matches the marker notify.ts looks for, so the push keeps the hand-off summary', () => {
+    expect(HANDOFF_MARKER).toBe(NOTIFY_HANDOFF_MARKER);
   });
 });
