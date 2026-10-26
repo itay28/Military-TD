@@ -19,12 +19,15 @@ const buildBarRoot = document.getElementById('build-bar');
 if (!buildBarRoot) throw new Error('index.html has no #build-bar element');
 const endScreenRoot = document.getElementById('end-screen');
 if (!endScreenRoot) throw new Error('index.html has no #end-screen element');
+const towerPanelRoot = document.getElementById('tower-panel');
+if (!towerPanelRoot) throw new Error('index.html has no #tower-panel element');
 
 const flags = parseTestFlags(window.location.search);
 const gameScene = new GameScene({
   hudRoot,
   buildBarRoot,
   endScreenRoot,
+  towerPanelRoot,
   flags,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {

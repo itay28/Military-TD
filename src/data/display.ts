@@ -1,3 +1,4 @@
+import type { Layer } from '../sim/combat';
 import type { PlaceTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
@@ -46,7 +47,10 @@ export const TOWER_NAMES = {
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
 
-/** The range ring shown while the pointer is over a tower. */
+/** What the tower panel calls each layer a tower can hit. */
+export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Record<Layer, string>;
+
+/** The range ring shown while the pointer is over a tower, or while it is selected. */
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
 
 /** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */
