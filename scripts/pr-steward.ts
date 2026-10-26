@@ -14,12 +14,14 @@ export const REVIEW_HEADING = '## Code review (mattpocock-skills:code-review)';
 /** Posted by the Action when it fires a round. */
 export const ROUND_MARKER = '<!-- pr-steward:round -->';
 /** Posted by the steward (or implement) agent when it has finished a round. */
+export const DONE_MARKER = '<!-- pr-steward:done -->';
+
 const ROUND_META = '<!-- pr-steward:round-meta';
 /** The hidden line under a round marker: why the round fired, and the base branch's head then (#183). */
 export const roundMeta = (reasons: readonly Reason[], baseSha: string) =>
   `${ROUND_META} reasons=${reasons.join(',')} base=${baseSha} -->`;
 const parseRoundMeta = (body: string) => {
-  const m = /<!-- pr-steward:round-meta reasons=([\w,]*) base=(\S+) -->/.exec(body);
+  const m = new RegExp(`${ROUND_META} reasons=([\\w,]*) base=(\\S+) -->`).exec(body);
   return m ? { reasons: m[1]!.split(','), base: m[2]! } : null;
 };
 
@@ -41,8 +43,6 @@ function countedRounds(rounds: readonly PrComment[], before: PrComment | undefin
   }
   return counted;
 }
-
-export const DONE_MARKER = '<!-- pr-steward:done -->';
 /** Posted by the Action when it hands a PR off. */
 export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
 /** The footers agents add to what they post; they tell them apart from the maintainer, whose identity they use. */
