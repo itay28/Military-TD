@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
-import { currentMilestone, graphql } from './board-sync.ts';
+import { currentMilestone, graphql, milestoneOrder } from './board-sync.ts';
 
 // The PR steward (docs/agents/issue-tracker.md → PR steward, ADR-0008): run by
 // .github/workflows/pr-steward.yml after CI and the CI review, on PR comments and reviews, on a
@@ -49,6 +49,11 @@ export interface Check {
 export interface MilestoneRef {
   readonly number: number;
   readonly title: string;
+}
+
+/** The milestone agents work on, with the open milestones ranked after it. */
+export interface CurrentMilestone extends MilestoneRef {
+  readonly after: readonly number[];
 }
 
 /**
@@ -131,7 +136,7 @@ export function decide(
   pr: StewardPr,
   now: Date,
   defaultBranch = 'main',
-  current: MilestoneRef | null = null,
+  current: CurrentMilestone | null = null,
 ): Decision {
   if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.fork) return { kind: 'skip', why: 'fork' };
@@ -192,7 +197,7 @@ export function decide(
         : `#${held.number} has an open question (needs-info)`,
     };
   // Look-ahead work (auto-start's next milestone) merges only once the current milestone has shipped.
-  const ahead = current && pr.closes.find((i) => i.milestone && i.milestone.number !== current.number);
+  const ahead = current && pr.closes.find((i) => i.milestone && current.after.includes(i.milestone.number));
   if (ahead && current)
     return {
       kind: 'wait',
@@ -465,7 +470,11 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
       pr,
       now,
       repository.defaultBranchRef.name,
-      current && { number: current.number, title: current.title },
+      current && {
+        number: current.number,
+        title: current.title,
+        after: milestoneOrder(repository.milestones.nodes).filter((n) => n !== current.number),
+      },
     );
     const switchedOff = !switchedOn(decision.kind, settings);
     const detail =

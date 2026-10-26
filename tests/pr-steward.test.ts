@@ -243,9 +243,9 @@ describe('decide: superseded checks', () => {
 });
 
 describe('decide: milestone hold', () => {
-  const v02 = { number: 2, title: 'v0.2.0 — Combat depth' };
   const v03 = { number: 4, title: 'v0.3.0 — Game shell' };
-  const closing = (...milestones: (typeof v02 | null)[]) =>
+  const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4] };
+  const closing = (...milestones: (typeof v02 | typeof v03 | null)[]) =>
     milestones.map((milestone, i) => ({ number: 3 + i, blocked: false, needsInfo: false, milestone }));
 
   it('merges a PR whose issue is in the current milestone', () => {
@@ -269,6 +269,11 @@ describe('decide: milestone hold', () => {
   it('merges issues without a milestone, and anything when no milestone is open', () => {
     expect(decide(pr({ closes: closing(null) }), now, 'main', v02).kind).toBe('merge');
     expect(decide(pr({ closes: closing(v03) }), now, 'main', null).kind).toBe('merge');
+  });
+
+  it('does not hold an issue from an already-shipped milestone', () => {
+    const v01 = { number: 1, title: 'v0.1.0 — MVP' };
+    expect(decide(pr({ closes: closing(v01) }), now, 'main', v02).kind).toBe('merge');
   });
 
   it('still runs steward rounds on a held PR', () => {
