@@ -4,15 +4,16 @@ Pitfalls agents have hit in this repo, and the way around each one. Add to this 
 
 ## Environments
 
-Sessions run locally (this PC), over Remote Control or `claude --bg` (also this PC), and in the cloud (claude.ai/code, `@claude` in GitHub Actions). They follow the same flow because anything with side effects runs in GitHub Actions, not in the client: board moves (*Board sync*), releases, the CI review. The `SessionStart` hook runs `npm run doctor` and tells the agent what this environment is missing (node version, `node_modules`, `gh` and its login).
+Sessions run locally (this PC), over Remote Control or `claude --bg` (also this PC), and in the cloud (claude.ai/code, `@claude` in GitHub Actions). They follow the same flow because anything with side effects runs in GitHub Actions, not in the client: board moves (*Board sync*), releases, the CI review. The `SessionStart` hook runs `npm run doctor` and tells the agent what this environment is missing (node version, `node_modules`, `gh` and its login; in the cloud, whether `gh api` reaches the repository).
 
 | | Local / Remote Control | Cloud session | GitHub Actions |
 | --- | --- | --- | --- |
 | Hooks and permissions in `.claude/settings.json` | yes | yes | `@claude` only |
 | Plugins (`enabledPlugins`, incl. `mattpocock-skills`) | yes | **no**: cloud sessions never install plugins from repo settings | `@claude` / CI review via the action's own config |
-| Skills in the repo's `.claude/skills/` | yes | yes (part of the clone) | `@claude` only |
+| Skills in the repo's `.claude/skills/` (vendored `tdd`, `pr`, `diagnosing-bugs`) | yes | yes (part of the clone) | `@claude` only |
 | Workflow skills: plugin `workflow@itay28-skills` (private repo `itay28/claude-skills`) | yes (installed at user scope) | no | no |
 | GitHub GraphQL (`gh pr`, `gh issue`, Projects v2) | yes | **no**: the cloud GitHub proxy blocks it; use the built-in GitHub tools and `gh api` (REST) | yes |
+| GitHub REST (`gh api`) | yes | yes, **only when the repository is attached** to the session or routine; `gh auth status` still fails (the proxy injects the token) | yes |
 | `GH_TOKEN`: repo-scoped fine-grained PAT | `gh auth login` | the cloud environment's env vars | `github.token` |
 | `PROJECT_TOKEN`: classic PAT, `project` + `repo` | user env var `GH_PROJECT_TOKEN`, or `~/.config/gh-project-token.txt` (only to set fields on new issues) | the cloud environment's env vars (same use) | repo secret `PROJECT_TOKEN` (Board sync, release board) |
 

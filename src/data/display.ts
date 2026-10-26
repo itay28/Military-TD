@@ -1,3 +1,4 @@
+import type { Layer } from '../sim/combat';
 import type { PlaceTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
@@ -20,7 +21,15 @@ export const MAP_STYLE = {
 export const ENEMY_STYLE = {
   infantry: { shape: 'circle', radius: 9, color: 0x9e3b2c }, // brick red
   jeep: { shape: 'square', radius: 7, color: 0x6b7d3a }, // olive drab
-} as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number }>;
+  helicopter: { shape: 'circle', radius: 11, color: 0x3f6f8f, rotor: 12 }, // steel blue, X rotor reaching 12 px along each axis
+  tank: { shape: 'circle', radius: 14, color: 0x4a5d3a }, // dark olive drab
+} as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number; rotor?: number }>;
+
+/** The X drawn over a rotor kind. */
+export const ROTOR = { color: 0xe5e1cf, width: 2 } as const;
+
+/** The shadow under an air enemy, offset in pixels so it reads as flying. */
+export const AIR_SHADOW = { offsetX: 4, offsetY: 10, color: 0x000000, alpha: 0.3 } as const;
 
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
@@ -56,7 +65,10 @@ export const TOWER_NAMES = {
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
 
-/** The range ring shown while the pointer is over a tower, with an inner ring at its minimum range if it has one. */
+/** What the tower panel calls each layer a tower can hit. */
+export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Record<Layer, string>;
+
+/** The range ring shown while the pointer is over a tower, or while it is selected, with an inner ring at its minimum range if it has one. */
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
 
 /** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */
