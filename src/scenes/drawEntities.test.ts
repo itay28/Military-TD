@@ -185,6 +185,40 @@ describe('drawTower', () => {
   });
 });
 
+describe('drawTower for the AA Gun', () => {
+  it('draws a circle, not a square, in its own colour', () => {
+    const { painter, calls } = recordingPainter();
+    drawTower(painter, {
+      ...TOWER_STATS.aaGun,
+      id: 1,
+      kind: 'aaGun',
+      tile: { col: 0, row: 0 },
+      cooldownMs: 0,
+      level: 1,
+      spent: 75,
+    });
+    const { size, fill, outline, outlineWidth } = TOWER_STYLE.aaGun;
+    expect(fill).not.toBe(TOWER_STYLE.rifleNest.fill);
+    expect(calls).toEqual([
+      ['fillStyle', fill],
+      ['fillCircle', 0, 0, size / 2],
+      ['lineStyle', outlineWidth, outline],
+      ['strokeCircle', 0, 0, size / 2],
+    ]);
+  });
+
+  it('draws its ghost as a circle with the AA Gun range ring', () => {
+    const { painter, calls } = recordingPainter();
+    drawGhost(painter, 'aaGun', true);
+    expect(calls).toEqual([
+      ['fillStyle', GHOST.placeable, GHOST.fillAlpha],
+      ['fillCircle', 0, 0, TOWER_STYLE.aaGun.size / 2],
+      ['lineStyle', GHOST.ringWidth, GHOST.placeable, GHOST.ringAlpha],
+      ['strokeCircle', 0, 0, 3 * TILE_PX],
+    ]);
+  });
+});
+
 describe('drawRangeRing', () => {
   it('strokes a circle of the tower’s range, in pixels, around the origin', () => {
     const { painter, calls } = recordingPainter();
