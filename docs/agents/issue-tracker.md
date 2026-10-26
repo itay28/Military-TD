@@ -48,7 +48,7 @@ Status lives on the **Military-TD Roadmap** project: https://github.com/users/it
 | In review | A PR that closes it is ready for review (not a draft) |
 | Done | Closed |
 
-**Other fields:** Area (`core`, `towers`, `units`, `ui`, `art`, `infra`, matching the `area:*` label), Priority and Size, as defined below. Set all three on new issues.
+**Other fields:** Area (`core`, `towers`, `units`, `ui`, `art`, `infra`, matching the `area:*` label), Priority and Size, as defined below. Set all three on new issues **as labels**: `area:<area>`, `priority:P0…P3` and `size:XS…XL`. *Board sync* copies them to the fields, then removes `size:*` and `priority:*` (the board stays the one source of truth) and keeps `area:*` (used for filtering). Two size labels: the bigger wins; two priority labels: the less urgent wins; two different area labels: Area is left alone; an unknown value is ignored and its label stays. Changing a field later works the same way: add the new label (#205).
 
 **Priority**: how much the issue matters to its milestone. Judge it against the milestone, not the whole game.
 
@@ -76,7 +76,7 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 - Item closed, PR merged → *Done*.
 - *Pull request linked to issue* is **off on purpose**: it moves the card when a draft PR is opened, which is too early. No built-in workflow fires on "ready for review".
 
-**Board sync** (`.github/workflows/board-sync.yml` → `scripts/board-sync.ts`): a GitHub Action, so it works the same whether a session runs locally, over Remote Control, in the cloud, or the change comes from the GitHub UI. It runs on every PR open/edit/ready/draft/close, on issue assign/reopen/close/label/milestone changes, every 6 hours (which also catches "blocked by" edits, which have no event), and on demand (Actions → *Board sync* → Run workflow). Each run reconciles every open issue on the board:
+**Board sync** (`.github/workflows/board-sync.yml` → `scripts/board-sync.ts`): a GitHub Action, so it works the same whether a session runs locally, over Remote Control, in the cloud, or the change comes from the GitHub UI. It runs on every PR open/edit/ready/draft/close, on issue assign/reopen/close/label/milestone changes, every 6 hours (which also catches "blocked by" edits, which have no event), and on demand (Actions → *Board sync* → Run workflow). Each run first copies field labels to the board (**Other fields** above), then reconciles every open issue on the board:
 
 | The issue has | Card goes to |
 | --- | --- |
@@ -94,7 +94,7 @@ The current milestone is the open one with the earliest due date, else the lowes
 - **Startable:** no PR, no assignee, `ready-for-agent`, no `hold` label, not a tracker, Size XS–L, no open blockers. In the current milestone that's the *Ready* column. With `AUTO_STACK` set to `on`, an issue whose open blockers are all closed by open PRs on one chain of branches (the stack-next rule) is startable too, based on the chain's tip branch.
 - **Order and cap:** Priority (P0 first, none last), then issue number; at most 5 `auto-agent` issues *In progress*. When the current milestone has nothing startable, the next milestone's issues are used.
 - **Claim, then fire:** assign `itay28`, add `auto-agent`, then fire the implement scheduled task (XS/S → `ROUTINE_SONNET_*`, M/L → `ROUTINE_OPUS_*`) with the issue number and base branch. If the fire fails, the claim is undone. A temporary refusal (HTTP 429, a 5xx or no answer: usage or rate limit) is quiet: the run stays green, auto-start stops for this run, and a later run tries again. Any other refusal (a bad token, a deleted routine) also adds `needs-you` and a comment to the issue, which pushes to the maintainer, and the run goes red; the issue isn't started again until `needs-you` is removed (#200). The task follows `docs/agents/prompts/implement.md`.
-- **No Size:** one comment on the issue asking for one; it starts once Size is set. XL never starts: split it.
+- **No Size:** the **sizing agent** usually sizes it first: `.github/workflows/size-issue.yml` runs when an issue is labelled `ready-for-agent` (or on demand, Actions → *Size issue*) and, if it has no Size on the board and no `size:*` label, runs Claude on Sonnet with `docs/agents/prompts/size.md`. It adds one `size:*` and one `priority:*` label with a one-line comment, then dispatches *Board sync*, which copies them and can start the issue in the same run. It uses `CLAUDE_CODE_OAUTH_TOKEN` and `PROJECT_TOKEN` (to read the board). Otherwise auto-start posts one comment asking for a Size; it starts once a `size:*` label (or Size) is set. XL never starts: split it.
 - **Off switch:** set `AUTO_SPAWN` to anything but `on`, or add `hold` to one issue. `--dry-run` logs what it would start.
 - **Setup errors:** with `AUTO_SPAWN` on and a `ROUTINE_*` secret missing, the board still syncs but auto-start is skipped and the run goes red.
 
@@ -142,7 +142,7 @@ So agents move cards by hand only:
 
 **Release issues** (label `release`) are the exception to the Status definitions above. Each one stands in for its milestone (milestones can't be cards) and moves with the milestone, not with assignees or closing PRs; see **Milestone release** in `docs/agents/releasing.md`. They have Area `infra` and no Priority or Size (they're trackers, not work), and no `ready-for-agent`, so they never go to *Ready*. The **Releases** view (filter `label:release`) shows them with their Status and Milestone. The other views include them.
 
-**Token:** the repo's `gh` login is a fine-grained token scoped to this repo, and fine-grained tokens can't edit user-owned Projects. Board edits need a classic token with `project` and `repo` scopes, passed only for that call via `GH_TOKEN`. Never print or commit it. If you don't have one, ask the human; don't skip the board update silently. Status moves don't need it any more (*Board sync* does them); setting Area, Priority and Size on new issues still does. Where each environment gets it: `docs/agents/tooling.md` → **Environments**.
+**Token:** the repo's `gh` login is a fine-grained token scoped to this repo, and fine-grained tokens can't edit user-owned Projects. Board edits need a classic token with `project` and `repo` scopes, passed only for that call via `GH_TOKEN`. Never print or commit it. If you don't have one, ask the human; don't skip the board update silently. Agents don't need it any more: *Board sync* moves Status and copies Area, Priority and Size from labels, so agents set labels instead (**Other fields** above). The commands below are for fixing the board by hand. Where each environment gets it: `docs/agents/tooling.md` → **Environments**.
 
 ```sh
 # with GH_TOKEN set to the classic token
