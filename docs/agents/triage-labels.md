@@ -13,3 +13,5 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 Edit the "Label in our tracker" column to match whatever vocabulary you actually use.
+
+Outside the triage roles, `needs-you` marks a PR the PR steward couldn't finish (stuck after 3 rounds). It and `needs-info` both push to the maintainer's phone; see **Hand-off** in `docs/agents/issue-tracker.md`.

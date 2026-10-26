@@ -7,13 +7,13 @@ const TO = { x: 100, y: 50 };
 describe('createTracers', () => {
   it('shows a new tracer fully opaque, from the tower to the target', () => {
     const tracers = createTracers(80);
-    tracers.add(FROM, TO);
-    expect(tracers.active()).toEqual([{ from: FROM, to: TO, alpha: 1 }]);
+    tracers.add(FROM, TO, 'rifleNest');
+    expect(tracers.active()).toEqual([{ from: FROM, to: TO, kind: 'rifleNest', alpha: 1 }]);
   });
 
   it('fades a tracer linearly over the fade time', () => {
     const tracers = createTracers(80);
-    tracers.add(FROM, TO);
+    tracers.add(FROM, TO, 'rifleNest');
     tracers.advance(20);
     expect(tracers.active()[0]?.alpha).toBeCloseTo(0.75);
     tracers.advance(40);
@@ -22,23 +22,23 @@ describe('createTracers', () => {
 
   it('drops a tracer once it has faded out', () => {
     const tracers = createTracers(80);
-    tracers.add(FROM, TO);
+    tracers.add(FROM, TO, 'rifleNest');
     tracers.advance(80);
     expect(tracers.active()).toEqual([]);
   });
 
   it('fades several tracers independently', () => {
     const tracers = createTracers(80);
-    tracers.add(FROM, TO);
+    tracers.add(FROM, TO, 'rifleNest');
     tracers.advance(60);
-    tracers.add(TO, FROM);
+    tracers.add(TO, FROM, 'rifleNest');
     tracers.advance(40);
-    expect(tracers.active()).toEqual([{ from: TO, to: FROM, alpha: 0.5 }]);
+    expect(tracers.active()).toEqual([{ from: TO, to: FROM, kind: 'rifleNest', alpha: 0.5 }]);
   });
 
   it('never shows a tracer with no fade time, for ?anim=0', () => {
     const tracers = createTracers(0);
-    tracers.add(FROM, TO);
+    tracers.add(FROM, TO, 'rifleNest');
     expect(tracers.active()).toEqual([]);
   });
 });

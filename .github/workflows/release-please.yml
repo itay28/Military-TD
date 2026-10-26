@@ -73,3 +73,26 @@ jobs:
           TAG: ${{ needs.release-please.outputs.tag_name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/release-board.ts release "$TAG"
+
+  # Pushes the new release to the maintainer's phone through ntfy (#169). A
+  # separate job, so a missing NTFY_TOPIC secret never holds up the deploy.
+  # Logic and tests: scripts/notify.ts.
+  notify:
+    name: notify
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Push the release to ntfy
+        env:
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node scripts/notify.ts release "$TAG"

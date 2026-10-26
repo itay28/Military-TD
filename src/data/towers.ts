@@ -12,6 +12,7 @@ export const TOWER_STATS = {
     targets: ['ground'],
     shell: { flightMs: 1000, innerRadius: 0.6, outerRadius: 1.25 },
   },
+  cannon: { cost: 100, range: 3, fireRate: 0.5, damage: 60, armorPierce: 5, targets: ['ground'] },
 } as const satisfies Record<string, TowerStats>;
 
 export type TowerKind = keyof typeof TOWER_STATS;
