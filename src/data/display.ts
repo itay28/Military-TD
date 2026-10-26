@@ -20,6 +20,7 @@ export const MAP_STYLE = {
 export const ENEMY_STYLE = {
   infantry: { shape: 'circle', radius: 9, color: 0x9e3b2c }, // brick red
   jeep: { shape: 'square', radius: 7, color: 0x6b7d3a }, // olive drab
+  tank: { shape: 'circle', radius: 14, color: 0x4a5d3a }, // dark olive drab
   helicopter: { shape: 'circle', radius: 11, color: 0x3f6f8f, rotor: 12 }, // steel blue, X rotor reaching 12 px along each axis
 } as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number; rotor?: number }>;
 
@@ -87,6 +88,9 @@ export const TRACER_STYLE = {
   rifleNest: { color: 0xffe9a0, width: 2 },
   cannon: { color: 0xffb347, width: 4 },
 } as const satisfies Record<TowerKind, { color: number; width: number }>;
+
+/** A shell in flight (a dot) and its blast when it lands (a circle at the outer ring, fading over `blastFadeMs`). */
+export const SHELL = { color: 0xd9d9d9, radius: 4, blastColor: 0xff8a3d, blastWidth: 2, blastFadeMs: 300 } as const;
 
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;

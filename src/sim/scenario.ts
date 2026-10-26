@@ -86,6 +86,8 @@ export interface ScenarioResult {
 const GAME_EVENT_TYPES = Object.keys({
   enemyLeaked: true,
   towerFired: true,
+  shellFired: true,
+  shellLanded: true,
   enemyKilled: true,
   waveStarted: true,
   waveCleared: true,
