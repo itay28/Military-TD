@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
-import { graphql } from './board-sync.ts';
+import { currentMilestone, graphql } from './board-sync.ts';
 
 // The PR steward (docs/agents/issue-tracker.md → PR steward, ADR-0008): run by
 // .github/workflows/pr-steward.yml after CI and the CI review, on PR comments and reviews, on a
@@ -41,7 +41,31 @@ export interface PrComment {
 
 export interface Check {
   readonly name: string;
-  readonly state: 'pending' | 'success' | 'failure';
+  readonly state: 'pending' | 'success' | 'failure' | 'cancelled';
+  /** When a check run finished (ISO time); orders re-runs of the same check. */
+  readonly completedAt?: string;
+}
+
+export interface MilestoneRef {
+  readonly number: number;
+  readonly title: string;
+}
+
+/**
+ * One result per check name (#179): a re-triggered check leaves its older run on the commit, often
+ * cancelled. A check is pending while any run is; otherwise its latest finished run counts, skipping
+ * cancelled runs when another run finished. A check whose runs were all cancelled counts as failing.
+ */
+export function currentChecks(checks: readonly Check[]): { name: string; state: 'pending' | 'success' | 'failure' }[] {
+  const byName = new Map<string, Check[]>();
+  for (const c of checks) byName.set(c.name, [...(byName.get(c.name) ?? []), c]);
+  return [...byName].map(([name, runs]) => {
+    if (runs.some((r) => r.state === 'pending')) return { name, state: 'pending' as const };
+    const latest = runs
+      .filter((r) => r.state !== 'cancelled')
+      .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))[0];
+    return { name, state: latest ? (latest.state as 'success' | 'failure') : ('failure' as const) };
+  });
 }
 
 /** An open PR, with what the steward reads. */
@@ -62,7 +86,12 @@ export interface StewardPr {
   readonly checks: readonly Check[];
   readonly unresolvedThreads: number;
   /** The issues it closes: still blocked by open issues, or waiting on an answer (`needs-info`). */
-  readonly closes: readonly { readonly number: number; readonly blocked: boolean; readonly needsInfo: boolean }[];
+  readonly closes: readonly {
+    readonly number: number;
+    readonly blocked: boolean;
+    readonly needsInfo: boolean;
+    readonly milestone?: MilestoneRef | null;
+  }[];
   /** Conversation comments, oldest first. */
   readonly comments: readonly PrComment[];
 }
@@ -95,14 +124,20 @@ const isMaintainer = (c: PrComment) =>
  * maintainer hasn't answered; wait while mergeability is unknown or a round is in flight; fire a
  * round for a conflict, a failed check, an unanswered CI review or maintainer comment, or
  * unresolved threads (hand off as stuck after MAX_ROUNDS); update a PR that is only behind; wait
- * for running checks and the CI review; then merge, if it targets the default branch and no issue it
- * closes is blocked or waiting on an answer.
+ * for running checks and the CI review; then merge, if it targets the default branch, no issue it
+ * closes is blocked or waiting on an answer, and none is in a later milestone than `current` (#180).
  */
-export function decide(pr: StewardPr, now: Date, defaultBranch = 'main'): Decision {
+export function decide(
+  pr: StewardPr,
+  now: Date,
+  defaultBranch = 'main',
+  current: MilestoneRef | null = null,
+): Decision {
   if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.fork) return { kind: 'skip', why: 'fork' };
   if (pr.labels.includes(HOLD_LABEL)) return { kind: 'skip', why: HOLD_LABEL };
   if (pr.head.startsWith(RELEASE_BRANCH)) return decideRelease(pr);
+  const checks = currentChecks(pr.checks);
 
   // The time of the latest comment matching `test`, or 0.
   const last = (test: (c: PrComment) => boolean) =>
@@ -122,11 +157,11 @@ export function decide(pr: StewardPr, now: Date, defaultBranch = 'main'): Decisi
   if (lastRound > lastDone && now.getTime() - lastRound < ROUND_TIMEOUT_MS)
     return { kind: 'wait', why: 'a steward round is in flight' };
 
-  const relevant = pr.checks.filter((c) => !IGNORED_CHECKS.includes(c.name));
+  const relevant = checks.filter((c) => !IGNORED_CHECKS.includes(c.name));
   const conflict = pr.mergeable === 'CONFLICTING';
   const pending =
     relevant.some((c) => c.state === 'pending') ||
-    pr.checks.some((c) => c.name === 'claude-review' && c.state === 'pending');
+    checks.some((c) => c.name === 'claude-review' && c.state === 'pending');
   // Running checks may still fail or post a review: wait so one round handles it all, unless
   // there's a conflict, which no check result changes.
   if (pending && !conflict) return { kind: 'wait', why: 'checks are running' };
@@ -156,6 +191,13 @@ export function decide(pr: StewardPr, now: Date, defaultBranch = 'main'): Decisi
         ? `#${held.number} is still blocked by open issues`
         : `#${held.number} has an open question (needs-info)`,
     };
+  // Look-ahead work (auto-start's next milestone) merges only once the current milestone has shipped.
+  const ahead = current && pr.closes.find((i) => i.milestone && i.milestone.number !== current.number);
+  if (ahead && current)
+    return {
+      kind: 'wait',
+      why: `#${ahead.number} is in ${ahead.milestone!.title}: merges after ${current.title} ships`,
+    };
   return { kind: 'merge' };
 }
 
@@ -164,7 +206,7 @@ export function decide(pr: StewardPr, now: Date, defaultBranch = 'main'): Decisi
  * (some must have run), it's brought up to date when behind, and otherwise it waits.
  */
 function decideRelease(pr: StewardPr): Decision {
-  const relevant = pr.checks.filter((c) => !IGNORED_CHECKS.includes(c.name));
+  const relevant = currentChecks(pr.checks).filter((c) => !IGNORED_CHECKS.includes(c.name));
   if (pr.mergeable !== 'MERGEABLE')
     return { kind: 'wait', why: 'release PR: waiting for release-please to refresh it' };
   if (!relevant.length) return { kind: 'wait', why: 'release PR: no checks ran on it' };
@@ -281,6 +323,7 @@ export function settingsFromEnv(env: Readonly<Record<string, string | undefined>
 const PR_QUERY = `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     defaultBranchRef { name }
+    milestones(states: OPEN, first: 50) { nodes { number title dueOn } }
     pullRequests(states: OPEN, first: 50) {
       totalCount
       nodes {
@@ -288,7 +331,7 @@ const PR_QUERY = `query($owner: String!, $name: String!) {
         labels(first: 20) { nodes { name } }
         reviewThreads(first: 100) { nodes { isResolved } }
         closingIssuesReferences(first: 10) {
-          nodes { number labels(first: 20) { nodes { name } } issueDependenciesSummary { blockedBy } }
+          nodes { number labels(first: 20) { nodes { name } } issueDependenciesSummary { blockedBy } milestone { number title } }
         }
         comments(last: 100) { nodes { author { login __typename } authorAssociation body createdAt } }
         commits(last: 1) {
@@ -298,7 +341,7 @@ const PR_QUERY = `query($owner: String!, $name: String!) {
                 contexts(first: 100) {
                   nodes {
                     __typename
-                    ... on CheckRun { name status conclusion }
+                    ... on CheckRun { name status conclusion completedAt }
                     ... on StatusContext { context state }
                   }
                 }
@@ -316,6 +359,7 @@ interface ContextNode {
   name?: string;
   status?: string;
   conclusion?: string | null;
+  completedAt?: string | null;
   context?: string;
   state?: string;
 }
@@ -338,6 +382,7 @@ interface PrNode {
       number: number;
       labels: { nodes: { name: string }[] };
       issueDependenciesSummary: { blockedBy: number } | null;
+      milestone: MilestoneRef | null;
     }[];
   };
   comments: {
@@ -352,14 +397,19 @@ interface PrNode {
 }
 
 interface PrData {
-  repository: { defaultBranchRef: { name: string }; pullRequests: { totalCount: number; nodes: PrNode[] } };
+  repository: {
+    defaultBranchRef: { name: string };
+    milestones: { nodes: { number: number; title: string; dueOn: string | null }[] };
+    pullRequests: { totalCount: number; nodes: PrNode[] };
+  };
 }
 
 function toCheck(node: ContextNode): Check {
   if (node.__typename === 'CheckRun') {
     if (node.status !== 'COMPLETED') return { name: node.name ?? '', state: 'pending' };
     const passed = ['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(node.conclusion ?? '');
-    return { name: node.name ?? '', state: passed ? 'success' : 'failure' };
+    const state = node.conclusion === 'CANCELLED' ? 'cancelled' : passed ? 'success' : 'failure';
+    return { name: node.name ?? '', state, ...(node.completedAt ? { completedAt: node.completedAt } : {}) };
   }
   const state =
     node.state === 'SUCCESS'
@@ -389,6 +439,7 @@ export function toStewardPr(node: PrNode): StewardPr {
       number: i.number,
       blocked: (i.issueDependenciesSummary?.blockedBy ?? 0) > 0,
       needsInfo: i.labels.nodes.some((l) => l.name === 'needs-info'),
+      milestone: i.milestone,
     })),
     comments: node.comments.nodes.map((c) => ({
       author: c.author?.login ?? '',
@@ -407,8 +458,15 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
     console.log(`::warning::${totalCount} open PRs, only the first ${nodes.length} were read. Paginate PR_QUERY.`);
   const now = new Date();
   const failures: string[] = [];
+  const currentNumber = currentMilestone(repository.milestones.nodes);
+  const current = repository.milestones.nodes.find((m) => m.number === currentNumber) ?? null;
   for (const pr of nodes.map(toStewardPr)) {
-    const decision = decide(pr, now, repository.defaultBranchRef.name);
+    const decision = decide(
+      pr,
+      now,
+      repository.defaultBranchRef.name,
+      current && { number: current.number, title: current.title },
+    );
     const switchedOff = !switchedOn(decision.kind, settings);
     const detail =
       decision.kind === 'skip' || decision.kind === 'wait'
