@@ -9,7 +9,7 @@ import {
   ROTOR,
   TILE_PX,
   TOWER_STYLE,
-  TRACER,
+  TRACER_STYLE,
 } from '../data/display';
 import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
@@ -67,7 +67,18 @@ describe('drawEnemy', () => {
     ]);
   });
 
-  it('draws a full HP bar centered above the circle at max HP', () => {
+  it('draws a Jeep as a square in its own color', () => {
+    const { painter, calls } = recordingPainter();
+    const { radius: r, color: c } = ENEMY_STYLE.jeep;
+    drawEnemy(painter, { ...infantry(20), ...ENEMY_STATS.jeep, kind: 'jeep', hp: 20 });
+    expect(calls.slice(0, 2)).toEqual([
+      ['fillStyle', c],
+      ['fillRect', -r, -r, r * 2, r * 2],
+    ]);
+    expect(c).not.toBe(color);
+  });
+
+  it('draws a full HP bar centered above the shape at max HP', () => {
     const { painter, calls } = recordingPainter();
     drawEnemy(painter, infantry(30));
     expect(calls.slice(2)).toEqual([
@@ -186,18 +197,23 @@ describe('drawRangeRing', () => {
 });
 
 describe('drawTracers', () => {
-  it('draws one line per tracer, at its alpha', () => {
+  it("draws one line per tracer in its tower's style, at its alpha", () => {
     const { painter, calls } = recordingPainter();
     drawTracers(painter, [
-      { from: { x: 0, y: 0 }, to: { x: 10, y: 20 }, alpha: 1 },
-      { from: { x: 5, y: 5 }, to: { x: 6, y: 7 }, alpha: 0.5 },
+      { from: { x: 0, y: 0 }, to: { x: 10, y: 20 }, kind: 'rifleNest', alpha: 1 },
+      { from: { x: 5, y: 5 }, to: { x: 6, y: 7 }, kind: 'cannon', alpha: 0.5 },
     ]);
+    const { rifleNest, cannon } = TRACER_STYLE;
     expect(calls).toEqual([
-      ['lineStyle', TRACER.width, TRACER.color, 1],
+      ['lineStyle', rifleNest.width, rifleNest.color, 1],
       ['lineBetween', 0, 0, 10, 20],
-      ['lineStyle', TRACER.width, TRACER.color, 0.5],
+      ['lineStyle', cannon.width, cannon.color, 0.5],
       ['lineBetween', 5, 5, 6, 7],
     ]);
+  });
+
+  it("a Cannon's tracer is heavier than a Rifle Nest's", () => {
+    expect(TRACER_STYLE.cannon.width).toBeGreaterThan(TRACER_STYLE.rifleNest.width);
   });
 });
 

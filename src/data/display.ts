@@ -16,11 +16,12 @@ export const MAP_STYLE = {
   grid: { color: 0x000000, alpha: 0.15, width: 1 },
 } as const;
 
-/** Enemies as circles, by kind (before the v0.4 sprites). Radius in pixels. */
+/** Enemies as filled shapes, by kind (before the v0.4 sprites). Radius in pixels: a circle's radius, or half a square's side. */
 export const ENEMY_STYLE = {
-  infantry: { radius: 9, color: 0x9e3b2c }, // brick red
-  helicopter: { radius: 11, color: 0x3f6f8f, rotor: 12 }, // steel blue, X rotor reaching 12 px along each axis
-} as const satisfies Record<EnemyKind, { radius: number; color: number; rotor?: number }>;
+  infantry: { shape: 'circle', radius: 9, color: 0x9e3b2c }, // brick red
+  jeep: { shape: 'square', radius: 7, color: 0x6b7d3a }, // olive drab
+  helicopter: { shape: 'circle', radius: 11, color: 0x3f6f8f, rotor: 12 }, // steel blue, X rotor reaching 12 px along each axis
+} as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number; rotor?: number }>;
 
 /** The X drawn over a rotor kind. */
 export const ROTOR = { color: 0xe5e1cf, width: 2 } as const;
@@ -28,12 +29,13 @@ export const ROTOR = { color: 0xe5e1cf, width: 2 } as const;
 /** The shadow under an air enemy, offset in pixels so it reads as flying. */
 export const AIR_SHADOW = { offsetX: 4, offsetY: 10, color: 0x000000, alpha: 0.3 } as const;
 
-/** The HP bar above each enemy. `gap` is the space between the bar and the top of the circle. */
+/** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
 
 /** Towers as outlined shapes, by kind. Size (side or diameter) in pixels, less than a tile so the grid shows around it. */
 export const TOWER_STYLE = {
   rifleNest: { shape: 'square', size: 32, fill: 0x3b4252, outline: 0xe5e1cf, outlineWidth: 2 }, // slate, bone outline
+  cannon: { shape: 'square', size: 36, fill: 0x6b4f2a, outline: 0xf0b429, outlineWidth: 3 }, // bronze, amber outline
   aaGun: { shape: 'circle', size: 30, fill: 0x8a5a2b, outline: 0xe5e1cf, outlineWidth: 2 }, // rust brown circle, bone outline
 } as const satisfies Record<
   TowerKind,
@@ -82,7 +84,14 @@ export const PLACEMENT_REFUSAL_TEXT = {
 } as const satisfies Record<PlaceTowerRefusal, string>;
 
 /** The line drawn for each hit, from the tower to the target. */
-export const TRACER = { color: 0xffe9a0, width: 2, fadeMs: 80 } as const;
+export const TRACER = { fadeMs: 80 } as const;
+
+/** Tracer line by tower kind: heavier for heavier guns. Width in pixels. */
+export const TRACER_STYLE = {
+  rifleNest: { color: 0xffe9a0, width: 2 },
+  cannon: { color: 0xffb347, width: 4 },
+  aaGun: { color: 0xffd27a, width: 1 },
+} as const satisfies Record<TowerKind, { color: number; width: number }>;
 
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;

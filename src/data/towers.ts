@@ -4,6 +4,7 @@ import type { TowerStats } from '../sim/towers';
 export const TOWER_STATS = {
   rifleNest: { cost: 50, range: 2.5, fireRate: 2, damage: 10, targets: ['ground', 'air'] },
   aaGun: { cost: 75, range: 3, fireRate: 4, damage: 8, targets: ['air', 'ground'] },
+  cannon: { cost: 100, range: 3, fireRate: 0.5, damage: 60, armorPierce: 5, targets: ['ground'] },
 } as const satisfies Record<string, TowerStats>;
 
 export type TowerKind = keyof typeof TOWER_STATS;

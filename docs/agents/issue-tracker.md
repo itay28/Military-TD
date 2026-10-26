@@ -76,18 +76,60 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 - Item closed, PR merged → *Done*.
 - *Pull request linked to issue* is **off on purpose**: it moves the card when a draft PR is opened, which is too early. No built-in workflow fires on "ready for review".
 
-**Board sync** (`.github/workflows/board-sync.yml` → `scripts/board-sync.ts`): a GitHub Action, so it works the same whether a session runs locally, over Remote Control, in the cloud, or the change comes from the GitHub UI. It runs on every PR open/edit/ready/draft/close, on issue assign/reopen, every 6 hours, and on demand (Actions → *Board sync* → Run workflow). Each run reconciles every open issue on the board:
+**Board sync** (`.github/workflows/board-sync.yml` → `scripts/board-sync.ts`): a GitHub Action, so it works the same whether a session runs locally, over Remote Control, in the cloud, or the change comes from the GitHub UI. It runs on every PR open/edit/ready/draft/close, on issue assign/reopen/close/label/milestone changes, every 6 hours (which also catches "blocked by" edits, which have no event), and on demand (Actions → *Board sync* → Run workflow). Each run reconciles every open issue on the board:
 
 | The issue has | Card goes to |
 | --- | --- |
 | an open PR ready for review, or a stacked PR merged into its parent branch | *In review* |
 | only draft PRs, or no PR but an assignee | *In progress* |
-| no PR, no assignee | stays where it is |
+| no PR, no assignee, card in *Backlog*/*Ready*/none: current milestone + `ready-for-agent` + no open blockers | *Ready* |
+| the same, when any of those three doesn't hold | *Backlog* |
+| no PR, no assignee, card *In progress*/*In review* | stays where it is |
 
-"Closes" means GitHub's link **or** `Closes/Fixes/Resolves #n` in the PR body: GitHub only links PRs that target `main`, so stacked PRs rely on the body. *Done* cards and release issues are never touched. It uses the `PROJECT_TOKEN` secret; a missing token or an API error fails the run, so a board that isn't syncing shows up red. Check by hand: `PROJECT_TOKEN=… node scripts/board-sync.ts --dry-run`.
+The current milestone is the open one with the earliest due date, else the lowest version.
+
+"Closes" means GitHub's link **or** `Closes/Fixes/Resolves #n` in the PR body: GitHub only links PRs that target `main`, so stacked PRs rely on the body. *Done* cards and trackers (release issues, epics) are never touched. It uses the `PROJECT_TOKEN` secret; a missing token or an API error fails the run, so a board that isn't syncing shows up red. Check by hand: `PROJECT_TOKEN=… node scripts/board-sync.ts --dry-run`.
+
+**Auto-start** (`scripts/auto-start.ts`, ADR-0008): when the repo variable `AUTO_SPAWN` is `on`, each *Board sync* run then starts cloud agents:
+- **Startable:** no PR, no assignee, `ready-for-agent`, no `hold` label, not a tracker, Size XS–L, no open blockers. In the current milestone that's the *Ready* column. With `AUTO_STACK` set to `on`, an issue whose open blockers are all closed by open PRs on one chain of branches (the stack-next rule) is startable too, based on the chain's tip branch.
+- **Order and cap:** Priority (P0 first, none last), then issue number; at most 5 `auto-agent` issues *In progress*. When the current milestone has nothing startable, the next milestone's issues are used.
+- **Claim, then fire:** assign `itay28`, add `auto-agent`, then fire the implement scheduled task (XS/S → `ROUTINE_SONNET_*`, M/L → `ROUTINE_OPUS_*`) with the issue number and base branch. If the fire fails, the claim is undone and the run goes red. The task follows `docs/agents/prompts/implement.md`.
+- **No Size:** one comment on the issue asking for one; it starts once Size is set. XL never starts: split it.
+- **Off switch:** set `AUTO_SPAWN` to anything but `on`, or add `hold` to one issue. `--dry-run` logs what it would start.
+- **Setup errors:** with `AUTO_SPAWN` on and a `ROUTINE_*` secret missing, the board still syncs but auto-start is skipped and the run goes red.
+
+**Auto-start setup** (maintainer, once, in the browser). The two scheduled tasks `implement-sonnet` (model Sonnet) and `implement-opus` (model Opus) already exist at [claude.ai/code/routines](https://claude.ai/code/routines), disabled. Their prompt is: *Read `docs/agents/prompts/implement.md` in the itay28/Military-TD repository and follow it. The issue number and base branch to use are in the `<routine-fire-payload>` block of this message; act on them.* For each one:
+1. **Edit**: under Repository, add `itay28/Military-TD`; keep your usual cloud environment; add the GitHub connector if your account has one.
+2. **Trigger → + → API**: copy the **Fire URL**, click **Generate token**, and copy the token (shown once).
+3. In GitHub → Settings → Secrets and variables → Actions → **Secrets**, add `ROUTINE_SONNET_URL` / `ROUTINE_SONNET_TOKEN` (or `ROUTINE_OPUS_…`) with those two values. The token can only start that one task: it has no GitHub or account access. Claims and comments use the existing `PROJECT_TOKEN`.
+4. Turn the task on.
+
+Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), and check with Actions → *Board sync* → Run workflow; the log's auto-start lines say what started. Each start opens a session in the task's **History**.
+
+**PR steward** (`.github/workflows/pr-steward.yml` → `scripts/pr-steward.ts`, ADR-0008): gets each PR to merged. It runs after CI and the CI review finish, on every PR comment and review, on each push to `main`, every 6 hours and on demand, and looks at every open PR:
+
+| The PR | Steward does |
+| --- | --- |
+| draft, from a fork, labelled `hold`, or `needs-you` with no maintainer comment since the hand-off | nothing |
+| mergeability still computing, a round in flight (no done marker yet, under 3 h old), or checks running (CI, CI review) | waits |
+| a conflict, a failing check, a CI review or maintainer comment newer than the last done marker, or unresolved review threads | fires a **round** of the `pr-steward` task, which fixes what it can and ends with a `<!-- pr-steward:done -->` comment |
+| the same, after 3 rounds since the latest maintainer comment | hands off: `needs-you` label + a summary comment |
+| only behind its base | merges the base in itself (no agent, not a round) |
+| no CI review comment yet | waits (add `review-again` to request one) |
+| closes an issue that is still blocked by open issues, or labelled `needs-info` | waits |
+| green, review answered, threads resolved, targets `main` | squash-merges it with the PR title (+ ` (#n)`) and body; if GitHub refuses, hands off |
+| release-please's release PR | no rounds and no review needed: merges once its checks are green (merging publishes the release, and the release push tells you) |
+
+- Stacked PRs are stewarded but merged only once GitHub retargets them to `main` (after their parent merges).
+- Checks that don't test the code are ignored: `board-sync`, `release-issue`, and `claude-review` (the review counts by its comment).
+- State lives in comments on the PR: `<!-- pr-steward:round -->` (round fired, with the session link), `<!-- pr-steward:done -->` (round finished), `<!-- pr-steward:stuck -->` (handed off). A **maintainer comment** is one by the owner or a collaborator without a marker and without the *Generated by Claude Code* footer. Agents post as the maintainer's identity, so they must sign with the footer. A maintainer comment gives the PR 3 fresh rounds and takes a handed-off PR back.
+- **Switches** (repo variables, off unless `on`): `AUTO_STEWARD` fires rounds, updates branches and hands off; `AUTO_MERGE` merges. Off, each run only logs what it would do. `hold` keeps one PR out.
+- The implement agent stops once its PR is ready; the CI review is the steward's first round.
+- Check by hand: `PROJECT_TOKEN=… node scripts/pr-steward.ts --dry-run`.
+
+**PR steward setup** (maintainer, once). The scheduled task `pr-steward` (model Sonnet) exists at [claude.ai/code/routines](https://claude.ai/code/routines), disabled, with the prompt *Read `docs/agents/prompts/pr-steward.md` in the itay28/Military-TD repository and follow it. The PR number and reasons are in the `<routine-fire-payload>` block of this message; act on them.* As for the implement tasks: add the repository (and the GitHub connector), add an **API** trigger, and save its Fire URL and token as the secrets `ROUTINE_STEWARD_URL` and `ROUTINE_STEWARD_TOKEN`. Turn the task on, then set `AUTO_STEWARD` = `on`, and `AUTO_MERGE` = `on` when you want merging. `main`'s branch protection must not require an approving review, or every merge is refused and handed off.
 
 So agents move cards by hand only:
-- **Unblocked** issue: Backlog → *Ready* (`/workflow:promote-ready`).
 - **Release issues**: only if a run warned or failed. Every move is a GitHub Action (see **Milestone release** in `docs/agents/releasing.md`).
 - To fix a card when a *Board sync* run failed; or re-run it.
 
@@ -104,6 +146,27 @@ gh project item-edit --project-id <project-id> --id <item-id> \
 ```
 
 `gh project view 4 --owner itay28 --format json` gives the project id.
+
+## Hand-off
+
+The maintainer isn't watching the board. They get an [ntfy](https://ntfy.sh) phone push when they're needed, and the **Needs you** board view (filter `label:needs-you,needs-info`) lists what's waiting on them.
+
+| Push | When | Clicks through to |
+| --- | --- | --- |
+| *Military-TD vX.Y.Z released*, with the changelog link | release-please publishes a release (`notify` job in `release-please.yml`) | the GitHub Release |
+| *PR #n is stuck*, with the steward's summary | a PR gets `needs-you`: the PR steward gave up after 3 rounds | the PR |
+| *Question on #n*, with the issue title | an issue gets `needs-info`: an agent asked a question (`docs/agents/prompts/implement.md`) | the issue |
+
+- **Labels:** `needs-you` goes on a stuck PR, `needs-info` on an issue with an open question. Removing the label takes the item out of the view. `hold` on the item means no push.
+- **Steward summary:** the PR steward posts its summary as a PR comment that starts with `<!-- pr-steward:stuck -->`, then adds `needs-you`. The push carries the latest such comment, or the PR title when there's none.
+- **How:** `.github/workflows/notify.yml` runs on those labels; logic and tests in `scripts/notify.ts`. Labels added with `GITHUB_TOKEN` don't start workflows, so an Action that labels that way runs `node scripts/notify.ts pr <n>` (or `issue <n>`) itself. A missing `NTFY_TOPIC` secret or an ntfy error fails the run.
+
+**Hand-off setup** (maintainer, once):
+1. Pick a long random topic name (it's the only secret: anyone who knows it can read and send), e.g. `openssl rand -hex 16` → `mtd-<hex>`.
+2. GitHub → Settings → Secrets and variables → Actions → **Secrets**: add `NTFY_TOPIC` with that name.
+3. Install the ntfy app (Android or iOS), tap **+**, and subscribe to that topic on `ntfy.sh`.
+4. Project board → **New view** (table) named **Needs you**, filter `label:needs-you,needs-info`.
+5. Check: Actions → *Notify* runs when you add `needs-info` to a test issue; the phone shows *Question on #n*.
 
 ## Wayfinding operations
 
