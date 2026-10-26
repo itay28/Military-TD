@@ -274,7 +274,8 @@ export function planRetries(issues: readonly RetryIssue[], now: number, idleMs =
     const model = meta?.[1];
     if (model !== 'sonnet' && model !== 'opus') continue;
     const times = [...i.comments.map((c) => c.createdAt), ...(i.pr?.activity ?? [])].map(Date.parse);
-    if (now - Math.max(...times) < idleMs) continue;
+    const idle = now - Math.max(...times);
+    if (Number.isNaN(idle) || idle < idleMs) continue;
     retries.push({ issue: i.number, base: meta![2]!, model, ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}) });
   }
   return retries;
@@ -307,7 +308,7 @@ export async function retryIssue(
       cause: error,
     });
   }
-  await github(fetchFn, token, 'POST', `issues/${retry.issue}/comments`, { body: firedComment(retry, sessionUrl) });
+  await postFiredMarker(retry, sessionUrl, token, fetchFn);
   return 'started';
 }
 
@@ -317,8 +318,8 @@ export const fireText = (start: Start) =>
 
 /**
  * Claim the issue (assign the maintainer, add `auto-agent`), then fire the implement task for its
- * model, and post the fired marker. The claim comes first so a second Board sync run can't start it again. If any step
- * fails, whatever part of the claim went through is undone, so the issue is startable next run.
+ * model, and post the fired marker. The claim comes first so a second Board sync run can't start it
+ * again. If any step fails, whatever part of the claim went through is undone, so the issue is startable next run.
  * A temporary fire refusal (classifyFireError) then returns `later`; anything else is rethrown
  * so the run goes red, and a setup error also hands the issue to the maintainer (`needs-you`).
  */
@@ -352,13 +353,22 @@ export async function startIssue(
       cause: error,
     });
   }
-  // The session is running, so a missing marker only means it can't be retried if it dies.
-  try {
-    await github(fetchFn, token, 'POST', `issues/${n}/comments`, { body: firedComment(start, sessionUrl) });
-  } catch (error) {
-    console.log(`::warning::#${n}: started, but posting the fired marker failed: ${String(error)}`);
-  }
+  await postFiredMarker(start, sessionUrl, token, fetchFn);
   return 'started';
+}
+
+/** The session is running, so a failed post only means a dead session can't be retried: warn, don't throw. */
+async function postFiredMarker(
+  start: Start,
+  sessionUrl: string | undefined,
+  token: string,
+  fetchFn: Fetch,
+): Promise<void> {
+  try {
+    await github(fetchFn, token, 'POST', `issues/${start.issue}/comments`, { body: firedComment(start, sessionUrl) });
+  } catch (error) {
+    console.log(`::warning::#${start.issue}: fired, but posting the fired marker failed: ${String(error)}`);
+  }
 }
 
 /** Tell the maintainer a fire was refused for a reason a retry won't fix: a comment, then `needs-you` (which pushes). */

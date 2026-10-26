@@ -484,6 +484,12 @@ describe('planRetries: which claimed issues are dead (#201)', () => {
   });
 });
 
+describe('planRetries: unparseable timestamps (#201)', () => {
+  it('does not retry an issue whose comment time fails to parse', () => {
+    expect(retried([claimed({ comments: [{ ...fired(61), createdAt: 'not a date' }] })])).toEqual([]);
+  });
+});
+
 describe('retryText (#201)', () => {
   it('adds Branch and PR lines only when they exist', () => {
     const plain = retryText({ issue: 7, base: 'main', model: 'opus' });
@@ -509,6 +515,13 @@ describe('retryIssue: fire again, keep the claim (#201)', () => {
     expect(text).toContain('PR: #40');
     const { body } = JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string };
     expect(body).toContain(FIRED_MARKER);
+  });
+
+  it('still reports the retry as started when posting the fired marker fails', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string) =>
+      url.startsWith('https://fire.example') ? ok() : new Response('boom', { status: 500 }),
+    );
+    await expect(retryIssue(retry, 'gh-token', routines, fetchFn)).resolves.toBe('started');
   });
 
   it('leaves it for a later run on a temporary refusal, posting nothing', async () => {
