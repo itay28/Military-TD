@@ -210,10 +210,11 @@ describe('decide: wait', () => {
     expect(kind(pr({ mergeable: 'UNKNOWN' }))).toBe('wait');
   });
 
-  it('waits while a round is in flight, and stops waiting once it is 3 hours old', () => {
+  it('waits while a round is in flight, and stops waiting once it is an hour old', () => {
     const red = { checks: [{ name: 'ci', state: 'failure' as const }] };
     expect(kind(pr({ ...red, comments: [action(ROUND_MARKER, 30)] }))).toBe('wait');
-    expect(kind(pr({ ...red, comments: [action(ROUND_MARKER, 200)] }))).toBe('steward');
+    // A round whose session died (e.g. a usage limit) never posts its done marker (#196).
+    expect(kind(pr({ ...red, comments: [action(ROUND_MARKER, 61)] }))).toBe('steward');
   });
 
   it('waits for the CI review before merging', () => {
