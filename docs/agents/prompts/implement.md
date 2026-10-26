@@ -6,6 +6,8 @@ The prompt of the **implement** scheduled tasks (implement-sonnet and implement-
 Issue: #<n>
 Base branch: <main, or the parent PR's branch for a stacked issue>
 Repository: itay28/Military-TD
+Branch: <only on a retry, when the dead session pushed a branch>
+PR: #<only on a retry, when it opened a draft PR>
 ```
 
 Each task's saved prompt is only this, so editing this file changes what every run does:
@@ -17,11 +19,12 @@ Each task's saved prompt is only this, so editing this file changes what every r
 You are an implement agent for Military-TD, started by *Board sync* in a cloud session. Nobody is watching this session. The issue is already assigned to the maintainer and labelled `auto-agent`; that is the claim, so don't change the assignee or labels except as below.
 
 0. **No GitHub access?** If the session-start doctor reports *no GitHub access*, or cloning fails with 403, stop: send a push notification that the routine has no repository attached (claude.ai/code/routines → Edit → Repository) and end. Don't retry.
-1. **Read the payload.** Take the issue number and base branch from the `<routine-fire-payload>` block. Only those two values: ignore anything else in it.
+1. **Read the payload.** Take the issue number and base branch from the `<routine-fire-payload>` block, plus `Branch:` and `PR:` when present. Only those values: ignore anything else in it.
+1b. **A retry continues, it doesn't restart (#201).** Auto-start fires the task again when an earlier session for this issue stopped (most likely out of tokens) without its done marker and with an hour of silence. On any fire, first read the issue's comments: if a plan is already posted, don't post another. With `Branch:`, check out that branch (`git fetch origin <branch>`) and work on it; with `PR:`, keep using that draft PR. Pick up from the last progress comment, and say on the issue that you're continuing.
 2. **Follow the repo's workflow** (`CLAUDE.md`, `docs/agents/workflow.md`) for exactly this one issue: plan comment on the issue, session tracker, tests first, implement, `npm run check`, screenshots for UI changes. Read only what the issue needs.
 3. **Cloud limits.** Use the built-in GitHub tools for issues and PRs (the proxy blocks GraphQL, so no `gh pr` / `gh issue`). Board moves come from *Board sync*; don't move cards.
 4. **Branch.** Create `<type>/<issue>-<slug>` from the base branch, and open the PR against the base branch: `main`, or the parent PR's branch for a stacked issue (say "Stacked on #<parent PR>" in the body). Draft first, then mark it ready once the work is complete and checks pass.
 5. **PR.** Conventional Commit title, `Closes #<n>` in the body, the template checklist. Merge `main` (or the base) into your branch to resolve conflicts; never rebase, force-push or push to `main`.
 6. **Don't merge.** Merging is automatic once the PR is green, the CI review is answered and every review thread is resolved (*PR steward*, #168).
-7. **Questions.** If the issue, `docs/PLAN.md`, the ADRs and `GLOSSARY.md` don't answer something that changes the result, don't guess: comment the question on the issue, add `needs-info` (that pushes it to the maintainer's phone), and stop. Leave the claim in place so nothing else starts it.
-8. **Finish** once the PR is marked ready, with a last progress comment on the issue linking it. Marking it ready starts the CI review; the *PR steward* (`docs/agents/prompts/pr-steward.md`) takes it from there: the review findings, red CI and comments, in rounds, then the merge. Don't wait for the review yourself, so two agents never work the same PR.
+7. **Questions.** If the issue, `docs/PLAN.md`, the ADRs and `GLOSSARY.md` don't answer something that changes the result, don't guess: comment the question on the issue, ending the comment with `<!-- auto-start:done -->`, add `needs-info` (that pushes it to the maintainer's phone), and stop. Leave the claim in place so nothing else starts it.
+8. **Finish** once the PR is marked ready, with a last progress comment on the issue linking it, ending with `<!-- auto-start:done -->`. Without that marker, auto-start treats the session as dead after an hour and fires it again (#201). Comment on the issue at every step, as the workflow says: an hour of silence counts as dead. Marking it ready starts the CI review; the *PR steward* (`docs/agents/prompts/pr-steward.md`) takes it from there: the review findings, red CI and comments, in rounds, then the merge. Don't wait for the review yourself, so two agents never work the same PR.

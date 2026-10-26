@@ -12,10 +12,18 @@ export const AUTO_AGENT_LABEL = 'auto-agent';
 export const HOLD_LABEL = 'hold';
 /** Hands an issue (or PR) to the maintainer; scripts/notify.ts pushes when it lands. */
 export const NEEDS_YOU_LABEL = 'needs-you';
+/** An agent's open question to the maintainer: an intentional stop, never retried (#201). */
+export const NEEDS_INFO_LABEL = 'needs-info';
 /** Starts the comment auto-start posts before labelling an issue `needs-you`; the push carries it. */
 export const HANDOFF_MARKER = '<!-- auto-start:stuck -->';
 /** Hidden in the no-Size comment, so it's posted once. */
 export const NO_SIZE_MARKER = '<!-- auto-start:no-size -->';
+/** Posted when auto-start fires an implement task, with the session link (#201). */
+export const FIRED_MARKER = '<!-- auto-start:fired -->';
+/** Posted by the implement agent when it ends: PR marked ready, or a `needs-info` question. */
+export const DONE_MARKER = '<!-- auto-start:done -->';
+/** A fired session this long without a done marker or any activity is dead, and fired again. */
+export const RETRY_IDLE_MS = 60 * 60 * 1000;
 /** At most this many `auto-agent` issues In progress at once (#165). */
 export const MAX_AGENTS = 5;
 const FIRE_BETA = 'experimental-cc-routine-2026-04-01';
@@ -220,13 +228,96 @@ export function classifyFireError(error: unknown): 'temporary' | 'setup' {
   return status === 429 || status >= 500 ? 'temporary' : 'setup';
 }
 
+/** An `auto-agent` issue as the retry check sees it (#201). */
+export interface RetryIssue {
+  readonly number: number;
+  readonly autoAgent: boolean;
+  readonly hold: boolean;
+  readonly needsYou: boolean;
+  readonly needsInfo: boolean;
+  /** Its latest comments, oldest first. */
+  readonly comments: readonly { readonly body: string; readonly createdAt: string }[];
+  /** The open PR that closes it, with the times of its latest commit and comment. */
+  readonly pr?: {
+    readonly number: number;
+    readonly head: string;
+    readonly draft: boolean;
+    readonly activity: readonly string[];
+  };
+}
+
+/** A dead implement session to fire again: the same model and base, continuing its branch and PR. */
+export interface Retry extends Start {
+  readonly branch?: string;
+  readonly pr?: number;
+}
+
+const FIRE_META = /<!-- auto-start:fire-meta model=(\S+) base=(\S+) -->/;
+
+/** The comment auto-start posts after a fire: the fired marker, plus the model and base for a retry. */
+export const firedComment = (start: Start, sessionUrl?: string) =>
+  `Auto-start fired the ${start.model} implement task${sessionUrl ? `: ${sessionUrl}` : ''}.\n\n` +
+  `${FIRED_MARKER}\n<!-- auto-start:fire-meta model=${start.model} base=${start.base} -->`;
+
+/**
+ * The implement sessions that died (#201): an `auto-agent` issue whose latest fired marker has no
+ * done marker after it, with no issue comment and no commit or comment on its PR for `idleMs`.
+ * Never `hold`, `needs-you`, `needs-info` (an intentional stop) or a ready PR (the steward's).
+ */
+export function planRetries(issues: readonly RetryIssue[], now: number, idleMs = RETRY_IDLE_MS): Retry[] {
+  const retries: Retry[] = [];
+  for (const i of issues) {
+    if (!i.autoAgent || i.hold || i.needsYou || i.needsInfo || (i.pr && !i.pr.draft)) continue;
+    const firedAt = i.comments.findLastIndex((c) => c.body.includes(FIRED_MARKER));
+    if (firedAt < 0 || i.comments.slice(firedAt).some((c) => c.body.includes(DONE_MARKER))) continue;
+    const meta = FIRE_META.exec(i.comments[firedAt]!.body);
+    const model = meta?.[1];
+    if (model !== 'sonnet' && model !== 'opus') continue;
+    const times = [...i.comments.map((c) => c.createdAt), ...(i.pr?.activity ?? [])].map(Date.parse);
+    if (now - Math.max(...times) < idleMs) continue;
+    retries.push({ issue: i.number, base: meta![2]!, model, ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}) });
+  }
+  return retries;
+}
+
+/** The fire `text` for a retry: `fireText` plus the branch and PR to continue, when they exist. */
+export const retryText = (retry: Retry) =>
+  fireText(retry) +
+  (retry.branch ? `\nBranch: ${retry.branch}` : '') +
+  (retry.pr === undefined ? '' : `\nPR: #${retry.pr}`);
+
+/**
+ * Fire a dead session's implement task again (#201). The claim stays as it is, and nothing counts
+ * the retry. A temporary refusal returns `later`; a setup error hands the issue to the maintainer
+ * (`needs-you`) and throws. A new fired marker restarts the 1 h clock.
+ */
+export async function retryIssue(
+  retry: Retry,
+  token: string,
+  routines: Routines,
+  fetchFn: Fetch = fetch,
+): Promise<'started' | 'later'> {
+  let sessionUrl: string | undefined;
+  try {
+    sessionUrl = await fireRoutine(routines[retry.model], retryText(retry), fetchFn);
+  } catch (error) {
+    if (classifyFireError(error) === 'temporary') return 'later';
+    await handOffIssue(retry.issue, retry.model, error, token, fetchFn);
+    throw new Error(`#${retry.issue}: retrying the ${retry.model} implement task failed: ${String(error)}`, {
+      cause: error,
+    });
+  }
+  await github(fetchFn, token, 'POST', `issues/${retry.issue}/comments`, { body: firedComment(retry, sessionUrl) });
+  return 'started';
+}
+
 /** The fire `text`: what the implement prompt (docs/agents/prompts/implement.md) reads. */
 export const fireText = (start: Start) =>
   `Issue: #${start.issue}\nBase branch: ${start.base}\nRepository: itay28/Military-TD`;
 
 /**
  * Claim the issue (assign the maintainer, add `auto-agent`), then fire the implement task for its
- * model. The claim comes first so a second Board sync run can't start it again. If any step
+ * model, and post the fired marker. The claim comes first so a second Board sync run can't start it again. If any step
  * fails, whatever part of the claim went through is undone, so the issue is startable next run.
  * A temporary fire refusal (classifyFireError) then returns `later`; anything else is rethrown
  * so the run goes red, and a setup error also hands the issue to the maintainer (`needs-you`).
@@ -240,12 +331,12 @@ export async function startIssue(
   const n = start.issue;
   const routine = routines[start.model];
   let firing = false;
+  let sessionUrl: string | undefined;
   try {
     await github(fetchFn, token, 'POST', `issues/${n}/assignees`, { assignees: [MAINTAINER] });
     await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [AUTO_AGENT_LABEL] });
     firing = true;
-    await fireRoutine(routine, fireText(start), fetchFn);
-    return 'started';
+    sessionUrl = await fireRoutine(routine, fireText(start), fetchFn);
   } catch (error) {
     // Undo whatever part of the claim went through; the original error is the one reported.
     const undo = await Promise.allSettled([
@@ -261,6 +352,13 @@ export async function startIssue(
       cause: error,
     });
   }
+  // The session is running, so a missing marker only means it can't be retried if it dies.
+  try {
+    await github(fetchFn, token, 'POST', `issues/${n}/comments`, { body: firedComment(start, sessionUrl) });
+  } catch (error) {
+    console.log(`::warning::#${n}: started, but posting the fired marker failed: ${String(error)}`);
+  }
+  return 'started';
 }
 
 /** Tell the maintainer a fire was refused for a reason a retry won't fix: a comment, then `needs-you` (which pushes). */

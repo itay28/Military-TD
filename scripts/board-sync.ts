@@ -4,10 +4,13 @@ import {
   commentNoSize,
   github,
   HOLD_LABEL,
+  NEEDS_INFO_LABEL,
   NEEDS_YOU_LABEL,
+  planRetries,
   planStarts,
+  retryIssue,
   startIssue,
-  type OpenPr,
+  type RetryIssue,
   type Routines,
   type StartIssue,
 } from './auto-start.ts';
@@ -313,7 +316,7 @@ interface BoardData {
   };
 }
 
-const PR_FIELDS = `nodes { isDraft state baseRefName headRefName body closingIssuesReferences(first: 20) { nodes { number } } }`;
+const PR_FIELDS = `nodes { number isDraft state baseRefName headRefName body closingIssuesReferences(first: 20) { nodes { number } } }`;
 
 // Open PRs, the latest merged ones (a stacked PR merged into its parent keeps its issue In review),
 // and the open milestones (for the Ready rule).
@@ -327,6 +330,7 @@ const PR_QUERY = `query($owner: String!, $name: String!) {
 }`;
 
 interface PrNode {
+  number: number;
   isDraft: boolean;
   state: PullRequest['state'];
   baseRefName: string;
@@ -351,6 +355,28 @@ const SET_FIELD = `mutation($project: ID!, $item: ID!, $field: ID!, $option: Str
   }
 }`;
 
+// What the retry check reads for one `auto-agent` issue (#201): its latest comments, and its PR's
+// latest commit and comment.
+const RETRY_QUERY = `query($owner: String!, $name: String!, $issue: Int!, $pr: Int!, $hasPr: Boolean!) {
+  repository(owner: $owner, name: $name) {
+    issue(number: $issue) { comments(last: 100) { nodes { body createdAt } } }
+    pullRequest(number: $pr) @include(if: $hasPr) {
+      comments(last: 1) { nodes { createdAt } }
+      commits(last: 1) { nodes { commit { committedDate } } }
+    }
+  }
+}`;
+
+interface RetryData {
+  repository: {
+    issue: { comments: { nodes: { body: string; createdAt: string }[] } } | null;
+    pullRequest?: {
+      comments: { nodes: { createdAt: string }[] };
+      commits: { nodes: { commit: { committedDate: string } }[] };
+    } | null;
+  };
+}
+
 /** What auto-start needs beyond a sync: off unless AUTO_SPAWN is `on`. */
 export interface AutoStart {
   readonly stack: boolean;
@@ -362,6 +388,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   const issues: BoardIssue[] = [];
   const startIssues: StartIssue[] = [];
   const labelled: LabelledItem[] = [];
+  const claimed: Omit<RetryIssue, 'comments' | 'pr'>[] = [];
   let project: BoardData['user']['projectV2'] | undefined;
   let cursor: string | null = null;
   do {
@@ -399,6 +426,14 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         priority: node.priority?.name,
         blockedBy: c.blockedBy?.nodes.filter((b) => b.state === 'OPEN').map((b) => b.number) ?? [],
       });
+      if (labels.includes(AUTO_AGENT_LABEL))
+        claimed.push({
+          number: c.number,
+          autoAgent: true,
+          hold: labels.includes(HOLD_LABEL),
+          needsYou: labels.includes(NEEDS_YOU_LABEL),
+          needsInfo: labels.includes(NEEDS_INFO_LABEL),
+        });
     }
     cursor = project.items.pageInfo.hasNextPage ? project.items.pageInfo.endCursor : null;
   } while (cursor);
@@ -408,16 +443,19 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     console.log(
       `::warning::${repository.open.totalCount} open PRs, only the first ${repository.open.nodes.length} were read; some cards may not move. Paginate PR_QUERY.`,
     );
-  const prs = [...repository.open.nodes, ...repository.merged.nodes].map((pr): PullRequest & { head: string } => ({
-    isDraft: pr.isDraft,
-    state: pr.state,
-    base: pr.baseRefName,
-    head: pr.headRefName,
-    issues: closingIssues(
-      pr.body,
-      pr.closingIssuesReferences.nodes.map((i) => i.number),
-    ),
-  }));
+  const prs = [...repository.open.nodes, ...repository.merged.nodes].map(
+    (pr): PullRequest & { head: string; number: number } => ({
+      number: pr.number,
+      isDraft: pr.isDraft,
+      state: pr.state,
+      base: pr.baseRefName,
+      head: pr.headRefName,
+      issues: closingIssues(
+        pr.body,
+        pr.closingIssuesReferences.nodes.map((i) => i.number),
+      ),
+    }),
+  );
 
   const defaultBranch = repository.defaultBranchRef.name;
   const order = milestoneOrder(repository.milestones.nodes);
@@ -467,7 +505,57 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   if (repository.open.totalCount > repository.open.nodes.length)
     throw new Error('Auto-start skipped: not every open PR was read (see the warning above). Paginate PR_QUERY.');
   const moved = new Map(moves.map((m) => [m.issue, m.to]));
-  const openPrs: OpenPr[] = prs.filter((pr) => pr.state === 'OPEN');
+  const openPrs = prs.filter((pr) => pr.state === 'OPEN');
+  // Try every fire and comment before failing the run, so one bad fire doesn't block the rest.
+  const failures: string[] = [];
+  // Each routine has its own fire limit; one that refused for now isn't fired again this run (#200).
+  const limited = new Set<string>();
+
+  // Dead implement sessions first (#201): fired again on their branch, keeping the claim and slot.
+  const retryIssues: RetryIssue[] = [];
+  for (const i of claimed) {
+    if (i.hold || i.needsYou || i.needsInfo) continue;
+    const pr = openPrs.find((p) => p.issues.includes(i.number));
+    if (pr && !pr.isDraft) continue;
+    const { repository: r } = await graphql<RetryData>(token, RETRY_QUERY, {
+      owner: OWNER,
+      name: REPO,
+      issue: i.number,
+      pr: pr?.number ?? 0,
+      hasPr: !!pr,
+    });
+    const activity = [
+      ...(r.pullRequest?.comments.nodes.map((c) => c.createdAt) ?? []),
+      ...(r.pullRequest?.commits.nodes.map((c) => c.commit.committedDate) ?? []),
+    ];
+    retryIssues.push({
+      ...i,
+      comments: r.issue?.comments.nodes ?? [],
+      ...(pr ? { pr: { number: pr.number, head: pr.head, draft: pr.isDraft, activity } } : {}),
+    });
+  }
+  for (const retry of planRetries(retryIssues, Date.now())) {
+    const what = `#${retry.issue}: retry ${retry.model} on ${retry.branch ?? retry.base} (no activity for 1 h)`;
+    if (limited.has(retry.model)) {
+      console.log(`${what}: skipped, the ${retry.model} routine refused a fire this run; retrying next run`);
+      continue;
+    }
+    if (dryRun) {
+      console.log(`${what} (dry run)`);
+      continue;
+    }
+    try {
+      if ((await retryIssue(retry, token, autoStart.routines)) === 'later') {
+        console.log(`${what}: the fire was refused for now (usage or rate limit); retrying next run`);
+        limited.add(retry.model);
+        continue;
+      }
+      console.log(what);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   const plan = planStarts(
     withFieldUpdates(startIssues, updates).map((i) => ({ ...i, status: moved.get(i.number) ?? i.status })),
     openPrs,
@@ -475,10 +563,6 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     { defaultBranch, stack: autoStart.stack },
   );
   if (!plan.starts.length) console.log('Auto-start: nothing to start.');
-  // Try every start and comment before failing the run, so one bad fire doesn't block the rest.
-  const failures: string[] = [];
-  // Each routine has its own fire limit; one that refused for now isn't fired again this run (#200).
-  const limited = new Set<string>();
   for (const start of plan.starts) {
     const what = `#${start.issue}: start ${start.model} on ${start.base}`;
     if (limited.has(start.model)) {

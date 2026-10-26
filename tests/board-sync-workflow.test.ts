@@ -23,6 +23,10 @@ describe('board sync workflow', () => {
     expect(yaml).toMatch(/^ {2}workflow_dispatch:/m);
   });
 
+  it('sweeps hourly, so a dead implement session is retried within about 2 h (#201)', () => {
+    expect(yaml).toMatch(/^ {4}- cron: '\d+ \* \* \* \*'\n/m);
+  });
+
   it('never runs two syncs at once', () => {
     expect(yaml).toMatch(/^concurrency:\n {2}group: board-sync\n {2}cancel-in-progress: false\n/m);
   });
