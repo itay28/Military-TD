@@ -8,13 +8,14 @@
 | **Path** | The ordered waypoints enemies walk from spawn to exit. Towers can't be built on Path tiles. | road, lane, track |
 | **Waypoint** | A tile where the Path turns, or its first or last tile. Consecutive waypoints share a row or a column; the tiles between them are **Path tiles**. | node, corner |
 | **Buildable tile** | A tile where a tower may be placed: not on the Path and not occupied. The map's `isBuildable` checks the first part; placement also checks occupancy. | |
-| **Tower** | A placed defensive unit. Kinds: **Rifle Nest**, **Cannon**, **Mortar**. | turret |
+| **Tower** | A placed defensive unit. Kinds: **Rifle Nest**, **Cannon**, **AA Gun**, **Mortar**. | turret |
 | **Level** | How far a tower has been upgraded: 1 when placed, up to 3. Each level has its own full stats (`TOWER_LEVELS`), and level pips on the tower show the upgrades. | tier, rank |
 | **Sell** | Starting a tower's **Dismantling** (`sellTower`), in the Build or Wave phase. When it ends the tower is gone, the tile is buildable again and the **Refund** is paid; the tower's combat stats stay. | demolish, destroy |
 | **Dismantling** | The `DISMANTLE_MS` (2 s) a sold tower takes to come down: it stops firing, can't be upgraded or sold again, and is refunded only when it ends (not if the game ends first). | |
 | **Refund** | The Money a sold tower gives back: `floor(SELL_REFUND × spent)`, where `spent` is its placement cost plus every upgrade, and `SELL_REFUND` is 0.7. | |
 | **Upgrade** | Raising a tower one level for that level's cost (`upgradeTower`), in the Build or Wave phase. Level 2 adds **optics** (more range), level 3 a **heavier weapon** (more damage and fire rate). The tower keeps its tile and cooldown. | |
 | **Cannon** | An anti-tank gun: slow-firing, ground only, one target, high damage, and Armor pierce enough for a Tank. Wasteful against Infantry: most of each hit is overkill. | artillery, AT gun |
+| **AA Gun** | A tower that hits Air and Ground (ADR-0007: no hard counters). Cheap rapid fire of light rounds, so Armor blunts it (cost 75, 4 shots/s, damage 8, range 3). Drawn as a rust-brown circle. | flak, anti-air |
 | **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
 | **Minimum range** | The dead zone around a tower's tile center that it can't fire into (`minRange`, exclusive): an enemy at or inside it is never a target, even when it's the only one in Range. The range ring shows it as an inner circle, on the Ghost too. | dead zone, blind spot |
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |

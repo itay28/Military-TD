@@ -48,11 +48,9 @@ export interface TowerStyle {
 export const TOWER_STYLE = {
   rifleNest: { shape: 'square', size: 32, fill: 0x3b4252, outline: 0xe5e1cf, outlineWidth: 2 }, // slate, bone outline
   cannon: { shape: 'square', size: 36, fill: 0x6b4f2a, outline: 0xf0b429, outlineWidth: 3 }, // bronze, amber outline
+  aaGun: { shape: 'circle', size: 30, fill: 0x8a5a2b, outline: 0xe5e1cf, outlineWidth: 2 }, // rust brown circle, bone outline
   mortar: { shape: 'circle', size: 34, fill: 0x4a3f2a, outline: 0xd9b45a, outlineWidth: 2 }, // dug-in brown pit, brass rim
 } as const satisfies Record<TowerKind, TowerStyle>;
-
-/** Kinds planned for v0.2 (#30), so their names are ready when they land. */
-type PlannedTowerKind = 'aaGun';
 
 /** What the player calls each tower kind. Every kind needs one. */
 export const TOWER_NAMES = {
@@ -60,7 +58,7 @@ export const TOWER_NAMES = {
   cannon: 'Cannon',
   aaGun: 'AA Gun',
   mortar: 'Mortar',
-} as const satisfies Record<TowerKind | PlannedTowerKind, string>;
+} as const satisfies Record<TowerKind, string>;
 
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
@@ -121,6 +119,7 @@ export const TRACER_STYLE = {
   rifleNest: { color: 0xffe9a0, width: 2 },
   cannon: { color: 0xffb347, width: 4 },
   mortar: { color: 0xd9b45a, width: 3 }, // unused: the Mortar fires Shells, not tracers
+  aaGun: { color: 0xffd27a, width: 1 },
 } as const satisfies Record<TowerKind, { color: number; width: number }>;
 
 /** A shell in flight (a dot) and its blast when it lands (a circle at the outer ring, fading over `blastFadeMs`). */
