@@ -38,6 +38,23 @@ for (const viewport of [
       await page.touchscreen.tap(x, y);
       expect((await state(page)).towers.map((t) => t.tile)).toEqual([BESIDE_PATH]);
     });
+
+    test('a lifted finger leaves no Ghost behind, as a mouse that left the map would', async ({ page }) => {
+      await openGame(page);
+      await selectKind(page);
+      // Zoom in so a drag has room to pan, then drag one finger across the map and lift it.
+      await page.evaluate(() => window.__TD__!.step(1));
+      const from = await tileToScreen(page, { col: 8, row: 5 });
+      const cdp = await page.context().newCDPSession(page);
+      const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: { x: number; y: number }[]) =>
+        cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+      await touch('touchStart', [from]);
+      for (let i = 1; i <= 5; i++) await touch('touchMove', [{ x: from.x - i * 6, y: from.y }]);
+      await expect.poll(async () => (await view(page)).ghost.visible).toBe(true); // the finger is on the map
+      await touch('touchEnd', []);
+      await expect.poll(async () => (await view(page)).ghost.visible).toBe(false);
+      expect((await state(page)).towers).toEqual([]);
+    });
   });
 }
 

@@ -172,6 +172,7 @@ export class GameScene extends Phaser.Scene {
         center: { x: this.rangeRing.x, y: this.rangeRing.y },
       },
       tracers: this.tracers.active(),
+      ghost: { visible: this.ghostGraphics.visible },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
     };
@@ -324,9 +325,11 @@ export class GameScene extends Phaser.Scene {
       this.onGesture(this.gestures.move(pointer.id, screen(pointer)));
       this.pointerTile = pixelToTile(screenToWorld(this.view, screen(pointer)));
     });
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) =>
-      this.onGesture(this.gestures.up(pointer.id, screen(pointer))),
-    );
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      this.onGesture(this.gestures.up(pointer.id, screen(pointer)));
+      // A lifted finger hovers nothing, so it leaves no Ghost or range ring behind; a mouse still hovers.
+      if (pointer.wasTouch) this.pointerTile = undefined;
+    });
     // Released off the canvas: never a tap.
     this.input.on('pointerupoutside', () => this.gestures.cancel());
     this.input.on('wheel', (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {

@@ -52,8 +52,8 @@ export function createGestures({ dragThresholdPx }: { readonly dragThresholdPx: 
       const last = pointers.get(id);
       if (!last) return undefined;
       if (pointers.size >= 2) {
-        const [a, b] = [...pointers.entries()].filter(([other]) => other !== id).map(([, p]) => p);
-        const other = a ?? b!;
+        // Two or more pointers are down, so one other than this one is.
+        const [, other] = [...pointers].find(([otherId]) => otherId !== id)!;
         pointers.set(id, point);
         const before = Math.hypot(last.x - other.x, last.y - other.y);
         const after = Math.hypot(point.x - other.x, point.y - other.y);
