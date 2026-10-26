@@ -1,5 +1,5 @@
 import type { Layer } from '../sim/combat';
-import type { PlaceTowerRefusal } from '../sim/game';
+import type { PlaceTowerRefusal, UpgradeTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
 import type { TowerKind } from './towers';
@@ -54,6 +54,12 @@ export const TOWER_NAMES = {
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
 
+/** What each level above 1 is called: the equipment its upgrade adds. Same for every kind for now. */
+export const LEVEL_NAME: Readonly<Record<number, string>> = { 2: 'Optics', 3: 'Heavier weapon' };
+
+/** The small squares along a tower's bottom edge, one per upgrade. Pixels, from the tower square's corner. */
+export const LEVEL_PIP = { size: 4, gap: 3, inset: 4, color: 0xe5e1cf } as const; // bone, like the outline
+
 /** What the tower panel calls each layer a tower can hit. */
 export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Record<Layer, string>;
 
@@ -83,6 +89,14 @@ export const PLACEMENT_REFUSAL_TEXT = {
   occupied: 'Tile occupied',
   insufficientMoney: 'Not enough money',
 } as const satisfies Record<PlaceTowerRefusal, string>;
+
+/** Why the Upgrade button is disabled, as its tooltip. `maxLevel` never shows: the button is hidden then. */
+export const UPGRADE_REFUSAL_TEXT = {
+  gameEnded: 'The game has ended',
+  noSuchTower: 'The tower is gone',
+  maxLevel: 'Top level',
+  insufficientMoney: 'Not enough money',
+} as const satisfies Record<UpgradeTowerRefusal, string>;
 
 /** The line drawn for each hit, from the tower to the target. */
 export const TRACER = { fadeMs: 80 } as const;
