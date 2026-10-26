@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  APPROVAL_MARKER,
+  HANDOFF_MARKER,
+  approvalAsked,
   STUCK_MARKER,
   lastCommentPages,
   pushFor,
@@ -7,6 +10,7 @@ import {
   releaseMessage,
   send,
   stewardSummary,
+  stuckIssueMessage,
   stuckPrMessage,
 } from '../scripts/notify';
 
@@ -52,6 +56,23 @@ describe('stuckPrMessage', () => {
   });
 });
 
+describe('stuckIssueMessage (#200)', () => {
+  const issue = { number: 42, title: 'feat: tank enemy', url: `${repoUrl}/issues/42` };
+
+  it('clicks through to the issue, names it in the title and carries the summary', () => {
+    const push = stuckIssueMessage(issue, "Auto-start's API trigger refused the fire (HTTP 401).");
+    expect(push).toEqual({
+      title: 'Issue #42 needs you',
+      body: "Auto-start's API trigger refused the fire (HTTP 401).",
+      click: issue.url,
+    });
+  });
+
+  it('falls back to the issue title without a summary', () => {
+    expect(stuckIssueMessage(issue, null).body).toBe('feat: tank enemy');
+  });
+});
+
 describe('questionMessage', () => {
   it('clicks through to the issue and carries its title', () => {
     const push = questionMessage({ number: 42, title: 'Sniper tower', url: `${repoUrl}/issues/42` });
@@ -78,6 +99,10 @@ describe('pushFor', () => {
     expect(pushFor('pull_request', onPr('needs-you'))).toEqual({ kind: 'pr', number: 7 });
   });
 
+  it('needs-you on an issue pushes a hand-off for that issue (#200)', () => {
+    expect(pushFor('issues', onIssue('needs-you'))).toEqual({ kind: 'stuck-issue', number: 9 });
+  });
+
   it('needs-info on an issue pushes for that issue', () => {
     expect(pushFor('issues', onIssue('needs-info'))).toEqual({ kind: 'issue', number: 9 });
   });
@@ -86,7 +111,7 @@ describe('pushFor', () => {
     ['another label on a PR', 'pull_request', onPr('bug')],
     ['another label on an issue', 'issues', onIssue('bug')],
     ['needs-info on a PR', 'pull_request', onPr('needs-info')],
-    ['needs-you on an issue', 'issues', onIssue('needs-you')],
+    ['an issue needing you on hold', 'issues', onIssue('needs-you', ['hold', 'needs-you'])],
     ['an issues event for a PR', 'issues', onIssue('needs-info', ['needs-info'], { pull_request: {} })],
     ['a PR on hold', 'pull_request', onPr('needs-you', ['needs-you', 'hold'])],
     ['an issue on hold', 'issues', onIssue('needs-info', ['hold', 'needs-info'])],
@@ -94,6 +119,39 @@ describe('pushFor', () => {
     ['another event', 'push', {}],
   ])('%s does not push', (_, name, event) => {
     expect(pushFor(name, event)).toBeNull();
+  });
+});
+
+describe('hand-off markers', () => {
+  it('match the markers the PR steward and auto-start post, so the push carries their summary', async () => {
+    const steward = await import('../scripts/pr-steward');
+    const autoStart = await import('../scripts/auto-start');
+    expect(STUCK_MARKER).toBe(steward.STUCK_MARKER);
+    expect(HANDOFF_MARKER).toBe(autoStart.HANDOFF_MARKER);
+  });
+});
+
+describe('approval hand-off (#206)', () => {
+  const pr = { number: 206, title: 'feat: gate', url: `${repoUrl}/pull/206` };
+  const comment = (body: string) => ({ body });
+
+  it('titles the push as an approval request', () => {
+    expect(stuckPrMessage(pr, 'Touches docs/adr/.', true).title).toBe('PR #206 needs your approval');
+    expect(stuckPrMessage(pr, 'CI red.').title).toBe('PR #206 is stuck');
+  });
+
+  it('tells an approval request from a stuck hand-off by the latest marked comment', () => {
+    const asked = comment(`${STUCK_MARKER}\n${APPROVAL_MARKER}\nTouches docs/adr/.`);
+    const stuck = comment(`${STUCK_MARKER}\nCI red.`);
+    expect(approvalAsked([stuck, asked])).toBe(true);
+    expect(approvalAsked([asked, stuck])).toBe(false);
+    expect(approvalAsked([])).toBe(false);
+  });
+
+  it('strips the approval marker from the summary', () => {
+    expect(stewardSummary([comment(`${STUCK_MARKER}\n${APPROVAL_MARKER}\nTouches docs/adr/.`)])).toBe(
+      'Touches docs/adr/.',
+    );
   });
 });
 
@@ -108,6 +166,10 @@ describe('stewardSummary', () => {
       comment('Later chatter.'),
     ];
     expect(stewardSummary(comments)).toBe('New summary.');
+  });
+
+  it("also reads auto-start's hand-off comment on an issue", () => {
+    expect(stewardSummary([comment(`${HANDOFF_MARKER}\nBad token.`)])).toBe('Bad token.');
   });
 
   it('is null without a marked comment', () => {

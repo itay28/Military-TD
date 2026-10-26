@@ -1,4 +1,4 @@
-import type { TowerKind } from '../data/towers';
+import { TOWER_LEVELS, TOWER_STATS, type TowerKind } from '../data/towers';
 import { damageTaken, type Layer } from './combat';
 import type { Enemy } from './enemies';
 import { tileCenter, type Position, type Tile } from './map';
@@ -9,6 +9,8 @@ export interface TowerStats {
   readonly cost: number;
   /** In tiles, from the tower's tile center. */
   readonly range: number;
+  /** In tiles: the dead zone around the tile center it can't fire into (exclusive); none when left out. */
+  readonly minRange?: number;
   /** Shots per second. */
   readonly fireRate: number;
   /** HP taken per shot, before armor. */
@@ -21,13 +23,32 @@ export interface TowerStats {
   readonly shell?: ShellStats;
 }
 
-/** A placed tower. Its stats are copied from its kind when it is placed. */
+/**
+ * A placed tower. Its stats are copied from its kind's level when it is placed or upgraded;
+ * `cost` stays what it cost to place.
+ */
 export interface Tower extends TowerStats {
   readonly id: number;
   readonly kind: TowerKind;
   readonly tile: Tile;
   /** Time until it can fire again; 0 when ready. */
   readonly cooldownMs: number;
+  /** 1 when placed; each upgrade adds 1, up to `towerLevels(kind).length`. */
+  readonly level: number;
+  /** Money put into it: its cost plus every upgrade's. */
+  readonly spent: number;
+  /** Time left until a sold tower is gone; undefined while it stands. A dismantling tower doesn't fire. */
+  readonly dismantleMs?: number;
+}
+
+/** Every level's stats for `kind`, level 1 (`TOWER_STATS`) first. */
+export function towerLevels(kind: TowerKind): readonly TowerStats[] {
+  return [TOWER_STATS[kind], ...TOWER_LEVELS[kind]];
+}
+
+/** The stats of the level after the tower's, or undefined at the top level. */
+export function nextLevel(tower: Tower): TowerStats | undefined {
+  return towerLevels(tower.kind)[tower.level];
 }
 
 /** What a shot did to one enemy. */
@@ -65,6 +86,7 @@ const COOLDOWN_EPSILON = 1e-9;
 
 /**
  * The enemy on a layer the tower hits and in range (inclusive, from the tile center) furthest along the Path ("first").
+ * An enemy at or inside the tower's `minRange` isn't a target.
  * Ties go to the one earlier in `enemies`, i.e. spawned first.
  */
 export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | undefined {
@@ -72,7 +94,8 @@ export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | u
   let target: Enemy | undefined;
   for (const enemy of enemies) {
     if (!tower.targets.includes(enemy.layer)) continue;
-    const inRange = Math.hypot(enemy.position.x - center.x, enemy.position.y - center.y) <= tower.range;
+    const gap = Math.hypot(enemy.position.x - center.x, enemy.position.y - center.y);
+    const inRange = gap <= tower.range && (tower.minRange === undefined || gap > tower.minRange);
     if (inRange && (!target || enemy.distance > target.distance)) target = enemy;
   }
   return target;
@@ -83,6 +106,7 @@ export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | u
  * for `damage` less the target's armor (see `damageTaken`).
  * A tower with `shell` doesn't hit: it returns a launch at its target's position, to become a Shell.
  * Towers act in order, and an enemy at 0 HP is removed at once, so later towers retarget.
+ * A dismantling tower does neither.
  * Time past the end of a cooldown carries into the next, so the fire rate holds at any tick size;
  * an idle tower waits at 0, ready.
  */
@@ -96,6 +120,7 @@ export function fireTowers(
   const launches: ShellLaunch[] = [];
   const kills: Enemy[] = [];
   const nextTowers = towers.map((tower) => {
+    if (tower.dismantleMs !== undefined) return tower;
     const cooldownMs = tower.cooldownMs - dtMs;
     const target = cooldownMs <= COOLDOWN_EPSILON ? selectTarget(tower, alive) : undefined;
     if (!target) return { ...tower, cooldownMs: Math.max(0, cooldownMs) };

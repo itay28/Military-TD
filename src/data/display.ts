@@ -1,5 +1,5 @@
 import type { Layer } from '../sim/combat';
-import type { PlaceTowerRefusal } from '../sim/game';
+import type { PlaceTowerRefusal, UpgradeTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
 import type { TowerKind } from './towers';
@@ -34,14 +34,23 @@ export const AIR_SHADOW = { offsetX: 4, offsetY: 10, color: 0x000000, alpha: 0.3
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
 
-/** Towers as outlined squares, by kind. Size in pixels, less than a tile so the grid shows around it. */
-export const TOWER_STYLE = {
-  rifleNest: { size: 32, fill: 0x3b4252, outline: 0xe5e1cf, outlineWidth: 2 }, // slate, bone outline
-  cannon: { size: 36, fill: 0x6b4f2a, outline: 0xf0b429, outlineWidth: 3 }, // bronze, amber outline
-} as const satisfies Record<TowerKind, { size: number; fill: number; outline: number; outlineWidth: number }>;
+/** How a tower kind is drawn (before the v0.4 sprites). */
+export interface TowerStyle {
+  readonly shape: 'square' | 'circle';
+  /** Side or diameter in pixels, less than a tile so the grid shows around it. */
+  readonly size: number;
+  readonly fill: number;
+  readonly outline: number;
+  readonly outlineWidth: number;
+}
 
-/** Kinds planned for v0.2 (#29–#31), so their names are ready when they land. */
-type PlannedTowerKind = 'cannon' | 'aaGun' | 'mortar';
+/** Towers as outlined shapes, by kind. */
+export const TOWER_STYLE = {
+  rifleNest: { shape: 'square', size: 32, fill: 0x3b4252, outline: 0xe5e1cf, outlineWidth: 2 }, // slate, bone outline
+  cannon: { shape: 'square', size: 36, fill: 0x6b4f2a, outline: 0xf0b429, outlineWidth: 3 }, // bronze, amber outline
+  aaGun: { shape: 'circle', size: 30, fill: 0x8a5a2b, outline: 0xe5e1cf, outlineWidth: 2 }, // rust brown circle, bone outline
+  mortar: { shape: 'circle', size: 34, fill: 0x4a3f2a, outline: 0xd9b45a, outlineWidth: 2 }, // dug-in brown pit, brass rim
+} as const satisfies Record<TowerKind, TowerStyle>;
 
 /** What the player calls each tower kind. Every kind needs one. */
 export const TOWER_NAMES = {
@@ -49,15 +58,24 @@ export const TOWER_NAMES = {
   cannon: 'Cannon',
   aaGun: 'AA Gun',
   mortar: 'Mortar',
-} as const satisfies Record<TowerKind | PlannedTowerKind, string>;
+} as const satisfies Record<TowerKind, string>;
 
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
 
+/** What each level above 1 is called: the equipment its upgrade adds. Same for every kind for now. */
+export const LEVEL_NAME: Readonly<Record<number, string>> = { 2: 'Optics', 3: 'Heavier weapon' };
+
+/** The small squares along a tower's bottom edge, one per upgrade. Pixels, from the tower square's corner. */
+export const LEVEL_PIP = { size: 4, gap: 3, inset: 4, color: 0xe5e1cf } as const; // bone, like the outline
+
 /** What the tower panel calls each layer a tower can hit. */
 export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Record<Layer, string>;
 
-/** The range ring shown while the pointer is over a tower, or while it is selected. */
+/** A dismantling tower is drawn at `alpha`, with a ring that shrinks from `radius` px to nothing as the time runs out. */
+export const DISMANTLE = { alpha: 0.4, color: 0xe5e1cf, radius: 28, width: 2 } as const;
+
+/** The range ring shown while the pointer is over a tower, or while it is selected, with an inner ring at its minimum range if it has one. */
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
 
 /** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */
@@ -84,6 +102,15 @@ export const PLACEMENT_REFUSAL_TEXT = {
   insufficientMoney: 'Not enough money',
 } as const satisfies Record<PlaceTowerRefusal, string>;
 
+/** Why the Upgrade button is disabled, as its tooltip. `maxLevel` never shows: the button is hidden then. */
+export const UPGRADE_REFUSAL_TEXT = {
+  gameEnded: 'The game has ended',
+  noSuchTower: 'The tower is gone',
+  dismantling: 'Being dismantled',
+  maxLevel: 'Top level',
+  insufficientMoney: 'Not enough money',
+} as const satisfies Record<UpgradeTowerRefusal, string>;
+
 /** The line drawn for each hit, from the tower to the target. */
 export const TRACER = { fadeMs: 80 } as const;
 
@@ -91,6 +118,8 @@ export const TRACER = { fadeMs: 80 } as const;
 export const TRACER_STYLE = {
   rifleNest: { color: 0xffe9a0, width: 2 },
   cannon: { color: 0xffb347, width: 4 },
+  mortar: { color: 0xd9b45a, width: 3 }, // unused: the Mortar fires Shells, not tracers
+  aaGun: { color: 0xffd27a, width: 1 },
 } as const satisfies Record<TowerKind, { color: number; width: number }>;
 
 /** A shell in flight (a dot) and its blast when it lands (a circle at the outer ring, fading over `blastFadeMs`). */

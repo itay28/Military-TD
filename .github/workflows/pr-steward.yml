@@ -4,7 +4,8 @@ name: PR steward
 # round (a cloud scheduled task that fixes conflicts, CI, review findings and maintainer
 # comments, at most 3 rounds before handing off with `needs-you`), merges the base into a PR
 # that is only behind, and squash-merges a PR that is green with every comment answered.
-# Every run looks at all open PRs, so the schedule fixes anything an event missed.
+# Every run looks at all open PRs, so the hourly schedule fixes anything an event missed, and
+# retries a round whose session died soon after its 1 h timeout.
 # Logic and tests: scripts/pr-steward.ts.
 #
 # Switches (repo variables, off unless `on`): AUTO_STEWARD fires rounds and updates branches,
@@ -21,7 +22,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '41 */6 * * *'
+    - cron: '41 * * * *'
   workflow_dispatch:
 
 # Runs queue instead of overlapping; each one reads the PRs fresh.
