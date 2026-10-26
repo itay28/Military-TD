@@ -99,7 +99,7 @@ The current milestone is the open one with the earliest due date, else the lowes
 - **Setup errors:** with `AUTO_SPAWN` on and a `ROUTINE_*` secret missing, the board still syncs but auto-start is skipped and the run goes red.
 
 **Auto-start setup** (maintainer, once, in the browser). The two scheduled tasks `implement-sonnet` (model Sonnet) and `implement-opus` (model Opus) already exist at [claude.ai/code/routines](https://claude.ai/code/routines), disabled. Their prompt is: *Read `docs/agents/prompts/implement.md` in the itay28/Military-TD repository and follow it. The issue number and base branch to use are in the `<routine-fire-payload>` block of this message; act on them.* For each one:
-1. **Edit**: under Repository, add `itay28/Military-TD`; keep your usual cloud environment; add the GitHub connector if your account has one.
+1. **Edit**: under Repository, add `itay28/Military-TD`; keep your usual cloud environment; add the GitHub connector if your account has one. Don't skip this: a routine made through the API or by an agent starts with no repository, and only the browser can add one. Without it, the fire succeeds and the Action stays green, but the session can't clone or call GitHub (403) and exits after a push notification; the doctor's *no GitHub access* line names it.
 2. **Trigger → + → API**: copy the **Fire URL**, click **Generate token**, and copy the token (shown once).
 3. In GitHub → Settings → Secrets and variables → Actions → **Secrets**, add `ROUTINE_SONNET_URL` / `ROUTINE_SONNET_TOKEN` (or `ROUTINE_OPUS_…`) with those two values. The token can only start that one task: it has no GitHub or account access. Claims and comments use the existing `PROJECT_TOKEN`.
 4. Turn the task on.
@@ -113,14 +113,18 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), an
 | draft, from a fork, labelled `hold`, or `needs-you` with no maintainer comment since the hand-off | nothing |
 | mergeability still computing, a round in flight (no done marker yet, under 3 h old), or checks running (CI, CI review) | waits |
 | a conflict, a failing check, a CI review or maintainer comment newer than the last done marker, or unresolved review threads | fires a **round** of the `pr-steward` task, which fixes what it can and ends with a `<!-- pr-steward:done -->` comment |
-| the same, after 3 rounds since the latest maintainer comment | hands off: `needs-you` label + a summary comment |
+| the same, after 3 rounds since the latest maintainer comment, or a conflict a round couldn't resolve | hands off: `needs-you` label + a summary comment |
 | only behind its base | merges the base in itself (no agent, not a round) |
 | no CI review comment yet | waits (add `review-again` to request one) |
 | closes an issue that is still blocked by open issues, or labelled `needs-info` | waits |
+| closes an issue in a later milestone than the current one (auto-start's look-ahead) | waits until the current milestone ships (its release closes the milestone); rounds still run |
 | green, review answered, threads resolved, targets `main` | squash-merges it with the PR title (+ ` (#n)`) and body; if GitHub refuses, hands off |
-| release-please's release PR | no rounds and no review needed: merges once its checks are green (merging publishes the release, and the release push tells you) |
+| release-please's release PR | no rounds and no review needed. It merges only when its version is the current milestone's (`v0.2.0 — …` → `release 0.2.0`), once its checks are green; merging publishes the release, and the release push tells you. A patch release (`release 0.1.2`) waits for you to merge it by hand (#187). Its checks only run with the `RELEASE_PLEASE_TOKEN` secret (`docs/agents/releasing.md`); without it, it waits for you |
+| the milestone report PR (`chore/release-0.N.0`) | no rounds and no review needed: merges once `0.N.0` is the current milestone's version, the milestone is done (only its release issue is open), the body ends with `Release-As: 0.N.0` and its checks are green. The squash commit message is the PR body, so the footer stays last. Add `hold` to read the audit and write Notes first |
 
 - Stacked PRs are stewarded but merged only once GitHub retargets them to `main` (after their parent merges).
+- A round fired only for a conflict doesn't count toward the 3: conflicts come from the base moving (a PR below it merged), not from a failed attempt. If a round fired for a conflict (alone or together with other reasons) ends with the conflict still there on the same base, the agent couldn't resolve it, so the PR is handed off at once (`needs-you`). The round marker carries a hidden `<!-- pr-steward:round-meta reasons=… base=<sha> -->` line for this.
+- Each check counts by its latest run: a cancelled run is ignored once another run of the same check finished (a re-triggered `pr-title` cancels its older run). A check whose only run was cancelled counts as failing.
 - Checks that don't test the code are ignored: `board-sync`, `release-issue`, and `claude-review` (the review counts by its comment).
 - State lives in comments on the PR: `<!-- pr-steward:round -->` (round fired, with the session link), `<!-- pr-steward:done -->` (round finished), `<!-- pr-steward:stuck -->` (handed off). A **maintainer comment** is one by the owner or a collaborator without a marker and without the *Generated by Claude Code* footer. Agents post as the maintainer's identity, so they must sign with the footer. A maintainer comment gives the PR 3 fresh rounds and takes a handed-off PR back.
 - **Switches** (repo variables, off unless `on`): `AUTO_STEWARD` fires rounds, updates branches and hands off; `AUTO_MERGE` merges. Off, each run only logs what it would do. `hold` keeps one PR out.

@@ -3,9 +3,12 @@ import {
   DONE_MARKER,
   REVIEW_HEADING,
   ROUND_MARKER,
+  roundMeta,
   STUCK_MARKER,
   act,
+  currentChecks,
   decide,
+  milestoneDone,
   settingsFromEnv,
   type Decision,
   type PrComment,
@@ -47,6 +50,7 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
   isDraft: false,
   fork: false,
   base: 'main',
+  baseSha: 'base-1',
   head: 'feat/3-mortar',
   headSha: 'abc123',
   labels: [],
@@ -75,14 +79,6 @@ describe('decide: skip', () => {
     expect(kind(pr({ labels: ['hold'] }))).toBe('skip');
   });
 
-  it('merges a release PR once CI is green, with no review or steward rounds', () => {
-    const release = pr({ head: 'release-please--branches--main', comments: [] });
-    expect(kind(release)).toBe('merge');
-    expect(kind({ ...release, comments: [review(10)] })).toBe('merge');
-    expect(kind({ ...release, checks: [{ name: 'ci', state: 'failure' }] })).toBe('wait');
-    expect(kind({ ...release, checks: [] })).toBe('wait');
-  });
-
   it('skips a handed-off PR until the maintainer comments', () => {
     const stuck = pr({ labels: ['needs-you'], comments: [review(90), action(STUCK_MARKER, 20)] });
     expect(kind(stuck)).toBe('skip');
@@ -92,6 +88,106 @@ describe('decide: skip', () => {
       reasons: ['review', 'comment'],
       clearNeedsYou: true,
     });
+  });
+});
+
+describe('decide: releases', () => {
+  const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4], done: false };
+  const done = { ...v02, done: true };
+  const release = (version: string, over: Partial<StewardPr> = {}) =>
+    pr({
+      title: `chore(main): release ${version}`,
+      head: 'release-please--branches--main--components--military-td',
+      closes: [],
+      comments: [],
+      ...over,
+    });
+  const report = (version: string, over: Partial<StewardPr> = {}) =>
+    pr({
+      title: `chore: release ${version}`,
+      head: `chore/release-${version}`,
+      body: `Refs #160\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nRelease-As: ${version}`,
+      closes: [],
+      comments: [],
+      ...over,
+    });
+
+  it('holds a patch release PR, naming the milestone it ships with', () => {
+    expect(decide(release('0.1.2'), now, 'main', v02)).toEqual({
+      kind: 'wait',
+      why: 'release PR 0.1.2: ships with v0.2.0 — Combat depth; merge it by hand to release now',
+    });
+  });
+
+  it("merges a release PR for the current milestone's version once CI is green, with no review", () => {
+    expect(decide(release('0.2.0'), now, 'main', v02).kind).toBe('merge');
+    expect(decide(release('0.2.0', { comments: [review(10)] }), now, 'main', v02).kind).toBe('merge');
+    expect(decide(release('0.2.0', { checks: [{ name: 'ci', state: 'failure' }] }), now, 'main', v02).kind).toBe(
+      'wait',
+    );
+    expect(decide(release('0.2.0', { checks: [] }), now, 'main', v02).kind).toBe('wait');
+  });
+
+  it("holds a release PR for another milestone's version, or when no milestone is open", () => {
+    expect(decide(release('0.3.0'), now, 'main', v02).kind).toBe('wait');
+    expect(decide(release('0.2.0'), now, 'main', null).kind).toBe('wait');
+  });
+
+  it('merges the report PR when its milestone is done and the footer matches, with no review', () => {
+    expect(decide(report('0.2.0'), now, 'main', done).kind).toBe('merge');
+    expect(decide(report('0.2.0', { comments: [review(10)], unresolvedThreads: 2 }), now, 'main', done).kind).toBe(
+      'merge',
+    );
+    expect(decide(report('0.2.0', { behind: true }), now, 'main', done).kind).toBe('update');
+  });
+
+  it('holds the report PR while its milestone has open issues', () => {
+    expect(decide(report('0.2.0'), now, 'main', v02)).toEqual({
+      kind: 'wait',
+      why: 'report PR 0.2.0: v0.2.0 — Combat depth still has open issues',
+    });
+  });
+
+  it('holds the report PR when its footer is missing or names another version', () => {
+    expect(decide(report('0.2.0', { body: 'Refs #160' }), now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0', { body: 'Refs #160\n\nRelease-As: 0.3.0' }), now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0', { body: 'Release-As: 0.2.0\n\nCo-authored-by: x' }), now, 'main', done).kind).toBe(
+      'wait',
+    );
+  });
+
+  it("holds a report PR for another milestone's version", () => {
+    expect(decide(report('0.3.0'), now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0'), now, 'main', null).kind).toBe('wait');
+  });
+
+  it('holds the report PR while checks run, fail or never ran', () => {
+    const pending = report('0.2.0', { checks: [{ name: 'ci', state: 'pending' }] });
+    expect(decide(pending, now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0', { checks: [{ name: 'ci', state: 'failure' }] }), now, 'main', done).kind).toBe(
+      'wait',
+    );
+    expect(decide(report('0.2.0', { checks: [] }), now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0', { mergeable: 'CONFLICTING' }), now, 'main', done).kind).toBe('wait');
+  });
+
+  it('skips held release and report PRs', () => {
+    expect(decide(release('0.2.0', { labels: ['hold'] }), now, 'main', v02).kind).toBe('skip');
+    expect(decide(report('0.2.0', { labels: ['hold'] }), now, 'main', done).kind).toBe('skip');
+  });
+});
+
+describe('milestoneDone', () => {
+  const issue = (...labels: string[]) => ({ labels: { nodes: labels.map((name) => ({ name })) } });
+
+  it('is done when only the release issue is open', () => {
+    expect(milestoneDone([issue('release', 'area:infra')])).toBe(true);
+    expect(milestoneDone([issue('release'), issue('area:towers')])).toBe(false);
+    expect(milestoneDone([])).toBe(false);
+  });
+
+  it('is not done when the open issues were truncated', () => {
+    expect(milestoneDone([issue('release')], true)).toBe(false);
   });
 });
 
@@ -173,11 +269,179 @@ describe('decide: steward rounds', () => {
     });
   });
 
+  describe('rounds spent on conflicts', () => {
+    const conflict = { mergeable: 'CONFLICTING' as const };
+    // A round marker as act() posts it: reasons and the base's head at that moment.
+    const round = (minutesAgo: number, reasons: string[], base: string) =>
+      action(`${ROUND_MARKER}\n${roundMeta(reasons as never, base)}`, minutesAgo);
+    const after = (r: ReturnType<typeof round>, m: number) => [r, agent(DONE_MARKER, m)];
+
+    it('does not count a conflict-only round', () => {
+      const comments = [...after(round(400, ['ci'], 'base-a'), 395), ...after(round(300, ['conflict'], 'base-b'), 295)];
+      expect(decide(pr({ comments, checks: [{ name: 'ci', state: 'failure' }] }), now)).toMatchObject({
+        kind: 'steward',
+        round: 2,
+      });
+    });
+
+    it('counts a round with any other reason', () => {
+      const comments = [
+        ...after(round(400, ['ci'], 'base-a'), 395),
+        ...after(round(300, ['conflict', 'ci'], 'base-b'), 295),
+      ];
+      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 3 });
+    });
+
+    it('counts rounds whose marker has no meta line', () => {
+      const old = [...after(action(ROUND_MARKER, 400), 395), ...after(round(300, ['conflict'], 'base-b'), 295)];
+      expect(decide(pr({ ...conflict, comments: old }), now)).toMatchObject({ kind: 'steward', round: 2 });
+    });
+
+    it('does not hand off a PR whose rounds were all spent on its base moving', () => {
+      const comments = [
+        ...after(round(500, ['ci'], 'base-a'), 495),
+        ...['base-b', 'base-c', 'base-d'].flatMap((b, i) =>
+          after(round(400 - i * 100, ['conflict'], b), 395 - i * 100),
+        ),
+      ];
+      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 2 });
+    });
+
+    it('fires again when the base moved since the last conflict round', () => {
+      const comments = after(round(300, ['conflict'], 'base-a'), 295);
+      expect(decide(pr({ ...conflict, baseSha: 'base-b', comments }), now)).toMatchObject({
+        kind: 'steward',
+        round: 1,
+      });
+    });
+
+    it('hands off at once when a conflict round left the conflict on the same base', () => {
+      const comments = after(round(300, ['conflict', 'ci'], 'base-a'), 295);
+      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments }), now)).toEqual({
+        kind: 'stuck',
+        reasons: ['conflict'],
+        conflict: true,
+      });
+      // A round that died without a done marker is stuck the same way.
+      const died = [round(300, ['conflict'], 'base-a')];
+      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments: died }), now)).toMatchObject({ kind: 'stuck' });
+    });
+
+    it('gives an unresolved conflict a fresh round after a maintainer comment', () => {
+      const comments = [...after(round(300, ['conflict'], 'base-a'), 295), maintainer(200)];
+      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments }), now)).toMatchObject({
+        kind: 'steward',
+        round: 1,
+      });
+    });
+  });
+
   it('hands off as stuck once 3 rounds were used', () => {
     const three = [400, 300, 200].flatMap((m) => [action(ROUND_MARKER, m + 5), agent(DONE_MARKER, m)]);
     expect(decide(pr({ checks: [{ name: 'ci', state: 'failure' }], comments: three }), now)).toEqual({
       kind: 'stuck',
       reasons: ['ci'],
+    });
+  });
+});
+
+describe('currentChecks', () => {
+  const run = (name: string, state: 'pending' | 'success' | 'failure' | 'cancelled', completedAt?: string) => ({
+    name,
+    state,
+    ...(completedAt ? { completedAt } : {}),
+  });
+
+  it('ignores a cancelled run once a later run of the same check passed', () => {
+    expect(currentChecks([run('pr-title', 'cancelled', at(10)), run('pr-title', 'success', at(5))])).toEqual([
+      { name: 'pr-title', state: 'success' },
+    ]);
+  });
+
+  it('ignores a cancelled run that finished after the passing one', () => {
+    expect(currentChecks([run('pr-title', 'success', at(10)), run('pr-title', 'cancelled', at(5))])).toEqual([
+      { name: 'pr-title', state: 'success' },
+    ]);
+  });
+
+  it('counts the latest result when a check was re-run', () => {
+    expect(currentChecks([run('ci', 'failure', at(10)), run('ci', 'success', at(5))])).toEqual([
+      { name: 'ci', state: 'success' },
+    ]);
+    expect(currentChecks([run('ci', 'success', at(10)), run('ci', 'failure', at(5))])).toEqual([
+      { name: 'ci', state: 'failure' },
+    ]);
+  });
+
+  it('treats a check whose only run was cancelled as failing', () => {
+    expect(currentChecks([run('e2e', 'cancelled', at(5))])).toEqual([{ name: 'e2e', state: 'failure' }]);
+  });
+
+  it('is pending while any run of the check is still going', () => {
+    expect(currentChecks([run('ci', 'success', at(10)), run('ci', 'pending')])).toEqual([
+      { name: 'ci', state: 'pending' },
+    ]);
+  });
+
+  it('keeps one entry per check name, in first-seen order', () => {
+    expect(
+      currentChecks([run('ci', 'success', at(9)), run('e2e', 'success', at(8)), run('ci', 'success', at(7))]),
+    ).toEqual([
+      { name: 'ci', state: 'success' },
+      { name: 'e2e', state: 'success' },
+    ]);
+  });
+});
+
+describe('decide: superseded checks', () => {
+  it('merges a green PR that also has a cancelled, re-run check', () => {
+    const checks = [
+      ...pr().checks,
+      { name: 'pr-title', state: 'cancelled' as const, completedAt: at(10) },
+      { name: 'pr-title', state: 'success' as const, completedAt: at(5) },
+    ];
+    expect(kind(pr({ checks }))).toBe('merge');
+  });
+});
+
+describe('decide: milestone hold', () => {
+  const v03 = { number: 4, title: 'v0.3.0 — Game shell' };
+  const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4], done: false };
+  const closing = (...milestones: (typeof v02 | typeof v03 | null)[]) =>
+    milestones.map((milestone, i) => ({ number: 3 + i, blocked: false, needsInfo: false, milestone }));
+
+  it('merges a PR whose issue is in the current milestone', () => {
+    expect(decide(pr({ closes: closing(v02) }), now, 'main', v02).kind).toBe('merge');
+  });
+
+  it('holds a PR whose issue is in a later milestone, naming both', () => {
+    expect(decide(pr({ closes: closing(v03) }), now, 'main', v02)).toEqual({
+      kind: 'wait',
+      why: '#3 is in v0.3.0 — Game shell: merges after v0.2.0 — Combat depth ships',
+    });
+  });
+
+  it('holds when any issue the PR closes is ahead', () => {
+    expect(decide(pr({ closes: closing(v02, v03) }), now, 'main', v02)).toMatchObject({
+      kind: 'wait',
+      why: expect.stringMatching(/^#4 is in v0\.3\.0/),
+    });
+  });
+
+  it('merges issues without a milestone, and anything when no milestone is open', () => {
+    expect(decide(pr({ closes: closing(null) }), now, 'main', v02).kind).toBe('merge');
+    expect(decide(pr({ closes: closing(v03) }), now, 'main', null).kind).toBe('merge');
+  });
+
+  it('does not hold an issue from an already-shipped milestone', () => {
+    const v01 = { number: 1, title: 'v0.1.0 — MVP' };
+    expect(decide(pr({ closes: closing(v01) }), now, 'main', v02).kind).toBe('merge');
+  });
+
+  it('still runs steward rounds on a held PR', () => {
+    expect(decide(pr({ closes: closing(v03), mergeable: 'CONFLICTING' }), now, 'main', v02)).toMatchObject({
+      kind: 'steward',
+      reasons: ['conflict'],
     });
   });
 });
@@ -236,6 +500,7 @@ describe('act', () => {
     const { body } = JSON.parse(fireOk.mock.calls[1]![1].body as string) as { body: string };
     expect(body).toContain(ROUND_MARKER);
     expect(body).toContain('https://claude.ai/code/session_1');
+    expect(body).toContain(roundMeta(['ci', 'review'], 'base-1'));
   });
 
   it('removes needs-you when a maintainer comment restarted the PR', async () => {
@@ -248,6 +513,13 @@ describe('act', () => {
     const fetchFn = vi.fn<Fetch>(async () => new Response('nope', { status: 500 }));
     await expect(act(pr(), steward, 'gh-token', settings, fetchFn)).rejects.toThrow(/#7/);
     expect(calls(fetchFn)).toEqual(['POST https://fire.example/steward']);
+  });
+
+  it('says why when an unresolved conflict hands off', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'stuck', reasons: ['conflict'], conflict: true }, 'gh-token', settings, fetchFn);
+    const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
+    expect(body).toContain("couldn't resolve the merge conflict");
   });
 
   it('hands off as stuck: needs-you label and a summary with the marker', async () => {
