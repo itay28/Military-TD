@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  APPROVAL_MARKER,
   HANDOFF_MARKER,
+  approvalAsked,
   STUCK_MARKER,
   lastCommentPages,
   pushFor,
@@ -126,6 +128,30 @@ describe('hand-off markers', () => {
     const autoStart = await import('../scripts/auto-start');
     expect(STUCK_MARKER).toBe(steward.STUCK_MARKER);
     expect(HANDOFF_MARKER).toBe(autoStart.HANDOFF_MARKER);
+  });
+});
+
+describe('approval hand-off (#206)', () => {
+  const pr = { number: 206, title: 'feat: gate', url: `${repoUrl}/pull/206` };
+  const comment = (body: string) => ({ body });
+
+  it('titles the push as an approval request', () => {
+    expect(stuckPrMessage(pr, 'Touches docs/adr/.', true).title).toBe('PR #206 needs your approval');
+    expect(stuckPrMessage(pr, 'CI red.').title).toBe('PR #206 is stuck');
+  });
+
+  it('tells an approval request from a stuck hand-off by the latest marked comment', () => {
+    const asked = comment(`${STUCK_MARKER}\n${APPROVAL_MARKER}\nTouches docs/adr/.`);
+    const stuck = comment(`${STUCK_MARKER}\nCI red.`);
+    expect(approvalAsked([stuck, asked])).toBe(true);
+    expect(approvalAsked([asked, stuck])).toBe(false);
+    expect(approvalAsked([])).toBe(false);
+  });
+
+  it('strips the approval marker from the summary', () => {
+    expect(stewardSummary([comment(`${STUCK_MARKER}\n${APPROVAL_MARKER}\nTouches docs/adr/.`)])).toBe(
+      'Touches docs/adr/.',
+    );
   });
 });
 
