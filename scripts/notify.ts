@@ -21,6 +21,8 @@ export interface Item {
 
 /** The PR steward (#168) starts its summary comment with this marker before labelling a PR `needs-you`. */
 export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
+/** The PR steward adds this next to the stuck marker when it asks for the maintainer's `/approve` (#206). */
+export const APPROVAL_MARKER = '<!-- pr-steward:approval -->';
 /** Auto-start (scripts/auto-start.ts) starts its comment with this before labelling an issue `needs-you` (#200). */
 export const HANDOFF_MARKER = '<!-- auto-start:stuck -->';
 
@@ -35,8 +37,9 @@ export function releaseMessage(tag: string, repoUrl: string): Push {
   };
 }
 
-export function stuckPrMessage(pr: Item, summary: string | null): Push {
-  return { title: `PR #${pr.number} is stuck`, body: fit(summary ?? pr.title), click: pr.url };
+export function stuckPrMessage(pr: Item, summary: string | null, approval = false): Push {
+  const title = approval ? `PR #${pr.number} needs your approval` : `PR #${pr.number} is stuck`;
+  return { title, body: fit(summary ?? pr.title), click: pr.url };
 }
 
 export function stuckIssueMessage(issue: Item, summary: string | null): Push {
@@ -95,10 +98,19 @@ export function pushFor(eventName: string, event: LabelEvent): Target | null {
 
 /** The latest hand-off summary among a PR's or issue's comments (oldest first), without its marker. */
 export function stewardSummary(comments: { body?: string | null }[]): string | null {
-  const markers = [STUCK_MARKER, HANDOFF_MARKER];
-  const latest = comments.findLast((c) => markers.some((m) => c.body?.includes(m)));
-  return latest?.body ? markers.reduce((body, m) => body.replace(m, ''), latest.body).trim() : null;
+  const latest = latestHandOff(comments);
+  return latest?.body
+    ? [...HANDOFF_MARKERS, APPROVAL_MARKER].reduce((body, m) => body.replace(m, ''), latest.body).trim()
+    : null;
 }
+
+/** Whether the latest hand-off on a PR asks for the maintainer's `/approve` rather than saying it's stuck. */
+export const approvalAsked = (comments: { body?: string | null }[]): boolean =>
+  !!latestHandOff(comments)?.body?.includes(APPROVAL_MARKER);
+
+const HANDOFF_MARKERS = [STUCK_MARKER, HANDOFF_MARKER];
+const latestHandOff = (comments: { body?: string | null }[]) =>
+  comments.findLast((c) => HANDOFF_MARKERS.some((m) => c.body?.includes(m)));
 
 /** The pages to fetch for a PR's latest comments: the last one and the one before, since the steward posts
  * its summary right before the label. */
@@ -145,7 +157,10 @@ interface ApiIssue {
   comments: number;
 }
 
-async function pushStuck(number: number, message: typeof stuckPrMessage): Promise<Push> {
+async function pushStuck(
+  number: number,
+  message: (item: Item, summary: string | null, approval: boolean) => Push,
+): Promise<Push> {
   const item = await get<ApiIssue>(`/issues/${number}`);
   const pages = lastCommentPages(item.comments, 100);
   const comments = (
@@ -153,7 +168,7 @@ async function pushStuck(number: number, message: typeof stuckPrMessage): Promis
       pages.map((p) => get<{ body?: string | null }[]>(`/issues/${number}/comments?per_page=100&page=${p}`)),
     )
   ).flat();
-  return message({ number, title: item.title, url: item.html_url }, stewardSummary(comments));
+  return message({ number, title: item.title, url: item.html_url }, stewardSummary(comments), approvalAsked(comments));
 }
 
 const pushPr = (number: number) => pushStuck(number, stuckPrMessage);
