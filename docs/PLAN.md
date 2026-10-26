@@ -23,7 +23,7 @@ The order follows three rules:
 | Version | Milestone | Scope |
 | --- | --- | --- |
 | **v0.1.0** | MVP | 1 map, 1 tower (Rifle Nest), 1 enemy (Infantry), 1 wave, Money, Lives, victory/defeat, shapes. Plus CI, headless scenario runner, UI test harness, release automation, itch.io deploy. |
-| **v0.2.0** | Combat depth | Cannon, AA Gun, Mortar; Jeep, Tank, Helicopter; armor and air/ground; upgrades and selling; tower info panel; **live DPS meter for the current wave**; 10 waves; build bar; balance. Still one map. |
+| **v0.2.0** | Combat depth | Cannon, AA Gun, Mortar; Jeep, Tank, Helicopter; armor and air/ground; upgrades and selling; tower info panel; **live DPS meter for the current wave**; 10 waves; build bar; **basic mobile layout** (fits the screen, pan and zoom, collapsible build bar); balance. Still one map. |
 | **v0.3.0** | Game shell | Main menu, pause, settings (persisted), game speed, level select (one map for now), **end-screen damage report**. |
 | **v0.4.0** | Art & map pipeline | Asset packs with tracked licenses, asset pipeline, sprites, tileset, effects, credits screen. Tiled import and validation; MVP map rebuilt in Tiled. |
 | **v0.5.0** | Maps & progression | Maps 2–4, saved progress, unlocks, star ratings, level select with previews. |
@@ -48,10 +48,10 @@ A small game that feels finished:
 | **Feedback** | Live DPS for the current wave; end-screen damage report per tower and per wave |
 | **Look & sound** | One consistent CC0 art style (Kenney), hit effects and explosions, SFX, 2–3 music tracks |
 | **Screens** | Main menu, level select, settings, pause, how to play, credits |
-| **Platform** | Desktop browser (mouse + keyboard) on itch.io; basic touch support; steady 60 fps |
+| **Platform** | Desktop browser (mouse + keyboard) on itch.io; fits phone screens with pan and zoom (v0.2.0); basic touch support; steady 60 fps |
 | **Quality** | Every map beatable by a bot in CI, no known crash bugs, ≥ 3 outside playtesters finished the campaign |
 
-Not in 1.0 (candidates for 1.x): player-made maps / in-game editor, endless mode, full mobile layout, multiplayer, story, achievements.
+Not in 1.0 (candidates for 1.x): player-made maps / in-game editor, endless mode, a phone-first layout beyond the basic one (v0.2.0), multiplayer, story, achievements.
 
 ## How issues are organized
 
@@ -170,7 +170,7 @@ tests/
 
 ## Later milestones
 
-- **v0.2.0 Combat depth:** #28 damage model · #29 Cannon · #30 AA Gun · #31 Mortar · #32 Jeep · #33 Tank · #34 Helicopter · #35 build bar · #36 10-wave schedule · #52 combat stats · #53 live DPS meter · #54 tower info panel · #55 upgrades · #56 selling · #16 balance
+- **v0.2.0 Combat depth:** #28 damage model · #29 Cannon · #30 AA Gun · #31 Mortar · #32 Jeep · #33 Tank · #34 Helicopter · #35 build bar · #36 10-wave schedule · #52 combat stats · #53 live DPS meter · #54 tower info panel · #55 upgrades · #56 selling · #189 basic mobile layout · #16 balance
 - **v0.3.0 Game shell:** #46 main menu · #47 pause · #48 settings · #49 persist settings · #50 game speed · #51 level select · #57 end-screen damage report
 - **v0.4.0 Art & map pipeline:** #39 asset packs and licenses · #40 asset pipeline · #41 tower sprites · #42 enemy sprites · #43 tileset · #44 effects · #58 Tiled import · #59 MVP map in Tiled · #60 license check in CI · #61 credits screen
 - **v0.5.0 Maps & progression:** #37 second map · #62 maps 3–4 · #63 saved progress · #64 unlocks and stars · #65 level select upgrade
