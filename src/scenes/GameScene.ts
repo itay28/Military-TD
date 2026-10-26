@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
+import { CAMERA, FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
 import type { TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
@@ -8,10 +8,12 @@ import { setUpGame, type GameSetup } from '../sim/scenario';
 import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
+import { clampView, fitView, panBy, screenToWorld, zoomAt, type CameraBounds, type CameraView } from './camera';
 import { pixelToTile, toPixels, type Pixel } from './coords';
 import { drawBlasts, drawEnemy, drawGhost, drawRangeRing, drawShells, drawTower, drawTracers } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
+import { createGestures, type Gesture, type Gestures } from './gestures';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
@@ -110,6 +112,11 @@ export class GameScene extends Phaser.Scene {
   private hoveredRingKey: string | undefined;
   /** The selected tower whose range ring is drawn, as its `ringKey`. */
   private selectedRingKey: string | undefined;
+  /** Where the camera looks. */
+  private view!: CameraView;
+  /** Whether the player has not panned or zoomed yet, so a resize fits the whole map again. */
+  private fitted = true;
+  private gestures!: Gestures;
 
   constructor({ hudRoot, buildBarRoot, endScreenRoot, towerPanelRoot, flags, onCreate }: GameSceneOptions) {
     super('Game');
@@ -147,6 +154,7 @@ export class GameScene extends Phaser.Scene {
   /** What test mode's view() reports: read from the display objects, so it shows what Phaser renders. */
   private testView(): TestView {
     this.children.depthSort(); // the order the next render draws in
+    const camera = this.cameras.main;
     const layers = this.children.list.map((object) => object.name).filter((name) => name !== '');
     return {
       rangeRing: {
@@ -155,6 +163,7 @@ export class GameScene extends Phaser.Scene {
         center: { x: this.rangeRing.x, y: this.rangeRing.y },
       },
       tracers: this.tracers.active(),
+      camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
     };
   }
@@ -224,9 +233,6 @@ export class GameScene extends Phaser.Scene {
 
     this.rangeRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
     this.selectedRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      this.pointerTile = pixelToTile({ x: pointer.worldX, y: pointer.worldY });
-    });
     this.input.on('gameout', () => (this.pointerTile = undefined));
 
     this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
@@ -236,19 +242,7 @@ export class GameScene extends Phaser.Scene {
       update: (view, { x, y, alpha }) => view.setPosition(x, y).setAlpha(alpha),
       destroy: (view) => view.destroy(),
     });
-    // A click on a tower selects it. Otherwise the sim decides whether it places one, so this works in the
-    // Build and Wave phases alike.
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.button !== 0) return;
-      const at = { x: pointer.worldX, y: pointer.worldY };
-      const action = resolveClick(this.sim.state.towers, this.towerPanel.selectedId, pixelToTile(at));
-      if (action.type === 'select') this.towerPanel.select(action.towerId);
-      else if (action.type === 'deselect') this.towerPanel.select(undefined);
-      else {
-        const refusal = placeAt(this.sim, this.buildBar.selected, action.tile);
-        if (refusal) this.floatingTexts.add(refusal, at);
-      }
-    });
+    this.setUpCamera();
 
     this.hud = mountHud(this.hudRoot, this.sim);
     this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
@@ -262,6 +256,87 @@ export class GameScene extends Phaser.Scene {
       this.towerPanel.destroy();
     });
     this.onCreate?.();
+  }
+
+  /** The camera's limits now: the canvas size and the map's size in world pixels. */
+  private cameraBounds(): CameraBounds {
+    const { map } = this.sim.state;
+    return {
+      viewport: { width: this.scale.width, height: this.scale.height },
+      world: { width: map.cols * TILE_PX, height: map.rows * TILE_PX },
+      maxZoom: CAMERA.maxZoom,
+    };
+  }
+
+  private setView(view: CameraView): void {
+    this.view = view;
+    this.cameras.main.setZoom(view.zoom).setScroll(view.scrollX, view.scrollY);
+  }
+
+  /**
+   * The map starts zoomed to fit the canvas, which fills the window. A drag pans it and the wheel or a pinch zooms
+   * it; only a tap (a press that doesn't move) acts on the map, so moving the map never places a tower.
+   */
+  private setUpCamera(): void {
+    // Origin at the top-left corner, so a screen pixel shows the world point `scroll + screen / zoom` (camera.ts).
+    this.cameras.main.setOrigin(0, 0);
+    this.fitted = true;
+    this.setView(fitView(this.cameraBounds()));
+    const onResize = (size: Phaser.Structs.Size) => {
+      this.cameras.main.setSize(size.width, size.height);
+      const bounds = this.cameraBounds();
+      this.setView(this.fitted ? fitView(bounds) : clampView(this.view, bounds));
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, onResize));
+
+    this.gestures = createGestures({ dragThresholdPx: CAMERA.dragThresholdPx });
+    const screen = (pointer: Phaser.Input.Pointer): Pixel => ({ x: pointer.x, y: pointer.y });
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.button !== 0) return;
+      this.onGesture(this.gestures.down(pointer.id, screen(pointer)));
+    });
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      this.onGesture(this.gestures.move(pointer.id, screen(pointer)));
+      this.pointerTile = pixelToTile(screenToWorld(this.view, screen(pointer)));
+    });
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) =>
+      this.onGesture(this.gestures.up(pointer.id, screen(pointer))),
+    );
+    // Released off the canvas: never a tap.
+    this.input.on('pointerupoutside', () => this.gestures.cancel());
+    this.input.on('wheel', (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
+      this.fitted = false;
+      this.setView(zoomAt(this.view, Math.exp(-dy * CAMERA.wheelZoomPerPx), screen(pointer), this.cameraBounds()));
+    });
+  }
+
+  private onGesture(gesture: Gesture | undefined): void {
+    if (!gesture) return;
+    if (gesture.type === 'tap') return this.tapAt(screenToWorld(this.view, gesture.point));
+    this.fitted = false;
+    const bounds = this.cameraBounds();
+    const panned = panBy(this.view, gesture.dx, gesture.dy, bounds);
+    this.setView(gesture.type === 'pinch' ? zoomAt(panned, gesture.factor, gesture.center, bounds) : panned);
+  }
+
+  /**
+   * A tap on the map at world pixel `at`. A tap on a tower selects it. Otherwise the sim decides whether it places
+   * one, so this works in the Build and Wave phases alike.
+   */
+  private tapAt(at: Pixel): void {
+    const action = resolveClick(
+      this.sim.state.towers,
+      this.towerPanel.selectedId,
+      pixelToTile(at),
+      this.buildBar.selected,
+    );
+    if (action.type === 'select') this.towerPanel.select(action.towerId);
+    else if (action.type === 'deselect') this.towerPanel.select(undefined);
+    else if (action.type === 'place') {
+      const refusal = placeAt(this.sim, action.kind, action.tile);
+      if (refusal) this.floatingTexts.add(refusal, at);
+    }
   }
 
   /** One fixed tick of the game, from the real-time loop or test mode's step(). */
@@ -308,10 +383,8 @@ export class GameScene extends Phaser.Scene {
     );
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.
     // None while a tower is selected, since a click then only deselects.
-    this.showGhost(
-      this.buildBar.selected,
-      selected ? undefined : ghostAt(this.sim, this.buildBar.selected, this.pointerTile),
-    );
+    const kind = this.buildBar.selected;
+    this.showGhost(kind, selected ? undefined : ghostAt(this.sim, kind, this.pointerTile));
     this.floatingTextViews.sync(this.floatingTexts.active());
   }
 
@@ -333,19 +406,20 @@ export class GameScene extends Phaser.Scene {
     return key;
   }
 
-  /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none. */
-  private showGhost(kind: TowerKind, ghost: Ghost | undefined): void {
-    const unchanged = ghost
-      ? kind === this.ghost?.kind &&
-        ghost.tile.col === this.ghost.tile.col &&
-        ghost.tile.row === this.ghost.tile.row &&
-        ghost.placeable === this.ghost.placeable
+  /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none or no kind is selected. */
+  private showGhost(kind: TowerKind | undefined, ghost: Ghost | undefined): void {
+    const shown = kind && ghost ? { ...ghost, kind } : undefined;
+    const unchanged = shown
+      ? shown.kind === this.ghost?.kind &&
+        shown.tile.col === this.ghost.tile.col &&
+        shown.tile.row === this.ghost.tile.row &&
+        shown.placeable === this.ghost.placeable
       : this.ghost === undefined;
     if (unchanged) return;
-    this.ghost = ghost && { ...ghost, kind };
-    this.ghostGraphics.clear().setVisible(ghost !== undefined);
-    if (!ghost) return;
-    const { x, y } = toPixels(tileCenter(ghost.tile));
-    drawGhost(this.ghostGraphics.setPosition(x, y), kind, ghost.placeable);
+    this.ghost = shown;
+    this.ghostGraphics.clear().setVisible(shown !== undefined);
+    if (!shown) return;
+    const { x, y } = toPixels(tileCenter(shown.tile));
+    drawGhost(this.ghostGraphics.setPosition(x, y), shown.kind, shown.placeable);
   }
 }

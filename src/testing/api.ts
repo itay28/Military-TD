@@ -25,6 +25,8 @@ export interface TestView {
   readonly rangeRing: { readonly visible: boolean; readonly towerId: number | null; readonly center: Pixel };
   /** The tracers drawn on the next frame, each from a tower to where its shot hit. */
   readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
+  /** The camera over the map: the world pixel at the canvas's top-left corner, and the zoom. */
+  readonly camera: { readonly scrollX: number; readonly scrollY: number; readonly zoom: number };
   /** Each display object's layer (`map`, `towers`, `enemies`, …), back to front as Phaser renders them; repeats collapsed. */
   readonly drawOrder: readonly string[];
 }
