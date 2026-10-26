@@ -66,7 +66,7 @@ jobs:
             if [ "$mergeable" = false ]; then echo "::error::PR #$PR conflicts with its base: resolve the conflict first"; exit 1; fi
             if [ "$mergeable" = true ] && [ "$(gh api "repos/$REPO/commits/$merge" --jq '.parents[1].sha')" = "$sha" ]; then break; fi
             merge=''
-            sleep 10
+            [ "$attempt" = 6 ] || sleep 10
           done
           if [ -z "$merge" ]; then echo "::error::GitHub hasn't computed PR #$PR's merge commit yet; add the label again"; exit 1; fi
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
