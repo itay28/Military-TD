@@ -17,8 +17,10 @@ on:
         required: true
         type: number
 
+# Keyed on the label too: adding any other label starts a run that is skipped, and it must not
+# cancel a live one. A hand run shares the group with the label's.
 concurrency:
-  group: update-snapshots-${{ github.event.pull_request.number || inputs.pr }}
+  group: update-snapshots-${{ github.event.pull_request.number || inputs.pr }}-${{ github.event.label.name || 'update-snapshots' }}
   cancel-in-progress: true
 
 permissions:
