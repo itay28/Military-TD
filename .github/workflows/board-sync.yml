@@ -1,0 +1,55 @@
+name: Board sync
+
+# Keeps each issue's card on the project board in step with its PRs and assignees
+# (docs/agents/issue-tracker.md → Project board): ready PR → In review, draft PR or
+# assigned → In progress. Every run reconciles the whole board, so the schedule fixes
+# anything an event missed. Logic and tests: scripts/board-sync.ts.
+#
+# GITHUB_TOKEN can't edit a user-owned project, so this uses the PROJECT_TOKEN
+# secret (classic PAT, project + repo scopes). Without it, the run fails.
+#
+# Auto-start: with the repo variable AUTO_SPAWN set to `on`, each run then claims startable
+# issues and fires the implement scheduled task (scripts/auto-start.ts; AUTO_STACK=on also
+# starts stacked issues). The ROUTINE_* secrets are the tasks' API trigger URLs and tokens.
+on:
+  pull_request:
+    types: [opened, reopened, edited, ready_for_review, converted_to_draft, closed]
+  issues:
+    types: [assigned, reopened, closed, labeled, unlabeled, milestoned, demilestoned]
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+# Runs queue instead of overlapping; each one reads the board fresh.
+concurrency:
+  group: board-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  board-sync:
+    name: board-sync
+    # Fork PRs get no secrets; the next scheduled sweep covers them.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Sync the board
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          AUTO_SPAWN: ${{ vars.AUTO_SPAWN }}
+          AUTO_STACK: ${{ vars.AUTO_STACK }}
+          ROUTINE_SONNET_URL: ${{ secrets.ROUTINE_SONNET_URL }}
+          ROUTINE_SONNET_TOKEN: ${{ secrets.ROUTINE_SONNET_TOKEN }}
+          ROUTINE_OPUS_URL: ${{ secrets.ROUTINE_OPUS_URL }}
+          ROUTINE_OPUS_TOKEN: ${{ secrets.ROUTINE_OPUS_TOKEN }}
+        run: node scripts/board-sync.ts

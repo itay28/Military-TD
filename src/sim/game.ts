@@ -124,7 +124,7 @@ export function createGame(config: GameConfig): Game {
   const emitter = createEmitter<GameEvents>();
   let nextId = 1;
   /** The running wave, from startWave until it is cleared. */
-  let wave: { readonly data: WaveData; readonly schedule: SpawnSchedule; readonly startMs: number } | undefined;
+  let wave: { readonly schedule: SpawnSchedule; readonly startMs: number } | undefined;
 
   const createEnemy = (kind: EnemyKind): Enemy => {
     const stats = ENEMY_STATS[kind];
@@ -163,8 +163,8 @@ export function createGame(config: GameConfig): Game {
       if (wave) {
         // A spawn due mid-tick walks the rest of the tick, so tick size doesn't change where enemies are.
         const elapsedMs = state.timeMs - wave.startMs;
-        for (const spawnMs of wave.schedule.take(elapsedMs)) {
-          const spawned = walkEnemies([createEnemy(wave.data.kind)], line, Math.max(0, elapsedMs - spawnMs));
+        for (const spawn of wave.schedule.take(elapsedMs)) {
+          const spawned = walkEnemies([createEnemy(spawn.kind)], line, Math.max(0, elapsedMs - spawn.atMs));
           enemies.push(...spawned.walking);
           leaked.push(...spawned.leaked);
         }
@@ -206,11 +206,11 @@ export function createGame(config: GameConfig): Game {
       const next = config.waves[state.waveNumber];
       if (!next) return { ok: false, reason: 'noWavesLeft' };
       if (state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
-      wave = { data: next, schedule: createSpawnSchedule(next), startMs: state.timeMs };
+      wave = { schedule: createSpawnSchedule(next), startMs: state.timeMs };
       state.phase = 'wave';
       state.stats = resetWave(state.stats);
       state.waveNumber++;
-      state.enemies.push(...wave.schedule.take(0).map(() => createEnemy(next.kind)));
+      state.enemies.push(...wave.schedule.take(0).map((spawn) => createEnemy(spawn.kind)));
       emitter.emit('waveStarted', { waveNumber: state.waveNumber });
       return { ok: true };
     },

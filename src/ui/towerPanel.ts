@@ -1,4 +1,4 @@
-import { LAYER_NAME, LEVEL_NAME, TOWER_NAME, UPGRADE_REFUSAL_TEXT } from '../data/display';
+import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, UPGRADE_REFUSAL_TEXT } from '../data/display';
 import type { Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
@@ -78,7 +78,7 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
     setHidden(root, !tower);
     if (!tower) return;
     const figures = stats.towers[tower.id];
-    setText(heading, TOWER_NAME[tower.kind]);
+    setText(heading, TOWER_NAMES[tower.kind]);
     setText(level, `Level ${tower.level}`);
     setText(damage, String(tower.damage));
     setText(fireRate, `${tower.fireRate}/s`);
