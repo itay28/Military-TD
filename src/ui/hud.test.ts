@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { WAVE_BANNER_MS } from '../data/display';
-import { waveDps } from '../sim/stats';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
+import { waveDps } from '../sim/stats';
 import { mountHud } from './hud';
 
 // Path 6 tiles long: an Infantry (1.5 tiles/s) leaks after 4000 ms.
