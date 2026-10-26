@@ -55,6 +55,13 @@ describe('createTestApi', () => {
     expect(testApi.state().money).toBe(START_MONEY - TOWER_STATS.rifleNest.cost);
   });
 
+  it('command upgrades a tower like a player and returns its new level', () => {
+    const testApi = api(fakeHooks({ towers: [{ kind: 'rifleNest', tile: BUILDABLE }] }));
+    const [tower] = testApi.state().towers;
+    expect(testApi.command({ type: 'upgradeTower', towerId: tower!.id })).toEqual({ ok: true, level: 2 });
+    expect(testApi.state()).toMatchObject({ money: START_MONEY - 40, towers: [{ level: 2 }] });
+  });
+
   it('command passes a refusal through', () => {
     const testApi = api(fakeHooks());
     const onPath = { col: 0, row: 2 };

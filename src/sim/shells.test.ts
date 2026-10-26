@@ -120,6 +120,8 @@ describe('createShell', () => {
       targets: ['ground'],
       armorPierce: 3,
       cooldownMs: 0,
+      level: 1,
+      spent: 50,
       shell: { flightMs: 800, innerRadius: 0.5, outerRadius: 1.5 },
     };
     expect(createShell({ tower, target: { x: 6, y: 1 }, shell: tower.shell! }, 12, 4000)).toEqual({
@@ -149,6 +151,8 @@ describe('createShell', () => {
       fireRate: 1,
       targets: ['ground'],
       cooldownMs: 0,
+      level: 1,
+      spent: 1,
     } as const;
     const shell = { flightMs: 1, innerRadius: 0, outerRadius: 1 };
     expect(createShell({ tower, target: { x: 0, y: 0 }, shell }, 1, 0).armorPierce).toBe(0);

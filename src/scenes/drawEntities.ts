@@ -3,6 +3,7 @@ import {
   ENEMY_STYLE,
   GHOST,
   HP_BAR,
+  LEVEL_PIP,
   RANGE_RING,
   ROTOR,
   SHELL,
@@ -64,13 +65,21 @@ function paintShape(painter: EntityPainter, { shape, size }: TowerStyle, stroke 
   else painter.fillRect(-half, -half, size, size);
 }
 
-/** A filled shape with an outline, in its kind's style. */
+/** A filled shape with an outline, in its kind's style, and a level pip per upgrade along its bottom edge. */
 export function drawTower(painter: EntityPainter, tower: Tower): void {
   const style = TOWER_STYLE[tower.kind];
   painter.fillStyle(style.fill);
   paintShape(painter, style);
   painter.lineStyle(style.outlineWidth, style.outline);
   paintShape(painter, style, true);
+  if (tower.level <= 1) return;
+  const half = style.size / 2;
+  const top = half - LEVEL_PIP.inset - LEVEL_PIP.size;
+  painter.fillStyle(LEVEL_PIP.color);
+  for (let i = 0; i < tower.level - 1; i++) {
+    const left = -half + LEVEL_PIP.inset + i * (LEVEL_PIP.size + LEVEL_PIP.gap);
+    painter.fillRect(left, top, LEVEL_PIP.size, LEVEL_PIP.size);
+  }
 }
 
 /** The range rings' radii in pixels: the range, then the minimum range (the dead zone's edge) if there is one. */

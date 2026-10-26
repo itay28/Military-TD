@@ -5,6 +5,7 @@ import {
   ENEMY_STYLE,
   GHOST,
   HP_BAR,
+  LEVEL_PIP,
   RANGE_RING,
   ROTOR,
   SHELL,
@@ -63,6 +64,8 @@ const rifleNest = (id: number, col: number, row: number): Tower => ({
   kind: 'rifleNest',
   tile: { col, row },
   cooldownMs: 0,
+  level: 1,
+  spent: 50,
 });
 
 const mortar = (id: number, col: number, row: number): Tower => ({
@@ -71,6 +74,8 @@ const mortar = (id: number, col: number, row: number): Tower => ({
   kind: 'mortar',
   tile: { col, row },
   cooldownMs: 0,
+  level: 1,
+  spent: 125,
 });
 
 describe('drawEnemy', () => {
@@ -174,6 +179,19 @@ describe('drawTower', () => {
       ['fillRect', -half, -half, size, size],
       ['lineStyle', outlineWidth, outline],
       ['strokeRect', -half, -half, size, size],
+    ]);
+  });
+
+  it('adds one level pip per upgrade, in a row along the bottom edge', () => {
+    const { painter, calls } = recordingPainter();
+    drawTower(painter, { ...rifleNest(1, 0, 0), level: 3 });
+    const { size: pip, gap, inset, color } = LEVEL_PIP;
+    const half = TOWER_STYLE.rifleNest.size / 2;
+    const top = half - inset - pip;
+    expect(calls.slice(4)).toEqual([
+      ['fillStyle', color],
+      ['fillRect', -half + inset, top, pip, pip],
+      ['fillRect', -half + inset + pip + gap, top, pip, pip],
     ]);
   });
 });
