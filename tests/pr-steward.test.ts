@@ -8,6 +8,7 @@ import {
   act,
   currentChecks,
   decide,
+  milestoneDone,
   settingsFromEnv,
   type Decision,
   type PrComment,
@@ -78,14 +79,6 @@ describe('decide: skip', () => {
     expect(kind(pr({ labels: ['hold'] }))).toBe('skip');
   });
 
-  it('merges a release PR once CI is green, with no review or steward rounds', () => {
-    const release = pr({ head: 'release-please--branches--main', comments: [] });
-    expect(kind(release)).toBe('merge');
-    expect(kind({ ...release, comments: [review(10)] })).toBe('merge');
-    expect(kind({ ...release, checks: [{ name: 'ci', state: 'failure' }] })).toBe('wait');
-    expect(kind({ ...release, checks: [] })).toBe('wait');
-  });
-
   it('skips a handed-off PR until the maintainer comments', () => {
     const stuck = pr({ labels: ['needs-you'], comments: [review(90), action(STUCK_MARKER, 20)] });
     expect(kind(stuck)).toBe('skip');
@@ -95,6 +88,106 @@ describe('decide: skip', () => {
       reasons: ['review', 'comment'],
       clearNeedsYou: true,
     });
+  });
+});
+
+describe('decide: releases', () => {
+  const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4], done: false };
+  const done = { ...v02, done: true };
+  const release = (version: string, over: Partial<StewardPr> = {}) =>
+    pr({
+      title: `chore(main): release ${version}`,
+      head: 'release-please--branches--main--components--military-td',
+      closes: [],
+      comments: [],
+      ...over,
+    });
+  const report = (version: string, over: Partial<StewardPr> = {}) =>
+    pr({
+      title: `chore: release ${version}`,
+      head: `chore/release-${version}`,
+      body: `Refs #160\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nRelease-As: ${version}`,
+      closes: [],
+      comments: [],
+      ...over,
+    });
+
+  it('holds a patch release PR, naming the milestone it ships with', () => {
+    expect(decide(release('0.1.2'), now, 'main', v02)).toEqual({
+      kind: 'wait',
+      why: 'release PR 0.1.2: ships with v0.2.0 — Combat depth; merge it by hand to release now',
+    });
+  });
+
+  it("merges a release PR for the current milestone's version once CI is green, with no review", () => {
+    expect(decide(release('0.2.0'), now, 'main', v02).kind).toBe('merge');
+    expect(decide(release('0.2.0', { comments: [review(10)] }), now, 'main', v02).kind).toBe('merge');
+    expect(decide(release('0.2.0', { checks: [{ name: 'ci', state: 'failure' }] }), now, 'main', v02).kind).toBe(
+      'wait',
+    );
+    expect(decide(release('0.2.0', { checks: [] }), now, 'main', v02).kind).toBe('wait');
+  });
+
+  it("holds a release PR for another milestone's version, or when no milestone is open", () => {
+    expect(decide(release('0.3.0'), now, 'main', v02).kind).toBe('wait');
+    expect(decide(release('0.2.0'), now, 'main', null).kind).toBe('wait');
+  });
+
+  it('merges the report PR when its milestone is done and the footer matches, with no review', () => {
+    expect(decide(report('0.2.0'), now, 'main', done).kind).toBe('merge');
+    expect(decide(report('0.2.0', { comments: [review(10)], unresolvedThreads: 2 }), now, 'main', done).kind).toBe(
+      'merge',
+    );
+    expect(decide(report('0.2.0', { behind: true }), now, 'main', done).kind).toBe('update');
+  });
+
+  it('holds the report PR while its milestone has open issues', () => {
+    expect(decide(report('0.2.0'), now, 'main', v02)).toEqual({
+      kind: 'wait',
+      why: 'report PR 0.2.0: v0.2.0 — Combat depth still has open issues',
+    });
+  });
+
+  it('holds the report PR when its footer is missing or names another version', () => {
+    expect(decide(report('0.2.0', { body: 'Refs #160' }), now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0', { body: 'Refs #160\n\nRelease-As: 0.3.0' }), now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0', { body: 'Release-As: 0.2.0\n\nCo-authored-by: x' }), now, 'main', done).kind).toBe(
+      'wait',
+    );
+  });
+
+  it("holds a report PR for another milestone's version", () => {
+    expect(decide(report('0.3.0'), now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0'), now, 'main', null).kind).toBe('wait');
+  });
+
+  it('holds the report PR while checks run, fail or never ran', () => {
+    const pending = report('0.2.0', { checks: [{ name: 'ci', state: 'pending' }] });
+    expect(decide(pending, now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0', { checks: [{ name: 'ci', state: 'failure' }] }), now, 'main', done).kind).toBe(
+      'wait',
+    );
+    expect(decide(report('0.2.0', { checks: [] }), now, 'main', done).kind).toBe('wait');
+    expect(decide(report('0.2.0', { mergeable: 'CONFLICTING' }), now, 'main', done).kind).toBe('wait');
+  });
+
+  it('skips held release and report PRs', () => {
+    expect(decide(release('0.2.0', { labels: ['hold'] }), now, 'main', v02).kind).toBe('skip');
+    expect(decide(report('0.2.0', { labels: ['hold'] }), now, 'main', done).kind).toBe('skip');
+  });
+});
+
+describe('milestoneDone', () => {
+  const issue = (...labels: string[]) => ({ labels: { nodes: labels.map((name) => ({ name })) } });
+
+  it('is done when only the release issue is open', () => {
+    expect(milestoneDone([issue('release', 'area:infra')])).toBe(true);
+    expect(milestoneDone([issue('release'), issue('area:towers')])).toBe(false);
+    expect(milestoneDone([])).toBe(false);
+  });
+
+  it('is not done when the open issues were truncated', () => {
+    expect(milestoneDone([issue('release')], true)).toBe(false);
   });
 });
 
@@ -293,7 +386,7 @@ describe('decide: superseded checks', () => {
 
 describe('decide: milestone hold', () => {
   const v03 = { number: 4, title: 'v0.3.0 — Game shell' };
-  const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4] };
+  const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4], done: false };
   const closing = (...milestones: (typeof v02 | typeof v03 | null)[]) =>
     milestones.map((milestone, i) => ({ number: 3 + i, blocked: false, needsInfo: false, milestone }));
 
