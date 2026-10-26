@@ -143,7 +143,22 @@ tests/
 | Start money / lives | 100 / 20 |
 | Rifle Nest | cost 50, range 2.5 tiles, 2 shots/s, 10 damage |
 | Infantry | 30 HP, 1.5 tiles/s, reward 5, leak cost 1 life |
-| MVP wave | 8 Infantry, 800 ms spacing |
+| Waves | 10, below (`src/data/waves.ts`) |
+
+**Wave schedule.** Each new kind first comes alone, in small numbers, then mixes with the others. A group is count × kind, spacing between spawns, and a delay before its first spawn (#140); groups in a wave run in parallel. Tuning: #16.
+
+| Wave | Groups | Introduces |
+| --- | --- | --- |
+| 1 | 8 Infantry, 800 ms | Infantry |
+| 2 | 12 Infantry, 800 ms | |
+| 3 | 3 Jeeps, 1500 ms | Jeep, alone |
+| 4 | 10 Infantry, 800 ms · 5 Jeeps, 600 ms, after 4 s | |
+| 5 | 1 Tank | Tank, alone |
+| 6 | 12 Infantry, 800 ms · 2 Tanks, 3000 ms, after 3 s | |
+| 7 | 3 Helicopters, 2500 ms | Helicopter, alone |
+| 8 | 6 Helicopters, 2000 ms · 10 Infantry, 800 ms, after 2 s · 6 Jeeps, 600 ms, after 8 s | |
+| 9 | 3 Tanks, 3000 ms · 6 Helicopters, 2000 ms, after 3 s · 10 Jeeps, 600 ms, after 6 s | |
+| 10 | 5 Tanks, 3000 ms · 10 Helicopters, 2000 ms, after 2 s · 20 Infantry, 600 ms, after 4 s · 10 Jeeps, 600 ms, after 12 s | |
 
 ## v0.1.0 — MVP tasks
 

@@ -36,6 +36,19 @@ describe('recordShots', () => {
   });
 });
 
+describe('totals', () => {
+  it('per-tower damage and kills add up to the overall figures', () => {
+    const stats = [
+      [shot(1, [10, 5], [11, 4]), shot(2, [10, 2])],
+      [shot(2, [12, 6]), shot(3, [11, 1], [13, 3])],
+    ].reduce((acc, shots) => recordShots(acc, shots, new Set([10, 11])), emptyStats());
+    const sum = (key: 'damage' | 'kills') => Object.values(stats.towers).reduce((acc, t) => acc + t.total[key], 0);
+    expect(stats.total.damage).toBeGreaterThan(0);
+    expect(sum('damage')).toBe(stats.total.damage);
+    expect(sum('kills')).toBe(stats.total.kills);
+  });
+});
+
 describe('waves', () => {
   const played = recordShots(emptyStats(), [shot(1, [10, 7])], new Set([10]));
 

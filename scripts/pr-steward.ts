@@ -12,6 +12,16 @@ import { isMilestoneDone, releaseVersion } from './milestone-report.ts';
 
 /** Starts the CI review's comment (.github/workflows/claude-code-review.yml). */
 export const REVIEW_HEADING = '## Code review (mattpocock-skills:code-review)';
+/**
+ * Posted by the Action when it asks for a missing CI review (#209), with the head commit it asked
+ * for: a PR marked ready while it conflicts never starts the review workflow, as GitHub runs no
+ * `pull_request` workflow on a conflicted PR. One request per head commit, so a failing review job
+ * doesn't loop.
+ */
+export const REVIEW_REQUEST_MARKER = '<!-- pr-steward:review-requested';
+export const reviewRequestMarker = (sha: string) => `${REVIEW_REQUEST_MARKER} sha=${sha} -->`;
+/** Re-runs the CI review (.github/workflows/claude-code-review.yml). */
+const REVIEW_AGAIN_LABEL = 'review-again';
 /** Posted by the Action when it fires a round. */
 export const ROUND_MARKER = '<!-- pr-steward:round -->';
 /** Posted by the steward (or implement) agent when it has finished a round. */
@@ -207,6 +217,8 @@ export type Decision =
   | { readonly kind: 'skip'; readonly why: string }
   | { readonly kind: 'wait'; readonly why: string }
   | { readonly kind: 'update' }
+  /** No CI review ever ran on this PR: add `review-again` to start one (#209). */
+  | { readonly kind: 'review' }
   | {
       readonly kind: 'steward';
       readonly reasons: readonly Reason[];
@@ -239,9 +251,10 @@ const isApproval = (c: PrComment) => isMaintainer(c) && APPROVE_COMMAND.test(c.b
  * round for a conflict, a failed check, an unanswered CI review or maintainer comment, or
  * unresolved threads (hand off as stuck after MAX_ROUNDS, or at once when a round left a conflict
  * on the same base); update a PR that is only behind; wait
- * for running checks and the CI review; then merge, if it targets the default branch, no issue it
- * closes is blocked or waiting on an answer, and none is in a later milestone than `current` (#180),
- * and, when it touches a critical path, a maintainer `/approve` came after the latest round (#206).
+ * for running checks and the CI review, requesting a review that never ran (#209); then merge, if
+ * it targets the default branch, no issue it closes is blocked or waiting on an answer, and none
+ * is in a later milestone than `current` (#180), and, when it touches a critical path, a
+ * maintainer `/approve` came after the latest round (#206).
  */
 export function decide(
   pr: StewardPr,
@@ -302,7 +315,10 @@ export function decide(
       : { kind: 'steward', reasons, round: used + 1, retry: !!latest && !finished(latest), clearNeedsYou };
   }
   if (pr.behind) return { kind: 'update' };
-  if (!lastReview) return { kind: 'wait', why: 'no CI review yet (add `review-again` to request one)' };
+  if (!lastReview)
+    return pr.comments.some((c) => c.body.includes(reviewRequestMarker(pr.headSha)))
+      ? { kind: 'wait', why: 'no CI review yet (requested for this commit; add `review-again` to ask again)' }
+      : { kind: 'review' };
   if (pr.base !== defaultBranch) return { kind: 'wait', why: `stacked on ${pr.base}: merges after its parent` };
   const held = pr.closes.find((i) => i.blocked || i.needsInfo);
   if (held)
@@ -487,6 +503,12 @@ ${APPROVAL_MARKER}`,
       );
       return;
     }
+    case 'review':
+      await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+        body: `PR steward: no CI review ran on this PR, so I added \`${REVIEW_AGAIN_LABEL}\` to start one. GitHub runs no PR workflow while a PR has a merge conflict, so marking it ready then doesn't start the review.\n\n${reviewRequestMarker(pr.headSha)}`,
+      });
+      await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [REVIEW_AGAIN_LABEL] });
+      return;
     case 'update':
       await github(fetchFn, token, 'PUT', `pulls/${n}/update-branch`, { expected_head_sha: pr.headSha });
       return;

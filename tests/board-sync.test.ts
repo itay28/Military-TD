@@ -3,10 +3,14 @@ import {
   closingIssues,
   currentMilestone,
   desiredStatus,
+  planFieldsFromLabels,
+  planFieldUpdates,
   planMoves,
+  withFieldUpdates,
   type BoardIssue,
   type PullRequest,
 } from '../scripts/board-sync';
+import { planStarts, type StartIssue } from '../scripts/auto-start';
 
 // The board-sync workflow keeps each issue's card in step with its PRs and assignees (docs/agents/issue-tracker.md).
 describe('closingIssues', () => {
@@ -170,5 +174,111 @@ describe('planMoves', () => {
       { issue: 1, from: 'In progress', to: 'In review' },
       { issue: 3, from: 'Ready', to: 'In progress' },
     ]);
+  });
+});
+
+// Agents set Size and Priority as labels; Board sync copies them (and `area:*`) to the board (#205).
+describe('planFieldsFromLabels', () => {
+  it('reads size, priority and area labels', () => {
+    expect(planFieldsFromLabels(['size:M', 'priority:P1', 'area:ui', 'enhancement']).fields).toEqual({
+      Size: 'M',
+      Priority: 'P1',
+      Area: 'ui',
+    });
+  });
+
+  it('takes the bigger Size and the less urgent Priority when two labels disagree', () => {
+    expect(planFieldsFromLabels(['size:L', 'size:S', 'priority:P0', 'priority:P2']).fields).toEqual({
+      Size: 'L',
+      Priority: 'P2',
+    });
+  });
+
+  it('ignores unknown values: not copied, not removed', () => {
+    expect(planFieldsFromLabels(['size:XXL', 'priority:urgent', 'area:music'])).toEqual({
+      fields: {},
+      removeLabels: [],
+    });
+  });
+
+  it('leaves Area alone when two area labels disagree', () => {
+    expect(planFieldsFromLabels(['area:ui', 'area:core']).fields).toEqual({});
+  });
+
+  it('removes the size and priority labels it read, never area labels', () => {
+    expect(planFieldsFromLabels(['size:S', 'size:M', 'priority:P3', 'area:infra', 'size:XXL']).removeLabels).toEqual([
+      'size:S',
+      'size:M',
+      'priority:P3',
+    ]);
+  });
+});
+
+describe('planFieldUpdates', () => {
+  const unset = { Size: undefined, Priority: undefined, Area: undefined };
+
+  it('sets the fields of a labelled issue and removes its labels', () => {
+    expect(planFieldUpdates([{ number: 7, labels: ['size:M', 'priority:P1', 'area:ui'], fields: unset }])).toEqual([
+      {
+        issue: 7,
+        set: [
+          { field: 'Size', value: 'M' },
+          { field: 'Priority', value: 'P1' },
+          { field: 'Area', value: 'ui' },
+        ],
+        removeLabels: ['size:M', 'priority:P1'],
+      },
+    ]);
+  });
+
+  it('only removes the labels when the board already matches', () => {
+    expect(
+      planFieldUpdates([
+        { number: 7, labels: ['size:M', 'priority:P1', 'area:ui'], fields: { Size: 'M', Priority: 'P1', Area: 'ui' } },
+      ]),
+    ).toEqual([{ issue: 7, set: [], removeLabels: ['size:M', 'priority:P1'] }]);
+  });
+
+  it('plans nothing for an issue without field labels, or whose area label already matches', () => {
+    expect(
+      planFieldUpdates([
+        { number: 1, labels: ['enhancement'], fields: unset },
+        { number: 2, labels: ['area:core'], fields: { ...unset, Area: 'core' } },
+      ]),
+    ).toEqual([]);
+  });
+});
+
+describe('withFieldUpdates', () => {
+  const start = (over: Partial<StartIssue> = {}): StartIssue => ({
+    number: 9,
+    status: 'Ready',
+    assigned: false,
+    tracker: false,
+    labelled: true,
+    hold: false,
+    needsYou: false,
+    autoAgent: false,
+    size: undefined,
+    priority: undefined,
+    milestone: 2,
+    blockedBy: [],
+    ...over,
+  });
+
+  it('lets auto-start see a Size set from a label in the same run', () => {
+    const issues = [start()];
+    expect(planStarts(issues, [], [2]).noSize).toEqual([9]);
+    const updated = withFieldUpdates(issues, planFieldUpdates([{ number: 9, labels: ['size:S'], fields: {} }]));
+    expect(planStarts(updated, [], [2]).starts).toEqual([{ issue: 9, base: 'main', model: 'sonnet' }]);
+  });
+
+  it('carries the new Priority and leaves other issues as they were', () => {
+    const issues = [start(), start({ number: 10, size: 'M' })];
+    const updated = withFieldUpdates(issues, [
+      { issue: 9, set: [{ field: 'Priority', value: 'P0' }], removeLabels: [] },
+    ]);
+    expect(updated[0]).toEqual(start({ priority: 'P0' }));
+    expect(updated[1]).toBe(issues[1]);
   });
 });
