@@ -20,6 +20,7 @@ export const MAP_STYLE = {
 export const ENEMY_STYLE = {
   infantry: { shape: 'circle', radius: 9, color: 0x9e3b2c }, // brick red
   jeep: { shape: 'square', radius: 7, color: 0x6b7d3a }, // olive drab
+  tank: { shape: 'circle', radius: 14, color: 0x4a5d3a }, // dark olive drab
 } as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number }>;
 
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
