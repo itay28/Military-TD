@@ -176,27 +176,22 @@ describe('decide: steward rounds', () => {
     });
   });
 
-  describe('rounds spent on a conflict from the base moving (#183)', () => {
+  describe('rounds spent on conflicts', () => {
     const conflict = { mergeable: 'CONFLICTING' as const };
     // A round marker as act() posts it: reasons and the base's head at that moment.
     const round = (minutesAgo: number, reasons: string[], base: string) =>
       action(`${ROUND_MARKER}\n${roundMeta(reasons as never, base)}`, minutesAgo);
     const after = (r: ReturnType<typeof round>, m: number) => [r, agent(DONE_MARKER, m)];
 
-    it('does not count a conflict-only round when the base moved since the previous round', () => {
+    it('does not count a conflict-only round', () => {
       const comments = [...after(round(400, ['ci'], 'base-a'), 395), ...after(round(300, ['conflict'], 'base-b'), 295)];
-      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 2 });
+      expect(decide(pr({ comments, checks: [{ name: 'ci', state: 'failure' }] }), now)).toMatchObject({
+        kind: 'steward',
+        round: 2,
+      });
     });
 
-    it('counts a conflict-only round when the base did not move', () => {
-      const comments = [
-        ...after(round(400, ['conflict'], 'base-a'), 395),
-        ...after(round(300, ['conflict'], 'base-a'), 295),
-      ];
-      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 3 });
-    });
-
-    it('counts a round with any other reason, even when the base moved', () => {
+    it('counts a round with any other reason', () => {
       const comments = [
         ...after(round(400, ['ci'], 'base-a'), 395),
         ...after(round(300, ['conflict', 'ci'], 'base-b'), 295),
@@ -204,12 +199,9 @@ describe('decide: steward rounds', () => {
       expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 3 });
     });
 
-    it('counts the first round and rounds whose marker has no meta line', () => {
-      expect(decide(pr({ ...conflict, comments: after(round(300, ['conflict'], 'base-a'), 295) }), now)).toMatchObject({
-        round: 2,
-      });
+    it('counts rounds whose marker has no meta line', () => {
       const old = [...after(action(ROUND_MARKER, 400), 395), ...after(round(300, ['conflict'], 'base-b'), 295)];
-      expect(decide(pr({ ...conflict, comments: old }), now)).toMatchObject({ round: 3 });
+      expect(decide(pr({ ...conflict, comments: old }), now)).toMatchObject({ kind: 'steward', round: 2 });
     });
 
     it('does not hand off a PR whose rounds were all spent on its base moving', () => {
@@ -220,6 +212,34 @@ describe('decide: steward rounds', () => {
         ),
       ];
       expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 2 });
+    });
+
+    it('fires again when the base moved since the last conflict round', () => {
+      const comments = after(round(300, ['conflict'], 'base-a'), 295);
+      expect(decide(pr({ ...conflict, baseSha: 'base-b', comments }), now)).toMatchObject({
+        kind: 'steward',
+        round: 1,
+      });
+    });
+
+    it('hands off at once when a conflict round left the conflict on the same base', () => {
+      const comments = after(round(300, ['conflict', 'ci'], 'base-a'), 295);
+      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments }), now)).toEqual({
+        kind: 'stuck',
+        reasons: ['conflict'],
+        conflict: true,
+      });
+      // A round that died without a done marker is stuck the same way.
+      const died = [round(300, ['conflict'], 'base-a')];
+      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments: died }), now)).toMatchObject({ kind: 'stuck' });
+    });
+
+    it('gives an unresolved conflict a fresh round after a maintainer comment', () => {
+      const comments = [...after(round(300, ['conflict'], 'base-a'), 295), maintainer(200)];
+      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments }), now)).toMatchObject({
+        kind: 'steward',
+        round: 1,
+      });
     });
   });
 
@@ -400,6 +420,13 @@ describe('act', () => {
     const fetchFn = vi.fn<Fetch>(async () => new Response('nope', { status: 500 }));
     await expect(act(pr(), steward, 'gh-token', settings, fetchFn)).rejects.toThrow(/#7/);
     expect(calls(fetchFn)).toEqual(['POST https://fire.example/steward']);
+  });
+
+  it('says why when an unresolved conflict hands off', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'stuck', reasons: ['conflict'], conflict: true }, 'gh-token', settings, fetchFn);
+    const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
+    expect(body).toContain("couldn't resolve the merge conflict");
   });
 
   it('hands off as stuck: needs-you label and a summary with the marker', async () => {
