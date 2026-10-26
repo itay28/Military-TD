@@ -4,6 +4,7 @@ import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
 import { createMap, type GameMap, type MapData, type Position, type Tile } from './map';
 import { createShell, landShells, type Shell, type ShellLanding } from './shells';
+import { emptyStats, recordShots, resetWave, withWaveElapsed, type CombatStats } from './stats';
 import { fireTowers, towerAt, type Shot, type Tower } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
@@ -43,6 +44,8 @@ export interface GameState {
   /** Waves cleared so far: every wave after Victory, the waves before the lost one after Defeat. */
   readonly wavesCleared: number;
   readonly totalWaves: number;
+  /** Damage and kills, overall and per tower; wave figures freeze when the wave ends. */
+  readonly stats: CombatStats;
 }
 
 export interface GameEvents {
@@ -121,6 +124,7 @@ export function createGame(config: GameConfig): Game {
     waveNumber: 0,
     wavesCleared: 0,
     totalWaves: config.waves.length,
+    stats: emptyStats(),
   };
   const emitter = createEmitter<GameEvents>();
   let nextId = 1;
@@ -172,6 +176,8 @@ export function createGame(config: GameConfig): Game {
       state.shells = [...landing.shells, ...launched];
       const kills = [...landing.kills, ...fired.kills];
       for (const enemy of kills) state.money += enemy.reward;
+      state.stats = recordShots(state.stats, fired.shots, new Set(kills.map((enemy) => enemy.id)));
+      if (wave) state.stats = withWaveElapsed(state.stats, state.timeMs - wave.startMs);
       let cleared = false;
       if (state.lives === 0) {
         wave = undefined;
@@ -211,6 +217,7 @@ export function createGame(config: GameConfig): Game {
       if (state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
       wave = { schedule: createSpawnSchedule(next), startMs: state.timeMs };
       state.phase = 'wave';
+      state.stats = resetWave(state.stats);
       state.waveNumber++;
       state.enemies.push(...wave.schedule.take(0).map((spawn) => createEnemy(spawn.kind)));
       emitter.emit('waveStarted', { waveNumber: state.waveNumber });

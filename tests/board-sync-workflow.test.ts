@@ -12,8 +12,10 @@ describe('board sync workflow', () => {
     );
   });
 
-  it('runs when an issue is assigned or reopened', () => {
-    expect(yaml).toMatch(/^ {2}issues:\n {4}types: \[assigned, reopened\]\n/m);
+  it('runs on every issue change the Ready rule depends on: assignee, blocker closed, label, milestone', () => {
+    expect(yaml).toMatch(
+      /^ {2}issues:\n {4}types: \[assigned, reopened, closed, labeled, unlabeled, milestoned, demilestoned\]\n/m,
+    );
   });
 
   it('also sweeps on a schedule and on demand, to fix any card that drifted', () => {
@@ -34,5 +36,17 @@ describe('board sync workflow', () => {
   it('runs the sync with the project token from secrets', () => {
     expect(runsOf(yaml)).toEqual(['node scripts/board-sync.ts']);
     expect(yaml).toContain('PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}');
+  });
+});
+
+describe('board sync workflow: auto-start', () => {
+  it('passes the auto-start switches from repo variables', () => {
+    expect(yaml).toContain('AUTO_SPAWN: ${{ vars.AUTO_SPAWN }}');
+    expect(yaml).toContain('AUTO_STACK: ${{ vars.AUTO_STACK }}');
+  });
+
+  it('passes both routine triggers from secrets', () => {
+    for (const name of ['ROUTINE_SONNET_URL', 'ROUTINE_SONNET_TOKEN', 'ROUTINE_OPUS_URL', 'ROUTINE_OPUS_TOKEN'])
+      expect(yaml).toContain(`${name}: \${{ secrets.${name} }}`);
   });
 });

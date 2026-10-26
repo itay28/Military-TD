@@ -59,6 +59,11 @@ describe('.claude/settings.json', () => {
     expect(commands('SessionStart')).toEqual(['node "$CLAUDE_PROJECT_DIR/scripts/doctor.ts" --hook']);
   });
 
+  it('declares no plugins or marketplaces: cloud sessions never install them from repo settings', () => {
+    expect(JSON.stringify(settings)).not.toContain('itay28-skills');
+    expect(settings).not.toHaveProperty('extraKnownMarketplaces');
+  });
+
   it('has no client-side board hook: the board moves in GitHub Actions', () => {
     expect(JSON.stringify(settings)).not.toContain('board-status');
   });

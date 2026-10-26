@@ -8,16 +8,19 @@ Sessions run locally (this PC), over Remote Control or `claude --bg` (also this 
 
 | | Local / Remote Control | Cloud session | GitHub Actions |
 | --- | --- | --- | --- |
-| Repo settings, hooks, plugins in `.claude/settings.json` | yes | yes | `@claude` only |
-| Workflow skills: plugin `workflow@itay28-skills` (private repo `itay28/claude-skills`) | yes (user scope, every repo) | yes through the repo settings, if the session can clone the private repo | no |
+| Hooks and permissions in `.claude/settings.json` | yes | yes | `@claude` only |
+| Plugins (`enabledPlugins`, incl. `mattpocock-skills`) | yes | **no**: cloud sessions never install plugins from repo settings | `@claude` / CI review via the action's own config |
+| Skills in the repo's `.claude/skills/` | yes | yes (part of the clone) | `@claude` only |
+| Workflow skills: plugin `workflow@itay28-skills` (private repo `itay28/claude-skills`) | yes (installed at user scope) | no | no |
+| GitHub GraphQL (`gh pr`, `gh issue`, Projects v2) | yes | **no**: the cloud GitHub proxy blocks it; use the built-in GitHub tools and `gh api` (REST) | yes |
 | `GH_TOKEN`: repo-scoped fine-grained PAT | `gh auth login` | the cloud environment's env vars | `github.token` |
 | `PROJECT_TOKEN`: classic PAT, `project` + `repo` | user env var `GH_PROJECT_TOKEN`, or `~/.config/gh-project-token.txt` (only to set fields on new issues) | the cloud environment's env vars (same use) | repo secret `PROJECT_TOKEN` (Board sync, release board) |
 
 Same names everywhere, each environment reading its own store; tokens never go in the repo. Prefer a separate token per environment, so one can be revoked without breaking the others.
 
-**Local only:** `claude --bg` and the skills that use it (`/workflow:spawn-sessions`, `/workflow:stack-next`); the Windows notes below.
+So **board work always lives in Actions** (*Board sync* moves Status and keeps *Ready* exact), never in a skill or hook a session has to run.
 
-**Skills:** change them in `itay28/claude-skills`, push, then `/plugin marketplace update itay28-skills`. Don't copy skills into `~/.claude/skills`: cloud sessions can't see that folder.
+**Local only:** the workflow plugin (`/workflow:promote-ready`, which is optional now that Ready is automatic; `/workflow:spawn-sessions` and `/workflow:stack-next`, which need `claude --bg`), and the Windows notes below. Change those skills in `itay28/claude-skills`, push, then `/plugin marketplace update itay28-skills`. Something every environment needs goes in Actions or in the repo's `.claude/skills/`.
 
 **Git remote:** Military-TD pushes over HTTPS with Git Credential Manager. Windows' own `ssh` has no GitHub host key here, so `git@github.com:` remotes fail with "Host key verification failed".
 
