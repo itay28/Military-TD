@@ -3,6 +3,7 @@ import {
   DONE_MARKER,
   REVIEW_HEADING,
   ROUND_MARKER,
+  roundMeta,
   STUCK_MARKER,
   act,
   currentChecks,
@@ -48,6 +49,7 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
   isDraft: false,
   fork: false,
   base: 'main',
+  baseSha: 'base-1',
   head: 'feat/3-mortar',
   headSha: 'abc123',
   labels: [],
@@ -171,6 +173,53 @@ describe('decide: steward rounds', () => {
     expect(decide(pr({ ...red, comments: [...done(300)] }), now)).toMatchObject({ kind: 'steward', round: 2 });
     expect(decide(pr({ ...red, comments: [...done(300), maintainer(250), ...done(200)] }), now)).toMatchObject({
       round: 2,
+    });
+  });
+
+  describe('rounds spent on a conflict from the base moving (#183)', () => {
+    const conflict = { mergeable: 'CONFLICTING' as const };
+    // A round marker as act() posts it: reasons and the base's head at that moment.
+    const round = (minutesAgo: number, reasons: string[], base: string) =>
+      action(`${ROUND_MARKER}\n${roundMeta(reasons as never, base)}`, minutesAgo);
+    const after = (r: ReturnType<typeof round>, m: number) => [r, agent(DONE_MARKER, m)];
+
+    it('does not count a conflict-only round when the base moved since the previous round', () => {
+      const comments = [...after(round(400, ['ci'], 'base-a'), 395), ...after(round(300, ['conflict'], 'base-b'), 295)];
+      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 2 });
+    });
+
+    it('counts a conflict-only round when the base did not move', () => {
+      const comments = [
+        ...after(round(400, ['conflict'], 'base-a'), 395),
+        ...after(round(300, ['conflict'], 'base-a'), 295),
+      ];
+      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 3 });
+    });
+
+    it('counts a round with any other reason, even when the base moved', () => {
+      const comments = [
+        ...after(round(400, ['ci'], 'base-a'), 395),
+        ...after(round(300, ['conflict', 'ci'], 'base-b'), 295),
+      ];
+      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 3 });
+    });
+
+    it('counts the first round and rounds whose marker has no meta line', () => {
+      expect(decide(pr({ ...conflict, comments: after(round(300, ['conflict'], 'base-a'), 295) }), now)).toMatchObject({
+        round: 2,
+      });
+      const old = [...after(action(ROUND_MARKER, 400), 395), ...after(round(300, ['conflict'], 'base-b'), 295)];
+      expect(decide(pr({ ...conflict, comments: old }), now)).toMatchObject({ round: 3 });
+    });
+
+    it('does not hand off a PR whose rounds were all spent on its base moving', () => {
+      const comments = [
+        ...after(round(500, ['ci'], 'base-a'), 495),
+        ...['base-b', 'base-c', 'base-d'].flatMap((b, i) =>
+          after(round(400 - i * 100, ['conflict'], b), 395 - i * 100),
+        ),
+      ];
+      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 2 });
     });
   });
 
@@ -338,6 +387,7 @@ describe('act', () => {
     const { body } = JSON.parse(fireOk.mock.calls[1]![1].body as string) as { body: string };
     expect(body).toContain(ROUND_MARKER);
     expect(body).toContain('https://claude.ai/code/session_1');
+    expect(body).toContain(roundMeta(['ci', 'review'], 'base-1'));
   });
 
   it('removes needs-you when a maintainer comment restarted the PR', async () => {

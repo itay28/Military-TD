@@ -14,6 +14,34 @@ export const REVIEW_HEADING = '## Code review (mattpocock-skills:code-review)';
 /** Posted by the Action when it fires a round. */
 export const ROUND_MARKER = '<!-- pr-steward:round -->';
 /** Posted by the steward (or implement) agent when it has finished a round. */
+const ROUND_META = '<!-- pr-steward:round-meta';
+/** The hidden line under a round marker: why the round fired, and the base branch's head then (#183). */
+export const roundMeta = (reasons: readonly Reason[], baseSha: string) =>
+  `${ROUND_META} reasons=${reasons.join(',')} base=${baseSha} -->`;
+const parseRoundMeta = (body: string) => {
+  const m = /<!-- pr-steward:round-meta reasons=([\w,]*) base=(\S+) -->/.exec(body);
+  return m ? { reasons: m[1]!.split(','), base: m[2]! } : null;
+};
+
+/**
+ * Rounds that count toward MAX_ROUNDS among `rounds` (round markers, oldest first), given the
+ * marker before them. A round fired only for a conflict, after the base moved since the previous
+ * round, is free: the conflict came from the base (a PR below merging), not from this PR (#183).
+ * A marker without a meta line counts.
+ */
+function countedRounds(rounds: readonly PrComment[], before: PrComment | undefined): number {
+  let previous = before && parseRoundMeta(before.body);
+  let counted = 0;
+  for (const r of rounds) {
+    const meta = parseRoundMeta(r.body);
+    const free =
+      meta && previous && meta.reasons.length === 1 && meta.reasons[0] === 'conflict' && meta.base !== previous.base;
+    if (!free) counted++;
+    previous = meta;
+  }
+  return counted;
+}
+
 export const DONE_MARKER = '<!-- pr-steward:done -->';
 /** Posted by the Action when it hands a PR off. */
 export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
@@ -81,6 +109,8 @@ export interface StewardPr {
   readonly isDraft: boolean;
   readonly fork: boolean;
   readonly base: string;
+  /** The base branch's head commit. */
+  readonly baseSha: string;
   readonly head: string;
   readonly headSha: string;
   readonly labels: readonly string[];
@@ -178,9 +208,9 @@ export function decide(
   if (lastMaintainer > lastDone) reasons.push('comment');
   if (pr.unresolvedThreads > 0) reasons.push('threads');
   if (reasons.length) {
-    const used = pr.comments.filter(
-      (c) => c.body.includes(ROUND_MARKER) && Date.parse(c.createdAt) > lastMaintainer,
-    ).length;
+    const markers = pr.comments.filter((c) => c.body.includes(ROUND_MARKER));
+    const since = markers.filter((c) => Date.parse(c.createdAt) > lastMaintainer);
+    const used = countedRounds(since, markers[markers.length - since.length - 1]);
     return used >= MAX_ROUNDS
       ? { kind: 'stuck', reasons }
       : { kind: 'steward', reasons, round: used + 1, clearNeedsYou };
@@ -272,7 +302,7 @@ export async function act(
       }
       if (decision.clearNeedsYou) await github(fetchFn, token, 'DELETE', `issues/${n}/labels/${NEEDS_YOU_LABEL}`);
       await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
-        body: `PR steward round ${decision.round}/${MAX_ROUNDS} started for: ${describeReasons(decision.reasons)}.${session ? ` Session: ${session}` : ''}\n\n${ROUND_MARKER}`,
+        body: `PR steward round ${decision.round}/${MAX_ROUNDS} started for: ${describeReasons(decision.reasons)}.${session ? ` Session: ${session}` : ''}\n\n${ROUND_MARKER}\n${roundMeta(decision.reasons, pr.baseSha)}`,
       });
       return;
     }
@@ -332,7 +362,7 @@ const PR_QUERY = `query($owner: String!, $name: String!) {
     pullRequests(states: OPEN, first: 50) {
       totalCount
       nodes {
-        number title body isDraft isCrossRepository baseRefName headRefName headRefOid mergeable mergeStateStatus
+        number title body isDraft isCrossRepository baseRefName baseRefOid headRefName headRefOid mergeable mergeStateStatus
         labels(first: 20) { nodes { name } }
         reviewThreads(first: 100) { nodes { isResolved } }
         closingIssuesReferences(first: 10) {
@@ -376,6 +406,7 @@ interface PrNode {
   isDraft: boolean;
   isCrossRepository: boolean;
   baseRefName: string;
+  baseRefOid: string;
   headRefName: string;
   headRefOid: string;
   mergeable: StewardPr['mergeable'];
@@ -433,6 +464,7 @@ export function toStewardPr(node: PrNode): StewardPr {
     isDraft: node.isDraft,
     fork: node.isCrossRepository,
     base: node.baseRefName,
+    baseSha: node.baseRefOid,
     head: node.headRefName,
     headSha: node.headRefOid,
     labels: node.labels.nodes.map((l) => l.name),
