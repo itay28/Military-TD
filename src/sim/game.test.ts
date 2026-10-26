@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MVP_MAP } from '../data/maps';
-import { MVP_WAVES } from '../data/waves';
+import { WAVES } from '../data/waves';
 import { createGame, TICK_MS } from './game';
 import { InvalidMapError, type MapData } from './map';
 import type { WaveData } from './waves';
@@ -331,8 +331,8 @@ describe('waves and phases', () => {
     expect(() => newGame(20, [TWO_WAVES[0]!, { groups: [] }])).toThrow(RangeError);
   });
 
-  it('the MVP wave with no towers: all 8 Infantry leak, 12 Lives left, victory', () => {
-    const game = createGame({ map: MVP_MAP, lives: 20, money: 100, waves: MVP_WAVES });
+  it('wave 1 alone with no towers: all 8 Infantry leak, 12 Lives left, victory', () => {
+    const game = createGame({ map: MVP_MAP, lives: 20, money: 100, waves: WAVES.slice(0, 1) });
     let leaks = 0;
     game.events.on('enemyLeaked', () => leaks++);
     game.startWave();

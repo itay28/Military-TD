@@ -2,7 +2,7 @@ import type { EnemyKind } from '../data/enemies';
 import { MVP_MAP } from '../data/maps';
 import { START_LIVES, START_MONEY } from '../data/start';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
-import { MVP_WAVES } from '../data/waves';
+import { WAVES } from '../data/waves';
 import { createGame, TICK_MS, type CommandResult, type Game, type GameEvents, type GameState } from './game';
 import { tileKey, type MapData, type Tile } from './map';
 import type { WaveData } from './waves';
@@ -31,7 +31,7 @@ export interface ScriptStep {
  */
 export type StopCondition = 'end' | { readonly ticks: number } | { readonly event: keyof GameEvents };
 
-/** How a game starts. Left-out values take the MVP game's. */
+/** How a game starts. Left-out values take the default game's: the MVP map, start Lives and Money, and `WAVES`. */
 export interface GameSetup {
   readonly map?: MapData;
   readonly lives?: number;
@@ -107,7 +107,7 @@ export function setUpGame(setup: GameSetup = {}): Game {
     lives: setup.lives ?? START_LIVES,
     // Pre-placed towers are placed like any other, with their cost added first, so they come free.
     money: (setup.money ?? START_MONEY) + towersCost,
-    waves: setup.waves ?? MVP_WAVES,
+    waves: setup.waves ?? WAVES,
   });
   for (const { kind, tile } of towers) {
     const placed = game.placeTower(kind, tile);

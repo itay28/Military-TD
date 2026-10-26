@@ -49,3 +49,16 @@ export async function stepToEnd(page: Page, maxTicks = 60 * 60 * 10): Promise<Te
   }
   throw new Error(`The game did not end within ${maxTicks} ticks`);
 }
+
+/** Like `stepToEnd`, but starts each wave as soon as the game is back in the Build phase, as a player would. */
+export async function playToEnd(page: Page, maxTicks = 60 * 60 * 30): Promise<TestState> {
+  for (let ticks = 0; ticks < maxTicks; ticks += 600) {
+    const now = await page.evaluate(() => {
+      const td = window.__TD__!;
+      if (td.state().phase === 'build') td.command({ type: 'startWave' });
+      return td.step(600);
+    });
+    if (now.phase === 'victory' || now.phase === 'defeat') return now;
+  }
+  throw new Error(`The game did not end within ${maxTicks} ticks`);
+}

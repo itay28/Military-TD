@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MVP_MAP } from '../data/maps';
 import { START_LIVES, START_MONEY } from '../data/start';
+import { WAVES } from '../data/waves';
 import { TICK_MS } from './game';
 import type { MapData } from './map';
 import { runScenario, setUpGame } from './scenario';
@@ -20,12 +21,12 @@ const SMALL: MapData = {
 const ONE_INFANTRY = [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }] as const;
 
 describe('runScenario', () => {
-  it('uses the MVP map, Lives, Money and waves when the scenario leaves them out', () => {
+  it('uses the MVP map, start Lives and Money, and the wave schedule when the scenario leaves them out', () => {
     const { finalState } = runScenario({ until: { ticks: 0 } });
     expect(finalState.map.id).toBe(MVP_MAP.id);
     expect(finalState.lives).toBe(START_LIVES);
     expect(finalState.money).toBe(START_MONEY);
-    expect(finalState.totalWaves).toBe(1);
+    expect(finalState.totalWaves).toBe(WAVES.length);
   });
 
   it('until { ticks } stops after exactly that many fixed ticks, with outcome stopped', () => {
