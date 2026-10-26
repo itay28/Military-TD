@@ -39,6 +39,7 @@ jobs:
     outputs:
       branch: ${{ steps.pr.outputs.branch }}
       sha: ${{ steps.pr.outputs.sha }}
+      merge: ${{ steps.pr.outputs.merge }}
     steps:
       # First, so the label can be added again even if this run fails.
       - name: Remove the update-snapshots label
@@ -58,9 +59,20 @@ jobs:
           if [ "$state" != open ]; then echo "::error::PR #$PR is $state"; exit 1; fi
           # Fork PRs get no PROJECT_TOKEN push, and their code must not run next to it.
           if [ "$head_repo" != "$REPO" ]; then echo "::error::PR #$PR comes from a fork ($head_repo)"; exit 1; fi
+          # e2e tests the PR merged with its base (refs/pull/N/merge), so render that same tree (#198).
+          # GitHub computes the merge commit lazily: retry while it's unknown or still for an older head.
+          for attempt in 1 2 3 4 5 6; do
+            read -r mergeable merge < <(gh api "repos/$REPO/pulls/$PR" --jq '[(.mergeable | tostring), (.merge_commit_sha | tostring)] | @tsv')
+            if [ "$mergeable" = false ]; then echo "::error::PR #$PR conflicts with its base: resolve the conflict first"; exit 1; fi
+            if [ "$mergeable" = true ] && [ "$(gh api "repos/$REPO/commits/$merge" --jq '.parents[1].sha')" = "$sha" ]; then break; fi
+            merge=''
+            [ "$attempt" = 6 ] || sleep 10
+          done
+          if [ -z "$merge" ]; then echo "::error::GitHub hasn't computed PR #$PR's merge commit yet; add the label again"; exit 1; fi
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "PR #$PR: $branch at $sha"
+          echo "merge=$merge" >> "$GITHUB_OUTPUT"
+          echo "PR #$PR: $branch at $sha, merged with its base as $merge"
 
   # The same image as ci.yml's e2e job, so the baselines match what e2e compares against.
   render:
@@ -70,10 +82,10 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.64.0-noble
     steps:
-      - name: Checkout the PR head
+      - name: Checkout the PR merged with its base
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.resolve.outputs.sha }}
+          ref: ${{ needs.resolve.outputs.merge }}
           persist-credentials: false
 
       - name: Set up Node
