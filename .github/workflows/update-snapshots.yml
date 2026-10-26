@@ -1,0 +1,146 @@
+name: Update snapshots
+
+# Remakes the e2e screenshot baselines in CI's own Playwright container and commits the changed
+# ones to a PR's branch (docs/agents/workflow.md → Screenshot baselines). Cloud sessions can't
+# download the e2e job's artifact, so they add the `update-snapshots` label instead; a human can
+# also run it by hand with the PR number.
+#
+# PR code runs only in `render`, which holds no secrets. `commit` runs none of it: it copies in
+# the rendered PNGs and pushes with PROJECT_TOKEN (classic PAT), so the push starts CI.
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number
+        required: true
+        type: number
+
+concurrency:
+  group: update-snapshots-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: update-snapshots-resolve
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'update-snapshots'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      # Removing the label goes through the issues API.
+      issues: write
+    outputs:
+      branch: ${{ steps.pr.outputs.branch }}
+      sha: ${{ steps.pr.outputs.sha }}
+    steps:
+      # First, so the label can be added again even if this run fails.
+      - name: Remove the update-snapshots label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label update-snapshots
+
+      - name: Find the PR's branch
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+          REPO: ${{ github.repository }}
+        run: |
+          read -r state head_repo branch sha < <(gh api "repos/$REPO/pulls/$PR" --jq '[.state, .head.repo.full_name, .head.ref, .head.sha] | @tsv')
+          if [ "$state" != open ]; then echo "::error::PR #$PR is $state"; exit 1; fi
+          # Fork PRs get no PROJECT_TOKEN push, and their code must not run next to it.
+          if [ "$head_repo" != "$REPO" ]; then echo "::error::PR #$PR comes from a fork ($head_repo)"; exit 1; fi
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "PR #$PR: $branch at $sha"
+
+  # The same image as ci.yml's e2e job, so the baselines match what e2e compares against.
+  render:
+    name: update-snapshots-render
+    needs: resolve
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+    steps:
+      - name: Checkout the PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `changed` rewrites only baselines that differ (and adds missing ones), so unchanged PNGs stay byte-identical.
+      - name: Remake the baselines
+        run: npx playwright test screenshots.spec.ts --update-snapshots=changed
+
+      - name: Upload the baselines
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshots
+          path: tests/e2e/screenshots.spec.ts-snapshots/*.png
+          if-no-files-found: error
+          retention-days: 1
+
+  commit:
+    name: update-snapshots-commit
+    needs: [resolve, render]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for PROJECT_TOKEN
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          if [ -z "$PROJECT_TOKEN" ]; then echo "::error::PROJECT_TOKEN secret is missing: it pushes the baselines so CI runs"; exit 1; fi
+
+      - name: Checkout the PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.branch }}
+          token: ${{ secrets.PROJECT_TOKEN }}
+
+      - name: Download the baselines
+        uses: actions/download-artifact@v4
+        with:
+          name: snapshots
+          path: ${{ runner.temp }}/snapshots
+
+      - name: Commit and push the changed baselines
+        env:
+          BRANCH: ${{ needs.resolve.outputs.branch }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+          SNAPSHOTS: tests/e2e/screenshots.spec.ts-snapshots
+        run: |
+          # A push since the render would get baselines made from older code.
+          if [ "$(git rev-parse HEAD)" != "$SHA" ]; then
+            echo "::error::$BRANCH moved past $SHA since the render; add the label again"
+            exit 1
+          fi
+          # Only PNGs, only into the baseline folder.
+          find "$RUNNER_TEMP/snapshots" -maxdepth 1 -type f -name '*.png' -exec cp {} "$SNAPSHOTS/" \;
+          git add "$SNAPSHOTS"
+          if git diff --cached --quiet; then
+            echo "No baseline changed." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "Updated baselines on \`$BRANCH\`:"
+            git diff --cached --name-only | sed 's/^/- /'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'test(e2e): update screenshot baselines from CI'
+          git push origin "HEAD:$BRANCH"
