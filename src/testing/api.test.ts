@@ -62,6 +62,15 @@ describe('createTestApi', () => {
     expect(testApi.state()).toMatchObject({ money: START_MONEY - 40, towers: [{ level: 2 }] });
   });
 
+  it('command starts selling a tower and returns the refund', () => {
+    const testApi = api(fakeHooks({ towers: [{ kind: 'rifleNest', tile: BUILDABLE }] }));
+    const [tower] = testApi.state().towers;
+    expect(testApi.command({ type: 'sellTower', towerId: tower!.id })).toEqual({ ok: true, refund: 35 });
+    expect(testApi.state().towers).toHaveLength(1);
+    testApi.step(120);
+    expect(testApi.state().towers).toEqual([]);
+  });
+
   it('command passes a refusal through', () => {
     const testApi = api(fakeHooks());
     const onPath = { col: 0, row: 2 };

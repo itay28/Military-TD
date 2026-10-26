@@ -109,7 +109,9 @@ export function addedPrs(prs: MergedPr[], milestoneIssues: number[], since: stri
 }
 
 const RELEASE_LABEL = 'release';
-const isRelease = (issue: MilestoneIssue): boolean => issue.labels.includes(RELEASE_LABEL);
+/** What the done rule reads of an issue; the PR steward (scripts/pr-steward.ts) shares it. */
+type DoneIssue = Pick<MilestoneIssue, 'state' | 'labels'>;
+const isRelease = (issue: DoneIssue): boolean => issue.labels.includes(RELEASE_LABEL);
 
 /** The release a milestone ships as: `v0.1.0 — MVP` → `0.1.0`. Null when the title has no leading version. */
 export function releaseVersion(title: string): string | null {
@@ -134,12 +136,12 @@ export function previousReleaseTag(tags: string[], version: string): string | nu
 }
 
 /** The milestone's open release issue, which stands in for it on the board. */
-export function releaseIssue(issues: MilestoneIssue[]): MilestoneIssue | undefined {
+export function releaseIssue<T extends DoneIssue>(issues: readonly T[]): T | undefined {
   return issues.find((issue) => isRelease(issue) && issue.state === 'open');
 }
 
 /** Done means every issue is closed except the open release issue. Once released, that issue closes too, so it stops counting as done. */
-export function isMilestoneDone(issues: MilestoneIssue[]): boolean {
+export function isMilestoneDone<T extends DoneIssue>(issues: readonly T[]): boolean {
   return releaseIssue(issues) !== undefined && issues.every((issue) => isRelease(issue) || issue.state === 'closed');
 }
 

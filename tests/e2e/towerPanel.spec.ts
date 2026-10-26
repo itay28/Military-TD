@@ -57,6 +57,15 @@ test('a click on an empty tile while a tower is selected only deselects', async 
   });
 });
 
+test('Sell dismantles for 2 s, then refunds 70%, closes the panel and removes the tower', async ({ page }) => {
+  await selectPlacedTower(page);
+  await panel(page).getByRole('button', { name: 'Sell (+35)' }).click();
+  await expect(panel(page).getByRole('button', { name: 'Dismantling…' })).toBeDisabled();
+  await page.evaluate(() => window.__TD__!.step(120));
+  await expect(panel(page)).toBeHidden();
+  expect(await state(page)).toMatchObject({ towers: [], money: START_MONEY - TOWER_STATS.rifleNest.cost + 35 });
+});
+
 test('Restart closes the panel', async ({ page }) => {
   await selectPlacedTower(page);
   await expect(panel(page)).toBeVisible();
