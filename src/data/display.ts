@@ -1,3 +1,4 @@
+import type { Layer } from '../sim/combat';
 import type { PlaceTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
@@ -20,8 +21,8 @@ export const MAP_STYLE = {
 export const ENEMY_STYLE = {
   infantry: { shape: 'circle', radius: 9, color: 0x9e3b2c }, // brick red
   jeep: { shape: 'square', radius: 7, color: 0x6b7d3a }, // olive drab
-  tank: { shape: 'circle', radius: 14, color: 0x4a5d3a }, // dark olive drab
   helicopter: { shape: 'circle', radius: 11, color: 0x3f6f8f, rotor: 12 }, // steel blue, X rotor reaching 12 px along each axis
+  tank: { shape: 'circle', radius: 14, color: 0x4a5d3a }, // dark olive drab
 } as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number; rotor?: number }>;
 
 /** The X drawn over a rotor kind. */
@@ -53,7 +54,10 @@ export const TOWER_NAMES = {
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
 
-/** The range ring shown while the pointer is over a tower. */
+/** What the tower panel calls each layer a tower can hit. */
+export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Record<Layer, string>;
+
+/** The range ring shown while the pointer is over a tower, or while it is selected. */
 export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
 
 /** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */
