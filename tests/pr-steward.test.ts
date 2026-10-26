@@ -2,6 +2,8 @@ import { describe, expect, it, vi, type Mock } from 'vitest';
 import {
   DONE_MARKER,
   REVIEW_HEADING,
+  REVIEW_REQUEST_MARKER,
+  reviewRequestMarker,
   ROUND_MARKER,
   roundMeta,
   STUCK_MARKER,
@@ -39,6 +41,7 @@ const agent = (marker: string, minutesAgo: number): PrComment => ({
   createdAt: at(minutesAgo),
 });
 const action = (marker: string, minutesAgo: number): PrComment => ({ ...agent(marker, minutesAgo), body: marker });
+const reviewRequest = (sha: string, minutesAgo: number): PrComment => action(reviewRequestMarker(sha), minutesAgo);
 const maintainer = (minutesAgo: number): PrComment => ({
   author: 'itay28',
   bot: false,
@@ -225,8 +228,35 @@ describe('decide: wait', () => {
     expect(kind(pr({ ...red, comments: [action(ROUND_MARKER, 61)] }))).toBe('steward');
   });
 
-  it('waits for the CI review before merging', () => {
-    expect(decide(pr({ comments: [] }), now)).toMatchObject({ kind: 'wait', why: expect.stringMatching(/review/) });
+  it('waits for the CI review before merging, once it was requested for this head', () => {
+    expect(decide(pr({ comments: [reviewRequest('abc123', 10)] }), now)).toMatchObject({
+      kind: 'wait',
+      why: expect.stringMatching(/review/),
+    });
+  });
+});
+
+// A PR marked ready while it conflicts never starts the review workflow (#209).
+describe('decide: request a missing CI review', () => {
+  it('requests the review when a green PR has none and none was requested for its head', () => {
+    expect(kind(pr({ comments: [] }))).toBe('review');
+  });
+
+  it('requests it again after a new commit', () => {
+    expect(kind(pr({ comments: [reviewRequest('old-head', 90)] }))).toBe('review');
+  });
+
+  it('does not request it while checks or the review run, the PR is behind, or a round is due', () => {
+    const none = { comments: [] };
+    expect(kind(pr({ ...none, checks: [{ name: 'claude-review', state: 'pending' }] }))).toBe('wait');
+    expect(kind(pr({ ...none, checks: [{ name: 'e2e', state: 'pending' }] }))).toBe('wait');
+    expect(kind(pr({ ...none, behind: true }))).toBe('update');
+    expect(kind(pr({ ...none, unresolvedThreads: 1 }))).toBe('steward');
+  });
+
+  it('marks each request with the head commit it was made for', () => {
+    expect(reviewRequestMarker('abc123')).toContain(REVIEW_REQUEST_MARKER);
+    expect(reviewRequestMarker('abc123')).toContain('abc123');
   });
 });
 
@@ -744,6 +774,22 @@ describe('act', () => {
     expect(body).toContain(STUCK_MARKER);
     expect(body).toContain(`HTTP ${status}`);
     expect(body).toContain('ROUTINE_STEWARD_TOKEN');
+  });
+
+  it('requests a missing CI review: a comment with the head marker, then the review-again label (#209)', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'review' }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
+    const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
+    expect(body).toContain(reviewRequestMarker('abc123'));
+    const { labels } = JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { labels: string[] };
+    expect(labels).toEqual(['review-again']);
+  });
+
+  it('only logs a review request while AUTO_STEWARD is off', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'review' }, 'gh-token', { merge: true }, fetchFn);
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it('says why when an unresolved conflict hands off', async () => {

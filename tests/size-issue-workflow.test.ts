@@ -25,14 +25,14 @@ describe('size issue workflow', () => {
     expect(yaml).toContain('docs/agents/prompts/size.md');
   });
 
-  it('allows reading, adding labels and one comment, nothing else', () => {
+  it('allows reading, adding labels and commenting on the one issue, nothing else', () => {
     expect(allowedTools).toEqual([
       'Read',
       'Glob',
       'Grep',
-      'Bash(gh issue view:*)',
-      'Bash(gh issue edit * --add-label *)',
-      'Bash(gh issue comment:*)',
+      'Bash(gh issue view ${{ env.ISSUE }} *)',
+      'Bash(gh issue edit ${{ env.ISSUE }} --add-label *)',
+      'Bash(gh issue comment ${{ env.ISSUE }} *)',
     ]);
   });
 

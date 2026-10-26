@@ -1,5 +1,6 @@
 import { WAVE_BANNER_MS } from '../data/display';
 import { isGameOver, type Game } from '../sim/game';
+import { waveDps } from '../sim/stats';
 
 /** The parts of the Game the HUD reads and commands. */
 export type HudGame = Pick<Game, 'state' | 'events' | 'startWave'>;
@@ -23,6 +24,7 @@ export function mountHud(root: HTMLElement, game: HudGame): Hud {
   const money = field('hud-money');
   const lives = field('hud-lives');
   const wave = field('hud-wave');
+  const dps = field('hud-dps');
   const startWave = doc.createElement('button');
   startWave.type = 'button';
   startWave.dataset.testid = 'start-wave';
@@ -51,6 +53,9 @@ export function mountHud(root: HTMLElement, game: HudGame): Hud {
     setText(money, `Money ${state.money}`);
     setText(lives, `Lives ${state.lives}`);
     setText(wave, `Wave ${state.waveNumber} / ${state.totalWaves}`);
+    const { damage, elapsedMs } = state.stats.wave;
+    // The wave figures freeze when the wave ends, so between waves this keeps showing the last wave's DPS.
+    setText(dps, state.waveNumber === 0 ? 'DPS –' : `DPS ${Math.round(waveDps(damage, elapsedMs))}`);
     setDisabled(startWave, state.phase !== 'build');
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
     const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { WAVE_BANNER_MS } from '../data/display';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
+import { waveDps } from '../sim/stats';
 import { mountHud } from './hud';
 
 // Path 6 tiles long: an Infantry (1.5 tiles/s) leaks after 4000 ms.
@@ -163,6 +164,64 @@ describe('HUD', () => {
       hud.update();
       expect(game.state.phase).toBe('victory');
       expect(banner()?.textContent).toBe('');
+    });
+  });
+
+  describe('DPS', () => {
+    const dps = () => byTestId('hud-dps')?.textContent;
+    const armed = () => {
+      const game = newGame();
+      expect(game.placeTower('rifleNest', { col: 1, row: 0 })).toMatchObject({ ok: true });
+      return game;
+    };
+    const rounded = (game: Game) =>
+      `DPS ${Math.round(waveDps(game.state.stats.wave.damage, game.state.stats.wave.elapsedMs))}`;
+
+    it('shows "DPS –" before any wave', () => {
+      mountHud(root, armed());
+      expect(dps()).toBe('DPS –');
+    });
+
+    it('shows the rounded wave DPS during a wave', () => {
+      const game = armed();
+      const hud = mountHud(root, game);
+      game.startWave();
+      for (let t = 0; t < 1500; t += 100) game.tick(100);
+      hud.update();
+      expect(game.state.stats.wave.damage).toBeGreaterThan(0);
+      expect(dps()).toBe(rounded(game));
+    });
+
+    it("keeps the last wave's figure after waveCleared", () => {
+      const game = armed();
+      const hud = mountHud(root, game);
+      game.startWave();
+      for (let t = 0; t < LEAK_MS; t += 100) game.tick(100);
+      hud.update();
+      expect(game.state.phase).toBe('build');
+      const figure = rounded(game);
+      expect(figure).not.toBe('DPS 0');
+      expect(dps()).toBe(figure);
+      game.tick(5000);
+      hud.update();
+      expect(dps()).toBe(figure);
+    });
+
+    it("doesn't write to the DOM while the rounded value is unchanged", async () => {
+      const game = armed();
+      const hud = mountHud(root, game);
+      game.startWave();
+      for (let t = 0; t < LEAK_MS; t += 100) game.tick(100);
+      hud.update();
+      const writes: string[] = [];
+      new MutationObserver((records) => writes.push(...records.map((r) => r.type))).observe(root, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
+      hud.update();
+      await Promise.resolve();
+      expect(writes).toEqual([]);
     });
   });
 
