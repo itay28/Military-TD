@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TOWER_STATS } from '../data/towers';
-import { createGame, type GameState } from '../sim/game';
+import { createGame, TICK_MS, type GameState } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { emptyStats, type CombatStats } from '../sim/stats';
 import type { Tower } from '../sim/towers';
@@ -41,6 +41,8 @@ const fakeGame = (towers: Tower[], stats: CombatStats = emptyStats()) => {
     state: { ...base, towers, stats },
     canUpgradeTower: () => ({ ok: true }),
     upgradeTower: () => ({ ok: true, level: 2 }),
+    sellTower: () => ({ ok: true, refund: 35 }),
+    canSellTower: () => ({ ok: true, refund: 35 }),
   };
   return game;
 };
@@ -220,5 +222,27 @@ describe('Tower panel upgrades', () => {
     panel.update();
     expect(value('tower-level')).toBe('Level 3');
     expect(upgradeButton().hidden).toBe(true);
+  });
+});
+
+describe('Tower panel Sell button', () => {
+  it('shows the refund; selling shows Dismantling… with the buttons disabled, and the panel closes when the tower is gone', () => {
+    const game = createGame({ map: SMALL, money: 100, lives: 20, waves: [] });
+    const placed = game.placeTower('rifleNest', { col: 1, row: 3 });
+    if (!placed.ok) throw new Error(placed.reason);
+    const panel = mountTowerPanel(root, game);
+    panel.select(placed.towerId);
+    const button = root.querySelector<HTMLButtonElement>('[data-testid="tower-sell"]')!;
+    expect(button.textContent).toBe('Sell (+35)');
+    button.click();
+    expect(button.textContent).toBe('Dismantling…');
+    expect(button.disabled).toBe(true);
+    expect(upgradeButton().disabled).toBe(true);
+    expect(root.hidden).toBe(false);
+    for (let i = 0; i < 120; i++) game.tick(TICK_MS);
+    panel.update();
+    expect(game.state.money).toBe(85);
+    expect(panel.selectedId).toBeUndefined();
+    expect(root.hidden).toBe(true);
   });
 });

@@ -1,5 +1,6 @@
 import {
   AIR_SHADOW,
+  DISMANTLE,
   ENEMY_STYLE,
   GHOST,
   HP_BAR,
@@ -69,6 +70,12 @@ export function drawTower(painter: EntityPainter, tower: Tower): void {
     const left = -half + LEVEL_PIP.inset + i * (LEVEL_PIP.size + LEVEL_PIP.gap);
     painter.fillRect(left, top, LEVEL_PIP.size, LEVEL_PIP.size);
   }
+}
+
+/** The ring around a dismantling tower; `left` is the share of the dismantle time still to go (1 down to 0). */
+export function drawDismantleRing(painter: EntityPainter, left: number): void {
+  painter.lineStyle(DISMANTLE.width, DISMANTLE.color);
+  painter.strokeCircle(0, 0, DISMANTLE.radius * left);
 }
 
 /** The circle a tower can hit within. */
