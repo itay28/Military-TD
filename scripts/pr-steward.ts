@@ -365,7 +365,7 @@ const PR_QUERY = `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     defaultBranchRef { name }
     milestones(states: OPEN, first: 50) {
-      nodes { number title dueOn issues(states: OPEN, first: 100) { nodes { labels(first: 20) { nodes { name } } } } }
+      nodes { number title dueOn issues(states: OPEN, first: 100) { pageInfo { hasNextPage } nodes { labels(first: 20) { nodes { name } } } } }
     }
     pullRequests(states: OPEN, first: 50) {
       totalCount
@@ -447,7 +447,7 @@ interface PrData {
         number: number;
         title: string;
         dueOn: string | null;
-        issues: { nodes: { labels: { nodes: { name: string }[] } }[] };
+        issues: { pageInfo: { hasNextPage: boolean }; nodes: { labels: { nodes: { name: string }[] } }[] };
       }[];
     };
     pullRequests: { totalCount: number; nodes: PrNode[] };
@@ -501,9 +501,9 @@ export function toStewardPr(node: PrNode): StewardPr {
   };
 }
 
-/** From a milestone's open issues: only its release issue is left. */
-export const milestoneDone = (open: readonly { labels: { nodes: { name: string }[] } }[]): boolean =>
-  open.length > 0 && open.every((i) => i.labels.nodes.some((l) => l.name === RELEASE_LABEL));
+/** From a milestone's open issues: only its release issue is left. A truncated list (more pages) is never done. */
+export const milestoneDone = (open: readonly { labels: { nodes: { name: string }[] } }[], truncated = false): boolean =>
+  !truncated && open.length > 0 && open.every((i) => i.labels.nodes.some((l) => l.name === RELEASE_LABEL));
 
 async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun: boolean): Promise<void> {
   const { repository } = await graphql<PrData>(token, PR_QUERY, { owner: 'itay28', name: 'Military-TD' });
@@ -523,7 +523,7 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
         number: current.number,
         title: current.title,
         after: milestoneOrder(repository.milestones.nodes).filter((n) => n !== current.number),
-        done: milestoneDone(current.issues.nodes),
+        done: milestoneDone(current.issues.nodes, current.issues.pageInfo.hasNextPage),
       },
     );
     const switchedOff = !switchedOn(decision.kind, settings);

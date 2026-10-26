@@ -183,6 +183,10 @@ describe('milestoneDone', () => {
     expect(milestoneDone([issue('release'), issue('area:towers')])).toBe(false);
     expect(milestoneDone([])).toBe(false);
   });
+
+  it('is not done when the open issues were truncated', () => {
+    expect(milestoneDone([issue('release')], true)).toBe(false);
+  });
 });
 
 describe('decide: wait', () => {
