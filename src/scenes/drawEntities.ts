@@ -1,5 +1,6 @@
 import {
   AIR_SHADOW,
+  DISMANTLE,
   ENEMY_STYLE,
   GHOST,
   HP_BAR,
@@ -85,6 +86,12 @@ export function drawTower(painter: EntityPainter, tower: Tower): void {
 /** The range rings' radii in pixels: the range, then the minimum range (the dead zone's edge) if there is one. */
 export function rangeRingRadii({ range, minRange }: TowerStats): number[] {
   return minRange === undefined ? [range * TILE_PX] : [range * TILE_PX, minRange * TILE_PX];
+}
+
+/** The ring around a dismantling tower; `left` is the share of the dismantle time still to go (1 down to 0). */
+export function drawDismantleRing(painter: EntityPainter, left: number): void {
+  painter.lineStyle(DISMANTLE.width, DISMANTLE.color);
+  painter.strokeCircle(0, 0, DISMANTLE.radius * left);
 }
 
 /** The circle a tower can hit within, and the dead zone inside it if it has a minimum range. */

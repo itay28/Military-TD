@@ -1,5 +1,5 @@
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
-import { TOWER_STATS, type TowerKind } from '../data/towers';
+import { DISMANTLE_MS, SELL_REFUND, TOWER_STATS, type TowerKind } from '../data/towers';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
 import { createMap, type GameMap, type MapData, type Position, type Tile } from './map';
@@ -10,6 +10,9 @@ import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData }
 
 /** The one fixed step, in ms. The Game scene and the scenario runner both tick with it. */
 export const TICK_MS = 1000 / 60;
+
+/** Slack for float sums of tick times, so a dismantle due on a tick ends on it. */
+const DISMANTLE_EPSILON = 1e-9;
 
 export interface GameConfig {
   readonly map: MapData;
@@ -64,6 +67,8 @@ export interface GameEvents {
   shellLanded: ShellLanding;
   /** An enemy's HP reached 0 and it was removed. `reward` is the Money it paid, already in `state.money`. */
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
+  /** A tower finished dismantling and left `tile`. `refund` is the Money it gave back, already in `state.money`. */
+  towerSold: { readonly towerId: number; readonly tile: Tile; readonly refund: number };
   waveStarted: { readonly waveNumber: number };
   /** Every enemy of the wave has spawned and none is left alive. */
   waveCleared: { readonly waveNumber: number };
@@ -81,7 +86,10 @@ export type CommandResult<Reason extends string, Value extends object = object> 
 export type PlaceTowerRefusal = 'gameEnded' | 'notBuildable' | 'occupied' | 'insufficientMoney';
 
 /** Why upgradeTower refused, in the order it checks. */
-export type UpgradeTowerRefusal = 'gameEnded' | 'noSuchTower' | 'maxLevel' | 'insufficientMoney';
+export type UpgradeTowerRefusal = 'gameEnded' | 'noSuchTower' | 'dismantling' | 'maxLevel' | 'insufficientMoney';
+
+/** Why sellTower refused, in the order it checks. */
+export type SellTowerRefusal = 'gameEnded' | 'noSuchTower' | 'dismantling';
 
 export interface Game {
   readonly state: GameState;
@@ -107,12 +115,22 @@ export interface Game {
   /**
    * Raises tower `towerId` one level for that level's cost, in the Build or Wave phase, and returns its new level.
    * It takes the new level's stats and keeps its tile and cooldown. Refuses, in this order: `gameEnded` after
-   * Victory or Defeat, `noSuchTower` when no standing tower has that id, `maxLevel` at the top level,
+   * Victory or Defeat, `noSuchTower` when no standing tower has that id, `dismantling` when it is being sold, `maxLevel` at the top level,
    * `insufficientMoney` when Money is below the cost.
    */
   upgradeTower(towerId: number): CommandResult<UpgradeTowerRefusal, { readonly level: number }>;
   /** Whether `upgradeTower(towerId)` would succeed now, or the reason it would refuse. Changes nothing. */
   canUpgradeTower(towerId: number): CommandResult<UpgradeTowerRefusal>;
+  /**
+   * Starts dismantling tower `towerId`, in the Build or Wave phase: it stops firing and can't be upgraded, and
+   * after `DISMANTLE_MS` of game time it is removed, its tile is buildable again and `floor(SELL_REFUND × spent)`
+   * is paid (the `refund` returned) with a `towerSold` event. If the game ends first, nothing is paid.
+   * Refuses, in this order: `gameEnded` after Victory or Defeat, `noSuchTower` when no standing tower has that id,
+   * `dismantling` when it is already being sold.
+   */
+  sellTower(towerId: number): CommandResult<SellTowerRefusal, { readonly refund: number }>;
+  /** Whether `sellTower(towerId)` would succeed now (with the `refund` it would pay), or the reason it would refuse. Changes nothing. */
+  canSellTower(towerId: number): CommandResult<SellTowerRefusal, { readonly refund: number }>;
 }
 
 /** Builds a game from data. Throws InvalidMapError when the map is malformed, RangeError for a malformed wave. */
@@ -161,10 +179,19 @@ export function createGame(config: GameConfig): Game {
     if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' } as const;
     const tower = state.towers.find((t) => t.id === towerId);
     if (!tower) return { ok: false, reason: 'noSuchTower' } as const;
+    if (tower.dismantleMs !== undefined) return { ok: false, reason: 'dismantling' } as const;
     const next = nextLevel(tower);
     if (!next) return { ok: false, reason: 'maxLevel' } as const;
     if (state.money < next.cost) return { ok: false, reason: 'insufficientMoney' } as const;
     return { ok: true, tower, next } as const;
+  };
+
+  const checkSell = (towerId: number) => {
+    if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' } as const;
+    const tower = state.towers.find((t) => t.id === towerId);
+    if (!tower) return { ok: false, reason: 'noSuchTower' } as const;
+    if (tower.dismantleMs !== undefined) return { ok: false, reason: 'dismantling' } as const;
+    return { ok: true, tower, refund: Math.floor(SELL_REFUND * tower.spent) } as const;
   };
 
   return {
@@ -201,6 +228,7 @@ export function createGame(config: GameConfig): Game {
       for (const enemy of kills) state.money += enemy.reward;
       state.stats = recordShots(state.stats, fired.shots, new Set(kills.map((enemy) => enemy.id)));
       if (wave) state.stats = withWaveElapsed(state.stats, state.timeMs - wave.startMs);
+      const sold: { towerId: number; tile: Tile; refund: number }[] = [];
       let cleared = false;
       if (state.lives === 0) {
         wave = undefined;
@@ -212,6 +240,18 @@ export function createGame(config: GameConfig): Game {
         state.wavesCleared++;
         state.phase = state.waveNumber === state.totalWaves ? 'victory' : 'build';
         if (state.phase === 'victory') state.shells = [];
+      }
+      // A tower whose dismantling ends is paid out, unless the game just ended.
+      if (!isGameOver(state.phase)) {
+        state.towers = state.towers.flatMap((tower) => {
+          if (tower.dismantleMs === undefined) return [tower];
+          const dismantleMs = tower.dismantleMs - dtMs;
+          if (dismantleMs > DISMANTLE_EPSILON) return [{ ...tower, dismantleMs }];
+          const refund = Math.floor(SELL_REFUND * tower.spent);
+          state.money += refund;
+          sold.push({ towerId: tower.id, tile: tower.tile, refund });
+          return [];
+        });
       }
       // Emit once the state is settled, so listeners read this tick's state.
       for (const leak of leaks) emitter.emit('enemyLeaked', leak);
@@ -225,6 +265,7 @@ export function createGame(config: GameConfig): Game {
       for (const shot of fired.shots) emitter.emit('towerFired', shot);
       for (const landed of landing.landed) emitter.emit('shellLanded', landed);
       for (const enemy of kills) emitter.emit('enemyKilled', { enemy, reward: enemy.reward });
+      for (const sale of sold) emitter.emit('towerSold', sale);
       if (cleared) emitter.emit('waveCleared', { waveNumber: state.waveNumber });
       if (state.phase === 'victory') emitter.emit('victory', { lives: state.lives });
       if (state.phase === 'defeat') emitter.emit('defeat', { waveNumber: state.waveNumber });
@@ -269,6 +310,16 @@ export function createGame(config: GameConfig): Game {
     canUpgradeTower(towerId) {
       const allowed = checkUpgrade(towerId);
       return allowed.ok ? { ok: true } : allowed;
+    },
+    sellTower(towerId) {
+      const allowed = checkSell(towerId);
+      if (!allowed.ok) return allowed;
+      state.towers = state.towers.map((t) => (t.id === towerId ? { ...t, dismantleMs: DISMANTLE_MS } : t));
+      return { ok: true, refund: allowed.refund };
+    },
+    canSellTower(towerId) {
+      const allowed = checkSell(towerId);
+      return allowed.ok ? { ok: true, refund: allowed.refund } : allowed;
     },
   };
 }
