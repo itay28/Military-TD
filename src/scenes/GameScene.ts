@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { FLOATING_TEXT, TRACER } from '../data/display';
+import { FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
 import type { TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
@@ -9,12 +9,13 @@ import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import { pixelToTile, toPixels, type Pixel } from './coords';
-import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers } from './drawEntities';
+import { drawBlasts, drawEnemy, drawGhost, drawRangeRing, drawShells, drawTower, drawTracers } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
+import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
 import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
@@ -27,7 +28,16 @@ const MAX_TICKS_PER_FRAME = 5;
 const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
 
 /** Draw order, back to front. */
-const DEPTH = { map: 0, towers: 1, enemies: 2, tracers: 3, ghost: 4, rangeRing: 5, floatingText: 6 } as const;
+const DEPTH = {
+  map: 0,
+  towers: 1,
+  enemies: 2,
+  tracers: 3,
+  shells: 3,
+  ghost: 4,
+  rangeRing: 5,
+  floatingText: 6,
+} as const;
 
 /** Puts `object` on `layer`: the depth that orders it, and the name test mode's view() reports it by. */
 function onLayer<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Depth>(
@@ -74,6 +84,8 @@ export class GameScene extends Phaser.Scene {
   private towerViews!: ViewSync<Tower>;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
+  private blasts!: Blasts;
+  private shellGraphics!: Phaser.GameObjects.Graphics;
   private rangeRing!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
   /** The ghost last drawn, and its kind, so it is redrawn only when its tile, colour or kind changes. */
@@ -181,6 +193,13 @@ export class GameScene extends Phaser.Scene {
       if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
     });
 
+    // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
+    this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
+    this.shellGraphics = onLayer(this.add.graphics(), 'shells');
+    this.sim.events.on('shellLanded', ({ position, outerRadius }) =>
+      this.blasts.add(toPixels(position), outerRadius * TILE_PX),
+    );
+
     this.rangeRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       this.pointerTile = pixelToTile({ x: pointer.worldX, y: pointer.worldY });
@@ -223,6 +242,7 @@ export class GameScene extends Phaser.Scene {
   override update(_time: number, deltaMs: number): void {
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
+    this.blasts.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     this.loop.advance(frameMs(this.flags, deltaMs));
     this.hud.update();
@@ -234,6 +254,15 @@ export class GameScene extends Phaser.Scene {
     this.enemyViews.sync(enemies);
     this.tracerGraphics.clear();
     drawTracers(this.tracerGraphics, this.tracers.active());
+    this.shellGraphics.clear();
+    const { shells, timeMs } = this.sim.state;
+    drawShells(
+      this.shellGraphics,
+      shells.map((shell) =>
+        shellPoint({ ...shell, from: toPixels(shell.from), target: toPixels(shell.target) }, timeMs),
+      ),
+    );
+    drawBlasts(this.shellGraphics, this.blasts.active());
     // Checked every frame, not only on pointer moves, so a tower that appears under a still pointer shows its ring.
     this.hover(this.pointerTile && towerAt(towers, this.pointerTile));
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.

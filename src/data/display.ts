@@ -82,5 +82,8 @@ export const TRACER_STYLE = {
   cannon: { color: 0xffb347, width: 4 },
 } as const satisfies Record<TowerKind, { color: number; width: number }>;
 
+/** A shell in flight (a dot) and its blast when it lands (a circle at the outer ring, fading over `blastFadeMs`). */
+export const SHELL = { color: 0xd9d9d9, radius: 4, blastColor: 0xff8a3d, blastWidth: 2, blastFadeMs: 300 } as const;
+
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
