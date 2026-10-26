@@ -125,5 +125,12 @@ export const TRACER_STYLE = {
 /** A shell in flight (a dot) and its blast when it lands (a circle at the outer ring, fading over `blastFadeMs`). */
 export const SHELL = { color: 0xd9d9d9, radius: 4, blastColor: 0xff8a3d, blastWidth: 2, blastFadeMs: 300 } as const;
 
+/**
+ * Pan and zoom of the map. `maxZoom` is how far in it zooms (it zooms out until the whole map fits); a press that
+ * moves less than `dragThresholdPx` screen pixels is a click, not a drag; each wheel pixel zooms by `wheelZoomPerPx`
+ * (as an exponent, so in and out are symmetric).
+ */
+export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015 } as const;
+
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;

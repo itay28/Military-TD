@@ -2,26 +2,31 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Military TD</title>
     <style>
       html,
       body {
         margin: 0;
         height: 100%;
+        overflow: hidden;
         background: #1b1e16;
       }
-      /* The HUD and build bar are DOM, not Phaser text (ADR-0003): the HUD above the canvas and the build bar
-         right of it, so neither covers the map. */
+      /* The HUD and build bar are DOM, not Phaser text (ADR-0003): the HUD along the top and the build bar against
+         the right edge, so neither covers the map. The stage takes the rest of the window, and the camera fits the map
+         in it, so the game fits any screen with no page scroll. */
       #app {
         display: grid;
-        grid-template-columns: auto auto;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: auto minmax(0, 1fr);
         grid-template-areas:
-          'hud .'
+          'hud hud'
           'stage bar';
-        place-content: safe center; /* on a small window, scroll instead of clipping the HUD off the top */
         gap: 6px;
+        box-sizing: border-box;
         height: 100%;
+        height: 100dvh;
+        padding: 6px;
       }
       #hud {
         grid-area: hud;
@@ -33,6 +38,19 @@
         padding: 0 8px;
         font: 16px monospace;
         color: #e4e0c8;
+      }
+      /* A phone: the HUD wraps and shrinks rather than pushing the page wider. */
+      @media (max-width: 640px), (max-height: 480px) {
+        #hud {
+          flex-wrap: wrap;
+          gap: 4px 12px;
+          min-height: 28px;
+          font-size: 13px;
+        }
+        #hud button {
+          padding: 3px 10px;
+          font-size: 13px;
+        }
       }
       #hud .hud-banner {
         color: #f0c95a;
@@ -62,16 +80,47 @@
       #stage {
         grid-area: stage;
         position: relative;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
       }
-      /* Two columns of tower buttons: icon, cost and hotkey. Greyed out when the player can't afford it. */
+      #game {
+        position: absolute;
+        inset: 0;
+      }
+      /* Drags and pinches on the map move the camera, not the page. */
+      #game canvas {
+        display: block;
+        touch-action: none;
+      }
+      /* Against the right edge: a toggle that folds it away, then two columns of tower buttons (icon, cost and
+         hotkey), greyed out when the player can't afford it. */
       #build-bar {
         grid-area: bar;
-        align-self: start;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
         width: 104px;
+        min-height: 0;
+        overflow-y: auto;
+      }
+      #build-bar[data-collapsed='true'] {
+        width: 28px;
+      }
+      #build-bar .build-toggle {
+        align-self: flex-end;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        font: 12px monospace;
+        border-width: 1px;
       }
       #build-bar .build-grid {
         display: grid;
         gap: 4px;
+      }
+      #build-bar .build-grid[hidden] {
+        display: none;
       }
       #build-bar button {
         position: relative;
@@ -213,6 +262,12 @@
         background: transparent;
         border: 0;
         cursor: pointer;
+      }
+      @media (max-width: 640px), (max-height: 480px) {
+        #tower-panel {
+          width: 180px;
+          font-size: 12px;
+        }
       }
       #tower-panel button:focus-visible {
         outline: 2px solid #f0c95a;

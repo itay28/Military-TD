@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { START_MONEY } from '../../src/data/start';
 import { TOWER_STATS } from '../../src/data/towers';
-import { clickTile, openGame, state } from './helpers';
+import { clickTile, openGame, selectKind, state } from './helpers';
 
 const BESIDE_PATH = { col: 1, row: 3 };
 const EMPTY = { col: 5, row: 4 };
@@ -11,6 +11,7 @@ const panel = (page: Page) => page.getByRole('dialog', { name: 'Rifle Nest' });
 /** Places a Rifle Nest beside the Path, then clicks it. */
 async function selectPlacedTower(page: Page) {
   await openGame(page);
+  await selectKind(page);
   await clickTile(page, BESIDE_PATH);
   await clickTile(page, BESIDE_PATH);
 }

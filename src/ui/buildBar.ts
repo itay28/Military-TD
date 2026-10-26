@@ -16,8 +16,10 @@ export interface BuildBarGame {
 }
 
 export interface BuildBar<K extends string = TowerKind> {
-  /** The kind a click on the map places. */
-  readonly selected: K;
+  /** The kind a click on the map places, or undefined when none is: then a click on the map builds nothing. */
+  readonly selected: K | undefined;
+  /** Whether the bar is folded down to its toggle, leaving the map more room. */
+  readonly collapsed: boolean;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
   /** Removes the bar's elements and stops listening for hotkeys. */
@@ -37,21 +39,38 @@ export function buildOptions(): BuildOption[] {
 const cssColor = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
 /**
- * Builds the build bar inside `root`: one button per option, the first selected. A click or the option's number
- * key (`1`…`n`) selects it, unless the player can't afford it. It's DOM, so tests can query it (ADR-0003).
+ * Builds the build bar inside `root`: a collapse toggle, then one button per option, none selected. A click or the
+ * option's number key (`1`…`n`) selects it, unless the player can't afford it; a click on the selected one, or
+ * Escape, clears it. It's DOM, so tests can query it (ADR-0003).
  */
 export function mountBuildBar<K extends string>(
   root: HTMLElement,
   game: BuildBarGame,
   options: readonly BuildOption<K>[],
 ): BuildBar<K> {
-  const first = options[0];
-  if (!first) throw new Error('The build bar needs at least one tower kind');
+  if (options.length === 0) throw new Error('The build bar needs at least one tower kind');
   const doc = root.ownerDocument;
+  const toggle = doc.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'build-toggle';
+  toggle.dataset.testid = 'build-bar-toggle';
+  toggle.setAttribute('aria-label', 'Build bar');
+  toggle.addEventListener('click', () => setCollapsed(!collapsed));
   const grid = doc.createElement('div');
   grid.className = 'build-grid';
   grid.style.gridTemplateColumns = `repeat(${BUILD_BAR_COLUMNS}, 1fr)`;
-  root.append(grid);
+  root.append(toggle, grid);
+
+  let collapsed = false;
+  const setCollapsed = (value: boolean) => {
+    collapsed = value;
+    grid.hidden = value;
+    root.dataset.collapsed = String(value);
+    toggle.setAttribute('aria-expanded', String(!value));
+    toggle.textContent = value ? '◀' : '▶';
+    toggle.title = value ? 'Show the build bar' : 'Hide the build bar';
+  };
+  setCollapsed(false);
 
   const entries = options.map((option, i) => {
     const hotkey = String(i + 1);
@@ -70,16 +89,20 @@ export function mountBuildBar<K extends string>(
     const key = doc.createElement('kbd');
     key.textContent = hotkey;
     button.append(icon, cost, key);
-    button.addEventListener('click', () => select(option));
+    button.addEventListener('click', () => (option === selected ? clear() : select(option)));
     grid.append(button);
     return { option, button };
   });
 
-  let selected = first;
+  let selected: BuildOption<K> | undefined;
   const affordable = (option: BuildOption<K>) => game.state.money >= option.cost;
   const select = (option: BuildOption<K>) => {
     if (!affordable(option)) return;
     selected = option;
+    update();
+  };
+  const clear = () => {
+    selected = undefined;
     update();
   };
 
@@ -95,6 +118,7 @@ export function mountBuildBar<K extends string>(
 
   const onKey = (event: KeyboardEvent) => {
     if (event.ctrlKey || event.altKey || event.metaKey) return;
+    if (event.key === 'Escape') return clear();
     const option = /^[1-9]$/.test(event.key) ? options[Number(event.key) - 1] : undefined;
     if (option) select(option);
   };
@@ -103,12 +127,16 @@ export function mountBuildBar<K extends string>(
   update();
   return {
     get selected() {
-      return selected.kind;
+      return selected?.kind;
+    },
+    get collapsed() {
+      return collapsed;
     },
     update,
     destroy() {
       doc.removeEventListener('keydown', onKey);
       root.replaceChildren();
+      delete root.dataset.collapsed;
     },
   };
 }

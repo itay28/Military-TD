@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { TILE_PX } from '../../src/data/display';
 import type { Tile } from '../../src/sim/map';
-import { clickTile, openGame, state, stepToEnd, tileToScreen, view } from './helpers';
+import { clickTile, openGame, selectKind, state, stepToEnd, tileToScreen, view } from './helpers';
 
 // What the Game scene draws, read through __TD__.view() (#134). The view changes on the next frame, so the
 // tests poll it after moving the mouse. Tracers are the exception: they fade on frame time, so they're read in the
@@ -34,6 +34,7 @@ test("hovering a placed tower shows its range ring around the tower's tile; leav
   page,
 }) => {
   await openGame(page);
+  await selectKind(page);
   await clickTile(page, BESIDE_PATH); // the pointer stays on the new tower
   const [tower] = (await state(page)).towers;
 
@@ -53,6 +54,7 @@ test("hovering a placed tower shows its range ring around the tower's tile; leav
 test('after Restart, a tower placed on the same tile shows its range ring when hovered', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('single-infantry-leaks'));
+  await selectKind(page);
   await clickTile(page, BESIDE_PATH);
   const [first] = (await state(page)).towers;
   await expect.poll(() => rangeRing(page)).toMatchObject({ visible: true, towerId: first!.id });
@@ -64,6 +66,7 @@ test('after Restart, a tower placed on the same tile shows its range ring when h
   await expect(page.getByRole('dialog')).toBeHidden();
   expect((await state(page)).towers).toEqual([]);
 
+  await selectKind(page); // a restart clears the build bar's selection
   await clickTile(page, BESIDE_PATH);
   const [second] = (await state(page)).towers;
   expect(second!.id).toBe(first!.id); // the case that broke: same id, same tile
