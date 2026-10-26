@@ -1,5 +1,5 @@
 import { pathToFileURL } from 'node:url';
-import { fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
+import { classifyFireError, fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
 import { currentMilestone, graphql, milestoneOrder } from './board-sync.ts';
 import { isMilestoneDone, releaseVersion } from './milestone-report.ts';
 
@@ -27,20 +27,40 @@ const parseRoundMeta = (body: string) => {
 };
 
 /**
- * Rounds that count toward MAX_ROUNDS among `rounds` (round markers). A round fired only for a
- * conflict is free: conflicts come from the base moving, and one the agent can't resolve hands
- * off at once (see `unresolvedConflict`). A marker without a meta line counts.
+ * Whether a round (its marker) finished: a done marker came after it, before the next round
+ * marker. A round that didn't died, most likely out of tokens; it's retried and never counted (#200).
  */
-function countedRounds(rounds: readonly PrComment[]): number {
+function finishedRound(comments: readonly PrComment[]): (round: PrComment) => boolean {
+  const times = (marker: string) => comments.filter((c) => c.body.includes(marker)).map((c) => Date.parse(c.createdAt));
+  const rounds = times(ROUND_MARKER);
+  const dones = times(DONE_MARKER);
+  return (round) => {
+    const t = Date.parse(round.createdAt);
+    const next = Math.min(...rounds.filter((r) => r > t));
+    return dones.some((d) => d > t && d < next);
+  };
+}
+
+/**
+ * Rounds that count toward MAX_ROUNDS among `rounds` (round markers): only finished ones. A
+ * round fired only for a conflict is free too: conflicts come from the base moving, and one the
+ * agent can't resolve hands off at once (see `unresolvedConflict`). A marker without a meta line counts.
+ */
+function countedRounds(rounds: readonly PrComment[], finished: (round: PrComment) => boolean): number {
   return rounds.filter((r) => {
     const meta = parseRoundMeta(r.body);
-    return !(meta && meta.reasons.length === 1 && meta.reasons[0] === 'conflict');
+    return finished(r) && !(meta && meta.reasons.length === 1 && meta.reasons[0] === 'conflict');
   }).length;
 }
 
-/** Whether the latest round was fired for a conflict on this same base, and the conflict is still there. */
-function unresolvedConflict(rounds: readonly PrComment[], baseSha: string): boolean {
-  const meta = rounds.length ? parseRoundMeta(rounds[rounds.length - 1]!.body) : null;
+/** Whether the latest round finished, was fired for a conflict on this same base, and the conflict is still there. */
+function unresolvedConflict(
+  rounds: readonly PrComment[],
+  baseSha: string,
+  finished: (round: PrComment) => boolean,
+): boolean {
+  const latest = rounds.at(-1);
+  const meta = latest && finished(latest) ? parseRoundMeta(latest.body) : null;
   return !!meta && meta.reasons.includes('conflict') && meta.base === baseSha;
 }
 /** Posted by the Action when it hands a PR off. */
@@ -57,7 +77,7 @@ const REPORT_BRANCH = /^chore\/release-(\d+\.\d+\.\d+)$/;
 const NEEDS_YOU_LABEL = 'needs-you';
 /** Rounds a PR gets before it's handed off; a maintainer comment gives it fresh ones (#165). */
 export const MAX_ROUNDS = 3;
-/** A round with no done marker after this long has died (e.g. its session hit a usage limit); it counts as used. Real rounds take minutes (#196). */
+/** A round with no done marker after this long has died (e.g. its session hit a usage limit) and is retried, not counted (#200). Real rounds take minutes (#196). */
 const ROUND_TIMEOUT_MS = 60 * 60 * 1000;
 /** Checks that report on bookkeeping, not on the PR's code; the CI review is judged by its comment. */
 const IGNORED_CHECKS = ['board-sync', 'release-issue', 'claude-review', 'pr-steward'];
@@ -148,6 +168,8 @@ export type Decision =
       readonly kind: 'steward';
       readonly reasons: readonly Reason[];
       readonly round: number;
+      /** The latest round died without its done marker; this one fires it again (#200). */
+      readonly retry: boolean;
       /** A maintainer comment restarted a handed-off PR. */
       readonly clearNeedsYou: boolean;
     }
@@ -223,12 +245,14 @@ export function decide(
   if (pr.unresolvedThreads > 0) reasons.push('threads');
   if (reasons.length) {
     const since = pr.comments.filter((c) => c.body.includes(ROUND_MARKER) && Date.parse(c.createdAt) > lastMaintainer);
-    if (conflict && unresolvedConflict(since, pr.baseSha))
+    const finished = finishedRound(pr.comments);
+    if (conflict && unresolvedConflict(since, pr.baseSha, finished))
       return { kind: 'stuck', reasons: ['conflict'], conflict: true };
-    const used = countedRounds(since);
+    const used = countedRounds(since, finished);
+    const latest = since.at(-1);
     return used >= MAX_ROUNDS
       ? { kind: 'stuck', reasons }
-      : { kind: 'steward', reasons, round: used + 1, clearNeedsYou };
+      : { kind: 'steward', reasons, round: used + 1, retry: !!latest && !finished(latest), clearNeedsYou };
   }
   if (pr.behind) return { kind: 'update' };
   if (!lastReview) return { kind: 'wait', why: 'no CI review yet (add `review-again` to request one)' };
@@ -355,11 +379,25 @@ export async function act(
       try {
         session = await fireRoutine(settings.steward!, stewardText(pr, decision.reasons, decision.round), fetchFn);
       } catch (error) {
-        throw new Error(`#${n}: firing the PR steward failed: ${String(error)}`, { cause: error });
+        // Out of tokens or rate-limited: nothing is posted or counted, and a later run fires it (#200).
+        if (classifyFireError(error) === 'temporary') {
+          console.log(`#${n}: the fire was refused for now (usage or rate limit); retrying next run`);
+          return;
+        }
+        await handOff(
+          pr,
+          `The steward's API trigger refused the fire (HTTP ${(error as { status?: number }).status}): check the ROUTINE_STEWARD_URL and ROUTINE_STEWARD_TOKEN secrets and the pr-steward routine at claude.ai/code/routines.`,
+          token,
+          fetchFn,
+        );
+        throw new Error(`#${n}: firing the PR steward failed, handed off: ${String(error)}`, { cause: error });
       }
       if (decision.clearNeedsYou) await github(fetchFn, token, 'DELETE', `issues/${n}/labels/${NEEDS_YOU_LABEL}`);
+      const retry = decision.retry
+        ? ' (a retry: the last round ended without reporting, most likely out of tokens)'
+        : '';
       await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
-        body: `PR steward round ${decision.round}/${MAX_ROUNDS} started for: ${describeReasons(decision.reasons)}.${session ? ` Session: ${session}` : ''}\n\n${ROUND_MARKER}\n${roundMeta(decision.reasons, pr.baseSha)}`,
+        body: `PR steward round ${decision.round}/${MAX_ROUNDS} started${retry} for: ${describeReasons(decision.reasons)}.${session ? ` Session: ${session}` : ''}\n\n${ROUND_MARKER}\n${roundMeta(decision.reasons, pr.baseSha)}`,
       });
       return;
     }
