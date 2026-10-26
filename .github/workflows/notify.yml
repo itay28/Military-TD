@@ -2,7 +2,8 @@ name: Notify
 
 # Pushes to the maintainer's phone through ntfy when they're needed (#169,
 # docs/agents/issue-tracker.md → Hand-off): a PR labelled needs-you (stuck after
-# the steward's rounds) or an issue labelled needs-info (an agent's question).
+# the steward's rounds), an issue labelled needs-you (auto-start couldn't start it)
+# or an issue labelled needs-info (an agent's question).
 # Releases push from release-please.yml. Logic and tests: scripts/notify.ts.
 #
 # Needs the NTFY_TOPIC secret; without it the run fails. Labels added with

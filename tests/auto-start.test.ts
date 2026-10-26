@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import {
   AUTO_AGENT_LABEL,
+  HANDOFF_MARKER,
+  classifyFireError,
   commentNoSize,
   NO_SIZE_MARKER,
   planStarts,
@@ -20,6 +22,7 @@ const issue = (number: number, over: Partial<StartIssue> = {}): StartIssue => ({
   tracker: false,
   labelled: true,
   hold: false,
+  needsYou: false,
   autoAgent: false,
   size: 'S',
   priority: 'P1',
@@ -49,6 +52,10 @@ describe('planStarts: which issues are startable', () => {
         issue(6, { blockedBy: [99] }),
       ]),
     ).toEqual([]);
+  });
+
+  it('skips an issue handed to the maintainer with needs-you (#200)', () => {
+    expect(numbers([issue(1, { needsYou: true }), issue(2)])).toEqual([2]);
   });
 
   it('skips issues that already have an open PR, and cards already in progress or review', () => {
@@ -218,9 +225,48 @@ describe('startIssue: claim, then fire', () => {
     expect(text).toContain('Base branch: feat/5-a');
   });
 
-  it('un-claims and throws when the fire fails', async () => {
+  it('reports a start that went through', async () => {
+    await expect(
+      startIssue(
+        start,
+        'gh-token',
+        routines,
+        vi.fn<Fetch>(async () => ok()),
+      ),
+    ).resolves.toBe('started');
+  });
+
+  it.each([429, 500, 503])(
+    'un-claims quietly and leaves it for the next run when the fire is refused with HTTP %i (#200)',
+    async (status) => {
+      const fetchFn = vi.fn<Fetch>(async (url: string) =>
+        url.startsWith('https://fire.example') ? new Response('busy', { status }) : ok(),
+      );
+      await expect(startIssue(start, 'gh-token', routines, fetchFn)).resolves.toBe('later');
+      expect(calls(fetchFn)).toEqual([
+        `POST ${api}/assignees`,
+        `POST ${api}/labels`,
+        'POST https://fire.example/opus',
+        `DELETE ${api}/assignees`,
+        `DELETE ${api}/labels/${AUTO_AGENT_LABEL}`,
+      ]);
+    },
+  );
+
+  it('throws when un-claiming fails after a temporary refusal, so the stuck claim shows', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string, init: RequestInit) =>
+      url.startsWith('https://fire.example')
+        ? new Response('busy', { status: 429 })
+        : init.method === 'DELETE'
+          ? new Response('gone', { status: 500 })
+          : ok(),
+    );
+    await expect(startIssue(start, 'gh-token', routines, fetchFn)).rejects.toThrow(/un-claiming failed/);
+  });
+
+  it('un-claims, hands the issue to the maintainer and throws on a setup error (#200)', async () => {
     const fetchFn = vi.fn<Fetch>(async (url: string) =>
-      url.startsWith('https://fire.example') ? new Response('nope', { status: 500 }) : ok(),
+      url.startsWith('https://fire.example') ? new Response('bad token', { status: 401 }) : ok(),
     );
     await expect(startIssue(start, 'gh-token', routines, fetchFn)).rejects.toThrow(/#12/);
     expect(calls(fetchFn)).toEqual([
@@ -229,7 +275,14 @@ describe('startIssue: claim, then fire', () => {
       'POST https://fire.example/opus',
       `DELETE ${api}/assignees`,
       `DELETE ${api}/labels/${AUTO_AGENT_LABEL}`,
+      `POST ${api}/comments`,
+      `POST ${api}/labels`,
     ]);
+    const { body } = JSON.parse(fetchFn.mock.calls[5]![1].body as string) as { body: string };
+    expect(body).toContain(HANDOFF_MARKER);
+    expect(body).toContain('HTTP 401');
+    expect(body).toContain('ROUTINE_OPUS_TOKEN');
+    expect(JSON.parse(fetchFn.mock.calls[6]![1].body as string)).toEqual({ labels: ['needs-you'] });
   });
 
   it('does not fire when the claim fails', async () => {
@@ -250,7 +303,7 @@ describe('startIssue: claim, then fire', () => {
   it('still reports the fire error when un-claiming fails too', async () => {
     const fetchFn = vi.fn<Fetch>(async (url: string, init: RequestInit) =>
       url.startsWith('https://fire.example')
-        ? new Response('fire broke', { status: 500 })
+        ? new Response('fire broke', { status: 400 })
         : init.method === 'DELETE'
           ? new Response('gone', { status: 500 })
           : ok(),
@@ -258,6 +311,22 @@ describe('startIssue: claim, then fire', () => {
     const failure = startIssue(start, 'gh-token', routines, fetchFn);
     await expect(failure).rejects.toThrow(/fire broke/);
     await expect(failure).rejects.toThrow(/un-claiming failed/);
+  });
+});
+
+describe('classifyFireError (#200)', () => {
+  const refused = (status: number) => Object.assign(new Error(`fire: HTTP ${status}`), { status });
+
+  it.each([429, 500, 502, 503, 529])('HTTP %i is temporary: retry on a later run', (status) => {
+    expect(classifyFireError(refused(status))).toBe('temporary');
+  });
+
+  it('a network error with no status is temporary', () => {
+    expect(classifyFireError(new TypeError('fetch failed'))).toBe('temporary');
+  });
+
+  it.each([400, 401, 403, 404, 422])('HTTP %i is a setup error', (status) => {
+    expect(classifyFireError(refused(status))).toBe('setup');
   });
 });
 

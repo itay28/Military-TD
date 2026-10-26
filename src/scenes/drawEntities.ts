@@ -11,10 +11,11 @@ import {
   TILE_PX,
   TOWER_STYLE,
   TRACER_STYLE,
+  type TowerStyle,
 } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
-import type { Tower } from '../sim/towers';
+import type { Tower, TowerStats } from '../sim/towers';
 import type { MapPainter } from './drawMap';
 import type { Pixel } from './coords';
 import type { BlastCircle } from './shellView';
@@ -55,17 +56,25 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   painter.fillRect(left, top, (HP_BAR.width * enemy.hp) / enemy.maxHp, HP_BAR.height);
 }
 
-/** A filled square or circle with an outline, in its kind's style, and a level pip per upgrade along its bottom edge. */
-export function drawTower(painter: EntityPainter, tower: Tower): void {
-  const { shape, size, fill, outline, outlineWidth } = TOWER_STYLE[tower.kind];
+/** Fills, or with `stroke` outlines, a kind's shape centered on the origin, in the current style. */
+function paintShape(painter: EntityPainter, { shape, size }: TowerStyle, stroke = false): void {
   const half = size / 2;
-  painter.fillStyle(fill);
-  if (shape === 'circle') painter.fillCircle(0, 0, half);
+  if (shape === 'circle') {
+    if (stroke) painter.strokeCircle(0, 0, half);
+    else painter.fillCircle(0, 0, half);
+  } else if (stroke) painter.strokeRect(-half, -half, size, size);
   else painter.fillRect(-half, -half, size, size);
-  painter.lineStyle(outlineWidth, outline);
-  if (shape === 'circle') painter.strokeCircle(0, 0, half);
-  else painter.strokeRect(-half, -half, size, size);
+}
+
+/** A filled shape with an outline, in its kind's style, and a level pip per upgrade along its bottom edge. */
+export function drawTower(painter: EntityPainter, tower: Tower): void {
+  const style = TOWER_STYLE[tower.kind];
+  painter.fillStyle(style.fill);
+  paintShape(painter, style);
+  painter.lineStyle(style.outlineWidth, style.outline);
+  paintShape(painter, style, true);
   if (tower.level <= 1) return;
+  const half = style.size / 2;
   const top = half - LEVEL_PIP.inset - LEVEL_PIP.size;
   painter.fillStyle(LEVEL_PIP.color);
   for (let i = 0; i < tower.level - 1; i++) {
@@ -74,28 +83,30 @@ export function drawTower(painter: EntityPainter, tower: Tower): void {
   }
 }
 
+/** The range rings' radii in pixels: the range, then the minimum range (the dead zone's edge) if there is one. */
+export function rangeRingRadii({ range, minRange }: TowerStats): number[] {
+  return minRange === undefined ? [range * TILE_PX] : [range * TILE_PX, minRange * TILE_PX];
+}
+
 /** The ring around a dismantling tower; `left` is the share of the dismantle time still to go (1 down to 0). */
 export function drawDismantleRing(painter: EntityPainter, left: number): void {
   painter.lineStyle(DISMANTLE.width, DISMANTLE.color);
   painter.strokeCircle(0, 0, DISMANTLE.radius * left);
 }
 
-/** The circle a tower can hit within. */
+/** The circle a tower can hit within, and the dead zone inside it if it has a minimum range. */
 export function drawRangeRing(painter: EntityPainter, tower: Tower): void {
   painter.lineStyle(RANGE_RING.width, RANGE_RING.color, RANGE_RING.alpha);
-  painter.strokeCircle(0, 0, tower.range * TILE_PX);
+  for (const radius of rangeRingRadii(tower)) painter.strokeCircle(0, 0, radius);
 }
 
-/** A see-through tower of `kind` and its range ring, green if it can be placed here, red if not. */
+/** A see-through tower of `kind` and its range rings, green if it can be placed here, red if not. */
 export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: boolean): void {
   const color = placeable ? GHOST.placeable : GHOST.blocked;
-  const { shape, size } = TOWER_STYLE[kind];
-  const half = size / 2;
   painter.fillStyle(color, GHOST.fillAlpha);
-  if (shape === 'circle') painter.fillCircle(0, 0, half);
-  else painter.fillRect(-half, -half, size, size);
+  paintShape(painter, TOWER_STYLE[kind]);
   painter.lineStyle(GHOST.ringWidth, color, GHOST.ringAlpha);
-  painter.strokeCircle(0, 0, TOWER_STATS[kind].range * TILE_PX);
+  for (const radius of rangeRingRadii(TOWER_STATS[kind])) painter.strokeCircle(0, 0, radius);
 }
 
 /** Each tracer as a line in canvas pixels, in its tower's style, at its current alpha. */
