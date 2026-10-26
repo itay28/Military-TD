@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url';
 import {
   AUTO_AGENT_LABEL,
   commentNoSize,
+  github,
   HOLD_LABEL,
   NEEDS_YOU_LABEL,
   planStarts,
@@ -14,7 +15,8 @@ import {
 // Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule
 // (docs/agents/issue-tracker.md → Project board). Run by .github/workflows/board-sync.yml on
 // every PR or assignment change and on a schedule. Each run reconciles the whole board, so
-// a missed event is fixed by the next one. The decisions are pure functions; the CLI at the
+// a missed event is fixed by the next one. It also copies `size:*`, `priority:*` and `area:*` labels
+// to the Size, Priority and Area fields (#205). The decisions are pure functions; the CLI at the
 // bottom only fetches and writes. With AUTO_SPAWN=on it then starts agents (scripts/auto-start.ts).
 
 const OWNER = 'itay28';
@@ -156,6 +158,78 @@ export function planMoves(
   });
 }
 
+/** The board fields set from labels (#205): `size:M` → Size M, `priority:P1` → Priority P1, `area:ui` → Area ui. */
+export type LabelField = 'Size' | 'Priority' | 'Area';
+const FIELD_LABELS: readonly { field: LabelField; prefix: string; values: readonly string[] }[] = [
+  // Ordered small to big and urgent to not, so the last value wins a tie (issue-tracker.md).
+  { field: 'Size', prefix: 'size:', values: ['XS', 'S', 'M', 'L', 'XL'] },
+  { field: 'Priority', prefix: 'priority:', values: ['P0', 'P1', 'P2', 'P3'] },
+  { field: 'Area', prefix: 'area:', values: ['core', 'towers', 'units', 'ui', 'art', 'infra'] },
+];
+
+export interface FieldsFromLabels {
+  readonly fields: Partial<Record<LabelField, string>>;
+  /** The `size:*` and `priority:*` labels read: the board keeps the value. `area:*` labels stay, for filtering. */
+  readonly removeLabels: string[];
+}
+
+/**
+ * The board fields an issue's labels ask for. Two size labels: the bigger wins; two priority
+ * labels: the less urgent wins; two different area labels: Area is left alone. Labels with an
+ * unknown value are ignored, and stay on the issue.
+ */
+export function planFieldsFromLabels(labels: readonly string[]): FieldsFromLabels {
+  const fields: Partial<Record<LabelField, string>> = {};
+  const removeLabels: string[] = [];
+  for (const { field, prefix, values } of FIELD_LABELS) {
+    const found = labels.filter((l) => l.startsWith(prefix) && values.includes(l.slice(prefix.length)));
+    const picked = found.map((l) => l.slice(prefix.length)).sort((a, b) => values.indexOf(a) - values.indexOf(b));
+    if (field === 'Area') {
+      if (new Set(picked).size === 1) fields[field] = picked[0]!;
+    } else {
+      if (picked.length) fields[field] = picked.at(-1)!;
+      removeLabels.push(...found);
+    }
+  }
+  return { fields, removeLabels };
+}
+
+/** An issue's labels and its board fields' current values. */
+export interface LabelledItem {
+  readonly number: number;
+  readonly labels: readonly string[];
+  readonly fields: Partial<Record<LabelField, string | undefined>>;
+}
+
+export interface FieldUpdate {
+  readonly issue: number;
+  /** Fields whose value differs from the labels. */
+  readonly set: readonly { field: LabelField; value: string }[];
+  readonly removeLabels: readonly string[];
+}
+
+/** For each issue, the fields to set and the labels to remove; issues with nothing to do are left out. */
+export function planFieldUpdates(items: readonly LabelledItem[]): FieldUpdate[] {
+  return items.flatMap((item) => {
+    const { fields, removeLabels } = planFieldsFromLabels(item.labels);
+    const set = FIELD_LABELS.flatMap(({ field }) => {
+      const value = fields[field];
+      return value !== undefined && value !== item.fields[field] ? [{ field, value }] : [];
+    });
+    return set.length || removeLabels.length ? [{ issue: item.number, set, removeLabels }] : [];
+  });
+}
+
+/** Auto-start's issues with this run's Size and Priority updates, so a newly sized issue can start now. */
+export function withFieldUpdates(issues: readonly StartIssue[], updates: readonly FieldUpdate[]): StartIssue[] {
+  return issues.map((issue) => {
+    const set = updates.find((u) => u.issue === issue.number)?.set ?? [];
+    const value = (field: LabelField) => set.find((s) => s.field === field)?.value;
+    if (!value('Size') && !value('Priority')) return issue;
+    return { ...issue, size: value('Size') ?? issue.size, priority: value('Priority') ?? issue.priority };
+  });
+}
+
 export async function graphql<T>(token: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
   const response = await fetch('https://api.github.com/graphql', {
     method: 'POST',
@@ -173,6 +247,9 @@ const BOARD_QUERY = `query($owner: String!, $project: Int!, $cursor: String) {
     projectV2(number: $project) {
       id
       field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } }
+      sizeField: field(name: "Size") { ... on ProjectV2SingleSelectField { id options { id name } } }
+      priorityField: field(name: "Priority") { ... on ProjectV2SingleSelectField { id options { id name } } }
+      areaField: field(name: "Area") { ... on ProjectV2SingleSelectField { id options { id name } } }
       items(first: 100, after: $cursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
@@ -180,6 +257,7 @@ const BOARD_QUERY = `query($owner: String!, $project: Int!, $cursor: String) {
           fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
           size: fieldValueByName(name: "Size") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
           priority: fieldValueByName(name: "Priority") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+          area: fieldValueByName(name: "Area") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
           content {
             ... on Issue {
               number
@@ -198,11 +276,19 @@ const BOARD_QUERY = `query($owner: String!, $project: Int!, $cursor: String) {
   }
 }`;
 
+interface SelectField {
+  id: string;
+  options: { id: string; name: string }[];
+}
+
 interface BoardData {
   user: {
     projectV2: {
       id: string;
-      field: { id: string; options: { id: string; name: string }[] };
+      field: SelectField;
+      sizeField: SelectField | null;
+      priorityField: SelectField | null;
+      areaField: SelectField | null;
       items: {
         pageInfo: { hasNextPage: boolean; endCursor: string | null };
         nodes: {
@@ -210,6 +296,7 @@ interface BoardData {
           fieldValueByName: { name?: string } | null;
           size: { name?: string } | null;
           priority: { name?: string } | null;
+          area: { name?: string } | null;
           content: {
             number?: number;
             state?: string;
@@ -257,7 +344,8 @@ interface PrData {
   };
 }
 
-const SET_STATUS = `mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+// Sets a single-select field: Status, or Size, Priority and Area from labels.
+const SET_FIELD = `mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
   updateProjectV2ItemFieldValue(input: { projectId: $project, itemId: $item, fieldId: $field, value: { singleSelectOptionId: $option } }) {
     projectV2Item { id }
   }
@@ -273,6 +361,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   const items = new Map<number, string>();
   const issues: BoardIssue[] = [];
   const startIssues: StartIssue[] = [];
+  const labelled: LabelledItem[] = [];
   let project: BoardData['user']['projectV2'] | undefined;
   let cursor: string | null = null;
   do {
@@ -296,6 +385,11 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         milestone: c.milestone?.number ?? null,
       });
       const labels = c.labels?.nodes.map((l) => l.name) ?? [];
+      labelled.push({
+        number: c.number,
+        labels,
+        fields: { Size: node.size?.name, Priority: node.priority?.name, Area: node.area?.name },
+      });
       startIssues.push({
         ...issues.at(-1)!,
         hold: labels.includes(HOLD_LABEL),
@@ -333,13 +427,39 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     const option = project.field.options.find((o) => o.name === move.to);
     if (!option) throw new Error(`no "${move.to}" option on the Status field`);
     if (!dryRun)
-      await graphql(token, SET_STATUS, {
+      await graphql(token, SET_FIELD, {
         project: project.id,
         item: items.get(move.issue),
         field: project.field.id,
         option: option.id,
       });
     console.log(`#${move.issue}: ${move.from ?? 'no status'} → ${move.to}${dryRun ? ' (dry run)' : ''}`);
+  }
+
+  // Size, Priority and Area from labels (#205), before auto-start so a newly sized issue starts now.
+  const updates = planFieldUpdates(labelled);
+  const fieldOf: Record<LabelField, SelectField | null> = {
+    Size: project.sizeField,
+    Priority: project.priorityField,
+    Area: project.areaField,
+  };
+  for (const update of updates) {
+    for (const { field, value } of update.set) {
+      const option = fieldOf[field]?.options.find((o) => o.name === value);
+      if (!option) throw new Error(`no "${value}" option on the ${field} field`);
+      if (!dryRun)
+        await graphql(token, SET_FIELD, {
+          project: project.id,
+          item: items.get(update.issue),
+          field: fieldOf[field]!.id,
+          option: option.id,
+        });
+      console.log(`#${update.issue}: ${field} → ${value}${dryRun ? ' (dry run)' : ''}`);
+    }
+    for (const label of update.removeLabels) {
+      if (!dryRun) await github(fetch, token, 'DELETE', `issues/${update.issue}/labels/${encodeURIComponent(label)}`);
+      console.log(`#${update.issue}: removed label ${label}${dryRun ? ' (dry run)' : ''}`);
+    }
   }
 
   if (!autoStart) return;
@@ -349,7 +469,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   const moved = new Map(moves.map((m) => [m.issue, m.to]));
   const openPrs: OpenPr[] = prs.filter((pr) => pr.state === 'OPEN');
   const plan = planStarts(
-    startIssues.map((i) => ({ ...i, status: moved.get(i.number) ?? i.status })),
+    withFieldUpdates(startIssues, updates).map((i) => ({ ...i, status: moved.get(i.number) ?? i.status })),
     openPrs,
     order,
     { defaultBranch, stack: autoStart.stack },
