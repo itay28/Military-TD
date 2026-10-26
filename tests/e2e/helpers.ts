@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, TILE_PX } from '../../src/data/display';
 import type { Tile } from '../../src/sim/map';
-import type { TestState } from '../../src/testing/api';
+import type { TestState, TestView } from '../../src/testing/api';
 
 /** Test mode's URL flags, as in src/testing/flags.ts. `test=1` is always on. */
 export interface OpenOptions {
@@ -37,6 +37,9 @@ export async function clickTile(page: Page, tile: Tile): Promise<void> {
 }
 
 export const state = (page: Page): Promise<TestState> => page.evaluate(() => window.__TD__!.state());
+
+/** What the Game scene draws now. It changes on the next frame, so poll it (`expect.poll`) after moving the mouse. */
+export const view = (page: Page): Promise<TestView> => page.evaluate(() => window.__TD__!.view());
 
 /** Runs fixed ticks in chunks until the game ends, so a test reaches Victory or Defeat without waiting in real time. */
 export async function stepToEnd(page: Page, maxTicks = 60 * 60 * 10): Promise<TestState> {

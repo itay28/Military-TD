@@ -15,7 +15,7 @@ const SMALL: MapData = {
   ],
 };
 
-const ONE_INFANTRY: readonly WaveData[] = [{ kind: 'infantry', count: 1, spacingMs: 0 }];
+const ONE_INFANTRY: readonly WaveData[] = [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }];
 const BESIDE_PATH = { col: 1, row: 2 };
 const FAR_FROM_PATH = { col: 0, row: 4 };
 

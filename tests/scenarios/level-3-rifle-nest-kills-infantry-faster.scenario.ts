@@ -6,7 +6,7 @@ export default defineScenario({
   description: 'A level-3 Rifle Nest (heavier weapon: 16 damage) kills one Infantry in 2 shots, not 3.',
   towers: [{ kind: 'rifleNest', tile: { col: 1, row: 3 } }],
   money: 110,
-  waves: [{ kind: 'infantry', count: 1, spacingMs: 0 }],
+  waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }],
   script: [
     { atTick: 0, command: { type: 'upgradeTower', towerId: 1 } },
     { atTick: 0, command: { type: 'upgradeTower', towerId: 1 } },

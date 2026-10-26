@@ -6,13 +6,12 @@
     "agent-engineering@anthropic-plugin-directory": false
   },
   "hooks": {
-    "PostToolUse": [
+    "SessionStart": [
       {
-        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/board-status.ts\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/doctor.ts\" --hook",
             "timeout": 30
           }
         ]

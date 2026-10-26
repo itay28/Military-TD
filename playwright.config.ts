@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// E2E_PORT lets sessions in parallel worktrees each serve their own build.
+const PORT = Number(process.env['E2E_PORT'] ?? 4173);
 
 // UI tests against the built game in headless Chromium (ADR-0003). `npm run test:e2e`.
 export default defineConfig({
@@ -14,7 +15,7 @@ export default defineConfig({
   snapshotPathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}',
   use: {
     baseURL: `http://localhost:${PORT}`,
-    // The 768 × 480 canvas plus the HUD bar and margins, as in workflow.md → 4b.
+    // The 768 × 480 canvas plus the HUD above it, the build bar beside it and margins, as in workflow.md → 4b.
     viewport: { width: 900, height: 560 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

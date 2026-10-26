@@ -6,7 +6,7 @@ import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
 import { setUpGame, type GameSetup } from '../sim/scenario';
 import { towerAt, type Tower } from '../sim/towers';
-import type { TestHooks } from '../testing/api';
+import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import { pixelToTile, toPixels, type Pixel } from './coords';
 import { drawDismantleRing, drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers } from './drawEntities';
@@ -17,6 +17,7 @@ import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
 import { resolveClick } from './selection';
 import { createTracers, type Tracers } from './tracers';
+import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
@@ -32,8 +33,13 @@ const ringKey = (tower: Tower): string => `${tower.id}@${tower.range}`;
 /** Draw order, back to front. */
 const DEPTH = { map: 0, towers: 1, enemies: 2, tracers: 3, ghost: 4, rangeRing: 5, floatingText: 6 } as const;
 
-/** The tower kind a click places. The MVP has one; the v0.2 build bar will pick it. */
-const PLACING: TowerKind = 'rifleNest';
+/** Puts `object` on `layer`: the depth that orders it, and the name test mode's view() reports it by. */
+function onLayer<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Depth>(
+  object: T,
+  layer: keyof typeof DEPTH,
+): T {
+  return object.setDepth(DEPTH[layer]).setName(layer);
+}
 
 interface EnemyView {
   readonly graphics: Phaser.GameObjects.Graphics;
@@ -44,6 +50,8 @@ interface EnemyView {
 export interface GameSceneOptions {
   /** The DOM element the HUD is drawn in (`#hud` in index.html). */
   readonly hudRoot: HTMLElement;
+  /** The DOM element right of the canvas the build bar is drawn in (`#build-bar` in index.html). */
+  readonly buildBarRoot: HTMLElement;
   /** The DOM element over the canvas the End screen is drawn in (`#end-screen` in index.html). */
   readonly endScreenRoot: HTMLElement;
   /** The DOM element over the canvas the tower panel is drawn in (`#tower-panel` in index.html). */
@@ -57,6 +65,7 @@ export interface GameSceneOptions {
 /** Owns the Simulation, draws it, and advances it on a fixed timestep. */
 export class GameScene extends Phaser.Scene {
   private readonly hudRoot: HTMLElement;
+  private readonly buildBarRoot: HTMLElement;
   private readonly endScreenRoot: HTMLElement;
   private readonly towerPanelRoot: HTMLElement;
   private readonly flags: TestFlags;
@@ -66,6 +75,7 @@ export class GameScene extends Phaser.Scene {
   private sim!: Game;
   private loop!: FixedStep;
   private hud!: Hud;
+  private buildBar!: BuildBar;
   private endScreen!: EndScreen;
   private towerPanel!: TowerPanel;
   private enemyViews!: ViewSync<Enemy>;
@@ -75,8 +85,8 @@ export class GameScene extends Phaser.Scene {
   private rangeRing!: Phaser.GameObjects.Graphics;
   private selectedRing!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
-  /** The ghost last drawn, so it is redrawn only when its tile or colour changes. */
-  private ghost: Ghost | undefined;
+  /** The ghost last drawn, and its kind, so it is redrawn only when its tile, colour or kind changes. */
+  private ghost: (Ghost & { readonly kind: TowerKind }) | undefined;
   private floatingTexts!: FloatingTexts;
   private floatingTextViews!: ViewSync<FloatingTextView>;
   /** Enemy positions before the latest tick, to interpolate from. */
@@ -88,9 +98,10 @@ export class GameScene extends Phaser.Scene {
   /** The selected tower whose range ring is drawn, as its `ringKey`. */
   private selectedRingKey: string | undefined;
 
-  constructor({ hudRoot, endScreenRoot, towerPanelRoot, flags, onCreate }: GameSceneOptions) {
+  constructor({ hudRoot, buildBarRoot, endScreenRoot, towerPanelRoot, flags, onCreate }: GameSceneOptions) {
     super('Game');
     this.hudRoot = hudRoot;
+    this.buildBarRoot = buildBarRoot;
     this.endScreenRoot = endScreenRoot;
     this.towerPanelRoot = towerPanelRoot;
     this.flags = flags;
@@ -116,6 +127,22 @@ export class GameScene extends Phaser.Scene {
           this.scene.restart();
         });
       },
+      view: () => this.testView(),
+    };
+  }
+
+  /** What test mode's view() reports: read from the display objects, so it shows what Phaser renders. */
+  private testView(): TestView {
+    this.children.depthSort(); // the order the next render draws in
+    const layers = this.children.list.map((object) => object.name).filter((name) => name !== '');
+    return {
+      rangeRing: {
+        visible: this.rangeRing.visible,
+        towerId: this.hoveredRingKey ? Number(this.hoveredRingKey.split('@')[0]) : null,
+        center: { x: this.rangeRing.x, y: this.rangeRing.y },
+      },
+      tracers: this.tracers.active(),
+      drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
     };
   }
 
@@ -127,7 +154,7 @@ export class GameScene extends Phaser.Scene {
     this.selectedRingKey = undefined;
     this.ghost = undefined;
     this.sim = setUpGame(this.setup);
-    drawMap(this.add.graphics().setDepth(DEPTH.map), this.sim.state.map);
+    drawMap(onLayer(this.add.graphics(), 'map'), this.sim.state.map);
     this.loop = createFixedStep({
       stepMs: TICK_MS,
       // Scaled with ?speed, so the cap doesn't pull a faster loop back to real time.
@@ -136,7 +163,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.enemyViews = createViewSync<Enemy, EnemyView>({
-      create: () => ({ graphics: this.add.graphics().setDepth(DEPTH.enemies), hp: Number.NaN }),
+      create: () => ({ graphics: onLayer(this.add.graphics(), 'enemies'), hp: Number.NaN }),
       update: (view, enemy) => {
         if (view.hp !== enemy.hp) {
           view.graphics.clear();
@@ -153,9 +180,9 @@ export class GameScene extends Phaser.Scene {
       create: (tower) => {
         const { x, y } = towerCenter(tower);
         return {
-          graphics: this.add.graphics().setDepth(DEPTH.towers).setPosition(x, y),
+          graphics: onLayer(this.add.graphics(), 'towers').setPosition(x, y),
           level: 0,
-          ring: this.add.graphics().setDepth(DEPTH.towers).setPosition(x, y),
+          ring: onLayer(this.add.graphics(), 'towers').setPosition(x, y),
         };
       },
       // Redrawn only when an upgrade changes the level pips; a dismantling tower is faded, with a shrinking ring.
@@ -177,24 +204,23 @@ export class GameScene extends Phaser.Scene {
 
     // ?anim=0: zero lifetimes, so tracers and floating texts never show.
     this.tracers = createTracers(this.flags.anim ? TRACER.fadeMs : 0);
-    this.tracerGraphics = this.add.graphics().setDepth(DEPTH.tracers);
+    this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
-      if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position));
+      if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
     });
 
-    this.rangeRing = this.add.graphics().setDepth(DEPTH.rangeRing).setVisible(false);
-    this.selectedRing = this.add.graphics().setDepth(DEPTH.rangeRing).setVisible(false);
+    this.rangeRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
+    this.selectedRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       this.pointerTile = pixelToTile({ x: pointer.worldX, y: pointer.worldY });
     });
     this.input.on('gameout', () => (this.pointerTile = undefined));
 
-    this.ghostGraphics = this.add.graphics().setDepth(DEPTH.ghost).setVisible(false);
+    this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
     this.floatingTexts = createFloatingTexts(this.flags.anim ? FLOATING_TEXT : { ...FLOATING_TEXT, durationMs: 0 });
     this.floatingTextViews = createViewSync<FloatingTextView, Phaser.GameObjects.Text>({
-      create: ({ text }) =>
-        this.add.text(0, 0, text, FLOATING_TEXT.style).setOrigin(0.5, 1).setDepth(DEPTH.floatingText),
+      create: ({ text }) => onLayer(this.add.text(0, 0, text, FLOATING_TEXT.style).setOrigin(0.5, 1), 'floatingText'),
       update: (view, { x, y, alpha }) => view.setPosition(x, y).setAlpha(alpha),
       destroy: (view) => view.destroy(),
     });
@@ -207,7 +233,7 @@ export class GameScene extends Phaser.Scene {
       if (action.type === 'select') this.towerPanel.select(action.towerId);
       else if (action.type === 'deselect') this.towerPanel.select(undefined);
       else {
-        const refusal = placeAt(this.sim, PLACING, action.tile);
+        const refusal = placeAt(this.sim, this.buildBar.selected, action.tile);
         if (refusal) this.floatingTexts.add(refusal, at);
       }
     });
@@ -217,11 +243,13 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.hud = mountHud(this.hudRoot, this.sim);
+    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
     this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.hud.destroy();
+      this.buildBar.destroy();
       this.endScreen.destroy();
       this.towerPanel.destroy();
     });
@@ -240,6 +268,7 @@ export class GameScene extends Phaser.Scene {
     this.floatingTexts.advance(deltaMs);
     this.loop.advance(frameMs(this.flags, deltaMs));
     this.hud.update();
+    this.buildBar.update();
     this.endScreen.update();
     this.towerPanel.update();
 
@@ -261,7 +290,10 @@ export class GameScene extends Phaser.Scene {
     );
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.
     // None while a tower is selected, since a click then only deselects.
-    this.showGhost(selected ? undefined : ghostAt(this.sim, PLACING, this.pointerTile));
+    this.showGhost(
+      this.buildBar.selected,
+      selected ? undefined : ghostAt(this.sim, this.buildBar.selected, this.pointerTile),
+    );
     this.floatingTextViews.sync(this.floatingTexts.active());
   }
 
@@ -283,17 +315,19 @@ export class GameScene extends Phaser.Scene {
     return key;
   }
 
-  /** Draws `ghost` on its tile, or hides it when there is none. */
-  private showGhost(ghost: Ghost | undefined): void {
-    const unchanged =
-      ghost?.tile.col === this.ghost?.tile.col &&
-      ghost?.tile.row === this.ghost?.tile.row &&
-      ghost?.placeable === this.ghost?.placeable;
+  /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none. */
+  private showGhost(kind: TowerKind, ghost: Ghost | undefined): void {
+    const unchanged = ghost
+      ? kind === this.ghost?.kind &&
+        ghost.tile.col === this.ghost.tile.col &&
+        ghost.tile.row === this.ghost.tile.row &&
+        ghost.placeable === this.ghost.placeable
+      : this.ghost === undefined;
     if (unchanged) return;
-    this.ghost = ghost;
+    this.ghost = ghost && { ...ghost, kind };
     this.ghostGraphics.clear().setVisible(ghost !== undefined);
     if (!ghost) return;
     const { x, y } = toPixels(tileCenter(ghost.tile));
-    drawGhost(this.ghostGraphics.setPosition(x, y), PLACING, ghost.placeable);
+    drawGhost(this.ghostGraphics.setPosition(x, y), kind, ghost.placeable);
   }
 }
