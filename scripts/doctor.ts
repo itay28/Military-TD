@@ -15,7 +15,7 @@ export interface Facts {
   readonly wantedNode: string | undefined;
   readonly nodeModules: boolean;
   /** Locally `gh auth status`; in the cloud, whether `gh api` (REST through the proxy) reaches the repository. */
-  readonly gh: 'logged-in' | 'logged-out' | 'missing' | 'rest-ok' | 'no-access';
+  readonly gh: 'logged-in' | 'logged-out' | 'missing' | 'rest-ok' | 'no-access' | 'unreachable';
 }
 
 const REPO = 'itay28/Military-TD';
@@ -32,6 +32,10 @@ export function diagnose(facts: Facts): { problems: string[]; summary: string } 
   if (facts.gh === 'no-access')
     problems.push(
       `no GitHub access to ${REPO}: attach the repository to this routine or session (claude.ai/code/routines → Edit → Repository); stop and report, nothing else will work`,
+    );
+  if (facts.gh === 'unreachable')
+    problems.push(
+      `GitHub REST check failed (network or timeout), not an access error: retry \`gh api repos/${REPO}\` before deciding anything`,
     );
   const head = `doctor (${facts.environment})`;
   const summary = problems.length
@@ -57,12 +61,18 @@ function ghState(): Facts['gh'] {
 
 // In the cloud, `gh auth status` always fails (the proxy injects the token), but REST works when the
 // repository is attached to the session; GraphQL never does (docs/agents/workflow.md → Cloud sessions).
+/** A failed `gh api repos/<repo>`: an HTTP 403/404 means the repository isn't attached; anything else (network, timeout) doesn't. */
+export function cloudGhStateFrom(stderr: string): Facts['gh'] {
+  return /\(HTTP 40[34]\)/.test(stderr) ? 'no-access' : 'unreachable';
+}
+
 function cloudGhState(): Facts['gh'] {
   try {
-    execFileSync('gh', ['api', `repos/${REPO}`, '--silent'], { stdio: 'ignore', timeout: 15_000 });
+    execFileSync('gh', ['api', `repos/${REPO}`, '--silent'], { stdio: ['ignore', 'ignore', 'pipe'], timeout: 15_000 });
     return 'rest-ok';
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'no-access';
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+    return cloudGhStateFrom(String((error as { stderr?: unknown }).stderr ?? ''));
   }
 }
 

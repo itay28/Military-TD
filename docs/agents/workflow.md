@@ -112,12 +112,12 @@ A PR that changes what the player sees (HUD, menus, overlays, anything a Scene d
 ## Cloud sessions
 
 Agents also run in cloud sessions: claude.ai/code, and the auto-start and PR steward routines (`docs/agents/prompts/`). The steps above are the same. These things differ (environment table: `docs/agents/tooling.md` → **Environments**):
-- **Doctor first.** The `SessionStart` hook runs `npm run doctor`. In the cloud it checks that `gh api` reaches `itay28/Military-TD`. If it reports *no GitHub access*, the repository isn't attached to the routine or session. Stop and report it (a push notification from a routine): nothing else will work, and only the maintainer can attach it in the browser.
+- **Doctor first.** The `SessionStart` hook runs `npm run doctor`. In the cloud it checks that `gh api` reaches `itay28/Military-TD`. If it reports *no GitHub access* (an HTTP 403/404), the repository isn't attached to the routine or session. Stop and report it (a push notification from a routine): nothing else will work, and only the maintainer can attach it in the browser. *GitHub REST check failed* is a network problem instead: retry before deciding.
 - **GitHub: REST only.** Use the built-in GitHub tools, or `gh api repos/itay28/Military-TD/...`. GraphQL is blocked, so `gh pr`, `gh issue` and `gh project` don't work. For review threads, auto-merge and draft/ready, the proxy's REST routes are `/repos/{owner}/{repo}/pulls/{n}/ccr/review_threads`, `.../ccr/comments/{id}/resolve`, `.../ccr/auto_merge` and `.../ccr/ready_for_review`.
 - **Board:** never move cards. *Board sync* does it from PR and issue events.
 - **Skills:** no plugins. `tdd`, `pr` and `diagnosing-bugs` come from `.claude/skills/` (vendored, `.claude/skills/README.md`). `code-review` stays in CI.
 - **Questions:** ask on the issue, add `needs-info` (that pushes to the maintainer's phone), and move on. Never guess.
-- **Merging:** never merge by hand. The *PR steward* merges a PR once it's green, the review is answered and the threads are resolved.
+- **Merging:** never merge, not even as the steward. The *PR steward* Action (`scripts/pr-steward.ts`) merges a PR itself once it's green, the review is answered and the threads are resolved.
 
 ## Token budget
 
