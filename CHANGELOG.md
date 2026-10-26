@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/itay28/Military-TD/compare/v0.1.1...v0.1.2) (2026-10-26)
+
+
+### Features
+
+* tower upgrades (optics, heavier weapon) ([#155](https://github.com/itay28/Military-TD/issues/155)) ([a5e198c](https://github.com/itay28/Military-TD/commit/a5e198c35a0e62d3a6805e36f16fd87ec3dbd44f))
+
 ## [0.1.1](https://github.com/itay28/Military-TD/compare/v0.1.0...v0.1.1) (2026-10-26)
 
 
