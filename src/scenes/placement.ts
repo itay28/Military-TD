@@ -12,11 +12,11 @@ export interface Ghost {
 }
 
 /**
- * The ghost to show for `tile`, the tile under the pointer. None off the map, or over a standing tower,
- * which shows its own range ring instead.
+ * The ghost to show for `tile`, the tile under the pointer. None with no build kind selected, off the map, or over
+ * a standing tower, which shows its own range ring instead.
  */
-export function ghostAt(game: Game, kind: TowerKind, tile: Tile | undefined): Ghost | undefined {
-  if (!tile || !game.state.map.inBounds(tile) || towerAt(game.state.towers, tile)) return undefined;
+export function ghostAt(game: Game, kind: TowerKind | undefined, tile: Tile | undefined): Ghost | undefined {
+  if (!kind || !tile || !game.state.map.inBounds(tile) || towerAt(game.state.towers, tile)) return undefined;
   return { tile, placeable: game.canPlaceTower(kind, tile).ok };
 }
 

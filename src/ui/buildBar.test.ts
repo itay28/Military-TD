@@ -12,7 +12,8 @@ const OPTIONS: readonly BuildOption<'rifle' | 'cannon' | 'mortar'>[] = [
 ];
 
 let root: HTMLElement;
-const buttons = () => [...root.querySelectorAll<HTMLButtonElement>('button')];
+const buttons = () => [...root.querySelectorAll<HTMLButtonElement>('.build-grid button')];
+const toggle = () => root.querySelector<HTMLButtonElement>('[data-testid="build-bar-toggle"]')!;
 const button = (kind: string) => root.querySelector<HTMLButtonElement>(`[data-testid="build-${kind}"]`)!;
 const pressed = () => buttons().filter((b) => b.getAttribute('aria-pressed') === 'true');
 const pressKey = (key: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
@@ -49,7 +50,7 @@ describe('Build bar', () => {
     expect(button('cannon').title).toBe('Cannon (2): 120');
     expect(button('cannon').textContent).toContain('120');
     expect(button('cannon').querySelector('kbd')?.textContent).toBe('2');
-    const grid = root.firstElementChild as HTMLElement;
+    const grid = root.querySelector<HTMLElement>('.build-grid')!;
     expect(grid.style.gridTemplateColumns).toBe(`repeat(${BUILD_BAR_COLUMNS}, 1fr)`);
     expect(BUILD_BAR_COLUMNS).toBe(2);
   });
@@ -61,10 +62,47 @@ describe('Build bar', () => {
     expect(icon.style.borderColor).toMatch(/#ffffff|rgb\(255, 255, 255\)/);
   });
 
-  it('selects the first kind at the start', () => {
+  it('selects no kind at the start, so a click on the map builds nothing until the player picks one', () => {
     const bar = mountBuildBar(root, wallet(500), OPTIONS);
-    expect(bar.selected).toBe('rifle');
-    expect(pressed()).toEqual([button('rifle')]);
+    expect(bar.selected).toBeUndefined();
+    expect(pressed()).toEqual([]);
+  });
+
+  it('a click on the selected kind clears the selection', () => {
+    const bar = mountBuildBar(root, wallet(500), OPTIONS);
+    button('cannon').click();
+    button('cannon').click();
+    expect(bar.selected).toBeUndefined();
+    expect(pressed()).toEqual([]);
+  });
+
+  it('Escape clears the selection', () => {
+    const bar = mountBuildBar(root, wallet(500), OPTIONS);
+    pressKey('1');
+    pressKey('Escape');
+    expect(bar.selected).toBeUndefined();
+  });
+
+  it('the toggle collapses the bar and expands it again', () => {
+    const bar = mountBuildBar(root, wallet(500), OPTIONS);
+    expect(bar.collapsed).toBe(false);
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    toggle().click();
+    expect(bar.collapsed).toBe(true);
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    expect(root.querySelector<HTMLElement>('.build-grid')!.hidden).toBe(true);
+    expect(root.dataset.collapsed).toBe('true');
+    toggle().click();
+    expect(bar.collapsed).toBe(false);
+    expect(root.querySelector<HTMLElement>('.build-grid')!.hidden).toBe(false);
+    expect(root.dataset.collapsed).toBe('false');
+  });
+
+  it('collapsing keeps the selected kind', () => {
+    const bar = mountBuildBar(root, wallet(500), OPTIONS);
+    pressKey('2');
+    toggle().click();
+    expect(bar.selected).toBe('cannon');
   });
 
   it('a click selects that kind', () => {
@@ -87,7 +125,7 @@ describe('Build bar', () => {
     pressKey('0');
     pressKey('a');
     document.dispatchEvent(new KeyboardEvent('keydown', { key: '2', ctrlKey: true }));
-    expect(bar.selected).toBe('rifle');
+    expect(bar.selected).toBeUndefined();
   });
 
   it('disables kinds the player cannot afford, and enables them when Money arrives', () => {
@@ -101,6 +139,7 @@ describe('Build bar', () => {
 
   it('an unaffordable kind cannot be selected by click or key', () => {
     const bar = mountBuildBar(root, wallet(100), OPTIONS);
+    button('rifle').click();
     button('cannon').click();
     pressKey('3');
     expect(bar.selected).toBe('rifle');
@@ -122,6 +161,6 @@ describe('Build bar', () => {
     bar.destroy();
     expect(root.children).toHaveLength(0);
     pressKey('2');
-    expect(bar.selected).toBe('rifle');
+    expect(bar.selected).toBeUndefined();
   });
 });

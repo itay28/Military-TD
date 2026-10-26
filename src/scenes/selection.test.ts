@@ -18,22 +18,34 @@ const EMPTY = { col: 0, row: 4 };
 
 describe('resolveClick', () => {
   it('a click on a tower selects it', () => {
-    expect(resolveClick(TOWERS, undefined, { col: 2, row: 2 })).toEqual({ type: 'select', towerId: 1 });
+    expect(resolveClick(TOWERS, undefined, { col: 2, row: 2 }, 'rifleNest')).toEqual({ type: 'select', towerId: 1 });
   });
 
   it('a click on another tower while one is selected selects that one', () => {
-    expect(resolveClick(TOWERS, 1, { col: 4, row: 2 })).toEqual({ type: 'select', towerId: 2 });
+    expect(resolveClick(TOWERS, 1, { col: 4, row: 2 }, undefined)).toEqual({ type: 'select', towerId: 2 });
   });
 
   it('a click on the selected tower keeps it selected', () => {
-    expect(resolveClick(TOWERS, 1, { col: 2, row: 2 })).toEqual({ type: 'select', towerId: 1 });
+    expect(resolveClick(TOWERS, 1, { col: 2, row: 2 }, undefined)).toEqual({ type: 'select', towerId: 1 });
   });
 
   it('a click on an empty tile while a tower is selected only deselects', () => {
-    expect(resolveClick(TOWERS, 1, EMPTY)).toEqual({ type: 'deselect' });
+    expect(resolveClick(TOWERS, 1, EMPTY, 'rifleNest')).toEqual({ type: 'deselect' });
   });
 
-  it('a click on an empty tile with nothing selected places a tower there', () => {
-    expect(resolveClick(TOWERS, undefined, EMPTY)).toEqual({ type: 'place', tile: EMPTY });
+  it('a click on an empty tile with a build kind selected places a tower there', () => {
+    expect(resolveClick(TOWERS, undefined, EMPTY, 'rifleNest')).toEqual({
+      type: 'place',
+      kind: 'rifleNest',
+      tile: EMPTY,
+    });
+  });
+
+  it('a click on an empty tile with no build kind selected does nothing', () => {
+    expect(resolveClick(TOWERS, undefined, EMPTY, undefined)).toEqual({ type: 'none' });
+  });
+
+  it('a click on a tower selects it even with no build kind selected', () => {
+    expect(resolveClick(TOWERS, undefined, { col: 4, row: 2 }, undefined)).toEqual({ type: 'select', towerId: 2 });
   });
 });

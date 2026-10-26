@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
-import { CANVAS_HEIGHT, CANVAS_WIDTH, TILE_PX } from '../../src/data/display';
+import { TILE_PX } from '../../src/data/display';
+import type { TowerKind } from '../../src/data/towers';
 import type { Tile } from '../../src/sim/map';
 import type { TestState, TestView } from '../../src/testing/api';
 
@@ -20,15 +21,21 @@ export async function openGame(page: Page, { manualStep = true, anim = false, sp
   await page.waitForFunction(() => window.__TD__ !== undefined);
 }
 
-/** The page coordinates of `tile`'s center, so a test clicks the canvas like a player. */
+/** The page coordinates of `tile`'s center, through the camera's pan and zoom, so a test clicks the canvas like a player. */
 export async function tileToScreen(page: Page, { col, row }: Tile): Promise<{ x: number; y: number }> {
   const box = await page.locator('#game canvas').boundingBox();
   if (!box) throw new Error('The game canvas is not on the page');
-  // Scaled, in case the canvas is ever drawn at another size than its resolution.
+  const { scrollX, scrollY, zoom } = (await view(page)).camera;
   return {
-    x: box.x + ((col + 0.5) * TILE_PX * box.width) / CANVAS_WIDTH,
-    y: box.y + ((row + 0.5) * TILE_PX * box.height) / CANVAS_HEIGHT,
+    x: box.x + ((col + 0.5) * TILE_PX - scrollX) * zoom,
+    y: box.y + ((row + 0.5) * TILE_PX - scrollY) * zoom,
   };
+}
+
+/** Selects `kind` on the build bar, unless it is selected already: no kind is at the start. */
+export async function selectKind(page: Page, kind: TowerKind = 'rifleNest'): Promise<void> {
+  const button = page.getByTestId(`build-${kind}`);
+  if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click();
 }
 
 export async function clickTile(page: Page, tile: Tile): Promise<void> {
