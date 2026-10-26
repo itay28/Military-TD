@@ -57,8 +57,8 @@ const REPORT_BRANCH = /^chore\/release-(\d+\.\d+\.\d+)$/;
 const NEEDS_YOU_LABEL = 'needs-you';
 /** Rounds a PR gets before it's handed off; a maintainer comment gives it fresh ones (#165). */
 export const MAX_ROUNDS = 3;
-/** A round with no done marker after this long has died; it counts as used. */
-const ROUND_TIMEOUT_MS = 3 * 60 * 60 * 1000;
+/** A round with no done marker after this long has died (e.g. its session hit a usage limit); it counts as used. Real rounds take minutes (#196). */
+const ROUND_TIMEOUT_MS = 60 * 60 * 1000;
 /** Checks that report on bookkeeping, not on the PR's code; the CI review is judged by its comment. */
 const IGNORED_CHECKS = ['board-sync', 'release-issue', 'claude-review', 'pr-steward'];
 const MAINTAINER_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'];
