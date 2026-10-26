@@ -1,0 +1,36 @@
+name: Failure report
+
+# Turns a failed CI run on main, a failed Release or a failed Deploy into an issue (#207,
+# docs/agents/issue-tracker.md → Hand-off): a new needs-triage bug under the Infra epic, or a comment on the
+# workflow's open report; a green run after a failure says so. Logic and tests: scripts/failure-report.ts.
+#
+# Pushes to the maintainer through scripts/notify.ts (labels set with GITHUB_TOKEN don't start notify.yml).
+# Needs the NTFY_TOPIC secret to push; without it a new report still opens, then the run fails.
+on:
+  workflow_run:
+    workflows: [CI, Release, Deploy]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  report:
+    name: report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: File or update the failure report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node scripts/failure-report.ts
