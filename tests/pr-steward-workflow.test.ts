@@ -18,6 +18,10 @@ describe('PR steward workflow', () => {
     expect(yaml).toMatch(/^ {2}workflow_dispatch:/m);
   });
 
+  it('runs hourly, so a round that died is retried soon after its 1 hour timeout (#196)', () => {
+    expect(yaml).toMatch(/^ {4}- cron: '\d+ \* \* \* \*'\n/m);
+  });
+
   it('never runs two at once', () => {
     expect(yaml).toMatch(/^concurrency:\n {2}group: pr-steward\n {2}cancel-in-progress: false\n/m);
   });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
+import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from './enemies';
 import { createGame, TICK_MS, type Game } from './game';
 import type { MapData, Tile } from './map';
@@ -47,6 +48,24 @@ describe('placeTower', () => {
       },
     ]);
     expect(place(game, { col: 1, row: 2 })).not.toBe(id);
+  });
+
+  it('a placed Mortar has its stats from data: long range, a minimum range, ground only, and shells', () => {
+    const game = createGame({ map: SMALL, lives: 20, money: 200, waves: [] });
+    const result = game.placeTower('mortar', { col: 5, row: 4 });
+    expect(result.ok).toBe(true);
+    expect(game.state.money).toBe(75);
+    expect(game.state.towers).toEqual([
+      expect.objectContaining({
+        kind: 'mortar',
+        range: 5,
+        minRange: 1.5,
+        fireRate: 1 / 3,
+        damage: 40,
+        targets: ['ground'],
+        shell: { flightMs: 1000, innerRadius: 0.6, outerRadius: 1.25 },
+      }),
+    ]);
   });
 
   it('a tower with nothing in range stays ready, at 0 cooldown', () => {
@@ -305,6 +324,29 @@ describe('layers', () => {
   });
 });
 
+describe('minimum range', () => {
+  // A 1.5-tile dead zone around the center (2.5, 2.5); each enemy stands straight above it, `gap` tiles away.
+  const tower = handTower({ range: 5, minRange: 1.5 });
+  const above = (id: number, gap: number, distance: number) =>
+    handEnemy(id, distance, { position: { x: 2.5, y: 2.5 - gap } });
+
+  it('an enemy inside the minimum range is never picked, even when it is furthest along', () => {
+    expect(selectTarget(tower, [above(1, 2, 1), above(2, 1, 5)])?.id).toBe(1);
+  });
+
+  it('an enemy exactly at the minimum range is not picked', () => {
+    expect(selectTarget(tower, [above(1, 1.5, 1)])).toBeUndefined();
+  });
+
+  it('an enemy just past the minimum range is picked', () => {
+    expect(selectTarget(tower, [above(1, 1.51, 1)])?.id).toBe(1);
+  });
+
+  it('with only enemies inside the minimum range, there is no target', () => {
+    expect(selectTarget(tower, [above(1, 0, 1), above(2, 1, 2)])).toBeUndefined();
+  });
+});
+
 describe('armor', () => {
   it("an armored enemy takes damage − armor per hit, and the shot's hit reports it", () => {
     const fired = fireTowers([handTower({ damage: 10 })], [handEnemy(7, 1, { armor: 3 })], 0);
@@ -324,6 +366,44 @@ describe('armor', () => {
     expect(fired.shots[0]!.hits).toEqual([{ enemyId: 7, damage: 4 }]);
     expect(fired.kills).toEqual([expect.objectContaining({ id: 7, hp: 0 })]);
     expect(fired.enemies).toEqual([]);
+  });
+});
+
+describe('AA Gun', () => {
+  const aaGun = (): Tower => ({
+    ...TOWER_STATS.aaGun,
+    id: 1,
+    kind: 'aaGun',
+    tile: { col: 2, row: 2 },
+    cooldownMs: 0,
+    level: 1,
+    spent: 75,
+  });
+  const helicopter = (id: number, distance: number): Enemy =>
+    handEnemy(id, distance, {
+      ...ENEMY_STATS.helicopter,
+      kind: 'helicopter',
+      hp: ENEMY_STATS.helicopter.maxHp,
+    });
+
+  it('has the starting numbers from the spec', () => {
+    expect(TOWER_STATS.aaGun).toEqual({ cost: 75, range: 3, fireRate: 4, damage: 8, targets: ['air', 'ground'] });
+  });
+
+  it('hits ground enemies too (ADR-0007: no hard counters)', () => {
+    const result = fireTowers([aaGun()], [handEnemy(1, 1)], 0);
+    expect(result.shots.map((s) => s.targetId)).toEqual([1]);
+    expect(result.shots[0]?.hits).toEqual([{ enemyId: 1, damage: 8 }]);
+  });
+
+  it('does 3 damage per hit to an armor-5 enemy', () => {
+    const result = fireTowers([aaGun()], [handEnemy(1, 1, { armor: 5 })], 0);
+    expect(result.shots[0]?.hits).toEqual([{ enemyId: 1, damage: 3 }]);
+  });
+
+  it('shoots a Helicopter that is further along than a ground enemy', () => {
+    const result = fireTowers([aaGun()], [handEnemy(2, 1), helicopter(1, 2)], 0);
+    expect(result.shots.map((s) => s.targetId)).toEqual([1]);
   });
 });
 

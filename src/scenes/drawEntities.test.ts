@@ -24,6 +24,7 @@ import {
   drawShells,
   drawTower,
   drawTracers,
+  rangeRingRadii,
   type EntityPainter,
 } from './drawEntities';
 
@@ -65,6 +66,16 @@ const rifleNest = (id: number, col: number, row: number): Tower => ({
   cooldownMs: 0,
   level: 1,
   spent: 50,
+});
+
+const mortar = (id: number, col: number, row: number): Tower => ({
+  ...TOWER_STATS.mortar,
+  id,
+  kind: 'mortar',
+  tile: { col, row },
+  cooldownMs: 0,
+  level: 1,
+  spent: 125,
 });
 
 describe('drawEnemy', () => {
@@ -185,6 +196,64 @@ describe('drawTower', () => {
   });
 });
 
+describe('drawTower for the AA Gun', () => {
+  it('draws a circle, not a square, in its own colour', () => {
+    const { painter, calls } = recordingPainter();
+    drawTower(painter, {
+      ...TOWER_STATS.aaGun,
+      id: 1,
+      kind: 'aaGun',
+      tile: { col: 0, row: 0 },
+      cooldownMs: 0,
+      level: 1,
+      spent: 75,
+    });
+    const { size, fill, outline, outlineWidth } = TOWER_STYLE.aaGun;
+    expect(fill).not.toBe(TOWER_STYLE.rifleNest.fill);
+    expect(calls).toEqual([
+      ['fillStyle', fill],
+      ['fillCircle', 0, 0, size / 2],
+      ['lineStyle', outlineWidth, outline],
+      ['strokeCircle', 0, 0, size / 2],
+    ]);
+  });
+
+  it('draws its ghost as a circle with the AA Gun range ring', () => {
+    const { painter, calls } = recordingPainter();
+    drawGhost(painter, 'aaGun', true);
+    expect(calls).toEqual([
+      ['fillStyle', GHOST.placeable, GHOST.fillAlpha],
+      ['fillCircle', 0, 0, TOWER_STYLE.aaGun.size / 2],
+      ['lineStyle', GHOST.ringWidth, GHOST.placeable, GHOST.ringAlpha],
+      ['strokeCircle', 0, 0, 3 * TILE_PX],
+    ]);
+  });
+});
+
+describe('drawTower (Mortar)', () => {
+  it('draws a filled, outlined circle of its kind’s size centered on the origin', () => {
+    const { painter, calls } = recordingPainter();
+    drawTower(painter, mortar(1, 0, 0));
+    const { size, fill, outline, outlineWidth } = TOWER_STYLE.mortar;
+    expect(calls).toEqual([
+      ['fillStyle', fill],
+      ['fillCircle', 0, 0, size / 2],
+      ['lineStyle', outlineWidth, outline],
+      ['strokeCircle', 0, 0, size / 2],
+    ]);
+  });
+});
+
+describe('rangeRingRadii', () => {
+  it('is the range alone, in pixels, for a tower without a minimum range', () => {
+    expect(rangeRingRadii(TOWER_STATS.rifleNest)).toEqual([2.5 * TILE_PX]);
+  });
+
+  it('adds an inner ring at the minimum range for a tower with one', () => {
+    expect(rangeRingRadii(TOWER_STATS.mortar)).toEqual([5 * TILE_PX, 1.5 * TILE_PX]);
+  });
+});
+
 describe('drawRangeRing', () => {
   it('strokes a circle of the tower’s range, in pixels, around the origin', () => {
     const { painter, calls } = recordingPainter();
@@ -192,6 +261,16 @@ describe('drawRangeRing', () => {
     expect(calls).toEqual([
       ['lineStyle', RANGE_RING.width, RANGE_RING.color, RANGE_RING.alpha],
       ['strokeCircle', 0, 0, 2.5 * TILE_PX],
+    ]);
+  });
+
+  it('also strokes the dead zone at the minimum range', () => {
+    const { painter, calls } = recordingPainter();
+    drawRangeRing(painter, mortar(1, 0, 0));
+    expect(calls).toEqual([
+      ['lineStyle', RANGE_RING.width, RANGE_RING.color, RANGE_RING.alpha],
+      ['strokeCircle', 0, 0, 5 * TILE_PX],
+      ['strokeCircle', 0, 0, 1.5 * TILE_PX],
     ]);
   });
 });
@@ -237,6 +316,18 @@ describe('drawGhost', () => {
     const { painter, calls } = recordingPainter();
     drawGhost(painter, 'rifleNest', false);
     expect(calls).toEqual(ghostCalls(GHOST.blocked));
+  });
+
+  it('draws a Mortar as a see-through circle, with its range ring and the dead zone inside it', () => {
+    const { painter, calls } = recordingPainter();
+    drawGhost(painter, 'mortar', true);
+    expect(calls).toEqual([
+      ['fillStyle', GHOST.placeable, GHOST.fillAlpha],
+      ['fillCircle', 0, 0, TOWER_STYLE.mortar.size / 2],
+      ['lineStyle', GHOST.ringWidth, GHOST.placeable, GHOST.ringAlpha],
+      ['strokeCircle', 0, 0, 5 * TILE_PX],
+      ['strokeCircle', 0, 0, 1.5 * TILE_PX],
+    ]);
   });
 });
 

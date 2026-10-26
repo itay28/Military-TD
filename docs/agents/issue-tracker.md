@@ -93,7 +93,7 @@ The current milestone is the open one with the earliest due date, else the lowes
 **Auto-start** (`scripts/auto-start.ts`, ADR-0008): when the repo variable `AUTO_SPAWN` is `on`, each *Board sync* run then starts cloud agents:
 - **Startable:** no PR, no assignee, `ready-for-agent`, no `hold` label, not a tracker, Size XS–L, no open blockers. In the current milestone that's the *Ready* column. With `AUTO_STACK` set to `on`, an issue whose open blockers are all closed by open PRs on one chain of branches (the stack-next rule) is startable too, based on the chain's tip branch.
 - **Order and cap:** Priority (P0 first, none last), then issue number; at most 5 `auto-agent` issues *In progress*. When the current milestone has nothing startable, the next milestone's issues are used.
-- **Claim, then fire:** assign `itay28`, add `auto-agent`, then fire the implement scheduled task (XS/S → `ROUTINE_SONNET_*`, M/L → `ROUTINE_OPUS_*`) with the issue number and base branch. If the fire fails, the claim is undone and the run goes red. The task follows `docs/agents/prompts/implement.md`.
+- **Claim, then fire:** assign `itay28`, add `auto-agent`, then fire the implement scheduled task (XS/S → `ROUTINE_SONNET_*`, M/L → `ROUTINE_OPUS_*`) with the issue number and base branch. If the fire fails, the claim is undone. A temporary refusal (HTTP 429, a 5xx or no answer: usage or rate limit) is quiet: the run stays green, auto-start stops for this run, and a later run tries again. Any other refusal (a bad token, a deleted routine) also adds `needs-you` and a comment to the issue, which pushes to the maintainer, and the run goes red; the issue isn't started again until `needs-you` is removed (#200). The task follows `docs/agents/prompts/implement.md`.
 - **No Size:** one comment on the issue asking for one; it starts once Size is set. XL never starts: split it.
 - **Off switch:** set `AUTO_SPAWN` to anything but `on`, or add `hold` to one issue. `--dry-run` logs what it would start.
 - **Setup errors:** with `AUTO_SPAWN` on and a `ROUTINE_*` secret missing, the board still syncs but auto-start is skipped and the run goes red.
@@ -106,27 +106,30 @@ The current milestone is the open one with the earliest due date, else the lowes
 
 Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), and check with Actions → *Board sync* → Run workflow; the log's auto-start lines say what started. Each start opens a session in the task's **History**.
 
-**PR steward** (`.github/workflows/pr-steward.yml` → `scripts/pr-steward.ts`, ADR-0008): gets each PR to merged. It runs after CI and the CI review finish, on every PR comment and review, on each push to `main`, every 6 hours and on demand, and looks at every open PR:
+**PR steward** (`.github/workflows/pr-steward.yml` → `scripts/pr-steward.ts`, ADR-0008): gets each PR to merged. It runs after CI and the CI review finish, on every PR comment and review, on each push to `main`, every hour and on demand, and looks at every open PR:
 
 | The PR | Steward does |
 | --- | --- |
 | draft, from a fork, labelled `hold`, or `needs-you` with no maintainer comment since the hand-off | nothing |
-| mergeability still computing, a round in flight (no done marker yet, under 3 h old), or checks running (CI, CI review) | waits |
+| mergeability still computing, a round in flight (no done marker yet, under 1 h old), or checks running (CI, CI review) | waits |
 | a conflict, a failing check, a CI review or maintainer comment newer than the last done marker, or unresolved review threads | fires a **round** of the `pr-steward` task, which fixes what it can and ends with a `<!-- pr-steward:done -->` comment |
 | the same, after 3 rounds since the latest maintainer comment, or a conflict a round couldn't resolve | hands off: `needs-you` label + a summary comment |
+| the steward's trigger refuses the fire with a setup error (any 4xx but 429: bad token, deleted routine) | hands off the same way, naming the HTTP status and the secrets to check; the run goes red |
 | only behind its base | merges the base in itself (no agent, not a round) |
 | no CI review comment yet | waits (add `review-again` to request one) |
 | closes an issue that is still blocked by open issues, or labelled `needs-info` | waits |
 | closes an issue in a later milestone than the current one (auto-start's look-ahead) | waits until the current milestone ships (its release closes the milestone); rounds still run |
+| green, review answered, threads resolved, targets `main`, but it changes a **critical path** (#206) and no maintainer `/approve` came after both the latest round and the latest commit that isn't a merge | hands off for approval: `needs-you` + a comment listing the paths. Comment `/approve` to merge it, or comment what to change (that fires a round, and it asks again after). Critical paths (`CRITICAL_PATHS` in `scripts/pr-steward.ts`): the pipeline and the checks that gate merging (`.github/`, `.claude/`, `.husky/`, `CLAUDE.md`, `docs/agents/`, `scripts/` except `scenario.ts` and `itch-build.ts`, the lint/TS/Vite/Playwright configs), the release-please config and manifest, `docs/adr/`, `package.json` and its lockfile, `assets/manifest.json` and `LICENSE`; a renamed file (its old path is unknown) and a PR with more than 100 files count too |
 | green, review answered, threads resolved, targets `main` | squash-merges it with the PR title (+ ` (#n)`) and body; if GitHub refuses, hands off |
 | release-please's release PR | no rounds and no review needed. It merges only when its version is the current milestone's (`v0.2.0 — …` → `release 0.2.0`), once its checks are green; merging publishes the release, and the release push tells you. A patch release (`release 0.1.2`) waits for you to merge it by hand (#187). Its checks only run with the `RELEASE_PLEASE_TOKEN` secret (`docs/agents/releasing.md`); without it, it waits for you |
 | the milestone report PR (`chore/release-0.N.0`) | no rounds and no review needed: merges once `0.N.0` is the current milestone's version, the milestone is done (only its release issue is open), the body ends with `Release-As: 0.N.0` and its checks are green. The squash commit message is the PR body, so the footer stays last. Add `hold` to read the audit and write Notes first |
 
 - Stacked PRs are stewarded but merged only once GitHub retargets them to `main` (after their parent merges).
+- **Out of tokens is never a failure (#200).** A round whose session ends without its done marker (most likely the usage limit) is retried once it's 1 h old, as the same round number, and never counts toward the 3; nor does the conflict hand-off look at it. A fire refused for now (HTTP 429, a 5xx or no answer) posts nothing and counts nothing: the next run (at least hourly) fires it again, and the run stays green. A session with no GitHub access isn't counted either, but it pushes to the maintainer itself (prompt step 0) each time it's retried.
 - A round fired only for a conflict doesn't count toward the 3: conflicts come from the base moving (a PR below it merged), not from a failed attempt. If a round fired for a conflict (alone or together with other reasons) ends with the conflict still there on the same base, the agent couldn't resolve it, so the PR is handed off at once (`needs-you`). The round marker carries a hidden `<!-- pr-steward:round-meta reasons=… base=<sha> -->` line for this.
 - Each check counts by its latest run: a cancelled run is ignored once another run of the same check finished (a re-triggered `pr-title` cancels its older run). A check whose only run was cancelled counts as failing.
 - Checks that don't test the code are ignored: `board-sync`, `release-issue`, and `claude-review` (the review counts by its comment).
-- State lives in comments on the PR: `<!-- pr-steward:round -->` (round fired, with the session link), `<!-- pr-steward:done -->` (round finished), `<!-- pr-steward:stuck -->` (handed off). A **maintainer comment** is one by the owner or a collaborator without a marker and without the *Generated by Claude Code* footer. Agents post as the maintainer's identity, so they must sign with the footer. A maintainer comment gives the PR 3 fresh rounds and takes a handed-off PR back.
+- State lives in comments on the PR: `<!-- pr-steward:round -->` (round fired, with the session link), `<!-- pr-steward:done -->` (round finished), `<!-- pr-steward:stuck -->` (handed off). A **maintainer comment** is one by the owner or a collaborator without a marker and without the *Generated by Claude Code* footer. Agents post as the maintainer's identity, so they must sign with the footer. A maintainer comment gives the PR 3 fresh rounds and takes a handed-off PR back; one that starts with `/approve` fires no round, it only approves a PR that changes a critical path. Agents never post `/approve`.
 - **Switches** (repo variables, off unless `on`): `AUTO_STEWARD` fires rounds, updates branches and hands off; `AUTO_MERGE` merges. Off, each run only logs what it would do. `hold` keeps one PR out.
 - The implement agent stops once its PR is ready; the CI review is the steward's first round.
 - Check by hand: `PROJECT_TOKEN=… node scripts/pr-steward.ts --dry-run`.
@@ -158,11 +161,13 @@ The maintainer isn't watching the board. They get an [ntfy](https://ntfy.sh) pho
 | Push | When | Clicks through to |
 | --- | --- | --- |
 | *Military-TD vX.Y.Z released*, with the changelog link | release-please publishes a release (`notify` job in `release-please.yml`) | the GitHub Release |
-| *PR #n is stuck*, with the steward's summary | a PR gets `needs-you`: the PR steward gave up after 3 rounds | the PR |
+| *PR #n needs your approval*, with the paths | a PR that changes a critical path is otherwise ready to merge (#206); comment `/approve` | the PR |
+| *PR #n is stuck*, with the steward's summary | a PR gets `needs-you`: the PR steward gave up after 3 rounds, or its trigger has a setup error | the PR |
+| *Issue #n needs you*, with auto-start's summary | an issue gets `needs-you`: auto-start's trigger has a setup error (#200) | the issue |
 | *Question on #n*, with the issue title | an issue gets `needs-info`: an agent asked a question (`docs/agents/prompts/implement.md`) | the issue |
 
-- **Labels:** `needs-you` goes on a stuck PR, `needs-info` on an issue with an open question. Removing the label takes the item out of the view. `hold` on the item means no push.
-- **Steward summary:** the PR steward posts its summary as a PR comment that starts with `<!-- pr-steward:stuck -->`, then adds `needs-you`. The push carries the latest such comment, or the PR title when there's none.
+- **Labels:** `needs-you` goes on a stuck PR or an issue auto-start couldn't start, `needs-info` on an issue with an open question. Removing the label takes the item out of the view. `hold` on the item means no push.
+- **Steward summary:** the PR steward posts its summary as a PR comment that starts with `<!-- pr-steward:stuck -->`, then adds `needs-you`; auto-start does the same on an issue with `<!-- auto-start:stuck -->`. The push carries the latest such comment, or the title when there's none.
 - **How:** `.github/workflows/notify.yml` runs on those labels; logic and tests in `scripts/notify.ts`. Labels added with `GITHUB_TOKEN` don't start workflows, so an Action that labels that way runs `node scripts/notify.ts pr <n>` (or `issue <n>`) itself. A missing `NTFY_TOPIC` secret or an ntfy error fails the run.
 
 **Hand-off setup** (maintainer, once):

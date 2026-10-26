@@ -21,6 +21,10 @@ export interface Item {
 
 /** The PR steward (#168) starts its summary comment with this marker before labelling a PR `needs-you`. */
 export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
+/** The PR steward adds this next to the stuck marker when it asks for the maintainer's `/approve` (#206). */
+export const APPROVAL_MARKER = '<!-- pr-steward:approval -->';
+/** Auto-start (scripts/auto-start.ts) starts its comment with this before labelling an issue `needs-you` (#200). */
+export const HANDOFF_MARKER = '<!-- auto-start:stuck -->';
 
 // ntfy turns messages over 4096 bytes into attachments; stay under that.
 const MAX_BODY_BYTES = 4000;
@@ -33,8 +37,13 @@ export function releaseMessage(tag: string, repoUrl: string): Push {
   };
 }
 
-export function stuckPrMessage(pr: Item, summary: string | null): Push {
-  return { title: `PR #${pr.number} is stuck`, body: fit(summary ?? pr.title), click: pr.url };
+export function stuckPrMessage(pr: Item, summary: string | null, approval = false): Push {
+  const title = approval ? `PR #${pr.number} needs your approval` : `PR #${pr.number} is stuck`;
+  return { title, body: fit(summary ?? pr.title), click: pr.url };
+}
+
+export function stuckIssueMessage(issue: Item, summary: string | null): Push {
+  return { title: `Issue #${issue.number} needs you`, body: fit(summary ?? issue.title), click: issue.url };
 }
 
 export function questionMessage(issue: Item): Push {
@@ -69,9 +78,9 @@ export interface LabelEvent {
   issue?: Labelled;
 }
 
-export type Target = { kind: 'pr' | 'issue'; number: number };
+export type Target = { kind: 'pr' | 'issue' | 'stuck-issue'; number: number };
 
-/** What a label event pushes about: `needs-you` on a PR, `needs-info` on an issue, nothing on `hold`. */
+/** What a label event pushes about: `needs-you` on a PR or an issue, `needs-info` on an issue, nothing on `hold`. */
 export function pushFor(eventName: string, event: LabelEvent): Target | null {
   if (event.action !== 'labeled') return null;
   const onHold = (item: Labelled) => (item.labels ?? []).some((l) => l.name === 'hold');
@@ -80,17 +89,28 @@ export function pushFor(eventName: string, event: LabelEvent): Target | null {
     return onHold(event.pull_request) ? null : { kind: 'pr', number: event.pull_request.number };
   }
   // Labelling a PR sends a pull_request event, but an issue payload can still carry pull_request; skip those.
-  if (eventName === 'issues' && label === 'needs-info' && event.issue && !event.issue.pull_request) {
-    return onHold(event.issue) ? null : { kind: 'issue', number: event.issue.number };
+  if (eventName === 'issues' && event.issue && !event.issue.pull_request) {
+    const kind = label === 'needs-info' ? 'issue' : label === 'needs-you' ? 'stuck-issue' : null;
+    return kind && !onHold(event.issue) ? { kind, number: event.issue.number } : null;
   }
   return null;
 }
 
-/** The latest steward summary among a PR's comments (oldest first), without its marker. */
+/** The latest hand-off summary among a PR's or issue's comments (oldest first), without its marker. */
 export function stewardSummary(comments: { body?: string | null }[]): string | null {
-  const latest = comments.findLast((c) => c.body?.includes(STUCK_MARKER));
-  return latest?.body ? latest.body.replace(STUCK_MARKER, '').trim() : null;
+  const latest = latestHandOff(comments);
+  return latest?.body
+    ? [...HANDOFF_MARKERS, APPROVAL_MARKER].reduce((body, m) => body.replace(m, ''), latest.body).trim()
+    : null;
 }
+
+/** Whether the latest hand-off on a PR asks for the maintainer's `/approve` rather than saying it's stuck. */
+export const approvalAsked = (comments: { body?: string | null }[]): boolean =>
+  !!latestHandOff(comments)?.body?.includes(APPROVAL_MARKER);
+
+const HANDOFF_MARKERS = [STUCK_MARKER, HANDOFF_MARKER];
+const latestHandOff = (comments: { body?: string | null }[]) =>
+  comments.findLast((c) => HANDOFF_MARKERS.some((m) => c.body?.includes(m)));
 
 /** The pages to fetch for a PR's latest comments: the last one and the one before, since the steward posts
  * its summary right before the label. */
@@ -137,16 +157,21 @@ interface ApiIssue {
   comments: number;
 }
 
-async function pushPr(number: number): Promise<Push> {
-  const pr = await get<ApiIssue>(`/issues/${number}`);
-  const pages = lastCommentPages(pr.comments, 100);
+async function pushStuck(
+  number: number,
+  message: (item: Item, summary: string | null, approval: boolean) => Push,
+): Promise<Push> {
+  const item = await get<ApiIssue>(`/issues/${number}`);
+  const pages = lastCommentPages(item.comments, 100);
   const comments = (
     await Promise.all(
       pages.map((p) => get<{ body?: string | null }[]>(`/issues/${number}/comments?per_page=100&page=${p}`)),
     )
   ).flat();
-  return stuckPrMessage({ number, title: pr.title, url: pr.html_url }, stewardSummary(comments));
+  return message({ number, title: item.title, url: item.html_url }, stewardSummary(comments), approvalAsked(comments));
 }
+
+const pushPr = (number: number) => pushStuck(number, stuckPrMessage);
 
 async function pushIssue(number: number): Promise<Push> {
   const issue = await get<ApiIssue>(`/issues/${number}`);
@@ -158,6 +183,7 @@ async function pushEvent(): Promise<Push | null> {
   if (!path) throw new Error('GITHUB_EVENT_PATH is not set.');
   const target = pushFor(process.env['GITHUB_EVENT_NAME'] ?? '', JSON.parse(readFileSync(path, 'utf8')) as LabelEvent);
   if (!target) return null;
+  if (target.kind === 'stuck-issue') return pushStuck(target.number, stuckIssueMessage);
   return target.kind === 'pr' ? pushPr(target.number) : pushIssue(target.number);
 }
 

@@ -3,6 +3,7 @@ import {
   AUTO_AGENT_LABEL,
   commentNoSize,
   HOLD_LABEL,
+  NEEDS_YOU_LABEL,
   planStarts,
   startIssue,
   type OpenPr,
@@ -298,6 +299,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       startIssues.push({
         ...issues.at(-1)!,
         hold: labels.includes(HOLD_LABEL),
+        needsYou: labels.includes(NEEDS_YOU_LABEL),
         autoAgent: labels.includes(AUTO_AGENT_LABEL),
         size: node.size?.name,
         priority: node.priority?.name,
@@ -355,14 +357,24 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   if (!plan.starts.length) console.log('Auto-start: nothing to start.');
   // Try every start and comment before failing the run, so one bad fire doesn't block the rest.
   const failures: string[] = [];
+  // Each routine has its own fire limit; one that refused for now isn't fired again this run (#200).
+  const limited = new Set<string>();
   for (const start of plan.starts) {
     const what = `#${start.issue}: start ${start.model} on ${start.base}`;
+    if (limited.has(start.model)) {
+      console.log(`${what}: skipped, the ${start.model} routine refused a fire this run; retrying next run`);
+      continue;
+    }
     if (dryRun) {
       console.log(`${what} (dry run)`);
       continue;
     }
     try {
-      await startIssue(start, token, autoStart.routines);
+      if ((await startIssue(start, token, autoStart.routines)) === 'later') {
+        console.log(`${what}: the fire was refused for now (usage or rate limit), un-claimed; retrying next run`);
+        limited.add(start.model);
+        continue;
+      }
       console.log(what);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));

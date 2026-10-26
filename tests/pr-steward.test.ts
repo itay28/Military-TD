@@ -5,7 +5,12 @@ import {
   ROUND_MARKER,
   roundMeta,
   STUCK_MARKER,
+  APPROVAL_MARKER,
   act,
+  changedFiles,
+  codeCommittedAt,
+  criticalFiles,
+  renamedFiles,
   currentChecks,
   decide,
   milestoneDone,
@@ -63,6 +68,9 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
   ],
   unresolvedThreads: 0,
   closes: [{ number: 3, blocked: false, needsInfo: false }],
+  files: ['src/sim/towers.ts', 'tests/sim/towers.test.ts'],
+  renamed: [],
+  codeCommittedAt: at(40),
   comments: [review(60), agent(DONE_MARKER, 30)],
   ...over,
 });
@@ -210,10 +218,11 @@ describe('decide: wait', () => {
     expect(kind(pr({ mergeable: 'UNKNOWN' }))).toBe('wait');
   });
 
-  it('waits while a round is in flight, and stops waiting once it is 3 hours old', () => {
+  it('waits while a round is in flight, and stops waiting once it is an hour old', () => {
     const red = { checks: [{ name: 'ci', state: 'failure' as const }] };
     expect(kind(pr({ ...red, comments: [action(ROUND_MARKER, 30)] }))).toBe('wait');
-    expect(kind(pr({ ...red, comments: [action(ROUND_MARKER, 200)] }))).toBe('steward');
+    // A round whose session died (e.g. a usage limit) never posts its done marker (#196).
+    expect(kind(pr({ ...red, comments: [action(ROUND_MARKER, 61)] }))).toBe('steward');
   });
 
   it('waits for the CI review before merging', () => {
@@ -322,9 +331,15 @@ describe('decide: steward rounds', () => {
         reasons: ['conflict'],
         conflict: true,
       });
-      // A round that died without a done marker is stuck the same way.
+    });
+
+    it('retries a conflict round that died, rather than handing off (#200)', () => {
       const died = [round(300, ['conflict'], 'base-a')];
-      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments: died }), now)).toMatchObject({ kind: 'stuck' });
+      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments: died }), now)).toMatchObject({
+        kind: 'steward',
+        round: 1,
+        retry: true,
+      });
     });
 
     it('gives an unresolved conflict a fresh round after a maintainer comment', () => {
@@ -333,6 +348,44 @@ describe('decide: steward rounds', () => {
         kind: 'steward',
         round: 1,
       });
+    });
+  });
+
+  describe('rounds whose session died (#200)', () => {
+    // A round marker with no done marker after it: the session ended without reporting, e.g. out of tokens.
+    const red = { checks: [{ name: 'ci', state: 'failure' as const }] };
+    const done = (m: number) => [action(ROUND_MARKER, m + 5), agent(DONE_MARKER, m)];
+
+    it('does not count a dead round, and retries it as the same round', () => {
+      expect(decide(pr({ ...red, comments: [action(ROUND_MARKER, 61)] }), now)).toEqual({
+        kind: 'steward',
+        reasons: ['ci'],
+        round: 1,
+        retry: true,
+        clearNeedsYou: false,
+      });
+    });
+
+    it('never hands off a PR whose rounds all died', () => {
+      const dead = [500, 400, 300, 200].map((m) => action(ROUND_MARKER, m));
+      expect(decide(pr({ ...red, comments: dead }), now)).toMatchObject({ kind: 'steward', round: 1, retry: true });
+    });
+
+    it('counts only the rounds that finished', () => {
+      const comments = [...done(500), action(ROUND_MARKER, 400), ...done(300), action(ROUND_MARKER, 200)];
+      expect(decide(pr({ ...red, comments }), now)).toMatchObject({ kind: 'steward', round: 3, retry: true });
+    });
+
+    it('is not a retry when the last round finished', () => {
+      expect(decide(pr({ ...red, comments: [action(ROUND_MARKER, 400), ...done(300)] }), now)).toMatchObject({
+        round: 2,
+        retry: false,
+      });
+    });
+
+    it('still hands off once 3 rounds finished, dead ones in between', () => {
+      const comments = [...done(600), action(ROUND_MARKER, 500), ...done(400), ...done(300)];
+      expect(decide(pr({ ...red, comments }), now)).toEqual({ kind: 'stuck', reasons: ['ci'] });
     });
   });
 
@@ -474,6 +527,145 @@ describe('decide: update and merge', () => {
   });
 });
 
+describe('decide: approval gate (#206)', () => {
+  const approve = (minutesAgo: number): PrComment => ({ ...maintainer(minutesAgo), body: '/approve' });
+  const critical = (over: Partial<StewardPr> = {}) =>
+    pr({ files: ['src/sim/towers.ts', 'docs/adr/0009-new.md', '.github/workflows/ci.yml'], ...over });
+
+  it('lists the critical paths among changed files', () => {
+    expect(
+      criticalFiles([
+        'src/sim/towers.ts',
+        '.github/workflows/ci.yml',
+        '.claude/settings.json',
+        'CLAUDE.md',
+        'docs/agents/workflow.md',
+        'docs/adr/0009-x.md',
+        'scripts/pr-steward.ts',
+        'scripts/new-pipeline-step.ts',
+        'scripts/scenario.ts',
+        'scripts/itch-build.ts',
+        'release-please-config.json',
+        'package.json',
+        'package-lock.json',
+        'assets/manifest.json',
+        'eslint.config.js',
+        'docs/PLAN.md',
+      ]),
+    ).toEqual([
+      '.github/workflows/ci.yml',
+      '.claude/settings.json',
+      'CLAUDE.md',
+      'docs/agents/workflow.md',
+      'docs/adr/0009-x.md',
+      'scripts/pr-steward.ts',
+      'scripts/new-pipeline-step.ts',
+      'release-please-config.json',
+      'package.json',
+      'package-lock.json',
+      'assets/manifest.json',
+      'eslint.config.js',
+    ]);
+  });
+
+  it('merges a PR that touches only game files', () => {
+    expect(kind(pr())).toBe('merge');
+  });
+
+  it('asks for approval instead of merging a PR that touches a critical path', () => {
+    expect(decide(critical(), now)).toEqual({
+      kind: 'approval',
+      paths: ['docs/adr/0009-new.md', '.github/workflows/ci.yml'],
+    });
+  });
+
+  it('asks for approval when the file list was cut off', () => {
+    expect(decide(pr({ files: null }), now)).toMatchObject({ kind: 'approval' });
+  });
+
+  it('asks for approval when a file was renamed, since its old path may be critical', () => {
+    expect(decide(pr({ renamed: ['docs/notes.md'] }), now)).toEqual({
+      kind: 'approval',
+      paths: ['docs/notes.md (renamed: its old path may be critical)'],
+    });
+  });
+
+  it('asks again when code was committed after the approval', () => {
+    const comments = [review(60), agent(DONE_MARKER, 30), approve(20)];
+    expect(kind(critical({ comments, codeCommittedAt: at(10) }))).toBe('approval');
+    expect(kind(critical({ comments, codeCommittedAt: at(25) }))).toBe('merge');
+  });
+
+  it('only asks once everything else is done', () => {
+    expect(kind(critical({ behind: true }))).toBe('update');
+    expect(kind(critical({ checks: [{ name: 'ci', state: 'failure' }] }))).toBe('steward');
+  });
+
+  it('merges once the maintainer approves after the latest round', () => {
+    const comments = [review(60), action(ROUND_MARKER, 50), agent(DONE_MARKER, 30), approve(10)];
+    expect(kind(critical({ comments }))).toBe('merge');
+  });
+
+  it('asks again when a round ran after the approval', () => {
+    const comments = [review(90), approve(60), action(ROUND_MARKER, 50), agent(DONE_MARKER, 30)];
+    expect(kind(critical({ comments, labels: [] }))).toBe('approval');
+  });
+
+  it('ignores an approval signed by an agent', () => {
+    const comments = [
+      review(60),
+      agent(DONE_MARKER, 30),
+      { ...agent('', 10), body: '/approve\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_' },
+    ];
+    expect(kind(critical({ comments }))).toBe('approval');
+  });
+
+  it('fires no round for an approval comment', () => {
+    expect(kind(pr({ comments: [review(60), agent(DONE_MARKER, 30), approve(10)] }))).toBe('merge');
+  });
+
+  it('waits on the maintainer after asking, then merges on /approve', () => {
+    const asked = { ...action(`${STUCK_MARKER}\n${APPROVAL_MARKER}`, 20) };
+    const waiting = critical({ labels: ['needs-you'], comments: [review(60), agent(DONE_MARKER, 30), asked] });
+    expect(kind(waiting)).toBe('skip');
+    expect(kind({ ...waiting, comments: [...waiting.comments, approve(5)] })).toBe('merge');
+  });
+});
+
+describe('changedFiles', () => {
+  const file = (path: string, changeType = 'MODIFIED') => ({ path, changeType });
+
+  it('returns the paths, or null when GitHub has more than were read', () => {
+    expect(changedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts')] })).toEqual(['a.ts', 'b.ts']);
+    expect(changedFiles({ totalCount: 101, nodes: [file('a.ts')] })).toBeNull();
+    expect(changedFiles(null)).toBeNull();
+  });
+
+  it('lists renamed files by their new path', () => {
+    expect(renamedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts', 'RENAMED')] })).toEqual(['b.ts']);
+    expect(renamedFiles(null)).toEqual([]);
+  });
+});
+
+describe('codeCommittedAt', () => {
+  const commit = (committedDate: string, parents: number) => ({
+    commit: { committedDate, parents: { totalCount: parents } },
+  });
+
+  it("is the latest commit that isn't a merge, so merging the base keeps an approval", () => {
+    expect(codeCommittedAt([commit('2026-10-26T10:00:00Z', 1), commit('2026-10-26T11:00:00Z', 2)])).toBe(
+      '2026-10-26T10:00:00Z',
+    );
+  });
+
+  it('falls back to the latest commit when every one read is a merge', () => {
+    expect(codeCommittedAt([commit('2026-10-26T10:00:00Z', 2), commit('2026-10-26T11:00:00Z', 2)])).toBe(
+      '2026-10-26T11:00:00Z',
+    );
+    expect(codeCommittedAt([])).toBeNull();
+  });
+});
+
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 const ok = (body: unknown = {}) => new Response(JSON.stringify(body), { status: 200 });
 const calls = (fetchFn: Mock<Fetch>) => fetchFn.mock.calls.map(([url, init]) => `${init.method} ${url}`);
@@ -487,7 +679,13 @@ const fireOk = vi.fn<Fetch>(async (url: string) =>
 );
 
 describe('act', () => {
-  const steward: Decision = { kind: 'steward', reasons: ['ci', 'review'], round: 2, clearNeedsYou: false };
+  const steward: Decision = {
+    kind: 'steward',
+    reasons: ['ci', 'review'],
+    round: 2,
+    retry: false,
+    clearNeedsYou: false,
+  };
 
   it('fires a steward round with the PR, reasons and round, then posts the round marker with the session link', async () => {
     fireOk.mockClear();
@@ -509,10 +707,43 @@ describe('act', () => {
     expect(calls(fireOk)).toContain(`DELETE ${api}/issues/7/labels/needs-you`);
   });
 
-  it('posts no marker and throws when the fire fails', async () => {
-    const fetchFn = vi.fn<Fetch>(async () => new Response('nope', { status: 500 }));
+  it('says a retried round is a retry', async () => {
+    fireOk.mockClear();
+    await act(pr(), { ...steward, retry: true }, 'gh-token', settings, fireOk);
+    const { body } = JSON.parse(fireOk.mock.calls[1]![1].body as string) as { body: string };
+    expect(body).toMatch(/retry/i);
+  });
+
+  it.each([429, 500, 503])(
+    'posts nothing and waits for the next run when the fire is refused with HTTP %i (#200)',
+    async (status) => {
+      const fetchFn = vi.fn<Fetch>(async () => new Response('busy', { status }));
+      await expect(act(pr(), steward, 'gh-token', settings, fetchFn)).resolves.toBeUndefined();
+      expect(calls(fetchFn)).toEqual(['POST https://fire.example/steward']);
+    },
+  );
+
+  it('waits for the next run when the fire cannot reach the API', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => {
+      throw new TypeError('fetch failed');
+    });
+    await expect(act(pr(), steward, 'gh-token', settings, fetchFn)).resolves.toBeUndefined();
+  });
+
+  it.each([401, 403, 404])('hands off loudly and throws when the fire is refused with HTTP %i', async (status) => {
+    const fetchFn = vi.fn<Fetch>(async (url: string) =>
+      url.startsWith('https://fire.example') ? new Response('denied', { status }) : ok(),
+    );
     await expect(act(pr(), steward, 'gh-token', settings, fetchFn)).rejects.toThrow(/#7/);
-    expect(calls(fetchFn)).toEqual(['POST https://fire.example/steward']);
+    expect(calls(fetchFn)).toEqual([
+      'POST https://fire.example/steward',
+      `POST ${api}/issues/7/comments`,
+      `POST ${api}/issues/7/labels`,
+    ]);
+    const { body } = JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string };
+    expect(body).toContain(STUCK_MARKER);
+    expect(body).toContain(`HTTP ${status}`);
+    expect(body).toContain('ROUTINE_STEWARD_TOKEN');
   });
 
   it('says why when an unresolved conflict hands off', async () => {
@@ -529,6 +760,26 @@ describe('act', () => {
     expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
     const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
     expect(body).toContain(STUCK_MARKER);
+  });
+
+  it('asks for approval: a summary naming the paths with both markers, then needs-you', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'approval', paths: ['docs/adr/0009-new.md'] }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
+    const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
+    expect(body).toContain('docs/adr/0009-new.md');
+    expect(body).toContain('/approve');
+    expect(body).toContain(STUCK_MARKER);
+    expect(body).toContain(APPROVAL_MARKER);
+  });
+
+  it('asks for approval only when merging is on', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    const approval: Decision = { kind: 'approval', paths: ['package.json'] };
+    await act(pr(), approval, 'gh-token', { steward: settings.steward!, merge: false }, fetchFn);
+    expect(fetchFn).not.toHaveBeenCalled();
+    await act(pr(), approval, 'gh-token', { merge: true }, fetchFn);
+    expect(fetchFn).toHaveBeenCalled();
   });
 
   it('updates the branch against the head it saw', async () => {
