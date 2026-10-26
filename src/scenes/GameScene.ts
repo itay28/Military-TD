@@ -34,11 +34,12 @@ const DEPTH = {
   map: 0,
   towers: 1,
   enemies: 2,
-  tracers: 3,
-  shells: 3,
-  ghost: 4,
-  rangeRing: 5,
-  floatingText: 6,
+  air: 3,
+  tracers: 4,
+  shells: 4,
+  ghost: 5,
+  rangeRing: 6,
+  floatingText: 7,
 } as const;
 
 /** Puts `object` on `layer`: the depth that orders it, and the name test mode's view() reports it by. */
@@ -173,7 +174,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.enemyViews = createViewSync<Enemy, EnemyView>({
-      create: () => ({ graphics: onLayer(this.add.graphics(), 'enemies'), hp: Number.NaN }),
+      create: (enemy) => ({
+        graphics: onLayer(this.add.graphics(), enemy.layer === 'air' ? 'air' : 'enemies'),
+        hp: Number.NaN,
+      }),
       update: (view, enemy) => {
         if (view.hp !== enemy.hp) {
           view.graphics.clear();
