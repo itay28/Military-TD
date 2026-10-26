@@ -1,0 +1,40 @@
+name: Notify
+
+# Pushes to the maintainer's phone through ntfy when they're needed (#169,
+# docs/agents/issue-tracker.md → Hand-off): a PR labelled needs-you (stuck after
+# the steward's rounds) or an issue labelled needs-info (an agent's question).
+# Releases push from release-please.yml. Logic and tests: scripts/notify.ts.
+#
+# Needs the NTFY_TOPIC secret; without it the run fails. Labels added with
+# GITHUB_TOKEN don't start this workflow: such a workflow runs
+# `node scripts/notify.ts pr <n>` itself.
+on:
+  pull_request:
+    types: [labeled]
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  push:
+    name: push
+    if: github.event.label.name == 'needs-you' || github.event.label.name == 'needs-info'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Push to ntfy
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/notify.ts event

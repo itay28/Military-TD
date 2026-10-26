@@ -3,10 +3,10 @@ import { START_MONEY } from '../data/start';
 import { TOWER_STATS } from '../data/towers';
 import { TICK_MS } from '../sim/game';
 import { setUpGame, type GameSetup } from '../sim/scenario';
-import { createTestApi, type ScenarioLoaders, type TestHooks } from './api';
+import { createTestApi, type ScenarioLoaders, type TestHooks, type TestView } from './api';
 
 const BUILDABLE = { col: 1, row: 3 };
-const ONE_INFANTRY: GameSetup = { waves: [{ kind: 'infantry', count: 1, spacingMs: 0 }] };
+const ONE_INFANTRY: GameSetup = { waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }] };
 
 /** Hooks over a real game, as the Game scene gives them. */
 function fakeHooks(setup: GameSetup = {}): TestHooks & { load: ReturnType<typeof vi.fn> } {
@@ -17,8 +17,15 @@ function fakeHooks(setup: GameSetup = {}): TestHooks & { load: ReturnType<typeof
       for (let i = 0; i < ticks; i++) game.tick(TICK_MS);
     },
     load: vi.fn(async () => {}),
+    view: () => EMPTY_VIEW,
   };
 }
+
+const EMPTY_VIEW: TestView = {
+  rangeRing: { visible: false, towerId: null, center: { x: 0, y: 0 } },
+  tracers: [],
+  drawOrder: ['map'],
+};
 
 const api = (hooks: TestHooks, scenarios: ScenarioLoaders = {}) => createTestApi(hooks, scenarios);
 
@@ -46,6 +53,22 @@ describe('createTestApi', () => {
     const result = testApi.command({ type: 'placeTower', kind: 'rifleNest', tile: BUILDABLE });
     expect(result).toEqual({ ok: true, towerId: expect.any(Number) });
     expect(testApi.state().money).toBe(START_MONEY - TOWER_STATS.rifleNest.cost);
+  });
+
+  it('command upgrades a tower like a player and returns its new level', () => {
+    const testApi = api(fakeHooks({ towers: [{ kind: 'rifleNest', tile: BUILDABLE }] }));
+    const [tower] = testApi.state().towers;
+    expect(testApi.command({ type: 'upgradeTower', towerId: tower!.id })).toEqual({ ok: true, level: 2 });
+    expect(testApi.state()).toMatchObject({ money: START_MONEY - 40, towers: [{ level: 2 }] });
+  });
+
+  it('command starts selling a tower and returns the refund', () => {
+    const testApi = api(fakeHooks({ towers: [{ kind: 'rifleNest', tile: BUILDABLE }] }));
+    const [tower] = testApi.state().towers;
+    expect(testApi.command({ type: 'sellTower', towerId: tower!.id })).toEqual({ ok: true, refund: 35 });
+    expect(testApi.state().towers).toHaveLength(1);
+    testApi.step(120);
+    expect(testApi.state().towers).toEqual([]);
   });
 
   it('command passes a refusal through', () => {
@@ -88,10 +111,26 @@ describe('createTestApi', () => {
       },
       step: () => {},
       load: async () => {},
+      view: () => EMPTY_VIEW,
     };
     const testApi = api(hooks);
     testApi.command({ type: 'placeTower', kind: 'rifleNest', tile: BUILDABLE });
     game = setUpGame();
     expect(testApi.state().towers).toEqual([]);
+  });
+
+  it("view() is a plain copy of the scene's view that later frames don't change", () => {
+    const scene = {
+      rangeRing: { visible: true, towerId: 1, center: { x: 72, y: 168 } },
+      tracers: [{ from: { x: 72, y: 168 }, to: { x: 24, y: 120 }, alpha: 1 }],
+      drawOrder: ['map', 'towers', 'rangeRing'],
+    };
+    const hooks = { ...fakeHooks(), view: () => scene };
+    const view = api(hooks).view();
+    expect(view).toEqual(scene);
+    scene.rangeRing.visible = false;
+    scene.tracers.length = 0;
+    expect(view.rangeRing.visible).toBe(true);
+    expect(view.tracers).toHaveLength(1);
   });
 });

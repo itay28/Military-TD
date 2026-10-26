@@ -42,6 +42,8 @@ describe('placeTower', () => {
         damage: 10,
         targets: ['ground', 'air'],
         cooldownMs: 0,
+        level: 1,
+        spent: 50,
       },
     ]);
     expect(place(game, { col: 1, row: 2 })).not.toBe(id);
@@ -258,6 +260,8 @@ const handTower = (stats: Partial<Tower> = {}): Tower => ({
   damage: 10,
   targets: ['ground', 'air'],
   cooldownMs: 0,
+  level: 1,
+  spent: 50,
   ...stats,
 });
 
@@ -272,6 +276,16 @@ const handEnemy = (id: number, distance: number, stats: Partial<Enemy> = {}): En
 });
 
 describe('layers', () => {
+  it('a ground-only tower ignores a Helicopter in range', () => {
+    const helicopter = handEnemy(1, 1, {
+      ...ENEMY_STATS.helicopter,
+      kind: 'helicopter',
+      hp: ENEMY_STATS.helicopter.maxHp,
+    });
+    expect(selectTarget(handTower({ targets: ['ground'] }), [helicopter])).toBeUndefined();
+    expect(selectTarget(handTower({ targets: ['ground', 'air'] }), [helicopter])?.id).toBe(1);
+  });
+
   it('a ground-only tower ignores an air enemy further along and picks the ground one behind it', () => {
     const tower = handTower({ targets: ['ground'] });
     const enemies = [handEnemy(1, 1), handEnemy(2, 2, { layer: 'air' })];

@@ -1,6 +1,6 @@
 {
   "name": "military-td",
-  "version": "0.0.0",
+  "version": "0.1.3",
   "private": true,
   "description": "A basic military-themed tower defense game.",
   "type": "module",
@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "scenario": "node scripts/scenario.ts",
+    "doctor": "node scripts/doctor.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",

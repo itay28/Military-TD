@@ -2,7 +2,7 @@
 
 How every change gets made, by agents and humans alike. The rules are short; follow them in order.
 
-**Skills:** this repo uses **Matt Pocock's skills only** (`mattpocock-skills`, from github.com/mattpocock/skills). Don't use skills from other plugins that cover the same ground (e.g. `agent-engineering:*`, or `engineering:*` from Anthropic's engineering plugin), and prefer `mattpocock-skills:code-review` over the built-in `/code-review`.
+**Skills:** this repo uses **Matt Pocock's skills only** (`mattpocock-skills`, from github.com/mattpocock/skills). Don't use skills from other plugins that cover the same ground (e.g. `agent-engineering:*`, or `engineering:*` from Anthropic's engineering plugin), and prefer `mattpocock-skills:code-review` over the built-in `/code-review`. Cloud sessions don't get plugins, so `tdd`, `pr` and `diagnosing-bugs` are also vendored in `.claude/skills/` (see **Cloud sessions**).
 
 ## Ground rules
 
@@ -35,7 +35,7 @@ How every change gets made, by agents and humans alike. The rules are short; fol
 
 ### 0. Pick
 - Pick an open issue in the **current milestone** with `ready-for-agent`, no open blockers, and no assignee. The order in `docs/PLAN.md` helps.
-- Assign yourself. Move it to *In progress* on the project board (see **Project board** in `docs/agents/issue-tracker.md`).
+- Assign yourself. *Board sync* then moves the card to *In progress* (see **Project board** in `docs/agents/issue-tracker.md`).
 - No issue for the work yet? Create one first, under the right epic with its area label and milestone. Every PR closes an issue.
 - `needs-triage` issues get planned first (step 1, via `/triage` or `/grill-with-docs`), then relabelled `ready-for-agent`. Don't implement them directly.
 
@@ -70,8 +70,8 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
   - **Unit** (Vitest) for one sim module.
   - **Scenario** (`tests/scenarios/*.scenario.ts`) for game situations: setup → run headless → assert outcome and events.
     A file is `export default defineScenario({ description, ...setup, script, until, expectations(result, expect) { ... } })` (`tests/scenarios/define.ts`; setup and stop conditions: `Scenario` in `src/sim/scenario.ts`). `tests/scenarios/scenarios.test.ts` runs every file, checks its expectations and that two runs give the same event log. `npm run scenario -- <name>` prints the outcome, final Lives/Money and a timeline; add `--json` (with `npm run -s`) for the full run.
-  - **E2E** (Playwright, `tests/e2e/*.spec.ts`) for anything the player sees or clicks. `npm run test:e2e` builds the game, serves it with `vite preview` and runs the specs in headless Chromium (first time: `npx playwright install chromium`). Open the game with `openGame(page)` from `tests/e2e/helpers.ts`. It turns on test mode: `?test=1` exposes `window.__TD__` with `state()`, `command(cmd)`, `step(ticks)` and `loadScenario(name)`, and it also sets `?step=manual` (only `step` advances the game) and `?anim=0` (no tracers or floating texts). `?speed=N` runs the real-time loop N× faster. Click the canvas like a player with `clickTile(page, tile)`, and use `stepToEnd(page)` to reach Victory or Defeat without waiting. `loadScenario` sets up a named scenario's map, Lives, Money, towers and waves but doesn't run its script, so the test drives from there.
-  - **Screenshot baselines** (`toHaveScreenshot`, in `tests/e2e/screenshots.spec.ts`) run only when `CI` is set, so only in the CI `e2e` job's Playwright container, where fonts and rendering are fixed. To add or update one: push, let the `e2e` job fail, download its `playwright-report` artifact (`gh run download <run-id> -n playwright-report`), check the `*-actual.png` image, and commit it as `tests/e2e/screenshots.spec.ts-snapshots/<name>.png`. Never commit a baseline made on your own machine.
+  - **E2E** (Playwright, `tests/e2e/*.spec.ts`) for anything the player sees or clicks. `npm run test:e2e` builds the game, serves it with `vite preview` and runs the specs in headless Chromium (first time: `npx playwright install chromium`). Open the game with `openGame(page)` from `tests/e2e/helpers.ts`. It turns on test mode: `?test=1` exposes `window.__TD__` with `state()`, `command(cmd)`, `step(ticks)`, `loadScenario(name)` and `view()` (what the canvas shows: range ring, tracers, draw order; poll it with `expect.poll`, it updates on the next frame), and it also sets `?step=manual` (only `step` advances the game) and `?anim=0` (no tracers or floating texts). `?speed=N` runs the real-time loop N× faster. Click the canvas like a player with `clickTile(page, tile)`, and use `stepToEnd(page)` to reach Victory or Defeat without waiting. `loadScenario` sets up a named scenario's map, Lives, Money, towers and waves but doesn't run its script, so the test drives from there.
+  - **Screenshot baselines** (`toHaveScreenshot`, in `tests/e2e/screenshots.spec.ts`) run only when `CI` is set, so only in the CI `e2e` job's Playwright container, where fonts and rendering are fixed. To add or update one: push, let the `e2e` job fail, and check from its log that only the baselines you meant to change differ. Then add the `update-snapshots` label to the PR (keep its other labels). The *Update snapshots* Action (`.github/workflows/update-snapshots.yml`) remakes the baselines in that same container, from the PR merged with its base as `e2e` sees it (a PR with a conflict needs the conflict resolved first), and commits the changed ones to the branch, which re-runs CI; a human can also run it by hand (Actions → *Update snapshots*, PR number). Pull the commit and look at each new PNG: it must show exactly the change you made, or the bug is in the code, not the baseline. Never commit a baseline made on your own machine.
 
 ### 3. Implement
 - Write the minimum code to go green, then refactor with tests green.
@@ -83,7 +83,7 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 
 ### 4b. Screenshots for UI changes
 A PR that changes what the player sees (HUD, menus, overlays, anything a Scene draws) shows the change in screenshots, so a reviewer sees the result without building the game.
-- **What to capture:** each state the change touches, taken from the built game (`npm run build`, then `npm run preview`, which serves it on port 4173): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use a 900 × 560 viewport (the 768 × 480 canvas plus the HUD bar and margins) so later PRs compare like for like.
+- **What to capture:** each state the change touches, taken from the built game (`npm run build`, then `npm run preview`, which serves it on port 4173): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use a 900 × 560 viewport (the 768 × 480 canvas plus the HUD above it, the build bar beside it and margins) so later PRs compare like for like.
 - **How:** a throwaway Playwright script or spec, kept out of the commit, that opens the game with `openGame(page)` (`tests/e2e/helpers.ts`), sets up the state through the page and `window.__TD__` (`clickTile`, `loadScenario`, `step`), and calls `page.screenshot({ path })`. The config's 900 × 560 viewport applies. `npx playwright test <file>` builds and serves the game for you. Look at each image before attaching it.
 - **Where they live:** the `pr-assets` branch, one folder per PR (`<pr-number>/<name>.png`). It is never merged, so images stay off `main`; GitHub has no API for uploading images to a PR. To add a folder:
   ```sh
@@ -104,10 +104,20 @@ A PR that changes what the player sees (HUD, menus, overlays, anything a Scene d
 - Branch: `<type>/<issue>-<slug>`, e.g. `feat/8-tower-targeting`.
 - PR title in Conventional Commit form (it becomes the squash commit and drives the version bump): `feat: tower targeting and firing`.
 - Body via the `pr` skill, with `Closes #<n>` and the template checklist, plus screenshots for UI changes (step 4b).
-- **Draft vs ready:** open the PR as a draft while work is still in progress. As soon as it's complete (acceptance criteria met, checks green, review done), mark it ready for review (`gh pr ready <n>`), make sure the issue's card is *In review* (the board-status hook usually does it), and say so on the issue. Never leave a finished PR in draft.
+- **Draft vs ready:** open the PR as a draft while work is still in progress. As soon as it's complete (acceptance criteria met, checks green, review done), mark it ready for review (`gh pr ready <n>`), and say so on the issue (*Board sync* moves the card to *In review*). Never leave a finished PR in draft.
 - **Review:** the *Claude Code Review* workflow is the one code review. Don't run `code-review` locally as well. It runs `mattpocock-skills:code-review` on Sonnet when a PR is opened as ready or marked ready, and posts a Standards / Spec report as a PR comment. Drafts are skipped, and pushes don't re-run it. Wait for the comment (`gh pr checks <n> --watch`, then `gh pr view <n> --comments`), then address its findings or say on the PR why not. To get a second review after substantial fixes, add the `review-again` label (`gh pr edit <n> --add-label review-again`); the run removes it.
-- **Board:** the card moves to *In review* when the PR is marked ready, not when it is opened, and back to *In progress* if the PR is converted to a draft. In local sessions the board-status hook makes these moves after `gh pr ready`; check its report, and move the card by hand if it couldn't. Without the project token (e.g. `@claude` in CI), say on the issue which card needs moving (see `docs/agents/issue-tracker.md` → **Project board**). Merging the PR (or closing the issue) moves it to *Done* automatically.
+- **Board:** the *Board sync* Action moves the card to *In review* when the PR is marked ready, not when it is opened, and back to *In progress* if the PR is converted to a draft. It runs the same for every environment and for changes made in the GitHub UI. If its run fails, re-run it or move the card by hand (see `docs/agents/issue-tracker.md` → **Project board**). Merging the PR (or closing the issue) moves it to *Done* automatically. Keep `Closes #<n>` in the body even for stacked PRs: it's how their cards move.
 - Squash-merge when CI is green. Never push to `main` directly.
+
+## Cloud sessions
+
+Agents also run in cloud sessions: claude.ai/code, and the auto-start and PR steward routines (`docs/agents/prompts/`). The steps above are the same. These things differ (environment table: `docs/agents/tooling.md` → **Environments**):
+- **Doctor first.** The `SessionStart` hook runs `npm run doctor`. In the cloud it checks that `gh api` reaches `itay28/Military-TD`. If it reports *no GitHub access* (an HTTP 403/404), the repository isn't attached to the routine or session. Stop and report it (a push notification from a routine): nothing else will work, and only the maintainer can attach it in the browser. *GitHub REST check failed* is a network problem instead: retry before deciding.
+- **GitHub: REST only.** Use the built-in GitHub tools, or `gh api repos/itay28/Military-TD/...`. GraphQL is blocked, so `gh pr`, `gh issue` and `gh project` don't work. For review threads, auto-merge and draft/ready, the proxy's REST routes are `/repos/{owner}/{repo}/pulls/{n}/ccr/review_threads`, `.../ccr/comments/{id}/resolve`, `.../ccr/auto_merge` and `.../ccr/ready_for_review`.
+- **Board:** never move cards. *Board sync* does it from PR and issue events.
+- **Skills:** no plugins. `tdd`, `pr` and `diagnosing-bugs` come from `.claude/skills/` (vendored, `.claude/skills/README.md`). `code-review` stays in CI.
+- **Questions:** ask on the issue, add `needs-info` (that pushes to the maintainer's phone), and move on. Never guess.
+- **Merging:** never merge, not even as the steward. The *PR steward* Action (`scripts/pr-steward.ts`) merges a PR itself once it's green, the review is answered and the threads are resolved.
 
 ## Token budget
 

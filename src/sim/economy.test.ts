@@ -15,7 +15,7 @@ const SMALL: MapData = {
   ],
 };
 
-const ONE_INFANTRY: readonly WaveData[] = [{ kind: 'infantry', count: 1, spacingMs: 0 }];
+const ONE_INFANTRY: readonly WaveData[] = [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }];
 
 const newGame = (money = 100, waves: readonly WaveData[] = []) => createGame({ map: SMALL, lives: 20, money, waves });
 
@@ -92,7 +92,7 @@ describe('placeTower refusals', () => {
   });
 
   it('placement is allowed during a wave', () => {
-    const game = newGame(100, [{ kind: 'infantry', count: 3, spacingMs: 1000 }]);
+    const game = newGame(100, [{ groups: [{ kind: 'infantry', count: 3, spacingMs: 1000, delayMs: 0 }] }]);
     game.startWave();
     expect(game.state.phase).toBe('wave');
     expect(game.placeTower('rifleNest', { col: 2, row: 2 })).toMatchObject({ ok: true });
@@ -124,7 +124,7 @@ describe('canPlaceTower', () => {
   });
 
   it('says yes during a wave', () => {
-    const game = newGame(100, [{ kind: 'infantry', count: 3, spacingMs: 1000 }]);
+    const game = newGame(100, [{ groups: [{ kind: 'infantry', count: 3, spacingMs: 1000, delayMs: 0 }] }]);
     game.startWave();
     expect(game.canPlaceTower('rifleNest', { col: 2, row: 2 })).toEqual({ ok: true });
   });

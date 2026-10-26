@@ -16,6 +16,8 @@ export interface TowerPlacement {
 /** A command a scenario script can give, the same as a player (or a test) would. */
 export type ScenarioCommand =
   | ({ readonly type: 'placeTower' } & TowerPlacement)
+  | { readonly type: 'upgradeTower'; readonly towerId: number }
+  | { readonly type: 'sellTower'; readonly towerId: number }
   | { readonly type: 'startWave' }
   | { readonly type: 'spawnEnemy'; readonly kind: EnemyKind };
 
@@ -57,8 +59,14 @@ export const DEFAULT_MAX_TICKS = Math.round((60 * 60 * 1000) / TICK_MS);
 /** `victory` or `defeat` when the game ended; `stopped` when `until` was met first; `timeout` at `maxTicks`. */
 export type ScenarioOutcome = 'victory' | 'defeat' | 'stopped' | 'timeout';
 
-/** What a scenario command returned: `towerId` for a placed tower, `enemyId` for a spawned enemy. */
-export type CommandOutcome = CommandResult<string, { readonly towerId?: number; readonly enemyId?: number }>;
+/**
+ * What a scenario command returned: `towerId` for a placed tower, `level` for an upgraded one,
+ * `refund` for a sold one, `enemyId` for a spawned enemy.
+ */
+export type CommandOutcome = CommandResult<
+  string,
+  { readonly towerId?: number; readonly level?: number; readonly refund?: number; readonly enemyId?: number }
+>;
 
 /**
  * One entry in a run's log: a game event with its payload, or a command and what it returned.
@@ -86,7 +94,10 @@ export interface ScenarioResult {
 const GAME_EVENT_TYPES = Object.keys({
   enemyLeaked: true,
   towerFired: true,
+  shellFired: true,
+  shellLanded: true,
   enemyKilled: true,
+  towerSold: true,
   waveStarted: true,
   waveCleared: true,
   victory: true,
@@ -165,6 +176,10 @@ export function applyCommand(game: Game, command: ScenarioCommand): CommandOutco
   switch (command.type) {
     case 'placeTower':
       return game.placeTower(command.kind, command.tile);
+    case 'upgradeTower':
+      return game.upgradeTower(command.towerId);
+    case 'sellTower':
+      return game.sellTower(command.towerId);
     case 'startWave':
       return game.startWave();
     case 'spawnEnemy':
