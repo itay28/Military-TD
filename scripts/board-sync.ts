@@ -230,6 +230,15 @@ export function withFieldUpdates(issues: readonly StartIssue[], updates: readonl
   });
 }
 
+/** Removes a label; one a concurrent run already removed (404) is fine. */
+async function removeLabel(token: string, issue: number, label: string): Promise<void> {
+  try {
+    await github(fetch, token, 'DELETE', `issues/${issue}/labels/${encodeURIComponent(label)}`);
+  } catch (error) {
+    if ((error as { status?: number }).status !== 404) throw error;
+  }
+}
+
 export async function graphql<T>(token: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
   const response = await fetch('https://api.github.com/graphql', {
     method: 'POST',
@@ -446,7 +455,11 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   for (const update of updates) {
     for (const { field, value } of update.set) {
       const option = fieldOf[field]?.options.find((o) => o.name === value);
-      if (!option) throw new Error(`no "${value}" option on the ${field} field`);
+      if (!option) {
+        // Board options drifted from the label values: skip this field rather than abort the run.
+        console.warn(`#${update.issue}: no "${value}" option on the ${field} field, skipped`);
+        continue;
+      }
       if (!dryRun)
         await graphql(token, SET_FIELD, {
           project: project.id,
@@ -457,7 +470,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       console.log(`#${update.issue}: ${field} → ${value}${dryRun ? ' (dry run)' : ''}`);
     }
     for (const label of update.removeLabels) {
-      if (!dryRun) await github(fetch, token, 'DELETE', `issues/${update.issue}/labels/${encodeURIComponent(label)}`);
+      if (!dryRun) await removeLabel(token, update.issue, label);
       console.log(`#${update.issue}: removed label ${label}${dryRun ? ' (dry run)' : ''}`);
     }
   }
