@@ -1,4 +1,4 @@
-import { LAYER_NAME, TOWER_NAME } from '../data/display';
+import { LAYER_NAME, TOWER_NAMES } from '../data/display';
 import type { Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 
@@ -74,7 +74,7 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
     setHidden(!tower);
     if (!tower) return;
     const figures = stats.towers[tower.id];
-    setText(heading, TOWER_NAME[tower.kind]);
+    setText(heading, TOWER_NAMES[tower.kind]);
     setText(level, 'Level 1'); // Towers gain levels with upgrades (#55).
     setText(damage, String(tower.damage));
     setText(fireRate, `${tower.fireRate}/s`);
