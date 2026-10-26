@@ -181,7 +181,7 @@ export class GameScene extends Phaser.Scene {
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
-      if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position));
+      if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
     });
 
     this.rangeRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);

@@ -1,0 +1,59 @@
+name: PR steward
+
+# Reconciles every open PR (docs/agents/issue-tracker.md → PR steward): fires a PR steward
+# round (a cloud scheduled task that fixes conflicts, CI, review findings and maintainer
+# comments, at most 3 rounds before handing off with `needs-you`), merges the base into a PR
+# that is only behind, and squash-merges a PR that is green with every comment answered.
+# Every run looks at all open PRs, so the schedule fixes anything an event missed.
+# Logic and tests: scripts/pr-steward.ts.
+#
+# Switches (repo variables, off unless `on`): AUTO_STEWARD fires rounds and updates branches,
+# AUTO_MERGE merges. ROUTINE_STEWARD_URL / _TOKEN are the steward task's API trigger.
+# PROJECT_TOKEN (classic PAT) does the writes, so its pushes and merges start CI.
+on:
+  workflow_run:
+    workflows: [CI, Claude Code Review]
+    types: [completed]
+  issue_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '41 */6 * * *'
+  workflow_dispatch:
+
+# Runs queue instead of overlapping; each one reads the PRs fresh.
+concurrency:
+  group: pr-steward
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pr-steward:
+    name: pr-steward
+    # Comments on plain issues don't concern PRs; fork PRs get no secrets.
+    if: >-
+      (github.event_name != 'issue_comment' || github.event.issue.pull_request) &&
+      (github.event_name != 'pull_request_review' || !github.event.pull_request.head.repo.fork)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Steward the open PRs
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          AUTO_STEWARD: ${{ vars.AUTO_STEWARD }}
+          AUTO_MERGE: ${{ vars.AUTO_MERGE }}
+          ROUTINE_STEWARD_URL: ${{ secrets.ROUTINE_STEWARD_URL }}
+          ROUTINE_STEWARD_TOKEN: ${{ secrets.ROUTINE_STEWARD_TOKEN }}
+        run: node scripts/pr-steward.ts
