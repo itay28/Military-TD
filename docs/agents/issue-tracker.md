@@ -93,7 +93,7 @@ The current milestone is the open one with the earliest due date, else the lowes
 **Auto-start** (`scripts/auto-start.ts`, ADR-0008): when the repo variable `AUTO_SPAWN` is `on`, each *Board sync* run then starts cloud agents:
 - **Startable:** no PR, no assignee, `ready-for-agent`, no `hold` label, not a tracker, Size XS–L, no open blockers. In the current milestone that's the *Ready* column. With `AUTO_STACK` set to `on`, an issue whose open blockers are all closed by open PRs on one chain of branches (the stack-next rule) is startable too, based on the chain's tip branch.
 - **Order and cap:** Priority (P0 first, none last), then issue number; at most 5 `auto-agent` issues *In progress*. When the current milestone has nothing startable, the next milestone's issues are used.
-- **Claim, then fire:** assign `itay28`, add `auto-agent`, then fire the implement scheduled task (XS/S → `ROUTINE_SONNET_*`, M/L → `ROUTINE_OPUS_*`) with the issue number and base branch. If the fire fails, the claim is undone and the run goes red. The task follows `docs/agents/prompts/implement.md`.
+- **Claim, then fire:** assign `itay28`, add `auto-agent`, then fire the implement scheduled task (XS/S → `ROUTINE_SONNET_*`, M/L → `ROUTINE_OPUS_*`) with the issue number and base branch. If the fire fails, the claim is undone. A temporary refusal (HTTP 429, a 5xx or no answer: usage or rate limit) is quiet: the run stays green, auto-start stops for this run, and a later run tries again. Any other refusal (a bad token, a deleted routine) also adds `needs-you` and a comment to the issue, which pushes to the maintainer, and the run goes red; the issue isn't started again until `needs-you` is removed (#200). The task follows `docs/agents/prompts/implement.md`.
 - **No Size:** one comment on the issue asking for one; it starts once Size is set. XL never starts: split it.
 - **Off switch:** set `AUTO_SPAWN` to anything but `on`, or add `hold` to one issue. `--dry-run` logs what it would start.
 - **Setup errors:** with `AUTO_SPAWN` on and a `ROUTINE_*` secret missing, the board still syncs but auto-start is skipped and the run goes red.
@@ -114,6 +114,7 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), an
 | mergeability still computing, a round in flight (no done marker yet, under 1 h old), or checks running (CI, CI review) | waits |
 | a conflict, a failing check, a CI review or maintainer comment newer than the last done marker, or unresolved review threads | fires a **round** of the `pr-steward` task, which fixes what it can and ends with a `<!-- pr-steward:done -->` comment |
 | the same, after 3 rounds since the latest maintainer comment, or a conflict a round couldn't resolve | hands off: `needs-you` label + a summary comment |
+| the steward's trigger refuses the fire with a setup error (any 4xx but 429: bad token, deleted routine) | hands off the same way, naming the HTTP status and the secrets to check; the run goes red |
 | only behind its base | merges the base in itself (no agent, not a round) |
 | no CI review comment yet | waits (add `review-again` to request one) |
 | closes an issue that is still blocked by open issues, or labelled `needs-info` | waits |
@@ -123,6 +124,7 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), an
 | the milestone report PR (`chore/release-0.N.0`) | no rounds and no review needed: merges once `0.N.0` is the current milestone's version, the milestone is done (only its release issue is open), the body ends with `Release-As: 0.N.0` and its checks are green. The squash commit message is the PR body, so the footer stays last. Add `hold` to read the audit and write Notes first |
 
 - Stacked PRs are stewarded but merged only once GitHub retargets them to `main` (after their parent merges).
+- **Out of tokens is never a failure (#200).** A round whose session ends without its done marker (most likely the usage limit) is retried once it's 1 h old, as the same round number, and never counts toward the 3; nor does the conflict hand-off look at it. A fire refused for now (HTTP 429, a 5xx or no answer) posts nothing and counts nothing: the next run (at least hourly) fires it again, and the run stays green. A session with no GitHub access isn't counted either, but it pushes to the maintainer itself (prompt step 0) each time it's retried.
 - A round fired only for a conflict doesn't count toward the 3: conflicts come from the base moving (a PR below it merged), not from a failed attempt. If a round fired for a conflict (alone or together with other reasons) ends with the conflict still there on the same base, the agent couldn't resolve it, so the PR is handed off at once (`needs-you`). The round marker carries a hidden `<!-- pr-steward:round-meta reasons=… base=<sha> -->` line for this.
 - Each check counts by its latest run: a cancelled run is ignored once another run of the same check finished (a re-triggered `pr-title` cancels its older run). A check whose only run was cancelled counts as failing.
 - Checks that don't test the code are ignored: `board-sync`, `release-issue`, and `claude-review` (the review counts by its comment).
@@ -158,11 +160,12 @@ The maintainer isn't watching the board. They get an [ntfy](https://ntfy.sh) pho
 | Push | When | Clicks through to |
 | --- | --- | --- |
 | *Military-TD vX.Y.Z released*, with the changelog link | release-please publishes a release (`notify` job in `release-please.yml`) | the GitHub Release |
-| *PR #n is stuck*, with the steward's summary | a PR gets `needs-you`: the PR steward gave up after 3 rounds | the PR |
+| *PR #n is stuck*, with the steward's summary | a PR gets `needs-you`: the PR steward gave up after 3 rounds, or its trigger has a setup error | the PR |
+| *Issue #n needs you*, with auto-start's summary | an issue gets `needs-you`: auto-start's trigger has a setup error (#200) | the issue |
 | *Question on #n*, with the issue title | an issue gets `needs-info`: an agent asked a question (`docs/agents/prompts/implement.md`) | the issue |
 
-- **Labels:** `needs-you` goes on a stuck PR, `needs-info` on an issue with an open question. Removing the label takes the item out of the view. `hold` on the item means no push.
-- **Steward summary:** the PR steward posts its summary as a PR comment that starts with `<!-- pr-steward:stuck -->`, then adds `needs-you`. The push carries the latest such comment, or the PR title when there's none.
+- **Labels:** `needs-you` goes on a stuck PR or an issue auto-start couldn't start, `needs-info` on an issue with an open question. Removing the label takes the item out of the view. `hold` on the item means no push.
+- **Steward summary:** the PR steward posts its summary as a PR comment that starts with `<!-- pr-steward:stuck -->`, then adds `needs-you`; auto-start does the same on an issue with `<!-- auto-start:stuck -->`. The push carries the latest such comment, or the title when there's none.
 - **How:** `.github/workflows/notify.yml` runs on those labels; logic and tests in `scripts/notify.ts`. Labels added with `GITHUB_TOKEN` don't start workflows, so an Action that labels that way runs `node scripts/notify.ts pr <n>` (or `issue <n>`) itself. A missing `NTFY_TOPIC` secret or an ntfy error fails the run.
 
 **Hand-off setup** (maintainer, once):

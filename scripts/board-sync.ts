@@ -3,6 +3,7 @@ import {
   AUTO_AGENT_LABEL,
   commentNoSize,
   HOLD_LABEL,
+  NEEDS_YOU_LABEL,
   planStarts,
   startIssue,
   type OpenPr,
@@ -298,6 +299,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       startIssues.push({
         ...issues.at(-1)!,
         hold: labels.includes(HOLD_LABEL),
+        needsYou: labels.includes(NEEDS_YOU_LABEL),
         autoAgent: labels.includes(AUTO_AGENT_LABEL),
         size: node.size?.name,
         priority: node.priority?.name,
@@ -362,7 +364,11 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       continue;
     }
     try {
-      await startIssue(start, token, autoStart.routines);
+      if ((await startIssue(start, token, autoStart.routines)) === 'later') {
+        // Out of tokens or rate-limited (#200): the rest would be refused too; a later run retries.
+        console.log(`${what}: the fire was refused for now (usage or rate limit), un-claimed; retrying next run`);
+        break;
+      }
       console.log(what);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));

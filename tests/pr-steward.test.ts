@@ -323,9 +323,15 @@ describe('decide: steward rounds', () => {
         reasons: ['conflict'],
         conflict: true,
       });
-      // A round that died without a done marker is stuck the same way.
+    });
+
+    it('retries a conflict round that died, rather than handing off (#200)', () => {
       const died = [round(300, ['conflict'], 'base-a')];
-      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments: died }), now)).toMatchObject({ kind: 'stuck' });
+      expect(decide(pr({ ...conflict, baseSha: 'base-a', comments: died }), now)).toMatchObject({
+        kind: 'steward',
+        round: 1,
+        retry: true,
+      });
     });
 
     it('gives an unresolved conflict a fresh round after a maintainer comment', () => {
@@ -334,6 +340,44 @@ describe('decide: steward rounds', () => {
         kind: 'steward',
         round: 1,
       });
+    });
+  });
+
+  describe('rounds whose session died (#200)', () => {
+    // A round marker with no done marker after it: the session ended without reporting, e.g. out of tokens.
+    const red = { checks: [{ name: 'ci', state: 'failure' as const }] };
+    const done = (m: number) => [action(ROUND_MARKER, m + 5), agent(DONE_MARKER, m)];
+
+    it('does not count a dead round, and retries it as the same round', () => {
+      expect(decide(pr({ ...red, comments: [action(ROUND_MARKER, 61)] }), now)).toEqual({
+        kind: 'steward',
+        reasons: ['ci'],
+        round: 1,
+        retry: true,
+        clearNeedsYou: false,
+      });
+    });
+
+    it('never hands off a PR whose rounds all died', () => {
+      const dead = [500, 400, 300, 200].map((m) => action(ROUND_MARKER, m));
+      expect(decide(pr({ ...red, comments: dead }), now)).toMatchObject({ kind: 'steward', round: 1, retry: true });
+    });
+
+    it('counts only the rounds that finished', () => {
+      const comments = [...done(500), action(ROUND_MARKER, 400), ...done(300), action(ROUND_MARKER, 200)];
+      expect(decide(pr({ ...red, comments }), now)).toMatchObject({ kind: 'steward', round: 3, retry: true });
+    });
+
+    it('is not a retry when the last round finished', () => {
+      expect(decide(pr({ ...red, comments: [action(ROUND_MARKER, 400), ...done(300)] }), now)).toMatchObject({
+        round: 2,
+        retry: false,
+      });
+    });
+
+    it('still hands off once 3 rounds finished, dead ones in between', () => {
+      const comments = [...done(600), action(ROUND_MARKER, 500), ...done(400), ...done(300)];
+      expect(decide(pr({ ...red, comments }), now)).toEqual({ kind: 'stuck', reasons: ['ci'] });
     });
   });
 
@@ -488,7 +532,13 @@ const fireOk = vi.fn<Fetch>(async (url: string) =>
 );
 
 describe('act', () => {
-  const steward: Decision = { kind: 'steward', reasons: ['ci', 'review'], round: 2, clearNeedsYou: false };
+  const steward: Decision = {
+    kind: 'steward',
+    reasons: ['ci', 'review'],
+    round: 2,
+    retry: false,
+    clearNeedsYou: false,
+  };
 
   it('fires a steward round with the PR, reasons and round, then posts the round marker with the session link', async () => {
     fireOk.mockClear();
@@ -510,10 +560,43 @@ describe('act', () => {
     expect(calls(fireOk)).toContain(`DELETE ${api}/issues/7/labels/needs-you`);
   });
 
-  it('posts no marker and throws when the fire fails', async () => {
-    const fetchFn = vi.fn<Fetch>(async () => new Response('nope', { status: 500 }));
+  it('says a retried round is a retry', async () => {
+    fireOk.mockClear();
+    await act(pr(), { ...steward, retry: true }, 'gh-token', settings, fireOk);
+    const { body } = JSON.parse(fireOk.mock.calls[1]![1].body as string) as { body: string };
+    expect(body).toMatch(/retry/i);
+  });
+
+  it.each([429, 500, 503])(
+    'posts nothing and waits for the next run when the fire is refused with HTTP %i (#200)',
+    async (status) => {
+      const fetchFn = vi.fn<Fetch>(async () => new Response('busy', { status }));
+      await expect(act(pr(), steward, 'gh-token', settings, fetchFn)).resolves.toBeUndefined();
+      expect(calls(fetchFn)).toEqual(['POST https://fire.example/steward']);
+    },
+  );
+
+  it('waits for the next run when the fire cannot reach the API', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => {
+      throw new TypeError('fetch failed');
+    });
+    await expect(act(pr(), steward, 'gh-token', settings, fetchFn)).resolves.toBeUndefined();
+  });
+
+  it.each([401, 403, 404])('hands off loudly and throws when the fire is refused with HTTP %i', async (status) => {
+    const fetchFn = vi.fn<Fetch>(async (url: string) =>
+      url.startsWith('https://fire.example') ? new Response('denied', { status }) : ok(),
+    );
     await expect(act(pr(), steward, 'gh-token', settings, fetchFn)).rejects.toThrow(/#7/);
-    expect(calls(fetchFn)).toEqual(['POST https://fire.example/steward']);
+    expect(calls(fetchFn)).toEqual([
+      'POST https://fire.example/steward',
+      `POST ${api}/issues/7/comments`,
+      `POST ${api}/issues/7/labels`,
+    ]);
+    const { body } = JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string };
+    expect(body).toContain(STUCK_MARKER);
+    expect(body).toContain(`HTTP ${status}`);
+    expect(body).toContain('ROUTINE_STEWARD_TOKEN');
   });
 
   it('says why when an unresolved conflict hands off', async () => {

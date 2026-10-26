@@ -10,6 +10,10 @@ const MAINTAINER = 'itay28';
 export const AUTO_AGENT_LABEL = 'auto-agent';
 /** Keeps automation off an issue. */
 export const HOLD_LABEL = 'hold';
+/** Hands an issue (or PR) to the maintainer; scripts/notify.ts pushes when it lands. */
+export const NEEDS_YOU_LABEL = 'needs-you';
+/** Starts the comment auto-start posts before labelling an issue `needs-you`; the push carries it. */
+export const HANDOFF_MARKER = '<!-- auto-start:stuck -->';
 /** Hidden in the no-Size comment, so it's posted once. */
 export const NO_SIZE_MARKER = '<!-- auto-start:no-size -->';
 /** At most this many `auto-agent` issues In progress at once (#165). */
@@ -30,6 +34,8 @@ export interface StartIssue {
   /** Labelled `ready-for-agent`. */
   readonly labelled: boolean;
   readonly hold: boolean;
+  /** Labelled `needs-you`: handed to the maintainer, e.g. after a setup error (#200). */
+  readonly needsYou: boolean;
   readonly autoAgent: boolean;
   readonly size: string | undefined;
   readonly priority: string | undefined;
@@ -125,6 +131,7 @@ export function planStarts(
           !i.tracker &&
           i.labelled &&
           !i.hold &&
+          !i.needsYou &&
           !prs.some((pr) => pr.issues.includes(i.number)),
       )
       .sort((a, b) => rank(a.priority) - rank(b.priority) || a.number - b.number);
@@ -194,9 +201,23 @@ export async function fireRoutine(routine: Routine, text: string, fetchFn: Fetch
     },
     body: JSON.stringify({ text }),
   });
-  if (!response.ok) throw new Error(`fire: HTTP ${response.status} ${await response.text()}`);
+  if (!response.ok)
+    throw Object.assign(new Error(`fire: HTTP ${response.status} ${await response.text()}`), {
+      status: response.status,
+    });
   const body = (await response.json().catch(() => ({}))) as { claude_code_session_url?: string };
   return body.claude_code_session_url;
+}
+
+/**
+ * Why a fire failed (#200). `temporary`: a rate or usage limit (429), a server error (5xx) or no
+ * answer at all; a later run retries, nothing counts it and nobody is told. `setup`: any other
+ * refusal (bad token, deleted routine), which a retry won't fix: it fails loudly.
+ */
+export function classifyFireError(error: unknown): 'temporary' | 'setup' {
+  const status = (error as { status?: unknown } | null)?.status;
+  if (typeof status !== 'number') return 'temporary';
+  return status === 429 || status >= 500 ? 'temporary' : 'setup';
 }
 
 /** The fire `text`: what the implement prompt (docs/agents/prompts/implement.md) reads. */
@@ -206,21 +227,25 @@ export const fireText = (start: Start) =>
 /**
  * Claim the issue (assign the maintainer, add `auto-agent`), then fire the implement task for its
  * model. The claim comes first so a second Board sync run can't start it again. If any step
- * fails, whatever part of the claim went through is undone and the error rethrown, so the issue
- * is startable next run and the run goes red.
+ * fails, whatever part of the claim went through is undone, so the issue is startable next run.
+ * A temporary fire refusal (classifyFireError) then returns `later`; anything else is rethrown
+ * so the run goes red, and a setup error also hands the issue to the maintainer (`needs-you`).
  */
 export async function startIssue(
   start: Start,
   token: string,
   routines: Routines,
   fetchFn: Fetch = fetch,
-): Promise<void> {
+): Promise<'started' | 'later'> {
   const n = start.issue;
   const routine = routines[start.model];
+  let firing = false;
   try {
     await github(fetchFn, token, 'POST', `issues/${n}/assignees`, { assignees: [MAINTAINER] });
     await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [AUTO_AGENT_LABEL] });
+    firing = true;
     await fireRoutine(routine, fireText(start), fetchFn);
+    return 'started';
   } catch (error) {
     // Undo whatever part of the claim went through; the original error is the one reported.
     const undo = await Promise.allSettled([
@@ -229,10 +254,25 @@ export async function startIssue(
     ]);
     const undoErrors = undo.flatMap((r) => (r.status === 'rejected' ? [String(r.reason)] : []));
     const unclaimed = undoErrors.length ? `un-claiming failed (${undoErrors.join('; ')})` : 'un-claimed';
+    const kind = firing ? classifyFireError(error) : undefined;
+    if (kind === 'temporary' && !undoErrors.length) return 'later';
+    if (kind === 'setup') await handOffIssue(n, start.model, error, token, fetchFn);
     throw new Error(`#${n}: starting the ${start.model} implement task failed, ${unclaimed}: ${String(error)}`, {
       cause: error,
     });
   }
+}
+
+/** Tell the maintainer a fire was refused for a reason a retry won't fix: a comment, then `needs-you` (which pushes). */
+async function handOffIssue(n: number, model: Model, error: unknown, token: string, fetchFn: Fetch): Promise<void> {
+  const secret = `ROUTINE_${model.toUpperCase()}`;
+  await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+    body:
+      `${HANDOFF_MARKER}\nAuto-start couldn't start the ${model} implement task: its API trigger refused the fire ` +
+      `(HTTP ${(error as { status?: number }).status}). Check the ${secret}_URL and ${secret}_TOKEN secrets and the ` +
+      `implement-${model} routine at claude.ai/code/routines, then remove \`${NEEDS_YOU_LABEL}\` to start it again.`,
+  });
+  await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [NEEDS_YOU_LABEL] });
 }
 
 /** Ask for a Size on an issue auto-start skipped for lacking one; once. True if it commented. */

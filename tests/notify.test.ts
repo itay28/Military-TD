@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  HANDOFF_MARKER,
   STUCK_MARKER,
   lastCommentPages,
   pushFor,
@@ -7,6 +8,7 @@ import {
   releaseMessage,
   send,
   stewardSummary,
+  stuckIssueMessage,
   stuckPrMessage,
 } from '../scripts/notify';
 
@@ -52,6 +54,23 @@ describe('stuckPrMessage', () => {
   });
 });
 
+describe('stuckIssueMessage (#200)', () => {
+  const issue = { number: 42, title: 'feat: tank enemy', url: `${repoUrl}/issues/42` };
+
+  it('clicks through to the issue, names it in the title and carries the summary', () => {
+    const push = stuckIssueMessage(issue, "Auto-start's API trigger refused the fire (HTTP 401).");
+    expect(push).toEqual({
+      title: 'Issue #42 needs you',
+      body: "Auto-start's API trigger refused the fire (HTTP 401).",
+      click: issue.url,
+    });
+  });
+
+  it('falls back to the issue title without a summary', () => {
+    expect(stuckIssueMessage(issue, null).body).toBe('feat: tank enemy');
+  });
+});
+
 describe('questionMessage', () => {
   it('clicks through to the issue and carries its title', () => {
     const push = questionMessage({ number: 42, title: 'Sniper tower', url: `${repoUrl}/issues/42` });
@@ -78,6 +97,10 @@ describe('pushFor', () => {
     expect(pushFor('pull_request', onPr('needs-you'))).toEqual({ kind: 'pr', number: 7 });
   });
 
+  it('needs-you on an issue pushes a hand-off for that issue (#200)', () => {
+    expect(pushFor('issues', onIssue('needs-you'))).toEqual({ kind: 'stuck-issue', number: 9 });
+  });
+
   it('needs-info on an issue pushes for that issue', () => {
     expect(pushFor('issues', onIssue('needs-info'))).toEqual({ kind: 'issue', number: 9 });
   });
@@ -86,7 +109,7 @@ describe('pushFor', () => {
     ['another label on a PR', 'pull_request', onPr('bug')],
     ['another label on an issue', 'issues', onIssue('bug')],
     ['needs-info on a PR', 'pull_request', onPr('needs-info')],
-    ['needs-you on an issue', 'issues', onIssue('needs-you')],
+    ['an issue needing you on hold', 'issues', onIssue('needs-you', ['hold', 'needs-you'])],
     ['an issues event for a PR', 'issues', onIssue('needs-info', ['needs-info'], { pull_request: {} })],
     ['a PR on hold', 'pull_request', onPr('needs-you', ['needs-you', 'hold'])],
     ['an issue on hold', 'issues', onIssue('needs-info', ['hold', 'needs-info'])],
@@ -108,6 +131,10 @@ describe('stewardSummary', () => {
       comment('Later chatter.'),
     ];
     expect(stewardSummary(comments)).toBe('New summary.');
+  });
+
+  it("also reads auto-start's hand-off comment on an issue", () => {
+    expect(stewardSummary([comment(`${HANDOFF_MARKER}\nBad token.`)])).toBe('Bad token.');
   });
 
   it('is null without a marked comment', () => {
