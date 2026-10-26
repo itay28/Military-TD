@@ -5,6 +5,7 @@ import {
   ROUND_MARKER,
   STUCK_MARKER,
   act,
+  currentChecks,
   decide,
   settingsFromEnv,
   type Decision,
@@ -178,6 +179,107 @@ describe('decide: steward rounds', () => {
     expect(decide(pr({ checks: [{ name: 'ci', state: 'failure' }], comments: three }), now)).toEqual({
       kind: 'stuck',
       reasons: ['ci'],
+    });
+  });
+});
+
+describe('currentChecks', () => {
+  const run = (name: string, state: 'pending' | 'success' | 'failure' | 'cancelled', completedAt?: string) => ({
+    name,
+    state,
+    ...(completedAt ? { completedAt } : {}),
+  });
+
+  it('ignores a cancelled run once a later run of the same check passed', () => {
+    expect(currentChecks([run('pr-title', 'cancelled', at(10)), run('pr-title', 'success', at(5))])).toEqual([
+      { name: 'pr-title', state: 'success' },
+    ]);
+  });
+
+  it('ignores a cancelled run that finished after the passing one', () => {
+    expect(currentChecks([run('pr-title', 'success', at(10)), run('pr-title', 'cancelled', at(5))])).toEqual([
+      { name: 'pr-title', state: 'success' },
+    ]);
+  });
+
+  it('counts the latest result when a check was re-run', () => {
+    expect(currentChecks([run('ci', 'failure', at(10)), run('ci', 'success', at(5))])).toEqual([
+      { name: 'ci', state: 'success' },
+    ]);
+    expect(currentChecks([run('ci', 'success', at(10)), run('ci', 'failure', at(5))])).toEqual([
+      { name: 'ci', state: 'failure' },
+    ]);
+  });
+
+  it('treats a check whose only run was cancelled as failing', () => {
+    expect(currentChecks([run('e2e', 'cancelled', at(5))])).toEqual([{ name: 'e2e', state: 'failure' }]);
+  });
+
+  it('is pending while any run of the check is still going', () => {
+    expect(currentChecks([run('ci', 'success', at(10)), run('ci', 'pending')])).toEqual([
+      { name: 'ci', state: 'pending' },
+    ]);
+  });
+
+  it('keeps one entry per check name, in first-seen order', () => {
+    expect(
+      currentChecks([run('ci', 'success', at(9)), run('e2e', 'success', at(8)), run('ci', 'success', at(7))]),
+    ).toEqual([
+      { name: 'ci', state: 'success' },
+      { name: 'e2e', state: 'success' },
+    ]);
+  });
+});
+
+describe('decide: superseded checks', () => {
+  it('merges a green PR that also has a cancelled, re-run check', () => {
+    const checks = [
+      ...pr().checks,
+      { name: 'pr-title', state: 'cancelled' as const, completedAt: at(10) },
+      { name: 'pr-title', state: 'success' as const, completedAt: at(5) },
+    ];
+    expect(kind(pr({ checks }))).toBe('merge');
+  });
+});
+
+describe('decide: milestone hold', () => {
+  const v03 = { number: 4, title: 'v0.3.0 — Game shell' };
+  const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4] };
+  const closing = (...milestones: (typeof v02 | typeof v03 | null)[]) =>
+    milestones.map((milestone, i) => ({ number: 3 + i, blocked: false, needsInfo: false, milestone }));
+
+  it('merges a PR whose issue is in the current milestone', () => {
+    expect(decide(pr({ closes: closing(v02) }), now, 'main', v02).kind).toBe('merge');
+  });
+
+  it('holds a PR whose issue is in a later milestone, naming both', () => {
+    expect(decide(pr({ closes: closing(v03) }), now, 'main', v02)).toEqual({
+      kind: 'wait',
+      why: '#3 is in v0.3.0 — Game shell: merges after v0.2.0 — Combat depth ships',
+    });
+  });
+
+  it('holds when any issue the PR closes is ahead', () => {
+    expect(decide(pr({ closes: closing(v02, v03) }), now, 'main', v02)).toMatchObject({
+      kind: 'wait',
+      why: expect.stringMatching(/^#4 is in v0\.3\.0/),
+    });
+  });
+
+  it('merges issues without a milestone, and anything when no milestone is open', () => {
+    expect(decide(pr({ closes: closing(null) }), now, 'main', v02).kind).toBe('merge');
+    expect(decide(pr({ closes: closing(v03) }), now, 'main', null).kind).toBe('merge');
+  });
+
+  it('does not hold an issue from an already-shipped milestone', () => {
+    const v01 = { number: 1, title: 'v0.1.0 — MVP' };
+    expect(decide(pr({ closes: closing(v01) }), now, 'main', v02).kind).toBe('merge');
+  });
+
+  it('still runs steward rounds on a held PR', () => {
+    expect(decide(pr({ closes: closing(v03), mergeable: 'CONFLICTING' }), now, 'main', v02)).toMatchObject({
+      kind: 'steward',
+      reasons: ['conflict'],
     });
   });
 });

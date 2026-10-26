@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { FLOATING_TEXT, TRACER } from '../data/display';
+import { FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
 import type { TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
@@ -9,13 +9,14 @@ import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import { pixelToTile, toPixels, type Pixel } from './coords';
-import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers } from './drawEntities';
+import { drawBlasts, drawEnemy, drawGhost, drawRangeRing, drawShells, drawTower, drawTracers } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
 import { resolveClick } from './selection';
+import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
 import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
@@ -31,7 +32,17 @@ const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
 const ringKey = (tower: Tower): string => `${tower.id}@${tower.range}`;
 
 /** Draw order, back to front. */
-const DEPTH = { map: 0, towers: 1, enemies: 2, tracers: 3, ghost: 4, rangeRing: 5, floatingText: 6 } as const;
+const DEPTH = {
+  map: 0,
+  towers: 1,
+  enemies: 2,
+  air: 3,
+  tracers: 4,
+  shells: 4,
+  ghost: 5,
+  rangeRing: 6,
+  floatingText: 7,
+} as const;
 
 /** Puts `object` on `layer`: the depth that orders it, and the name test mode's view() reports it by. */
 function onLayer<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Depth>(
@@ -82,6 +93,8 @@ export class GameScene extends Phaser.Scene {
   private towerViews!: ViewSync<Tower>;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
+  private blasts!: Blasts;
+  private shellGraphics!: Phaser.GameObjects.Graphics;
   private rangeRing!: Phaser.GameObjects.Graphics;
   private selectedRing!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
@@ -163,7 +176,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.enemyViews = createViewSync<Enemy, EnemyView>({
-      create: () => ({ graphics: onLayer(this.add.graphics(), 'enemies'), hp: Number.NaN }),
+      create: (enemy) => ({
+        graphics: onLayer(this.add.graphics(), enemy.layer === 'air' ? 'air' : 'enemies'),
+        hp: Number.NaN,
+      }),
       update: (view, enemy) => {
         if (view.hp !== enemy.hp) {
           view.graphics.clear();
@@ -198,6 +214,13 @@ export class GameScene extends Phaser.Scene {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
       if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
     });
+
+    // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
+    this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
+    this.shellGraphics = onLayer(this.add.graphics(), 'shells');
+    this.sim.events.on('shellLanded', ({ position, outerRadius }) =>
+      this.blasts.add(toPixels(position), outerRadius * TILE_PX),
+    );
 
     this.rangeRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
     this.selectedRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
@@ -250,6 +273,7 @@ export class GameScene extends Phaser.Scene {
   override update(_time: number, deltaMs: number): void {
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
+    this.blasts.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     this.loop.advance(frameMs(this.flags, deltaMs));
     this.hud.update();
@@ -265,6 +289,15 @@ export class GameScene extends Phaser.Scene {
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);
     this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected);
+    this.shellGraphics.clear();
+    const { shells, timeMs } = this.sim.state;
+    drawShells(
+      this.shellGraphics,
+      shells.map((shell) =>
+        shellPoint({ ...shell, from: toPixels(shell.from), target: toPixels(shell.target) }, timeMs),
+      ),
+    );
+    drawBlasts(this.shellGraphics, this.blasts.active());
     // Checked every frame, not only on pointer moves, so a tower that appears under a still pointer shows its ring.
     // The selected tower's ring is drawn already.
     const hovered = this.pointerTile && towerAt(towers, this.pointerTile);

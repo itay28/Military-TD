@@ -1,10 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
-import { ENEMY_STYLE, GHOST, HP_BAR, LEVEL_PIP, RANGE_RING, TILE_PX, TOWER_STYLE, TRACER_STYLE } from '../data/display';
+import {
+  AIR_SHADOW,
+  ENEMY_STYLE,
+  GHOST,
+  HP_BAR,
+  LEVEL_PIP,
+  RANGE_RING,
+  ROTOR,
+  SHELL,
+  TILE_PX,
+  TOWER_STYLE,
+  TRACER_STYLE,
+} from '../data/display';
 import { TOWER_STATS } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
-import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers, type EntityPainter } from './drawEntities';
+import {
+  drawBlasts,
+  drawEnemy,
+  drawGhost,
+  drawRangeRing,
+  drawShells,
+  drawTower,
+  drawTracers,
+  type EntityPainter,
+} from './drawEntities';
 
 type Call = [string, ...number[]];
 
@@ -89,6 +110,53 @@ describe('drawEnemy', () => {
   });
 });
 
+describe('drawEnemy (Helicopter)', () => {
+  const helicopter: Enemy = {
+    ...ENEMY_STATS.helicopter,
+    id: 2,
+    kind: 'helicopter',
+    hp: 60,
+    distance: 0,
+    position: { x: 0.5, y: 0.5 },
+  };
+  const { radius, color } = ENEMY_STYLE.helicopter;
+
+  it('draws a shadow offset below it first, then its body in its own color', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, helicopter);
+    expect(calls.slice(0, 4)).toEqual([
+      ['fillStyle', AIR_SHADOW.color, AIR_SHADOW.alpha],
+      ['fillCircle', AIR_SHADOW.offsetX, AIR_SHADOW.offsetY, radius],
+      ['fillStyle', color],
+      ['fillCircle', 0, 0, radius],
+    ]);
+    expect(color).not.toBe(ENEMY_STYLE.infantry.color);
+  });
+
+  it('draws an X rotor over its body, before the HP bar', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, helicopter);
+    const s = ENEMY_STYLE.helicopter.rotor;
+    expect(calls.slice(4, 7)).toEqual([
+      ['lineStyle', ROTOR.width, ROTOR.color],
+      ['lineBetween', -s, -s, s, s],
+      ['lineBetween', -s, s, s, -s],
+    ]);
+  });
+
+  it('gives a ground enemy no rotor', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, infantry(30));
+    expect(calls.some((c) => c[0] === 'lineBetween')).toBe(false);
+  });
+
+  it('gives a ground enemy no shadow', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, infantry(30));
+    expect(calls.some((c) => c[0] === 'fillStyle' && c[1] === AIR_SHADOW.color)).toBe(false);
+  });
+});
+
 describe('drawTower', () => {
   it('draws a filled, outlined square of its kind’s size centered on the origin', () => {
     const { painter, calls } = recordingPainter();
@@ -169,5 +237,27 @@ describe('drawGhost', () => {
     const { painter, calls } = recordingPainter();
     drawGhost(painter, 'rifleNest', false);
     expect(calls).toEqual(ghostCalls(GHOST.blocked));
+  });
+});
+
+describe('drawShells', () => {
+  it('draws a dot per shell', () => {
+    const { painter, calls } = recordingPainter();
+    drawShells(painter, [{ x: 10, y: 20 }]);
+    expect(calls).toEqual([
+      ['fillStyle', SHELL.color],
+      ['fillCircle', 10, 20, SHELL.radius],
+    ]);
+  });
+});
+
+describe('drawBlasts', () => {
+  it('draws a circle outline per blast, at its alpha', () => {
+    const { painter, calls } = recordingPainter();
+    drawBlasts(painter, [{ center: { x: 10, y: 20 }, radius: 48, alpha: 0.5 }]);
+    expect(calls).toEqual([
+      ['lineStyle', SHELL.blastWidth, SHELL.blastColor, 0.5],
+      ['strokeCircle', 10, 20, 48],
+    ]);
   });
 });

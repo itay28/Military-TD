@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.1](https://github.com/itay28/Military-TD/compare/v0.1.0...v0.1.1) (2026-10-26)
+
+
+### Features
+
+* armor, armor pierce and air/ground targeting ([#142](https://github.com/itay28/Military-TD/issues/142)) ([6e9c36c](https://github.com/itay28/Military-TD/commit/6e9c36cfb3e6c756290b6646c4d133d286a80ed5))
+* auto-start cloud agents for Ready and stackable issues ([#172](https://github.com/itay28/Military-TD/issues/172)) ([9b78bf7](https://github.com/itay28/Military-TD/commit/9b78bf7aaff4e420d68efdfb28bc5a1bef4bfbed))
+* Cannon anti-tank tower ([#146](https://github.com/itay28/Military-TD/issues/146)) ([e24d71c](https://github.com/itay28/Military-TD/commit/e24d71c8501a98e9e8c17d7114a6f9b31e68c7f3))
+* cloud sessions check repo access and get the workflow skills ([#176](https://github.com/itay28/Military-TD/issues/176)) ([cc2ccef](https://github.com/itay28/Military-TD/commit/cc2ccefd5ea9e31954244d183f7b897131480b68))
+* Helicopter air enemy ([#149](https://github.com/itay28/Military-TD/issues/149)) ([c909a24](https://github.com/itay28/Military-TD/commit/c909a249dd0965fcae6bfdcbfc44d9197b6fe618))
+* Jeep enemy (fast, light) ([#147](https://github.com/itay28/Military-TD/issues/147)) ([0c74110](https://github.com/itay28/Military-TD/commit/0c7411038c66e7eca4bdbe1a7d0bf32eee84f96f))
+* per-tower and overall damage and kill stats ([#145](https://github.com/itay28/Military-TD/issues/145)) ([55bbeaa](https://github.com/itay28/Military-TD/commit/55bbeaaee1514c4b87bd68ead2b225174b7bcfa5))
+* PR steward fixes, refreshes and merges open PRs ([#174](https://github.com/itay28/Military-TD/issues/174)) ([2a00e1c](https://github.com/itay28/Military-TD/commit/2a00e1ca3bc8db0fe8f28fa0f8742132b7595282))
+* shells with flight time and two-ring splash ([#150](https://github.com/itay28/Military-TD/issues/150)) ([2cc62c9](https://github.com/itay28/Military-TD/commit/2cc62c9264f5348f8acf35a65aeef93a655af887))
+* steward ignores superseded checks and holds next-milestone merges ([#181](https://github.com/itay28/Military-TD/issues/181)) ([4760ea6](https://github.com/itay28/Military-TD/commit/4760ea669172f1d8d8c9678d3422c91b16d9ca7b))
+* Tank enemy ([#148](https://github.com/itay28/Military-TD/issues/148)) ([821a29f](https://github.com/itay28/Military-TD/commit/821a29f459b2f2a5484d3ba639741c794971886b))
+* tower build bar ([#143](https://github.com/itay28/Military-TD/issues/143)) ([a0a6815](https://github.com/itay28/Military-TD/commit/a0a68155ccc88a9fb54fc5e72c227ff2218930e3))
+* tower info panel for a selected tower ([#154](https://github.com/itay28/Military-TD/issues/154)) ([98f6080](https://github.com/itay28/Military-TD/commit/98f60803302a6b6bd2df6863a68f8773aea7fb09))
+* waves with several enemy groups ([#141](https://github.com/itay28/Military-TD/issues/141)) ([549d322](https://github.com/itay28/Military-TD/commit/549d322a5ed53d302c97f762f58857098d425a33))
+
 ## 0.1.0 (2026-10-25)
 
 
