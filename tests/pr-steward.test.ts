@@ -8,7 +8,9 @@ import {
   APPROVAL_MARKER,
   act,
   changedFiles,
+  codeCommittedAt,
   criticalFiles,
+  renamedFiles,
   currentChecks,
   decide,
   milestoneDone,
@@ -67,6 +69,8 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
   unresolvedThreads: 0,
   closes: [{ number: 3, blocked: false, needsInfo: false }],
   files: ['src/sim/towers.ts', 'tests/sim/towers.test.ts'],
+  renamed: [],
+  codeCommittedAt: at(40),
   comments: [review(60), agent(DONE_MARKER, 30)],
   ...over,
 });
@@ -538,7 +542,10 @@ describe('decide: approval gate (#206)', () => {
         'docs/agents/workflow.md',
         'docs/adr/0009-x.md',
         'scripts/pr-steward.ts',
+        'scripts/new-pipeline-step.ts',
         'scripts/scenario.ts',
+        'scripts/itch-build.ts',
+        'release-please-config.json',
         'package.json',
         'package-lock.json',
         'assets/manifest.json',
@@ -552,6 +559,8 @@ describe('decide: approval gate (#206)', () => {
       'docs/agents/workflow.md',
       'docs/adr/0009-x.md',
       'scripts/pr-steward.ts',
+      'scripts/new-pipeline-step.ts',
+      'release-please-config.json',
       'package.json',
       'package-lock.json',
       'assets/manifest.json',
@@ -572,6 +581,19 @@ describe('decide: approval gate (#206)', () => {
 
   it('asks for approval when the file list was cut off', () => {
     expect(decide(pr({ files: null }), now)).toMatchObject({ kind: 'approval' });
+  });
+
+  it('asks for approval when a file was renamed, since its old path may be critical', () => {
+    expect(decide(pr({ renamed: ['docs/notes.md'] }), now)).toEqual({
+      kind: 'approval',
+      paths: ['docs/notes.md (renamed: its old path may be critical)'],
+    });
+  });
+
+  it('asks again when code was committed after the approval', () => {
+    const comments = [review(60), agent(DONE_MARKER, 30), approve(20)];
+    expect(kind(critical({ comments, codeCommittedAt: at(10) }))).toBe('approval');
+    expect(kind(critical({ comments, codeCommittedAt: at(25) }))).toBe('merge');
   });
 
   it('only asks once everything else is done', () => {
@@ -611,10 +633,36 @@ describe('decide: approval gate (#206)', () => {
 });
 
 describe('changedFiles', () => {
+  const file = (path: string, changeType = 'MODIFIED') => ({ path, changeType });
+
   it('returns the paths, or null when GitHub has more than were read', () => {
-    expect(changedFiles({ totalCount: 2, nodes: [{ path: 'a.ts' }, { path: 'b.ts' }] })).toEqual(['a.ts', 'b.ts']);
-    expect(changedFiles({ totalCount: 101, nodes: [{ path: 'a.ts' }] })).toBeNull();
+    expect(changedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts')] })).toEqual(['a.ts', 'b.ts']);
+    expect(changedFiles({ totalCount: 101, nodes: [file('a.ts')] })).toBeNull();
     expect(changedFiles(null)).toBeNull();
+  });
+
+  it('lists renamed files by their new path', () => {
+    expect(renamedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts', 'RENAMED')] })).toEqual(['b.ts']);
+    expect(renamedFiles(null)).toEqual([]);
+  });
+});
+
+describe('codeCommittedAt', () => {
+  const commit = (committedDate: string, parents: number) => ({
+    commit: { committedDate, parents: { totalCount: parents } },
+  });
+
+  it("is the latest commit that isn't a merge, so merging the base keeps an approval", () => {
+    expect(codeCommittedAt([commit('2026-10-26T10:00:00Z', 1), commit('2026-10-26T11:00:00Z', 2)])).toBe(
+      '2026-10-26T10:00:00Z',
+    );
+  });
+
+  it('falls back to the latest commit when every one read is a merge', () => {
+    expect(codeCommittedAt([commit('2026-10-26T10:00:00Z', 2), commit('2026-10-26T11:00:00Z', 2)])).toBe(
+      '2026-10-26T11:00:00Z',
+    );
+    expect(codeCommittedAt([])).toBeNull();
   });
 });
 
