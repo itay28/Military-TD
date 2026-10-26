@@ -53,6 +53,10 @@ describe('ghostAt', () => {
     expect(ghostAt(newGame(), 'rifleNest', undefined)).toBeUndefined();
   });
 
+  it('shows no ghost when no build kind is selected', () => {
+    expect(ghostAt(newGame(), undefined, EMPTY)).toBeUndefined();
+  });
+
   it('shows no ghost over a standing tower, which shows its own range ring instead', () => {
     const game = newGame();
     game.placeTower('rifleNest', EMPTY);

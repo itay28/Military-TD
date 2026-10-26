@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from './data/display';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { createTestApi } from './testing/api';
@@ -13,8 +12,6 @@ if (versionEl) showVersion(versionEl);
 const hudRoot = document.getElementById('hud');
 // Unlike the version label, the game can't be played without its HUD.
 if (!hudRoot) throw new Error('index.html has no #hud element');
-// Same width as the canvas, so the bar lines up with the map above it.
-hudRoot.style.width = `${CANVAS_WIDTH}px`;
 const buildBarRoot = document.getElementById('build-bar');
 if (!buildBarRoot) throw new Error('index.html has no #build-bar element');
 const endScreenRoot = document.getElementById('end-screen');
@@ -35,11 +32,20 @@ const gameScene = new GameScene({
   },
 });
 
-new Phaser.Game({
+const gameRoot = document.getElementById('game');
+if (!gameRoot) throw new Error('index.html has no #game element');
+
+const game = new Phaser.Game({
   type: Phaser.AUTO,
-  parent: 'game',
-  width: CANVAS_WIDTH,
-  height: CANVAS_HEIGHT,
-  backgroundColor: '#2f3a24',
+  parent: gameRoot,
+  // The canvas fills the space left by the HUD and the build bar, at any window size; the camera fits the map in it.
+  scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
+  // The mouse and two fingers, for a pinch.
+  input: { activePointers: 2 },
+  backgroundColor: '#1b1e16',
   scene: [BootScene, gameScene],
 });
+// Phaser resizes on window resizes only; collapsing the build bar or the HUD wrapping resizes the stage without one.
+new ResizeObserver(() => {
+  if (game.scale.getParentBounds()) game.scale.refresh();
+}).observe(gameRoot);
