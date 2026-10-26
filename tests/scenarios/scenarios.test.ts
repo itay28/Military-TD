@@ -15,7 +15,7 @@ const scenarios = await Promise.all(
 describe('named scenarios', () => {
   it('include the starter scenarios', () => {
     expect(scenarios.map((s) => s.name)).toEqual(
-      expect.arrayContaining(['single-infantry-leaks', 'one-tower-kills-one-infantry', 'mvp-full-game']),
+      expect.arrayContaining(['single-infantry-leaks', 'one-tower-kills-one-infantry', 'full-game']),
     );
   });
 
@@ -35,8 +35,8 @@ describe('named scenarios', () => {
 
   // Wall-clock: a run takes a few ms, so 500 ms leaves a slow CI runner plenty of room.
   it('a full game runs in well under 1 s', () => {
-    const full = scenarios.find((s) => s.name === 'mvp-full-game');
-    if (!full) throw new Error('mvp-full-game scenario is missing');
+    const full = scenarios.find((s) => s.name === 'full-game');
+    if (!full) throw new Error('full-game scenario is missing');
     const start = performance.now();
     const result = runScenario(full.scenario);
     const elapsedMs = performance.now() - start;
