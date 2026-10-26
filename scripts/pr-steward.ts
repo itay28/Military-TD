@@ -27,22 +27,21 @@ const parseRoundMeta = (body: string) => {
 };
 
 /**
- * Rounds that count toward MAX_ROUNDS among `rounds` (round markers, oldest first), given the
- * marker before them. A round fired only for a conflict, after the base moved since the previous
- * round, is free: the conflict came from the base (a PR below merging), not from this PR (#183).
- * A marker without a meta line counts.
+ * Rounds that count toward MAX_ROUNDS among `rounds` (round markers). A round fired only for a
+ * conflict is free: conflicts come from the base moving, and one the agent can't resolve hands
+ * off at once (see `unresolvedConflict`). A marker without a meta line counts.
  */
-function countedRounds(rounds: readonly PrComment[], before: PrComment | undefined): number {
-  let previous = before && parseRoundMeta(before.body);
-  let counted = 0;
-  for (const r of rounds) {
+function countedRounds(rounds: readonly PrComment[]): number {
+  return rounds.filter((r) => {
     const meta = parseRoundMeta(r.body);
-    const free =
-      meta && previous && meta.reasons.length === 1 && meta.reasons[0] === 'conflict' && meta.base !== previous.base;
-    if (!free) counted++;
-    previous = meta;
-  }
-  return counted;
+    return !(meta && meta.reasons.length === 1 && meta.reasons[0] === 'conflict');
+  }).length;
+}
+
+/** Whether the latest round was fired for a conflict on this same base, and the conflict is still there. */
+function unresolvedConflict(rounds: readonly PrComment[], baseSha: string): boolean {
+  const meta = rounds.length ? parseRoundMeta(rounds[rounds.length - 1]!.body) : null;
+  return !!meta && meta.reasons.includes('conflict') && meta.base === baseSha;
 }
 /** Posted by the Action when it hands a PR off. */
 export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
@@ -152,7 +151,12 @@ export type Decision =
       /** A maintainer comment restarted a handed-off PR. */
       readonly clearNeedsYou: boolean;
     }
-  | { readonly kind: 'stuck'; readonly reasons: readonly Reason[] }
+  | {
+      readonly kind: 'stuck';
+      readonly reasons: readonly Reason[];
+      /** A conflict round didn't resolve the conflict. */
+      readonly conflict?: boolean;
+    }
   | { readonly kind: 'merge' };
 
 const isMaintainer = (c: PrComment) =>
@@ -165,7 +169,8 @@ const isMaintainer = (c: PrComment) =>
  * What to do with one open PR. In order: skip drafts, forks, `hold`, and `needs-you` PRs the
  * maintainer hasn't answered; hand release and milestone report PRs to decideRelease / decideReport; wait while mergeability is unknown or a round is in flight; fire a
  * round for a conflict, a failed check, an unanswered CI review or maintainer comment, or
- * unresolved threads (hand off as stuck after MAX_ROUNDS); update a PR that is only behind; wait
+ * unresolved threads (hand off as stuck after MAX_ROUNDS, or at once when a round left a conflict
+ * on the same base); update a PR that is only behind; wait
  * for running checks and the CI review; then merge, if it targets the default branch, no issue it
  * closes is blocked or waiting on an answer, and none is in a later milestone than `current` (#180).
  */
@@ -217,9 +222,10 @@ export function decide(
   if (lastMaintainer > lastDone) reasons.push('comment');
   if (pr.unresolvedThreads > 0) reasons.push('threads');
   if (reasons.length) {
-    const markers = pr.comments.filter((c) => c.body.includes(ROUND_MARKER));
-    const since = markers.filter((c) => Date.parse(c.createdAt) > lastMaintainer);
-    const used = countedRounds(since, markers[markers.length - since.length - 1]);
+    const since = pr.comments.filter((c) => c.body.includes(ROUND_MARKER) && Date.parse(c.createdAt) > lastMaintainer);
+    if (conflict && unresolvedConflict(since, pr.baseSha))
+      return { kind: 'stuck', reasons: ['conflict'], conflict: true };
+    const used = countedRounds(since);
     return used >= MAX_ROUNDS
       ? { kind: 'stuck', reasons }
       : { kind: 'steward', reasons, round: used + 1, clearNeedsYou };
@@ -360,7 +366,9 @@ export async function act(
     case 'stuck':
       await handOff(
         pr,
-        `${MAX_ROUNDS} steward rounds didn't finish it. Still open: ${describeReasons(decision.reasons)}.`,
+        decision.conflict
+          ? "The steward couldn't resolve the merge conflict: it's still there on the same base."
+          : `${MAX_ROUNDS} steward rounds didn't finish it. Still open: ${describeReasons(decision.reasons)}.`,
         token,
         fetchFn,
       );
