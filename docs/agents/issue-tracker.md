@@ -119,7 +119,8 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), an
 | closes an issue that is still blocked by open issues, or labelled `needs-info` | waits |
 | closes an issue in a later milestone than the current one (auto-start's look-ahead) | waits until the current milestone ships (its release closes the milestone); rounds still run |
 | green, review answered, threads resolved, targets `main` | squash-merges it with the PR title (+ ` (#n)`) and body; if GitHub refuses, hands off |
-| release-please's release PR | no rounds and no review needed: merges once its checks are green (merging publishes the release, and the release push tells you). Its checks only run with the `RELEASE_PLEASE_TOKEN` secret (`docs/agents/releasing.md`); without it, it waits for you |
+| release-please's release PR | no rounds and no review needed. It merges only when its version is the current milestone's (`v0.2.0 — …` → `release 0.2.0`), once its checks are green; merging publishes the release, and the release push tells you. A patch release (`release 0.1.2`) waits for you to merge it by hand (#187). Its checks only run with the `RELEASE_PLEASE_TOKEN` secret (`docs/agents/releasing.md`); without it, it waits for you |
+| the milestone report PR (`chore/release-0.N.0`) | no rounds and no review needed: merges once `0.N.0` is the current milestone's version, the milestone is done (only its release issue is open), the body ends with `Release-As: 0.N.0` and its checks are green. The squash commit message is the PR body, so the footer stays last. Add `hold` to read the audit and write Notes first |
 
 - Stacked PRs are stewarded but merged only once GitHub retargets them to `main` (after their parent merges).
 - Each check counts by its latest run: a cancelled run is ignored once another run of the same check finished (a re-triggered `pr-title` cancels its older run). A check whose only run was cancelled counts as failing.
