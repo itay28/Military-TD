@@ -254,6 +254,17 @@ describe('startIssue: claim, then fire', () => {
     },
   );
 
+  it('throws when un-claiming fails after a temporary refusal, so the stuck claim shows', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string, init: RequestInit) =>
+      url.startsWith('https://fire.example')
+        ? new Response('busy', { status: 429 })
+        : init.method === 'DELETE'
+          ? new Response('gone', { status: 500 })
+          : ok(),
+    );
+    await expect(startIssue(start, 'gh-token', routines, fetchFn)).rejects.toThrow(/un-claiming failed/);
+  });
+
   it('un-claims, hands the issue to the maintainer and throws on a setup error (#200)', async () => {
     const fetchFn = vi.fn<Fetch>(async (url: string) =>
       url.startsWith('https://fire.example') ? new Response('bad token', { status: 401 }) : ok(),

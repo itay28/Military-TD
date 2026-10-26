@@ -120,6 +120,15 @@ describe('pushFor', () => {
   });
 });
 
+describe('hand-off markers', () => {
+  it('match the markers the PR steward and auto-start post, so the push carries their summary', async () => {
+    const steward = await import('../scripts/pr-steward');
+    const autoStart = await import('../scripts/auto-start');
+    expect(STUCK_MARKER).toBe(steward.STUCK_MARKER);
+    expect(HANDOFF_MARKER).toBe(autoStart.HANDOFF_MARKER);
+  });
+});
+
 describe('stewardSummary', () => {
   const comment = (body: string) => ({ body });
 
