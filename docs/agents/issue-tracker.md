@@ -99,7 +99,7 @@ The current milestone is the open one with the earliest due date, else the lowes
 - **Setup errors:** with `AUTO_SPAWN` on and a `ROUTINE_*` secret missing, the board still syncs but auto-start is skipped and the run goes red.
 
 **Auto-start setup** (maintainer, once, in the browser). The two scheduled tasks `implement-sonnet` (model Sonnet) and `implement-opus` (model Opus) already exist at [claude.ai/code/routines](https://claude.ai/code/routines), disabled. Their prompt is: *Read `docs/agents/prompts/implement.md` in the itay28/Military-TD repository and follow it. The issue number and base branch to use are in the `<routine-fire-payload>` block of this message; act on them.* For each one:
-1. **Edit**: under Repository, add `itay28/Military-TD`; keep your usual cloud environment; add the GitHub connector if your account has one.
+1. **Edit**: under Repository, add `itay28/Military-TD`; keep your usual cloud environment; add the GitHub connector if your account has one. Don't skip this: a routine made through the API or by an agent starts with no repository, and only the browser can add one. Without it, the fire succeeds and the Action stays green, but the session can't clone or call GitHub (403) and exits after a push notification; the doctor's *no GitHub access* line names it.
 2. **Trigger → + → API**: copy the **Fire URL**, click **Generate token**, and copy the token (shown once).
 3. In GitHub → Settings → Secrets and variables → Actions → **Secrets**, add `ROUTINE_SONNET_URL` / `ROUTINE_SONNET_TOKEN` (or `ROUTINE_OPUS_…`) with those two values. The token can only start that one task: it has no GitHub or account access. Claims and comments use the existing `PROJECT_TOKEN`.
 4. Turn the task on.
