@@ -5,6 +5,7 @@ import {
   HP_BAR,
   RANGE_RING,
   ROTOR,
+  SHELL,
   TILE_PX,
   TOWER_STYLE,
   TRACER_STYLE,
@@ -13,6 +14,8 @@ import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
 import type { MapPainter } from './drawMap';
+import type { Pixel } from './coords';
+import type { BlastCircle } from './shellView';
 import type { TracerLine } from './tracers';
 
 /** The part of Phaser's Graphics that the entity drawers use, so tests can pass a recording fake. */
@@ -85,5 +88,19 @@ export function drawTracers(painter: EntityPainter, tracers: readonly TracerLine
   for (const { from, to, kind, alpha } of tracers) {
     painter.lineStyle(TRACER_STYLE[kind].width, TRACER_STYLE[kind].color, alpha);
     painter.lineBetween(from.x, from.y, to.x, to.y);
+  }
+}
+
+/** Each shell in flight as a dot at its canvas position. */
+export function drawShells(painter: EntityPainter, shells: readonly Pixel[]): void {
+  painter.fillStyle(SHELL.color);
+  for (const { x, y } of shells) painter.fillCircle(x, y, SHELL.radius);
+}
+
+/** Each blast as a circle outline at its outer ring, at its current alpha. */
+export function drawBlasts(painter: EntityPainter, blasts: readonly BlastCircle[]): void {
+  for (const { center, radius, alpha } of blasts) {
+    painter.lineStyle(SHELL.blastWidth, SHELL.blastColor, alpha);
+    painter.strokeCircle(center.x, center.y, radius);
   }
 }

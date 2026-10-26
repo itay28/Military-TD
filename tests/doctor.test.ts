@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { diagnose, type Facts } from '../scripts/doctor';
+import { cloudGhStateFrom, diagnose, type Facts } from '../scripts/doctor';
 
 // The SessionStart doctor tells the agent what this environment is missing (#162).
 const healthy: Facts = {
@@ -41,11 +41,41 @@ describe('diagnose', () => {
     ]);
   });
 
+  it('in the cloud, is ready when GitHub REST reaches the repository', () => {
+    expect(diagnose({ ...healthy, environment: 'cloud', gh: 'rest-ok' })).toEqual({
+      problems: [],
+      summary: 'doctor (cloud): ready',
+    });
+  });
+
+  it('in the cloud, says how to attach the repository when GitHub refuses it', () => {
+    expect(diagnose({ ...healthy, environment: 'cloud', gh: 'no-access' }).problems).toEqual([
+      'no GitHub access to itay28/Military-TD: attach the repository to this routine or session (claude.ai/code/routines → Edit → Repository); stop and report, nothing else will work',
+    ]);
+  });
+
+  it('in the cloud, a network failure or timeout is not reported as a missing repository', () => {
+    expect(diagnose({ ...healthy, environment: 'cloud', gh: 'unreachable' }).problems).toEqual([
+      'GitHub REST check failed (network or timeout), not an access error: retry `gh api repos/itay28/Military-TD` before deciding anything',
+    ]);
+  });
+
   it('lists every problem in the summary', () => {
     const { summary } = diagnose({ ...healthy, nodeModules: false, gh: 'missing' });
     expect(summary).toBe(
       'doctor (local): 2 problems. node_modules missing: run `npm ci` before tests; gh not found: issue and PR steps need it (GitHub CLI)',
     );
+  });
+});
+
+describe('cloudGhStateFrom', () => {
+  it.each([
+    ['gh: GitHub access to this repository is not enabled for this session (HTTP 403)', 'no-access'],
+    ['gh: Not Found (HTTP 404)', 'no-access'],
+    ['error connecting to api.github.com', 'unreachable'],
+    ['', 'unreachable'],
+  ])('%j → %s', (stderr, state) => {
+    expect(cloudGhStateFrom(stderr)).toBe(state);
   });
 });
 

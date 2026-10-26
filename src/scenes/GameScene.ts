@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { FLOATING_TEXT, TRACER } from '../data/display';
+import { FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
 import type { TowerKind } from '../data/towers';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
@@ -9,16 +9,19 @@ import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import { pixelToTile, toPixels, type Pixel } from './coords';
-import { drawEnemy, drawGhost, drawRangeRing, drawTower, drawTracers } from './drawEntities';
+import { drawBlasts, drawEnemy, drawGhost, drawRangeRing, drawShells, drawTower, drawTracers } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
+import { resolveClick } from './selection';
+import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
 import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
+import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
@@ -27,7 +30,17 @@ const MAX_TICKS_PER_FRAME = 5;
 const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
 
 /** Draw order, back to front. */
-const DEPTH = { map: 0, towers: 1, enemies: 2, air: 3, tracers: 4, ghost: 5, rangeRing: 6, floatingText: 7 } as const;
+const DEPTH = {
+  map: 0,
+  towers: 1,
+  enemies: 2,
+  air: 3,
+  tracers: 4,
+  shells: 4,
+  ghost: 5,
+  rangeRing: 6,
+  floatingText: 7,
+} as const;
 
 /** Puts `object` on `layer`: the depth that orders it, and the name test mode's view() reports it by. */
 function onLayer<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Depth>(
@@ -50,6 +63,8 @@ export interface GameSceneOptions {
   readonly buildBarRoot: HTMLElement;
   /** The DOM element over the canvas the End screen is drawn in (`#end-screen` in index.html). */
   readonly endScreenRoot: HTMLElement;
+  /** The DOM element over the canvas the tower panel is drawn in (`#tower-panel` in index.html). */
+  readonly towerPanelRoot: HTMLElement;
   /** Test mode's URL flags (ADR-0003). */
   readonly flags: TestFlags;
   /** Called at the end of every create(), the first game's and each restart's. */
@@ -61,6 +76,7 @@ export class GameScene extends Phaser.Scene {
   private readonly hudRoot: HTMLElement;
   private readonly buildBarRoot: HTMLElement;
   private readonly endScreenRoot: HTMLElement;
+  private readonly towerPanelRoot: HTMLElement;
   private readonly flags: TestFlags;
   private readonly onCreate: (() => void) | undefined;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
@@ -70,11 +86,15 @@ export class GameScene extends Phaser.Scene {
   private hud!: Hud;
   private buildBar!: BuildBar;
   private endScreen!: EndScreen;
+  private towerPanel!: TowerPanel;
   private enemyViews!: ViewSync<Enemy>;
   private towerViews!: ViewSync<Tower>;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
+  private blasts!: Blasts;
+  private shellGraphics!: Phaser.GameObjects.Graphics;
   private rangeRing!: Phaser.GameObjects.Graphics;
+  private selectedRing!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
   /** The ghost last drawn, and its kind, so it is redrawn only when its tile, colour or kind changes. */
   private ghost: (Ghost & { readonly kind: TowerKind }) | undefined;
@@ -84,14 +104,17 @@ export class GameScene extends Phaser.Scene {
   private previousPositions!: ReadonlyMap<number, Position>;
   /** The tile under the pointer, or undefined when it is off the canvas. */
   private pointerTile: Tile | undefined;
-  /** The tower whose range ring is drawn, by id. */
+  /** The tower under the pointer whose range ring is drawn, by id. */
   private hoveredTowerId: number | undefined;
+  /** The selected tower whose range ring is drawn, by id. */
+  private selectedRingId: number | undefined;
 
-  constructor({ hudRoot, buildBarRoot, endScreenRoot, flags, onCreate }: GameSceneOptions) {
+  constructor({ hudRoot, buildBarRoot, endScreenRoot, towerPanelRoot, flags, onCreate }: GameSceneOptions) {
     super('Game');
     this.hudRoot = hudRoot;
     this.buildBarRoot = buildBarRoot;
     this.endScreenRoot = endScreenRoot;
+    this.towerPanelRoot = towerPanelRoot;
     this.flags = flags;
     this.onCreate = onCreate;
   }
@@ -139,6 +162,7 @@ export class GameScene extends Phaser.Scene {
     this.previousPositions = new Map();
     this.pointerTile = undefined;
     this.hoveredTowerId = undefined;
+    this.selectedRingId = undefined;
     this.ghost = undefined;
     this.sim = setUpGame(this.setup);
     drawMap(onLayer(this.add.graphics(), 'map'), this.sim.state.map);
@@ -184,7 +208,15 @@ export class GameScene extends Phaser.Scene {
       if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
     });
 
+    // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
+    this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
+    this.shellGraphics = onLayer(this.add.graphics(), 'shells');
+    this.sim.events.on('shellLanded', ({ position, outerRadius }) =>
+      this.blasts.add(toPixels(position), outerRadius * TILE_PX),
+    );
+
     this.rangeRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
+    this.selectedRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       this.pointerTile = pixelToTile({ x: pointer.worldX, y: pointer.worldY });
     });
@@ -197,22 +229,30 @@ export class GameScene extends Phaser.Scene {
       update: (view, { x, y, alpha }) => view.setPosition(x, y).setAlpha(alpha),
       destroy: (view) => view.destroy(),
     });
-    // The sim decides whether a click places a tower, so this works in the Build and Wave phases alike.
+    // A click on a tower selects it. Otherwise the sim decides whether it places one, so this works in the
+    // Build and Wave phases alike.
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 0) return;
       const at = { x: pointer.worldX, y: pointer.worldY };
-      const refusal = placeAt(this.sim, this.buildBar.selected, pixelToTile(at));
-      if (refusal) this.floatingTexts.add(refusal, at);
+      const action = resolveClick(this.sim.state.towers, this.towerPanel.selectedId, pixelToTile(at));
+      if (action.type === 'select') this.towerPanel.select(action.towerId);
+      else if (action.type === 'deselect') this.towerPanel.select(undefined);
+      else {
+        const refusal = placeAt(this.sim, this.buildBar.selected, action.tile);
+        if (refusal) this.floatingTexts.add(refusal, at);
+      }
     });
 
     this.hud = mountHud(this.hudRoot, this.sim);
     this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
+    this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.hud.destroy();
       this.buildBar.destroy();
       this.endScreen.destroy();
+      this.towerPanel.destroy();
     });
     this.onCreate?.();
   }
@@ -226,32 +266,63 @@ export class GameScene extends Phaser.Scene {
   override update(_time: number, deltaMs: number): void {
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
+    this.blasts.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     this.loop.advance(frameMs(this.flags, deltaMs));
     this.hud.update();
     this.buildBar.update();
     this.endScreen.update();
+    this.towerPanel.update();
 
     const { enemies, towers } = this.sim.state;
     this.towerViews.sync(towers);
     this.enemyViews.sync(enemies);
     this.tracerGraphics.clear();
     drawTracers(this.tracerGraphics, this.tracers.active());
+    const { selectedId } = this.towerPanel;
+    const selected = towers.find((tower) => tower.id === selectedId);
+    this.selectedRingId = this.showRing(this.selectedRing, this.selectedRingId, selected);
+    this.shellGraphics.clear();
+    const { shells, timeMs } = this.sim.state;
+    drawShells(
+      this.shellGraphics,
+      shells.map((shell) =>
+        shellPoint({ ...shell, from: toPixels(shell.from), target: toPixels(shell.target) }, timeMs),
+      ),
+    );
+    drawBlasts(this.shellGraphics, this.blasts.active());
     // Checked every frame, not only on pointer moves, so a tower that appears under a still pointer shows its ring.
-    this.hover(this.pointerTile && towerAt(towers, this.pointerTile));
+    // The selected tower's ring is drawn already.
+    const hovered = this.pointerTile && towerAt(towers, this.pointerTile);
+    this.hoveredTowerId = this.showRing(
+      this.rangeRing,
+      this.hoveredTowerId,
+      hovered === selected ? undefined : hovered,
+    );
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.
-    this.showGhost(this.buildBar.selected, ghostAt(this.sim, this.buildBar.selected, this.pointerTile));
+    // None while a tower is selected, since a click then only deselects.
+    this.showGhost(
+      this.buildBar.selected,
+      selected ? undefined : ghostAt(this.sim, this.buildBar.selected, this.pointerTile),
+    );
     this.floatingTextViews.sync(this.floatingTexts.active());
   }
 
-  /** Shows the range ring of `tower`, or hides it when the pointer isn't over one. */
-  private hover(tower: Tower | undefined): void {
-    if (tower?.id === this.hoveredTowerId) return;
-    this.hoveredTowerId = tower?.id;
-    this.rangeRing.clear().setVisible(tower !== undefined);
-    if (!tower) return;
+  /**
+   * Draws the range ring of `tower` on `ring`, or hides it when there is none. `drawnId` is the tower the ring
+   * shows now, so an unchanged ring isn't redrawn. Returns the id it shows after.
+   */
+  private showRing(
+    ring: Phaser.GameObjects.Graphics,
+    drawnId: number | undefined,
+    tower: Tower | undefined,
+  ): number | undefined {
+    if (tower?.id === drawnId) return drawnId;
+    ring.clear().setVisible(tower !== undefined);
+    if (!tower) return undefined;
     const { x, y } = towerCenter(tower);
-    drawRangeRing(this.rangeRing.setPosition(x, y), tower);
+    drawRangeRing(ring.setPosition(x, y), tower);
+    return tower.id;
   }
 
   /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none. */

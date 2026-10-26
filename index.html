@@ -162,6 +162,61 @@
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
       }
+      /* The tower panel sits over the top-right of the map; the End screen, after it, covers it. */
+      #tower-panel {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 220px;
+        font: 13px monospace;
+        white-space: nowrap;
+        color: #e4e0c8;
+      }
+      #tower-panel [role='dialog'] {
+        position: relative;
+        padding: 10px 12px;
+        background: rgb(38 42 31 / 0.92);
+        border: 2px solid #c2a46b;
+        border-radius: 4px;
+      }
+      #tower-panel h2 {
+        margin: 0 24px 2px 0;
+        font-size: 15px;
+        color: #f0c95a;
+      }
+      #tower-panel p {
+        margin: 0 0 8px;
+        color: #a2a58f;
+      }
+      #tower-panel dl {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 2px 10px;
+        margin: 0;
+      }
+      #tower-panel dt {
+        color: #a2a58f;
+      }
+      #tower-panel dd {
+        margin: 0;
+        text-align: right;
+      }
+      #tower-panel button {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        font: bold 16px monospace;
+        color: #e4e0c8;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+      }
+      #tower-panel button:focus-visible {
+        outline: 2px solid #f0c95a;
+      }
       #version {
         position: fixed;
         right: 6px;
@@ -177,6 +232,7 @@
       <div id="hud"></div>
       <div id="stage">
         <div id="game"></div>
+        <div id="tower-panel" hidden></div>
         <div id="end-screen" hidden></div>
       </div>
       <nav id="build-bar" aria-label="Build"></nav>
