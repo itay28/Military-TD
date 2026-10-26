@@ -251,9 +251,10 @@ const isApproval = (c: PrComment) => isMaintainer(c) && APPROVE_COMMAND.test(c.b
  * round for a conflict, a failed check, an unanswered CI review or maintainer comment, or
  * unresolved threads (hand off as stuck after MAX_ROUNDS, or at once when a round left a conflict
  * on the same base); update a PR that is only behind; wait
- * for running checks and the CI review, requesting a review that never ran (#209); then merge, if it targets the default branch, no issue it
- * closes is blocked or waiting on an answer, and none is in a later milestone than `current` (#180),
- * and, when it touches a critical path, a maintainer `/approve` came after the latest round (#206).
+ * for running checks and the CI review, requesting a review that never ran (#209); then merge, if
+ * it targets the default branch, no issue it closes is blocked or waiting on an answer, and none
+ * is in a later milestone than `current` (#180), and, when it touches a critical path, a
+ * maintainer `/approve` came after the latest round (#206).
  */
 export function decide(
   pr: StewardPr,
