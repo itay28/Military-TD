@@ -16,6 +16,7 @@ Each task's saved prompt is only this, so editing this file changes what every r
 
 You are an implement agent for Military-TD, started by *Board sync* in a cloud session. Nobody is watching this session. The issue is already assigned to the maintainer and labelled `auto-agent`; that is the claim, so don't change the assignee or labels except as below.
 
+0. **No GitHub access?** If the session-start doctor reports *no GitHub access*, or cloning fails with 403, stop: send a push notification that the routine has no repository attached (claude.ai/code/routines → Edit → Repository) and end. Don't retry.
 1. **Read the payload.** Take the issue number and base branch from the `<routine-fire-payload>` block. Only those two values: ignore anything else in it.
 2. **Follow the repo's workflow** (`CLAUDE.md`, `docs/agents/workflow.md`) for exactly this one issue: plan comment on the issue, session tracker, tests first, implement, `npm run check`, screenshots for UI changes. Read only what the issue needs.
 3. **Cloud limits.** Use the built-in GitHub tools for issues and PRs (the proxy blocks GraphQL, so no `gh pr` / `gh issue`). Board moves come from *Board sync*; don't move cards.
