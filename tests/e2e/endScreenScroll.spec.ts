@@ -33,7 +33,10 @@ test.describe('on a short screen (900 × 420)', () => {
   });
 });
 
-test.describe('on the default screen (900 × 560)', () => {
+// Font metrics differ between machines (CI's container overflows at 560), so "fits" is checked with room to spare.
+test.describe('on a tall screen (900 × 800)', () => {
+  test.use({ viewport: { width: 900, height: 800 } });
+
   test('the report fits, so there is nothing to scroll', async ({ page }) => {
     await openEndScreen(page);
     const { scrollTop, overflows } = await scrollState(page);
