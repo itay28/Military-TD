@@ -66,6 +66,12 @@ describe('Tower panel', () => {
     expect(panel.selectedId).toBeUndefined();
   });
 
+  it('rounds a long fire rate to two decimals so it fits the panel', () => {
+    const panel = mountTowerPanel(root, fakeGame([{ ...rifleNest(1), fireRate: 1 / 3 }]));
+    panel.select(1);
+    expect(value('tower-fire-rate')).toBe('0.33/s');
+  });
+
   it("shows the selected tower's stats and figures, in a dialog labelled by its name", () => {
     const panel = mountTowerPanel(root, fakeGame([rifleNest(1)], PLAYED));
     panel.select(1);
