@@ -1,0 +1,32 @@
+import { expect, test, type Locator } from '@playwright/test';
+import { openGame, selectKind } from './helpers';
+
+// The HUD and build bar are DOM, so they are checked as text, not pixels: these snapshots run everywhere, not only in
+// CI's container. To update them: `npx playwright test ariaSnapshots --update-snapshots`, then commit the .aria.yml
+// files (docs/agents/workflow.md → Screenshot baselines).
+
+/**
+ * Compares `locator`'s aria snapshot with the file `name`, as exact text. `toMatchAriaSnapshot` would write numbers as
+ * `\d+` patterns on update, so a changed cost or Money would still pass.
+ */
+async function expectAria(locator: Locator, name: string) {
+  expect(`${await locator.ariaSnapshot()}\n`).toMatchSnapshot([name]);
+}
+
+test('the HUD at the start shows Money, Lives, Wave, DPS and an enabled Start Wave', async ({ page }) => {
+  await openGame(page);
+  await expectAria(page.locator('#hud'), 'hud-initial.aria.yml');
+});
+
+test('the build bar at the start lists every tower with its cost, none selected, the unaffordable ones disabled', async ({
+  page,
+}) => {
+  await openGame(page);
+  await expectAria(page.locator('#build-bar'), 'build-bar-initial.aria.yml');
+});
+
+test('the build bar marks the selected tower', async ({ page }) => {
+  await openGame(page);
+  await selectKind(page, 'rifleNest');
+  await expectAria(page.locator('#build-bar'), 'build-bar-selected.aria.yml');
+});
