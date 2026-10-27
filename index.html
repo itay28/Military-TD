@@ -76,6 +76,22 @@
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
       }
+      /* A toggle: outlined when off, filled when on. It sits right after Start Wave. */
+      #hud .hud-toggle {
+        margin-left: 0;
+        color: #c2a46b;
+        background: transparent;
+        box-shadow: inset 0 0 0 2px #c2a46b;
+      }
+      #hud .hud-toggle[aria-pressed='true'] {
+        color: #1b1e16;
+        background: #c2a46b;
+      }
+      #hud .hud-toggle:disabled {
+        color: #5e6350;
+        background: transparent;
+        box-shadow: inset 0 0 0 2px #5e6350;
+      }
       /* The End screen covers the canvas, so the map takes no clicks while it's open. */
       #stage {
         grid-area: stage;
