@@ -43,5 +43,7 @@ Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the
 
 - Art becomes a pipeline (models in, sprites out) rather than picking packs. Each kind needs one model per faction: 32 in total. CC-BY models need their attribution in `CREDITS.md`, as any asset does.
 - Maps get two faction fields; the sprite loader (#40) picks sprites by faction. Rules in `src/sim` don't change.
+- NAIP is US Government public domain, which `docs/assets.md` → Allowed licenses doesn't list yet. That table (and the manifest license check) needs a "US Government public domain" row before any NAIP tile is committed.
+- *Faction*, *attacker* and *defender* become domain terms: add them to `GLOSSARY.md` when this ADR is accepted.
 - Follow-ups: the render spike (#286); the faction data and map fields; one sprite set per faction; NAIP-based tilesets for the Tiled maps (ADR-0006).
 - If the spike's look doesn't convince, this ADR is rejected and the Kenney set stays as the final art.
