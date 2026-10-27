@@ -1,4 +1,4 @@
-import { MIN_BUILDABLE_TILES } from '../data/maps';
+import { MIN_BUILDABLE_TILES } from '../data/mapRules';
 import { createMap, InvalidMapError, tileKey, type MapData, type Tile } from './map';
 
 // Tiled map import (ADR-0006): a `.tmj` file → MapData. Pure, so tests and the game share it. Rules never see

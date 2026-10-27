@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createMap, type Tile } from '../sim/map';
+import { FIRST_MAP } from '../../tests/e2e/firstMap';
 import { MAPS, mapById, MVP_MAP } from './maps';
 
 function edgesOf({ col, row }: Tile, cols: number, rows: number): string[] {
@@ -31,6 +32,10 @@ describe('map registry', () => {
 
   it('starts with the MVP map', () => {
     expect(MAPS[0]?.data).toBe(MVP_MAP);
+  });
+
+  it('starts with the map the e2e specs expect', () => {
+    expect({ id: MAPS[0]?.id, name: MAPS[0]?.name }).toEqual(FIRST_MAP);
   });
 
   it('has unique ids', () => {

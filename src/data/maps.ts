@@ -1,25 +1,9 @@
 import type { MapData } from '../sim/map';
-import { GRID_COLS, GRID_ROWS } from './grid';
+import { importTiledMap } from '../sim/tiled';
+import trainingGround from '../../maps/01-training-ground.tmj?raw';
 
-/** The MVP map: enters on the left edge, snakes through the middle, exits on the right edge. */
-export const MVP_MAP: MapData = {
-  id: 'mvp',
-  cols: GRID_COLS,
-  rows: GRID_ROWS,
-  waypoints: [
-    { col: 0, row: 2 },
-    { col: 3, row: 2 },
-    { col: 3, row: 7 },
-    { col: 8, row: 7 },
-    { col: 8, row: 2 },
-    { col: 12, row: 2 },
-    { col: 12, row: 6 },
-    { col: 15, row: 6 },
-  ],
-};
-
-/** The fewest buildable tiles off the Path a map may have, so a full defense still leaves choices (ADR-0006). */
-export const MIN_BUILDABLE_TILES = 40;
+/** The MVP map: enters on the left edge, snakes through the middle, exits on the right edge. Built in `maps/` (ADR-0006). */
+export const MVP_MAP: MapData = importTiledMap('mvp', JSON.parse(trainingGround));
 
 /** A map the player can pick on the Level select: its id, the name shown, and its data. */
 export interface MapEntry {
