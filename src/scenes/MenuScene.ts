@@ -9,7 +9,7 @@ export interface MenuSceneOptions {
   readonly menuRoot: HTMLElement;
 }
 
-/** The Main menu: a title, Play (starts the Game scene), Settings and Credits (a second screen in the same root, with Back). Both are DOM (src/ui/). */
+/** The Main menu: a title, Play (opens the Level select), Settings and Credits (a second screen in the same root, with Back). Both are DOM (src/ui/). */
 export class MenuScene extends Phaser.Scene {
   private readonly app: HTMLElement;
   private readonly menuRoot: HTMLElement;
@@ -26,7 +26,7 @@ export class MenuScene extends Phaser.Scene {
       screen?.destroy();
       screen = mountMainMenu(this.menuRoot, {
         app: this.app,
-        onPlay: () => this.scene.start('Game'),
+        onPlay: () => this.scene.start('LevelSelect'),
         onCredits: showCredits,
         initialFocus,
       });
@@ -36,7 +36,7 @@ export class MenuScene extends Phaser.Scene {
       screen = mountCredits(this.menuRoot, { app: this.app, onBack: () => showMenu('credits') });
     };
     showMenu('play');
-    // Starting the Game scene shuts this one down, which takes the screen away.
+    // Starting the Level select shuts this one down, which takes the screen away.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => screen?.destroy());
   }
 }

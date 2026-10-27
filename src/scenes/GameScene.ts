@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CAMERA, DISMANTLE, FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
+import { MAPS, mapById } from '../data/maps';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
@@ -95,6 +96,8 @@ export class GameScene extends Phaser.Scene {
   private readonly onCreate: (() => void) | undefined;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
   private setup: GameSetup = {};
+  /** The map picked on the Level select, kept across restarts. A loaded scenario's own map overrides it. */
+  private mapId: string = MAPS[0]!.id;
   private sim!: Game;
   private loop!: FixedStep;
   /** The player's game speed. Each game starts at ×1. */
@@ -181,6 +184,11 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
+  init(data: { readonly mapId?: string } = {}): void {
+    if (data.mapId !== undefined) this.mapId = mapById(data.mapId).id;
+  }
+
   create(): void {
     // Restart reruns create() on this same object. Sim ids start again at 1, so last game's ids must not linger here.
     this.previousPositions = new Map();
@@ -188,7 +196,7 @@ export class GameScene extends Phaser.Scene {
     this.hoveredRingKey = undefined;
     this.selectedRingKey = undefined;
     this.ghost = undefined;
-    this.sim = setUpGame(this.setup);
+    this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
     this.gameSpeed = 1;
     drawMap(onLayer(this.add.graphics(), 'map'), this.sim.state.map);
     this.loop = createFixedStep({
