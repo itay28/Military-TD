@@ -121,7 +121,9 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
     update(); // now dismantling; the panel closes once the tower is gone
   };
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape' && selectedId !== undefined) select(undefined);
+    if (event.key !== 'Escape' || selectedId === undefined) return;
+    event.preventDefault(); // handled: it doesn't also pause (pauseMenu.ts)
+    select(undefined);
   };
   close.addEventListener('click', onClose);
   upgrade.addEventListener('click', onUpgrade);

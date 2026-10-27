@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Phase } from '../sim/game';
 import { mountPauseMenu, type PauseMenu, type PauseMenuOptions } from './pauseMenu';
 
@@ -11,10 +11,21 @@ let game: { state: { phase: Phase } };
 const pauseButton = () => hud.querySelector<HTMLButtonElement>('button[data-testid="pause"]');
 const button = (testId: string) => root.querySelector<HTMLButtonElement>(`button[data-testid="${testId}"]`);
 const dialog = () => root.querySelector<HTMLElement>('[role="dialog"]');
-const pressKey = (key: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+// From the body, as a real keypress with nothing focused, so it bubbles through the document to the window.
+const pressKey = (key: string) => document.body.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 
-const mount = (options: Partial<PauseMenuOptions> = {}): PauseMenu =>
-  mountPauseMenu(root, game, { buttonRoot: hud, blocked: [buildBar], onRestart: () => {}, ...options });
+let mounted: PauseMenu[] = [];
+const mount = (options: Partial<PauseMenuOptions> = {}): PauseMenu => {
+  const menu = mountPauseMenu(root, game, { buttonRoot: hud, blocked: [buildBar], onRestart: () => {}, ...options });
+  mounted.push(menu);
+  return menu;
+};
+
+// Its key listeners are on the window, which outlives each test's elements.
+afterEach(() => {
+  for (const menu of mounted) menu.destroy();
+  mounted = [];
+});
 
 beforeEach(() => {
   document.body.replaceChildren();
@@ -67,6 +78,30 @@ describe('mountPauseMenu', () => {
     const menu = mount();
     pressKey('p');
     expect(menu.paused).toBe(false);
+  });
+
+  it('does not pause on an Esc another control already handled', () => {
+    const menu = mount();
+    const onKey = (event: KeyboardEvent) => event.preventDefault();
+    document.addEventListener('keydown', onKey);
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    document.removeEventListener('keydown', onKey);
+    expect(menu.paused).toBe(false);
+  });
+
+  it('keeps keys from the page while paused, so shortcuts do nothing', () => {
+    const menu = mount();
+    const seen: string[] = [];
+    const onKey = (event: KeyboardEvent) => seen.push(event.key);
+    document.addEventListener('keydown', onKey);
+    menu.open();
+    pressKey('1');
+    pressKey('Escape');
+    expect(seen).toEqual([]);
+    expect(menu.paused).toBe(false);
+    pressKey('1');
+    document.removeEventListener('keydown', onKey);
+    expect(seen).toEqual(['1']);
   });
 
   it('calls onRestart when Restart is clicked', () => {

@@ -32,7 +32,8 @@ export interface PauseMenu {
 const TITLE_ID = 'pause-menu-title';
 
 /**
- * Builds the pause overlay inside `root`, over the canvas, and a Pause button in `buttonRoot`. Esc toggles it.
+ * Builds the pause overlay inside `root`, over the canvas, and a Pause button in `buttonRoot`. Esc toggles it; a
+ * keydown handler that uses an Esc for something else marks it with `preventDefault()`, and then it doesn't pause.
  * Pausing is a full freeze: the overlay covers the map and the `blocked` areas can't be used until Resume.
  */
 export function mountPauseMenu(
@@ -87,12 +88,19 @@ export function mountPauseMenu(
   root.append(dialog);
   root.hidden = true;
 
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== 'Escape' || event.repeat) return;
-    if (paused) close();
-    else open();
+  // While paused, keys stop at the window, before the build bar's and tower panel's shortcuts see them: Esc resumes.
+  const onKeyCapture = (event: KeyboardEvent) => {
+    if (!paused) return;
+    event.stopPropagation();
+    if (event.key === 'Escape' && !event.repeat) close();
   };
-  doc.addEventListener('keydown', onKeyDown);
+  // Esc pauses last, so one that cancelled something first (a tower selection, a build kind) doesn't also pause.
+  const onKeyBubble = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && !event.repeat && !event.defaultPrevented) open();
+  };
+  const win = doc.defaultView!;
+  win.addEventListener('keydown', onKeyCapture, true);
+  win.addEventListener('keydown', onKeyBubble);
 
   return {
     get paused() {
@@ -108,7 +116,8 @@ export function mountPauseMenu(
     destroy() {
       close();
       destroyed = true;
-      doc.removeEventListener('keydown', onKeyDown);
+      win.removeEventListener('keydown', onKeyCapture, true);
+      win.removeEventListener('keydown', onKeyBubble);
       pause.remove();
       root.replaceChildren();
       root.hidden = true;
