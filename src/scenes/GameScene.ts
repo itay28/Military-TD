@@ -46,6 +46,7 @@ const MAX_TICKS_PER_FRAME = 5;
 const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
 /** What a drawn range ring depends on: the tower, and its range, which an upgrade can change. */
 const ringKey = (tower: Tower): string => `${tower.id}@${tower.range}`;
+const ringKeyTowerId = (key: string): number => Number(key.split('@')[0]);
 
 /** Draw order, back to front. */
 const DEPTH = {
@@ -205,12 +206,12 @@ export class GameScene extends Phaser.Scene {
     return {
       rangeRing: {
         visible: this.rangeRing.visible,
-        towerId: this.hoveredRingKey ? Number(this.hoveredRingKey.split('@')[0]) : null,
+        towerId: this.hoveredRingKey ? ringKeyTowerId(this.hoveredRingKey) : null,
         center: { x: this.rangeRing.x, y: this.rangeRing.y },
       },
       rangeRings: [
         ...this.allRingIds,
-        ...[this.selectedRingKey, this.hoveredRingKey].flatMap((key) => (key ? [Number(key.split('@')[0])] : [])),
+        ...[this.selectedRingKey, this.hoveredRingKey].flatMap((key) => (key ? [ringKeyTowerId(key)] : [])),
       ].sort((a, b) => a - b),
       tracers: this.tracers.active(),
       ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
