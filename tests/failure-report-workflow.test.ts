@@ -10,6 +10,13 @@ describe('failure-report workflow', () => {
     expect(wf).toMatch(/^on:\n {2}workflow_run:\n {4}workflows: \[CI, Release, Deploy\]\n {4}types: \[completed\]\n/m);
   });
 
+  // A skipped job isn't billed: drop the runs scripts/failure-report.ts would ignore anyway (#217).
+  it('starts the job only for Deploy or runs on main', () => {
+    expect(wf).toContain(
+      "if: github.event.workflow_run.name == 'Deploy' || github.event.workflow_run.head_branch == 'main'",
+    );
+  });
+
   it('can write issues but not code', () => {
     expect(wf).toMatch(/^permissions:\n {2}contents: read\n {2}issues: write\n {2}actions: read\n/m);
   });
