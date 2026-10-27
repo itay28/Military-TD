@@ -11,6 +11,7 @@ test('a player opening the game sees the Main menu, not the HUD or build bar', a
   await expect(page.getByRole('button', { name: 'Settings' })).toBeDisabled();
   await expect(page.locator('#hud')).toBeHidden();
   await expect(page.locator('#build-bar')).toBeHidden();
+  await expect(page.locator('#tower-panel')).toBeHidden();
 });
 
 test('Play on the Main menu starts a new game in the Build phase', async ({ page }) => {
