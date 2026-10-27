@@ -6,8 +6,13 @@ export interface BuildOption<K extends string = TowerKind> {
   readonly kind: K;
   readonly name: string;
   readonly cost: number;
-  /** Colours of the tower's square, as the scene draws it. */
-  readonly icon: { readonly fill: number; readonly outline: number };
+  /** Colours, shape and size of the tower, as the scene draws it. */
+  readonly icon: {
+    readonly fill: number;
+    readonly outline: number;
+    readonly shape: 'square' | 'circle';
+    readonly size: number;
+  };
 }
 
 /** The parts of the Game the build bar reads. */
@@ -32,9 +37,17 @@ export function buildOptions(): BuildOption[] {
     kind,
     name: TOWER_NAMES[kind],
     cost: TOWER_STATS[kind].cost,
-    icon: { fill: TOWER_STYLE[kind].fill, outline: TOWER_STYLE[kind].outline },
+    icon: {
+      fill: TOWER_STYLE[kind].fill,
+      outline: TOWER_STYLE[kind].outline,
+      shape: TOWER_STYLE[kind].shape,
+      size: TOWER_STYLE[kind].size,
+    },
   }));
 }
+
+/** Pixels of the icon box in `index.html`; the largest tower fills it. */
+const ICON_BOX = 24;
 
 const cssColor = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
@@ -72,6 +85,7 @@ export function mountBuildBar<K extends string>(
   };
   setCollapsed(false);
 
+  const largest = Math.max(...options.map((option) => option.icon.size));
   const entries = options.map((option, i) => {
     const hotkey = String(i + 1);
     const button = doc.createElement('button');
@@ -84,6 +98,10 @@ export function mountBuildBar<K extends string>(
     icon.className = 'build-icon';
     icon.style.backgroundColor = cssColor(option.icon.fill);
     icon.style.borderColor = cssColor(option.icon.outline);
+    const side = `${(ICON_BOX * option.icon.size) / largest}px`;
+    icon.style.width = side;
+    icon.style.height = side;
+    if (option.icon.shape === 'circle') icon.style.borderRadius = '50%';
     const cost = doc.createElement('span');
     cost.className = 'build-cost';
     cost.textContent = String(option.cost);
