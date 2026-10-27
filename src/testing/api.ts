@@ -1,5 +1,6 @@
 import type { Pixel } from '../scenes/coords';
 import type { Game, GameState } from '../sim/game';
+import type { Tile } from '../sim/map';
 import { applyCommand, type CommandOutcome, type GameSetup, type ScenarioCommand } from '../sim/scenario';
 
 /** What the Game scene lends test mode. `game` is read each time: a restart replaces it. */
@@ -25,8 +26,11 @@ export interface TestView {
   readonly rangeRing: { readonly visible: boolean; readonly towerId: number | null; readonly center: Pixel };
   /** The tracers drawn on the next frame, each from a tower to where its shot hit. */
   readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
-  /** The Ghost under the pointer: shown only while a mouse hovers a tile with a build kind selected. */
-  readonly ghost: { readonly visible: boolean };
+  /**
+   * The Ghost under the pointer: shown only while a mouse hovers, or a finger drags over, a tile with a build kind
+   * selected. `tile` is null when it is hidden.
+   */
+  readonly ghost: { readonly visible: boolean; readonly tile: Tile | null };
   /** The camera over the map: the world pixel at the canvas's top-left corner, and the zoom. */
   readonly camera: { readonly scrollX: number; readonly scrollY: number; readonly zoom: number };
   /** Each display object's layer (`map`, `towers`, `enemies`, …), back to front as Phaser renders them; repeats collapsed. */
