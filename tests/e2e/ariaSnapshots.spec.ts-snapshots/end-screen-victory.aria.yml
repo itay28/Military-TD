@@ -1,0 +1,59 @@
+- dialog "Victory":
+  - heading "Victory" [level=2]
+  - paragraph: Waves survived 1 / 1
+  - table "By tower":
+    - caption: By tower
+    - rowgroup:
+      - row "Tower Tile Damage Kills DPS":
+        - columnheader "Tower"
+        - columnheader "Tile"
+        - columnheader "Damage"
+        - columnheader "Kills"
+        - columnheader "DPS"
+    - rowgroup:
+      - row "Rifle Nest 1, 3 30 1 29.5":
+        - rowheader "Rifle Nest"
+        - cell "1, 3"
+        - cell "30"
+        - cell "1"
+        - cell "29.5"
+  - table "By tower type":
+    - caption: By tower type
+    - rowgroup:
+      - row "Type Towers Damage Kills DPS":
+        - columnheader "Type"
+        - columnheader "Towers"
+        - columnheader "Damage"
+        - columnheader "Kills"
+        - columnheader "DPS"
+    - rowgroup:
+      - row "Rifle Nest 1 30 1 29.5":
+        - rowheader "Rifle Nest"
+        - cell "1"
+        - cell "30"
+        - cell "1"
+        - cell "29.5"
+  - table "By wave":
+    - caption: By wave
+    - rowgroup:
+      - row "Wave Time Damage Kills DPS":
+        - columnheader "Wave"
+        - columnheader "Time"
+        - columnheader "Damage"
+        - columnheader "Kills"
+        - columnheader "DPS"
+    - rowgroup:
+      - row "1 1.0 s 30 1 29.5":
+        - rowheader "1"
+        - cell "1.0 s"
+        - cell "30"
+        - cell "1"
+        - cell "29.5"
+    - rowgroup:
+      - row "Total 1.0 s 30 1 29.5":
+        - rowheader "Total"
+        - cell "1.0 s"
+        - cell "30"
+        - cell "1"
+        - cell "29.5"
+  - button "Restart"

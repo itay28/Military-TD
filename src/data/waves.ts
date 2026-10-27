@@ -9,6 +9,12 @@ const group = (kind: EnemyKind, count: number, spacingMs: number, delayMs = 0): 
 });
 
 /**
+ * With auto-start on, the next wave starts this long after the last one is cleared, in game time. Longer than
+ * `WAVE_BANNER_MS`, so the "Wave N cleared" banner and a moment of build time aren't skipped.
+ */
+export const AUTO_START_DELAY_MS = 5000;
+
+/**
  * The wave schedule, in order (PLAN: starting numbers). Each new kind first comes alone and in small numbers, then
  * mixes with the others. In a mixed wave, later groups start after a delay so the kinds overlap without all
  * arriving at once.

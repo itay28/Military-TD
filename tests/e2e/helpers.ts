@@ -21,6 +21,19 @@ export async function openGame(page: Page, { manualStep = true, anim = false, sp
   await page.waitForFunction(() => window.__TD__ !== undefined);
 }
 
+/** Opens the Main menu in test mode (`menu=1`). `window.__TD__` appears only once Play starts a game. */
+export async function openMenu(page: Page) {
+  await page.goto('/?test=1&menu=1&step=manual&anim=0');
+  await page.getByRole('button', { name: 'Play' }).waitFor();
+}
+
+/** Opens the Level select in test mode: the Main menu, then Play. */
+export async function openLevelSelect(page: Page) {
+  await openMenu(page);
+  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('heading', { name: 'Select map' }).waitFor();
+}
+
 /** The page coordinates of `tile`'s center, through the camera's pan and zoom, so a test clicks the canvas like a player. */
 export async function tileToScreen(page: Page, { col, row }: Tile): Promise<{ x: number; y: number }> {
   const box = await page.locator('#game canvas').boundingBox();

@@ -40,6 +40,10 @@ describe('createTestApi', () => {
     expect(JSON.parse(JSON.stringify(state))).toEqual(state);
   });
 
+  it('state() names the map the game is on, by id', () => {
+    expect(api(fakeHooks()).state().mapId).toBe('mvp');
+  });
+
   it('state() does not change when the game moves on', () => {
     const hooks = fakeHooks(ONE_INFANTRY);
     const testApi = api(hooks);
