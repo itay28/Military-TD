@@ -1,7 +1,7 @@
 import { expect, test, type Locator } from '@playwright/test';
-import { openGame, openMenu, selectKind } from './helpers';
+import { openGame, openLevelSelect, openMenu, selectKind } from './helpers';
 
-// The HUD, build bar and Main menu are DOM, so they are checked as text, not pixels: these snapshots run everywhere, not only in
+// The HUD, build bar, Main menu and Level select are DOM, so they are checked as text, not pixels: these snapshots run everywhere, not only in
 // CI's container. To update them: `npx playwright test ariaSnapshots --update-snapshots`, then commit the .aria.yml
 // files (docs/agents/workflow.md → Aria snapshots).
 
@@ -36,4 +36,9 @@ test('the build bar marks the selected tower', async ({ page }) => {
 test('the Main menu shows the title, Play, and Settings disabled', async ({ page }) => {
   await openMenu(page);
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
+});
+
+test('the Level select lists each map by name, then Back', async ({ page }) => {
+  await openLevelSelect(page);
+  await expectAria(page.locator('#level-select'), 'level-select-initial.aria.yml');
 });
