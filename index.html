@@ -200,6 +200,10 @@
       #pause-menu[hidden] {
         display: none;
       }
+      /* The Paused dialog is hidden while the Settings screen takes its place. */
+      #pause-menu [role='dialog'][hidden] {
+        display: none;
+      }
       #end-screen [role='dialog'],
       #pause-menu [role='dialog'] {
         display: flex;
@@ -465,6 +469,80 @@
         display: block;
         max-width: 100%;
       }
+      /* The Settings screen covers the whole page, over the Main menu or the paused game, whichever opened it. */
+      #settings {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(27 30 22 / 0.88);
+        font: 16px monospace;
+        color: #e4e0c8;
+      }
+      /* `display: flex` above would otherwise override the hidden attribute. */
+      #settings[hidden] {
+        display: none;
+      }
+      #settings [role='dialog'] {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        box-sizing: border-box;
+        max-width: calc(100% - 32px);
+        max-height: calc(100% - 16px);
+        overflow-y: auto;
+        padding: 16px 24px;
+        background: #262a1f;
+        border: 2px solid #c2a46b;
+        border-radius: 4px;
+      }
+      #settings h2 {
+        margin: 0;
+        font-size: 22px;
+        text-align: center;
+        color: #f0c95a;
+      }
+      #settings fieldset {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 18px;
+        margin: 0;
+        padding: 8px 12px 10px;
+        border: 1px solid #5e6350;
+        border-radius: 3px;
+      }
+      #settings legend {
+        padding: 0 4px;
+        color: #c2a46b;
+      }
+      #settings label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+      #settings input {
+        accent-color: #c2a46b;
+        width: 18px;
+        height: 18px;
+        margin: 0;
+      }
+      #settings button {
+        align-self: center;
+        width: 160px;
+        padding: 6px 0;
+        font: bold 16px monospace;
+        color: #1b1e16;
+        background: #c2a46b;
+        border: 0;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #settings :is(button, input):focus-visible {
+        outline: 2px solid #f0c95a;
+        outline-offset: 2px;
+      }
       #version {
         position: fixed;
         right: 6px;
@@ -488,6 +566,7 @@
     </div>
     <main id="menu" hidden></main>
     <main id="level-select" hidden></main>
+    <div id="settings" hidden></div>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
