@@ -2,5 +2,5 @@
   - heading "Paused" [level=2]
   - button "Resume"
   - button "Restart"
-  - button "Settings" [disabled]
+  - button "Settings"
   - button "Quit to menu" [disabled]
