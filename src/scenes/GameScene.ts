@@ -22,6 +22,7 @@ import {
 } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
+import { MAX_GAME_SPEED, type GameSpeed } from './gameSpeed';
 import { createGestures, type Gesture, type Gestures } from './gestures';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { interpolatePosition, snapshotPositions } from './interpolate';
@@ -96,6 +97,8 @@ export class GameScene extends Phaser.Scene {
   private setup: GameSetup = {};
   private sim!: Game;
   private loop!: FixedStep;
+  /** The player's game speed. Each game starts at ×1. */
+  private gameSpeed: GameSpeed = 1;
   private hud!: Hud;
   private buildBar!: BuildBar;
   private endScreen!: EndScreen;
@@ -186,11 +189,12 @@ export class GameScene extends Phaser.Scene {
     this.selectedRingKey = undefined;
     this.ghost = undefined;
     this.sim = setUpGame(this.setup);
+    this.gameSpeed = 1;
     drawMap(onLayer(this.add.graphics(), 'map'), this.sim.state.map);
     this.loop = createFixedStep({
       stepMs: TICK_MS,
-      // Scaled with ?speed, so the cap doesn't pull a faster loop back to real time.
-      maxStepsPerFrame: MAX_TICKS_PER_FRAME * Math.ceil(this.flags.speed),
+      // Scaled with ?speed and the fastest game speed, so the cap doesn't pull a faster loop back to real time.
+      maxStepsPerFrame: MAX_TICKS_PER_FRAME * Math.ceil(this.flags.speed) * MAX_GAME_SPEED,
       step: () => this.tickOnce(),
     });
 
@@ -269,7 +273,10 @@ export class GameScene extends Phaser.Scene {
       this.floatingTexts.add(`+${refund}`, toPixels(tileCenter(tile))),
     );
 
-    this.hud = mountHud(this.hudRoot, this.sim);
+    this.hud = mountHud(this.hudRoot, this.sim, {
+      get: () => this.gameSpeed,
+      set: (speed) => (this.gameSpeed = speed),
+    });
     this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
@@ -399,7 +406,7 @@ export class GameScene extends Phaser.Scene {
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
-    this.loop.advance(frameMs(this.flags, deltaMs));
+    this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
     this.hud.update();
     this.buildBar.update();
     this.endScreen.update();
