@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { CAMERA, DISMANTLE, FLOATING_TEXT, SHELL, TILE_PX, TRACER } from '../data/display';
+import { CAMERA, DISMANTLE, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
+import { ATLAS_KEY, TILE_TYPES, spriteFor, type SpriteKind } from '../data/sprites';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { MAPS, mapById } from '../data/maps';
 import type { Enemy } from '../sim/enemies';
@@ -16,12 +17,14 @@ import {
   drawDismantleRing,
   drawEnemy,
   drawGhost,
+  drawHpBar,
+  drawLevelPips,
   drawRangeRing,
   drawShells,
   drawTower,
   drawTracers,
 } from './drawEntities';
-import { drawMap } from './drawMap';
+import { drawGrid, drawMap, tileType } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, type GameSpeed } from './gameSpeed';
 import { createGestures, type Gesture, type Gestures } from './gestures';
@@ -66,8 +69,13 @@ function onLayer<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Co
   return object.setDepth(DEPTH[layer]).setName(layer);
 }
 
-interface EnemyView {
+/** An enemy or tower: its sprite, if it has one, and a Graphics over it with its shape or just its overlays. */
+interface EntityView {
+  readonly sprite: Phaser.GameObjects.Image | undefined;
   readonly graphics: Phaser.GameObjects.Graphics;
+}
+
+interface EnemyView extends EntityView {
   /** The HP last drawn, so the bar is redrawn only when it changes. */
   hp: number;
 }
@@ -195,7 +203,39 @@ export class GameScene extends Phaser.Scene {
       ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
+      sprites: this.textures.exists(ATLAS_KEY),
     };
+  }
+
+  /** The atlas frame `kind` is drawn with, or null to draw its shape: it has none, or the atlas didn't load. */
+  private frameFor(kind: SpriteKind): string | null {
+    const frame = spriteFor(kind);
+    if (frame === null || !this.textures.exists(ATLAS_KEY)) return null;
+    return this.textures.get(ATLAS_KEY).has(frame) ? frame : null;
+  }
+
+  /** A sprite of `kind` and a Graphics over it on `layer`, both at `at`; no sprite when `kind` has no frame. */
+  private addEntityView(kind: SpriteKind, layer: keyof typeof DEPTH, { x, y }: Pixel): EntityView {
+    const frame = this.frameFor(kind);
+    // Made first, so the Graphics on the same layer draws over it.
+    const sprite = frame === null ? undefined : onLayer(this.add.image(x, y, ATLAS_KEY, frame), layer);
+    sprite?.setScale(SPRITE_SCALE);
+    return { sprite, graphics: onLayer(this.add.graphics(), layer).setPosition(x, y) };
+  }
+
+  /** The map's tiles as sprites with the grid on top, or as shapes when the atlas lacks a tile frame. */
+  private drawMapView(): void {
+    const { map } = this.sim.state;
+    if (!TILE_TYPES.every((type) => this.frameFor(type) !== null))
+      return drawMap(onLayer(this.add.graphics(), 'map'), map);
+    for (let row = 0; row < map.rows; row++) {
+      for (let col = 0; col < map.cols; col++) {
+        const tile = { col, row };
+        const { x, y } = toPixels(tileCenter(tile));
+        onLayer(this.add.image(x, y, ATLAS_KEY, this.frameFor(tileType(map, tile))!), 'map').setScale(SPRITE_SCALE);
+      }
+    }
+    drawGrid(onLayer(this.add.graphics(), 'map'), map);
   }
 
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
@@ -212,7 +252,7 @@ export class GameScene extends Phaser.Scene {
     this.ghost = undefined;
     this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
     this.gameSpeed = 1;
-    drawMap(onLayer(this.add.graphics(), 'map'), this.sim.state.map);
+    this.drawMapView();
     this.loop = createFixedStep({
       stepMs: TICK_MS,
       // Scaled with ?speed and the fastest game speed, so the cap doesn't pull a faster loop back to real time.
@@ -222,43 +262,51 @@ export class GameScene extends Phaser.Scene {
 
     this.enemyViews = createViewSync<Enemy, EnemyView>({
       create: (enemy) => ({
-        graphics: onLayer(this.add.graphics(), enemy.layer === 'air' ? 'air' : 'enemies'),
+        ...this.addEntityView(enemy.kind, enemy.layer === 'air' ? 'air' : 'enemies', { x: 0, y: 0 }),
         hp: Number.NaN,
       }),
       update: (view, enemy) => {
         if (view.hp !== enemy.hp) {
           view.graphics.clear();
-          drawEnemy(view.graphics, enemy);
+          if (view.sprite) drawHpBar(view.graphics, enemy);
+          else drawEnemy(view.graphics, enemy);
           view.hp = enemy.hp;
         }
         const { x, y } = toPixels(interpolatePosition(this.previousPositions, enemy, this.loop.alpha));
         view.graphics.setPosition(x, y);
+        view.sprite?.setPosition(x, y);
       },
-      destroy: (view) => view.graphics.destroy(),
+      destroy: (view) => {
+        view.graphics.destroy();
+        view.sprite?.destroy();
+      },
     });
 
     this.towerViews = createViewSync({
       create: (tower) => {
-        const { x, y } = towerCenter(tower);
+        const at = towerCenter(tower);
         return {
-          graphics: onLayer(this.add.graphics(), 'towers').setPosition(x, y),
+          ...this.addEntityView(tower.kind, 'towers', at),
           level: 0,
-          ring: onLayer(this.add.graphics(), 'towers').setPosition(x, y),
+          ring: onLayer(this.add.graphics(), 'towers').setPosition(at.x, at.y),
         };
       },
       // Redrawn only when an upgrade changes the level pips; a dismantling tower is faded, with a shrinking ring.
       update: (view, tower) => {
         const dismantling = tower.dismantleMs !== undefined;
         view.graphics.setAlpha(dismantling ? DISMANTLE.alpha : 1);
+        view.sprite?.setAlpha(dismantling ? DISMANTLE.alpha : 1);
         view.ring.clear();
         if (dismantling) drawDismantleRing(view.ring, tower.dismantleMs! / DISMANTLE_MS);
         if (view.level === tower.level) return;
         view.level = tower.level;
         view.graphics.clear();
-        drawTower(view.graphics, tower);
+        if (view.sprite) drawLevelPips(view.graphics, tower);
+        else drawTower(view.graphics, tower);
       },
       destroy: (view) => {
         view.graphics.destroy();
+        view.sprite?.destroy();
         view.ring.destroy();
       },
     });

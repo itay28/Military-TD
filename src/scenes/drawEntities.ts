@@ -30,7 +30,7 @@ export interface EntityPainter extends MapPainter {
 
 // Enemies, towers, ghosts and range rings are drawn around the local origin; the scene positions each one's Graphics.
 
-/** A circle or square in its kind's color (air kinds get an offset shadow, rotor kinds an X), with an HP bar above it filled in proportion to HP left. */
+/** A circle or square in its kind's color (air kinds get an offset shadow, rotor kinds an X), with its HP bar. */
 export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   const style = ENEMY_STYLE[enemy.kind];
   const { shape, radius, color } = style;
@@ -47,7 +47,12 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
     painter.lineBetween(-s, -s, s, s);
     painter.lineBetween(-s, s, s, -s);
   }
+  drawHpBar(painter, enemy);
+}
 
+/** The HP bar centered above the enemy, filled in proportion to HP left. Drawn over its sprite too. */
+export function drawHpBar(painter: EntityPainter, enemy: Enemy): void {
+  const { radius } = ENEMY_STYLE[enemy.kind];
   const left = -HP_BAR.width / 2;
   const top = -radius - HP_BAR.gap - HP_BAR.height;
   painter.fillStyle(HP_BAR.back, HP_BAR.backAlpha);
@@ -66,14 +71,20 @@ function paintShape(painter: EntityPainter, { shape, size }: TowerStyle, stroke 
   else painter.fillRect(-half, -half, size, size);
 }
 
-/** A filled shape with an outline, in its kind's style, and a level pip per upgrade along its bottom edge. */
+/** A filled shape with an outline, in its kind's style, and its level pips. */
 export function drawTower(painter: EntityPainter, tower: Tower): void {
   const style = TOWER_STYLE[tower.kind];
   painter.fillStyle(style.fill);
   paintShape(painter, style);
   painter.lineStyle(style.outlineWidth, style.outline);
   paintShape(painter, style, true);
+  drawLevelPips(painter, tower);
+}
+
+/** A level pip per upgrade along the bottom edge of the tower's shape. Drawn over its sprite too. */
+export function drawLevelPips(painter: EntityPainter, tower: Tower): void {
   if (tower.level <= 1) return;
+  const style = TOWER_STYLE[tower.kind];
   const half = style.size / 2;
   const top = half - LEVEL_PIP.inset - LEVEL_PIP.size;
   painter.fillStyle(LEVEL_PIP.color);

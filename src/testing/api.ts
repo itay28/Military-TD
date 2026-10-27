@@ -35,6 +35,8 @@ export interface TestView {
   readonly camera: { readonly scrollX: number; readonly scrollY: number; readonly zoom: number };
   /** Each display object's layer (`map`, `towers`, `enemies`, …), back to front as Phaser renders them; repeats collapsed. */
   readonly drawOrder: readonly string[];
+  /** Whether the sprite atlas loaded. Without it, everything is drawn as shapes. */
+  readonly sprites: boolean;
 }
 
 /** `window.__TD__` with `?test=1` (ADR-0003). */
