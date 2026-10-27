@@ -151,6 +151,14 @@ describe('desiredStatus', () => {
     expect(desiredStatus(issue({ status: 'In review' }), [merged], 'main')).toBeUndefined();
   });
 
+  it('leaves the card alone once a PR merged into main, even if assigned or another PR is open (#258)', () => {
+    // A run that read the board before the close and the PRs after the merge must not overwrite Done.
+    const merged: PullRequest = { ...ready, state: 'MERGED' };
+    expect(desiredStatus(issue({ status: 'In review', assigned: true }), [merged], 'main')).toBeUndefined();
+    expect(desiredStatus(issue({ status: 'In review' }), [merged, draft], 'main')).toBeUndefined();
+    expect(desiredStatus(issue({ status: 'In progress' }), [ready, merged], 'main')).toBeUndefined();
+  });
+
   it('never moves Done cards or trackers (release issues, epics)', () => {
     expect(desiredStatus(issue({ status: 'Done' }), [ready])).toBeUndefined();
     expect(desiredStatus(issue({ tracker: true, assigned: true }), [ready])).toBeUndefined();
