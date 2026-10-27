@@ -3,7 +3,14 @@ import { firstScene, frameMs, parseTestFlags } from './flags';
 
 describe('parseTestFlags', () => {
   it('with no flags, test mode is off and the game runs in real time with animation', () => {
-    expect(parseTestFlags('')).toEqual({ test: false, manualStep: false, anim: true, speed: 1, menu: false });
+    expect(parseTestFlags('')).toEqual({
+      test: false,
+      manualStep: false,
+      anim: true,
+      speed: 1,
+      menu: false,
+      persist: false,
+    });
   });
 
   it('reads test=1, step=manual, anim=0 and speed=N', () => {
@@ -13,6 +20,7 @@ describe('parseTestFlags', () => {
       anim: false,
       speed: 4,
       menu: false,
+      persist: false,
     });
   });
 
@@ -23,6 +31,7 @@ describe('parseTestFlags', () => {
       anim: true,
       speed: 1,
       menu: false,
+      persist: false,
     });
   });
 
@@ -68,6 +77,11 @@ describe('firstScene', () => {
 
   it('goes straight to the Game in test mode, so specs start in the Build phase', () => {
     expect(firstScene(parseTestFlags('?test=1'))).toBe('Game');
+  });
+
+  it('persists settings in test mode only with persist=1', () => {
+    expect(parseTestFlags('?test=1').persist).toBe(false);
+    expect(parseTestFlags('?test=1&persist=1').persist).toBe(true);
   });
 
   it('opens the Main menu in test mode with menu=1', () => {
