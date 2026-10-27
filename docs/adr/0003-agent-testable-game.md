@@ -30,3 +30,5 @@ Supporting rules:
 - Agents can verify almost every change on their own. Only "does it feel fun" needs a human.
 - Some extra code (test hooks, scenario runner) has to be maintained. It ships in the build but is inert unless `?test=1` is set.
 - Choosing DOM for the UI means mixing Phaser and HTML layout. It's a small cost compared to testing UI drawn on the canvas.
+
+Changed: 2026-10-27. Pixel baselines cover the map canvas only (`#game`); DOM UI (HUD, build bar) is covered by aria snapshots (#203, #204), so UI PRs no longer touch a PNG.
