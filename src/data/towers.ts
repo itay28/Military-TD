@@ -3,8 +3,8 @@ import type { TowerStats } from '../sim/towers';
 /** Tower stats by kind, at level 1. Adding a kind here adds it to `TowerKind`. */
 export const TOWER_STATS = {
   rifleNest: { cost: 50, range: 2.5, fireRate: 2, damage: 10, targets: ['ground', 'air'] },
-  aaGun: { cost: 75, range: 3, fireRate: 4, damage: 8, targets: ['air', 'ground'] },
-  cannon: { cost: 100, range: 3, fireRate: 0.5, damage: 60, armorPierce: 5, targets: ['ground'] },
+  aaGun: { cost: 75, range: 3, fireRate: 3, damage: 13, targets: ['air', 'ground'] },
+  cannon: { cost: 100, range: 3, fireRate: 0.5, damage: 60, armorPierce: 8, targets: ['ground'] },
   mortar: {
     cost: 125,
     range: 5,
@@ -35,12 +35,12 @@ export const TOWER_LEVELS = {
     { cost: 70, range: 3, fireRate: 2.5, damage: 16, targets: ['ground', 'air'] },
   ],
   aaGun: [
-    { cost: 60, range: 3.5, fireRate: 4, damage: 8, targets: ['air', 'ground'] },
-    { cost: 105, range: 3.5, fireRate: 5, damage: 12.8, targets: ['air', 'ground'] },
+    { cost: 60, range: 3.5, fireRate: 3, damage: 13, targets: ['air', 'ground'] },
+    { cost: 105, range: 3.5, fireRate: 3.75, damage: 20.8, targets: ['air', 'ground'] },
   ],
   cannon: [
-    { cost: 80, range: 3.5, fireRate: 0.5, damage: 60, armorPierce: 5, targets: ['ground'] },
-    { cost: 140, range: 3.5, fireRate: 0.625, damage: 96, armorPierce: 5, targets: ['ground'] },
+    { cost: 80, range: 3.5, fireRate: 0.5, damage: 60, armorPierce: 8, targets: ['ground'] },
+    { cost: 140, range: 3.5, fireRate: 0.625, damage: 96, armorPierce: 8, targets: ['ground'] },
   ],
   mortar: [
     { ...TOWER_STATS.mortar, cost: 100, range: 5.5 },

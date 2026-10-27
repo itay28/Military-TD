@@ -101,7 +101,7 @@ describe('shell towers', () => {
     const money = game.state.money;
     run(game, 1050);
     expect(kills).toEqual([id]);
-    expect(game.state.money).toBe(money + 5);
+    expect(game.state.money).toBe(money + 4);
   });
 
   it('a shell keeps flying after its tower is gone', () => {
