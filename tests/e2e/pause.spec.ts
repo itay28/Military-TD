@@ -75,10 +75,12 @@ test('Restart from the pause menu starts a new Build phase', async ({ page }) =>
   expect(await state(page)).toMatchObject({ phase: 'build', waveNumber: 0, money: START_MONEY });
 });
 
-test('Settings and Quit to menu are shown but disabled until they exist (#48, #46)', async ({ page }) => {
+test('Quit to menu is shown but disabled until it is wired to the Main menu (#46); Settings is enabled (#48)', async ({
+  page,
+}) => {
   await openGame(page);
   await pauseButton(page).click();
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Quit to menu' })).toBeDisabled();
 });
 
