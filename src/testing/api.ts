@@ -1,4 +1,5 @@
 import type { Pixel } from '../scenes/coords';
+import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
 import type { Tile } from '../sim/map';
 import { applyCommand, type CommandOutcome, type GameSetup, type ScenarioCommand } from '../sim/scenario';
@@ -28,7 +29,7 @@ export interface TestView {
   readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
   /** The combat effects (muzzle flash, explosion, death puff) drawn on the next frame. */
   readonly effects: readonly {
-    readonly kind: 'muzzleFlash' | 'explosion' | 'puff';
+    readonly kind: EffectKind;
     readonly at: Pixel;
     readonly progress: number;
   }[];

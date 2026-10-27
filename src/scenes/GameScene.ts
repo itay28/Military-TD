@@ -317,7 +317,7 @@ export class GameScene extends Phaser.Scene {
       },
     });
 
-    // ?anim=0: zero lifetimes, so tracers and floating texts never show.
+    // ?anim=0: zero lifetimes, so effects, tracers and floating texts never show.
     this.effects = createEffects(this.flags.anim ? EFFECT.lifeMs : 0);
     this.effectGraphics = onLayer(this.add.graphics(), 'effects');
     this.sim.events.on('shellFired', ({ towerId }) => {
@@ -330,8 +330,9 @@ export class GameScene extends Phaser.Scene {
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
-      if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
-      if (tower) this.effects.add('muzzleFlash', towerCenter(tower));
+      if (!tower) return;
+      this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
+      this.effects.add('muzzleFlash', towerCenter(tower));
     });
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
