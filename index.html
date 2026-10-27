@@ -275,7 +275,8 @@
         border: 2px solid #c2a46b;
         border-radius: 4px;
       }
-      /* Scroll cue: a shadow on the edge with content hidden behind it. The `local` cover layers hide it once scrolled there, so nothing shows when the report fits. */
+      /* Scroll cue: a glow on an edge with hidden content.
+         The `local` cover layers hide it where nothing is clipped. */
       #end-screen [role='dialog'] {
         background:
           linear-gradient(#262a1f 30%, rgb(38 42 31 / 0)) top / 100% 24px local no-repeat,
