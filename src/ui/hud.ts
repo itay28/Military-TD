@@ -1,9 +1,16 @@
 import { WAVE_BANNER_MS } from '../data/display';
+import { nextSpeed, type GameSpeed } from '../scenes/gameSpeed';
 import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 
 /** The parts of the Game the HUD reads and commands. */
 export type HudGame = Pick<Game, 'state' | 'events' | 'startWave'>;
+
+/** The player's game speed, which the scene owns: the HUD shows it and sets the next one on click. */
+export interface HudSpeed {
+  get(): GameSpeed;
+  set(speed: GameSpeed): void;
+}
 
 export interface Hud {
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
@@ -13,7 +20,7 @@ export interface Hud {
 }
 
 /** Builds the HUD inside `root` and shows `game` in it. It's DOM, not Phaser text, so tests can query it (ADR-0003). */
-export function mountHud(root: HTMLElement, game: HudGame): Hud {
+export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud {
   const doc = root.ownerDocument;
   const field = (testId: string) => {
     const el = doc.createElement('span');
@@ -30,6 +37,10 @@ export function mountHud(root: HTMLElement, game: HudGame): Hud {
   startWave.dataset.testid = 'start-wave';
   startWave.textContent = 'Start Wave';
   root.append(startWave);
+  const speedButton = doc.createElement('button');
+  speedButton.type = 'button';
+  speedButton.dataset.testid = 'game-speed';
+  root.append(speedButton);
   // A live region stays in place and only its text changes, so screen readers announce it.
   const banner = doc.createElement('div');
   banner.setAttribute('role', 'status');
@@ -57,6 +68,12 @@ export function mountHud(root: HTMLElement, game: HudGame): Hud {
     // The wave figures freeze when the wave ends, so between waves this keeps showing the last wave's DPS.
     setText(dps, state.waveNumber === 0 ? 'DPS –' : `DPS ${Math.round(waveDps(damage, elapsedMs))}`);
     setDisabled(startWave, state.phase !== 'build');
+    const shown = speed.get();
+    setText(speedButton, `×${shown}`);
+    if (speedButton.getAttribute('aria-label') !== `Game speed ×${shown}`)
+      speedButton.setAttribute('aria-label', `Game speed ×${shown}`);
+    // Ticks stop once the game is over, so a faster speed would change nothing.
+    setDisabled(speedButton, isGameOver(state.phase));
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
     const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
     setText(banner, showBanner ? bannerText : '');
@@ -68,6 +85,10 @@ export function mountHud(root: HTMLElement, game: HudGame): Hud {
   // The sim decides; a refused start changes nothing. Redraw at once so a second click can't land first.
   startWave.addEventListener('click', () => {
     game.startWave();
+    update();
+  });
+  speedButton.addEventListener('click', () => {
+    speed.set(nextSpeed(speed.get()));
     update();
   });
   update();
