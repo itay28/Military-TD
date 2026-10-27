@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { classifyFireError, fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
 import { currentMilestone, graphql, milestoneOrder } from './board-sync.ts';
+import { markerFor } from './failure-report.ts';
 import { isMilestoneDone, releaseVersion } from './milestone-report.ts';
 
 // The PR steward (docs/agents/issue-tracker.md → PR steward, ADR-0008): run by
@@ -238,6 +239,31 @@ export type Decision =
   /** Ready to merge, but it touches a critical path (#206): hand off for the maintainer's `/approve`. */
   | { readonly kind: 'approval'; readonly paths: readonly string[] };
 
+/** CI on the default branch is red (#220), with the open *Failure report* issue for it, if any. */
+export interface MainRed {
+  readonly issue: number | null;
+}
+
+/** The CI workflow's jobs; a failed one on the default branch's head means main is red. */
+const MAIN_CI_JOBS = ['ci', 'e2e'];
+export const mainCiRed = (checks: readonly Check[]): boolean =>
+  checks.some((c) => MAIN_CI_JOBS.includes(c.name) && c.state === 'failure');
+
+/** From main's head checks and the open bugs: red, with the CI failure report (failure-report.ts) if open. */
+export const mainRedFrom = (
+  checks: readonly Check[],
+  openBugs: readonly { readonly number: number; readonly body: string }[],
+): MainRed | null =>
+  mainCiRed(checks) ? { issue: openBugs.find((i) => i.body.includes(markerFor('CI')))?.number ?? null } : null;
+
+/** A merge waits while main is red, unless the PR closes the issue that tracks it: that PR is the fix. */
+function heldByRedMain(pr: StewardPr, decision: Decision, mainRed: MainRed | null): Decision {
+  if (decision.kind !== 'merge' || !mainRed) return decision;
+  if (mainRed.issue !== null && pr.closes.some((i) => i.number === mainRed.issue)) return decision;
+  const issue = mainRed.issue === null ? '' : ` (#${mainRed.issue})`;
+  return { kind: 'wait', why: `main CI is failing${issue}: merges once main is green` };
+}
+
 const isMaintainer = (c: PrComment) =>
   !c.bot &&
   MAINTAINER_ASSOCIATIONS.includes(c.association) &&
@@ -254,13 +280,24 @@ const isApproval = (c: PrComment) => isMaintainer(c) && APPROVE_COMMAND.test(c.b
  * for running checks and the CI review, requesting a review that never ran (#209); then merge, if
  * it targets the default branch, no issue it closes is blocked or waiting on an answer, and none
  * is in a later milestone than `current` (#180), and, when it touches a critical path, a
- * maintainer `/approve` came after the latest round (#206).
+ * maintainer `/approve` came after the latest round (#206). While `mainRed`, no merge happens except
+ * the fix's (#220).
  */
 export function decide(
   pr: StewardPr,
   now: Date,
   defaultBranch = 'main',
   current: CurrentMilestone | null = null,
+  mainRed: MainRed | null = null,
+): Decision {
+  return heldByRedMain(pr, decideIgnoringMain(pr, now, defaultBranch, current), mainRed);
+}
+
+function decideIgnoringMain(
+  pr: StewardPr,
+  now: Date,
+  defaultBranch: string,
+  current: CurrentMilestone | null,
 ): Decision {
   if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.fork) return { kind: 'skip', why: 'fork' };
@@ -557,7 +594,8 @@ export function settingsFromEnv(env: Readonly<Record<string, string | undefined>
 
 const PR_QUERY = `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
-    defaultBranchRef { name }
+    defaultBranchRef { name target { ... on Commit { statusCheckRollup { contexts(first: 100) { nodes { ...Context } } } } } }
+    issues(states: OPEN, labels: ["bug"], first: 50) { nodes { number body } }
     milestones(states: OPEN, first: 50) {
       nodes { number title dueOn issues(states: OPEN, first: 100) { pageInfo { hasNextPage } nodes { labels(first: 20) { nodes { name } } } } }
     }
@@ -577,13 +615,7 @@ const PR_QUERY = `query($owner: String!, $name: String!) {
           nodes {
             commit {
               statusCheckRollup {
-                contexts(first: 100) {
-                  nodes {
-                    __typename
-                    ... on CheckRun { name status conclusion completedAt }
-                    ... on StatusContext { context state }
-                  }
-                }
+                contexts(first: 100) { nodes { ...Context } }
               }
             }
           }
@@ -591,6 +623,12 @@ const PR_QUERY = `query($owner: String!, $name: String!) {
       }
     }
   }
+}
+
+fragment Context on StatusCheckRollupContext {
+  __typename
+  ... on CheckRun { name status conclusion completedAt }
+  ... on StatusContext { context state }
 }`;
 
 interface ContextNode {
@@ -664,7 +702,11 @@ export const codeCommittedAt = (commits: readonly RecentCommit[]): string | null
 
 interface PrData {
   repository: {
-    defaultBranchRef: { name: string };
+    defaultBranchRef: {
+      name: string;
+      target: { statusCheckRollup: { contexts: { nodes: ContextNode[] } } | null } | null;
+    };
+    issues: { nodes: { number: number; body: string }[] };
     milestones: {
       nodes: {
         number: number;
@@ -741,6 +783,9 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
   const failures: string[] = [];
   const currentNumber = currentMilestone(repository.milestones.nodes);
   const current = repository.milestones.nodes.find((m) => m.number === currentNumber) ?? null;
+  const mainChecks = (repository.defaultBranchRef.target?.statusCheckRollup?.contexts.nodes ?? []).map(toCheck);
+  const mainRed = mainRedFrom(currentChecks(mainChecks), repository.issues.nodes);
+  if (mainRed) console.log(`${repository.defaultBranchRef.name} CI is failing: only its fix merges (#220).`);
   for (const pr of nodes.map(toStewardPr)) {
     const decision = decide(
       pr,
@@ -752,6 +797,7 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
         after: milestoneOrder(repository.milestones.nodes).filter((n) => n !== current.number),
         done: milestoneDone(current.issues.nodes, current.issues.pageInfo.hasNextPage),
       },
+      mainRed,
     );
     const switchedOff = !switchedOn(decision.kind, settings);
     const detail =

@@ -15,6 +15,8 @@ import {
   renamedFiles,
   currentChecks,
   decide,
+  mainCiRed,
+  mainRedFrom,
   milestoneDone,
   settingsFromEnv,
   type Decision,
@@ -554,6 +556,95 @@ describe('decide: update and merge', () => {
       kind: 'wait',
       why: expect.stringMatching(/stack/),
     });
+  });
+});
+
+describe('decide: main is red (#220)', () => {
+  const red = { issue: 216 };
+
+  it('holds a finished PR while CI on main is failing, naming its issue', () => {
+    expect(decide(pr(), now, 'main', null, red)).toEqual({
+      kind: 'wait',
+      why: 'main CI is failing (#216): merges once main is green',
+    });
+    expect(decide(pr(), now, 'main', null, { issue: null })).toEqual({
+      kind: 'wait',
+      why: 'main CI is failing: merges once main is green',
+    });
+  });
+
+  it('still merges the PR that fixes main', () => {
+    expect(kind(pr({ closes: [{ number: 216, blocked: false, needsInfo: false }] }))).toBe('merge');
+    const fix = pr({ closes: [{ number: 216, blocked: false, needsInfo: false }] });
+    expect(decide(fix, now, 'main', null, red).kind).toBe('merge');
+  });
+
+  it('still brings a behind PR up to date', () => {
+    expect(decide(pr({ behind: true }), now, 'main', null, red).kind).toBe('update');
+  });
+
+  it('holds the release and milestone report PRs too', () => {
+    const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4], done: true };
+    const release = pr({
+      title: 'chore(main): release 0.2.0',
+      head: 'release-please--branches--main--components--military-td',
+      closes: [],
+      comments: [],
+    });
+    const report = pr({
+      title: 'chore: release 0.2.0',
+      head: 'chore/release-0.2.0',
+      body: 'Refs #160\n\nRelease-As: 0.2.0',
+      closes: [],
+      comments: [],
+    });
+    expect(decide(release, now, 'main', v02).kind).toBe('merge');
+    expect(decide(release, now, 'main', v02, red).kind).toBe('wait');
+    expect(decide(report, now, 'main', v02).kind).toBe('merge');
+    expect(decide(report, now, 'main', v02, red).kind).toBe('wait');
+  });
+});
+
+describe('mainCiRed', () => {
+  it("is red when CI's ci or e2e job failed on main's head", () => {
+    expect(
+      mainCiRed([
+        { name: 'ci', state: 'success' },
+        { name: 'e2e', state: 'failure' },
+      ]),
+    ).toBe(true);
+    expect(mainCiRed([{ name: 'ci', state: 'failure' }])).toBe(true);
+  });
+
+  it('is not red while they pass, run or are missing, whatever other checks do', () => {
+    expect(
+      mainCiRed([
+        { name: 'ci', state: 'success' },
+        { name: 'e2e', state: 'success' },
+      ]),
+    ).toBe(false);
+    expect(
+      mainCiRed([
+        { name: 'ci', state: 'pending' },
+        { name: 'e2e', state: 'pending' },
+      ]),
+    ).toBe(false);
+    expect(mainCiRed([{ name: 'report', state: 'failure' }])).toBe(false);
+    expect(mainCiRed([])).toBe(false);
+  });
+});
+
+describe('mainRedFrom', () => {
+  const report = { number: 216, body: 'The CI workflow failed on main.\n\n<!-- failure-report:CI -->' };
+  const other = { number: 99, body: 'Some other bug' };
+
+  it('is null while main is green', () => {
+    expect(mainRedFrom([{ name: 'ci', state: 'success' }], [report])).toBeNull();
+  });
+
+  it("names the open CI failure report, or none when there isn't one", () => {
+    expect(mainRedFrom([{ name: 'e2e', state: 'failure' }], [other, report])).toEqual({ issue: 216 });
+    expect(mainRedFrom([{ name: 'e2e', state: 'failure' }], [other])).toEqual({ issue: null });
   });
 });
 
