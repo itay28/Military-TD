@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { WAVE_BANNER_MS } from '../data/display';
+import { AUTO_START_DELAY_MS } from '../data/waves';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { waveDps } from '../sim/stats';
@@ -222,6 +223,77 @@ describe('HUD', () => {
       hud.update();
       await Promise.resolve();
       expect(writes).toEqual([]);
+    });
+  });
+
+  describe('Auto-start', () => {
+    const toggle = () => root.querySelector<HTMLButtonElement>('button[data-testid="auto-start"]');
+    const nextWave = () => byTestId('hud-next-wave');
+
+    it('is an "Auto-start" toggle button, off at first', () => {
+      mountHud(root, newGame());
+      expect(toggle()?.textContent).toBe('Auto-start');
+      expect(toggle()?.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('clicking it turns auto-start on in the sim, and clicking again turns it off', () => {
+      const game = newGame();
+      mountHud(root, game);
+      toggle()!.click();
+      expect(game.state.autoStart).toBe(true);
+      expect(toggle()?.getAttribute('aria-pressed')).toBe('true');
+      toggle()!.click();
+      expect(game.state.autoStart).toBe(false);
+      expect(toggle()?.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('shows "Next wave in N", in whole seconds rounded up, while counting down', () => {
+      const game = newGame();
+      const hud = mountHud(root, game);
+      expect(nextWave()?.textContent).toBe('');
+      toggle()!.click();
+      expect(nextWave()?.textContent).toBe(`Next wave in ${AUTO_START_DELAY_MS / 1000}`);
+      game.tick(AUTO_START_DELAY_MS - 1500);
+      hud.update();
+      expect(nextWave()?.textContent).toBe('Next wave in 2');
+    });
+
+    it('shows no countdown while the "Wave N cleared" banner is up, then counts down', () => {
+      const game = newGame();
+      const hud = mountHud(root, game);
+      toggle()!.click();
+      game.tick(AUTO_START_DELAY_MS);
+      game.tick(LEAK_MS);
+      hud.update();
+      expect(byTestId('wave-banner')?.textContent).toBe('Wave 1 cleared');
+      expect(nextWave()?.textContent).toBe('');
+      game.tick(WAVE_BANNER_MS);
+      hud.update();
+      expect(nextWave()?.textContent).toBe(`Next wave in ${(AUTO_START_DELAY_MS - WAVE_BANNER_MS) / 1000}`);
+    });
+
+    it('shows no countdown once the wave has started, or after it is turned off', () => {
+      const game = newGame();
+      const hud = mountHud(root, game);
+      toggle()!.click();
+      game.tick(AUTO_START_DELAY_MS);
+      hud.update();
+      expect(game.state.phase).toBe('wave');
+      expect(nextWave()?.textContent).toBe('');
+      game.tick(LEAK_MS);
+      game.tick(WAVE_BANNER_MS);
+      hud.update();
+      expect(nextWave()?.textContent).not.toBe('');
+      toggle()!.click();
+      expect(nextWave()?.textContent).toBe('');
+    });
+
+    it('is disabled once the game is over', () => {
+      const game = newGame(1);
+      const hud = mountHud(root, game);
+      playWave(game);
+      hud.update();
+      expect(toggle()?.disabled).toBe(true);
     });
   });
 

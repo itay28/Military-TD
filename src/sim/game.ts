@@ -1,5 +1,6 @@
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, SELL_REFUND, TOWER_STATS, type TowerKind } from '../data/towers';
+import { AUTO_START_DELAY_MS } from '../data/waves';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
 import { createMap, type GameMap, type MapData, type Position, type Tile } from './map';
@@ -11,8 +12,8 @@ import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData }
 /** The one fixed step, in ms. The Game scene and the scenario runner both tick with it. */
 export const TICK_MS = 1000 / 60;
 
-/** Slack for float sums of tick times, so a dismantle due on a tick ends on it. */
-const DISMANTLE_EPSILON = 1e-9;
+/** Slack for float sums of tick times, so a dismantle or an auto-start due on a tick happens on it. */
+const TIME_EPSILON = 1e-9;
 
 export interface GameConfig {
   readonly map: MapData;
@@ -49,6 +50,10 @@ export interface GameState {
   readonly totalWaves: number;
   /** Damage and kills, overall and per tower; wave figures freeze when the wave ends. */
   readonly stats: CombatStats;
+  /** Whether the next wave starts by itself after a wave is cleared (`setAutoStart`). Off in a new game. */
+  readonly autoStart: boolean;
+  /** The game time the next wave starts by itself; set only while auto-start counts down in the Build phase. */
+  readonly autoStartAtMs: number | undefined;
 }
 
 export interface GameEvents {
@@ -105,6 +110,12 @@ export interface Game {
    */
   startWave(): CommandResult<'noWavesLeft' | 'notBuildPhase'>;
   /**
+   * Turns auto-start on or off. While it's on, `AUTO_START_DELAY_MS` of game time after each wave is cleared (or
+   * after it's turned on in the Build phase) the next wave starts as if by `startWave`. Turning it off cancels the
+   * countdown. Nothing counts down once every wave has started. Refuses with `gameEnded` after Victory or Defeat.
+   */
+  setAutoStart(on: boolean): CommandResult<'gameEnded'>;
+  /**
    * Places a tower on `tile` for its cost, in the Build or Wave phase, and returns its id.
    * Refuses, in this order: `gameEnded` after Victory or Defeat, `notBuildable` off the grid or on the Path,
    * `occupied` where a tower stands, `insufficientMoney` when Money is below the cost.
@@ -155,6 +166,8 @@ export function createGame(config: GameConfig): Game {
     wavesCleared: 0,
     totalWaves: config.waves.length,
     stats: emptyStats(),
+    autoStart: false,
+    autoStartAtMs: undefined,
   };
   const emitter = createEmitter<GameEvents>();
   let nextId = 1;
@@ -164,6 +177,26 @@ export function createGame(config: GameConfig): Game {
   const createEnemy = (kind: EnemyKind): Enemy => {
     const stats = ENEMY_STATS[kind];
     return { ...stats, id: nextId++, kind, hp: stats.maxHp, distance: 0, position: line.positionAt(0) };
+  };
+
+  /** Starts the auto-start countdown when it's on and a wave can start: in the Build phase, with waves left. */
+  const countDownToNextWave = () => {
+    if (state.autoStart && state.phase === 'build' && state.waveNumber < state.totalWaves)
+      state.autoStartAtMs = state.timeMs + AUTO_START_DELAY_MS;
+  };
+
+  const startWave = (): CommandResult<'noWavesLeft' | 'notBuildPhase'> => {
+    const next = config.waves[state.waveNumber];
+    if (!next) return { ok: false, reason: 'noWavesLeft' };
+    if (state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
+    wave = { schedule: createSpawnSchedule(next), startMs: state.timeMs };
+    state.phase = 'wave';
+    state.autoStartAtMs = undefined;
+    state.stats = resetWave(state.stats);
+    state.waveNumber++;
+    state.enemies.push(...wave.schedule.take(0).map((spawn) => createEnemy(spawn.kind)));
+    emitter.emit('waveStarted', { waveNumber: state.waveNumber });
+    return { ok: true };
   };
 
   const canPlaceTower = (kind: TowerKind, tile: Tile): CommandResult<PlaceTowerRefusal> => {
@@ -240,13 +273,14 @@ export function createGame(config: GameConfig): Game {
         state.wavesCleared++;
         state.phase = state.waveNumber === state.totalWaves ? 'victory' : 'build';
         if (state.phase === 'victory') state.shells = [];
+        countDownToNextWave();
       }
       // A tower whose dismantling ends is paid out, unless the game just ended.
       if (!isGameOver(state.phase)) {
         state.towers = state.towers.flatMap((tower) => {
           if (tower.dismantleMs === undefined) return [tower];
           const dismantleMs = tower.dismantleMs - dtMs;
-          if (dismantleMs > DISMANTLE_EPSILON) return [{ ...tower, dismantleMs }];
+          if (dismantleMs > TIME_EPSILON) return [{ ...tower, dismantleMs }];
           const refund = Math.floor(SELL_REFUND * tower.spent);
           state.money += refund;
           sold.push({ towerId: tower.id, tile: tower.tile, refund });
@@ -269,22 +303,21 @@ export function createGame(config: GameConfig): Game {
       if (cleared) emitter.emit('waveCleared', { waveNumber: state.waveNumber });
       if (state.phase === 'victory') emitter.emit('victory', { lives: state.lives });
       if (state.phase === 'defeat') emitter.emit('defeat', { waveNumber: state.waveNumber });
+      // Last, so the waveCleared that started the countdown is out before the next waveStarted.
+      if (state.autoStartAtMs !== undefined && state.timeMs >= state.autoStartAtMs - TIME_EPSILON) startWave();
     },
     spawnEnemy(kind) {
       const enemy = createEnemy(kind);
       state.enemies.push(enemy);
       return enemy.id;
     },
-    startWave() {
-      const next = config.waves[state.waveNumber];
-      if (!next) return { ok: false, reason: 'noWavesLeft' };
-      if (state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
-      wave = { schedule: createSpawnSchedule(next), startMs: state.timeMs };
-      state.phase = 'wave';
-      state.stats = resetWave(state.stats);
-      state.waveNumber++;
-      state.enemies.push(...wave.schedule.take(0).map((spawn) => createEnemy(spawn.kind)));
-      emitter.emit('waveStarted', { waveNumber: state.waveNumber });
+    startWave,
+    setAutoStart(on) {
+      if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' };
+      if (on === state.autoStart) return { ok: true };
+      state.autoStart = on;
+      if (on) countDownToNextWave();
+      else state.autoStartAtMs = undefined;
       return { ok: true };
     },
     placeTower(kind, tile) {
