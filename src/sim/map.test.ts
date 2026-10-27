@@ -84,6 +84,19 @@ describe('createMap', () => {
     expect(map.inBounds({ col: 5, row: 4 })).toBe(true);
   });
 
+  it('with a buildable list, only listed tiles off the Path are buildable', () => {
+    const map = createMap({
+      ...SMALL,
+      buildable: [
+        { col: 2, row: 2 },
+        { col: 1, row: 1 },
+      ],
+    });
+    expect(map.isBuildable({ col: 2, row: 2 })).toBe(true);
+    expect(map.isBuildable({ col: 0, row: 0 })).toBe(false);
+    expect(map.isBuildable({ col: 1, row: 1 })).toBe(false);
+  });
+
   it('waypoint positions are the tile centers', () => {
     expect(createMap(SMALL).waypointPositions).toEqual([
       { x: 0.5, y: 1.5 },

@@ -18,6 +18,9 @@ export const MVP_MAP: MapData = {
   ],
 };
 
+/** The fewest buildable tiles off the Path a map may have, so a full defense still leaves choices (ADR-0006). */
+export const MIN_BUILDABLE_TILES = 40;
+
 /** A map the player can pick on the Level select: its id, the name shown, and its data. */
 export interface MapEntry {
   readonly id: string;

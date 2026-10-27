@@ -80,6 +80,7 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 
 | The issue has | Card goes to |
 | --- | --- |
+| a PR merged into `main` | stays where it is (closing the issue moves it to *Done*; #258) |
 | an open PR ready for review, or a stacked PR merged into its parent branch | *In review* |
 | only draft PRs, or no PR but an assignee | *In progress* |
 | no PR, no assignee, card in *Backlog*/*Ready*/none: current milestone (or `area:infra` with no milestone) + `ready-for-agent` + no open blockers | *Ready* |

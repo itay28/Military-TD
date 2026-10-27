@@ -23,6 +23,7 @@ function fakeHooks(setup: GameSetup = {}): TestHooks & { load: ReturnType<typeof
 
 const EMPTY_VIEW: TestView = {
   rangeRing: { visible: false, towerId: null, center: { x: 0, y: 0 } },
+  rangeRings: [],
   tracers: [],
   ghost: { visible: false, tile: null },
   camera: { scrollX: 0, scrollY: 0, zoom: 1 },
@@ -128,6 +129,7 @@ describe('createTestApi', () => {
   it("view() is a plain copy of the scene's view that later frames don't change", () => {
     const scene = {
       rangeRing: { visible: true, towerId: 1, center: { x: 72, y: 168 } },
+      rangeRings: [1],
       tracers: [{ from: { x: 72, y: 168 }, to: { x: 24, y: 120 }, alpha: 1 }],
       ghost: { visible: true, tile: { col: 1, row: 2 } },
       camera: { scrollX: 10, scrollY: -20, zoom: 1.5 },
