@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MVP_MAP } from '../data/maps';
 import { START_LIVES, START_MONEY } from '../data/start';
-import { WAVES } from '../data/waves';
+import { AUTO_START_DELAY_MS, WAVES } from '../data/waves';
 import { TICK_MS } from './game';
 import type { MapData } from './map';
 import { runScenario, setUpGame } from './scenario';
@@ -52,6 +52,27 @@ describe('runScenario', () => {
     expect(leak?.tick).toBeGreaterThanOrEqual(249);
     expect(leak?.tick).toBeLessThanOrEqual(251);
     expect(events.slice(2).every((e) => e.tick === leak?.tick)).toBe(true);
+  });
+
+  it('a setAutoStart command turns auto-start on: the first wave starts AUTO_START_DELAY_MS later', () => {
+    const { events, finalState } = runScenario({
+      map: SMALL,
+      waves: ONE_INFANTRY,
+      script: [{ atTick: 0, command: { type: 'setAutoStart', on: true } }],
+      until: { event: 'waveStarted' },
+    });
+    expect(events[0]).toEqual({
+      tick: 0,
+      type: 'command',
+      command: { type: 'setAutoStart', on: true },
+      result: { ok: true },
+    });
+    expect(finalState.autoStart).toBe(true);
+    expect(events.at(-1)).toEqual({
+      tick: Math.round(AUTO_START_DELAY_MS / TICK_MS),
+      type: 'waveStarted',
+      waveNumber: 1,
+    });
   });
 
   it('a refused command is logged with its reason and the run goes on', () => {

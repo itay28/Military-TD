@@ -135,7 +135,11 @@ export function mountBuildBar<K extends string>(
 
   const onKey = (event: KeyboardEvent) => {
     if (event.ctrlKey || event.altKey || event.metaKey) return;
-    if (event.key === 'Escape') return clear();
+    if (event.key === 'Escape') {
+      if (!selected) return;
+      event.preventDefault(); // handled: it doesn't also pause (pauseMenu.ts)
+      return clear();
+    }
     const option = /^[1-9]$/.test(event.key) ? options[Number(event.key) - 1] : undefined;
     if (option) select(option);
   };

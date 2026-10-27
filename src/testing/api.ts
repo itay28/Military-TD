@@ -17,8 +17,8 @@ export interface TestHooks {
 /** Named scenarios' setups, loaded on demand. */
 export type ScenarioLoaders = Readonly<Record<string, () => Promise<GameSetup>>>;
 
-/** The game state without the map (which has methods), so it survives `page.evaluate`. */
-export type TestState = Omit<GameState, 'map'>;
+/** The game state without the map (which has methods), so it survives `page.evaluate`, plus the map's id. */
+export type TestState = Omit<GameState, 'map'> & { readonly mapId: string };
 
 /** What the Game scene draws now, in canvas pixels, read from its display objects. */
 export interface TestView {
@@ -62,9 +62,8 @@ declare global {
 
 export function createTestApi(hooks: TestHooks, scenarios: ScenarioLoaders): TestApi {
   const state = (): TestState => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { map, ...rest } = hooks.game.state;
-    return structuredClone(rest);
+    return { ...structuredClone(rest), mapId: map.id };
   };
   return {
     state,

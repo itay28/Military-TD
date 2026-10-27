@@ -67,6 +67,10 @@
         border-radius: 3px;
         cursor: pointer;
       }
+      /* The Pause button sits right of Start Wave, whose auto margin pushes both to the end. */
+      #hud [data-testid='pause'] {
+        margin-left: 8px;
+      }
       #hud button:disabled {
         background: #5e6350;
         color: #a2a58f;
@@ -75,6 +79,22 @@
       #hud button:focus-visible {
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
+      }
+      /* A toggle: outlined when off, filled when on. It sits right after Start Wave. */
+      #hud .hud-toggle {
+        margin-left: 0;
+        color: #c2a46b;
+        background: transparent;
+        box-shadow: inset 0 0 0 2px #c2a46b;
+      }
+      #hud .hud-toggle[aria-pressed='true'] {
+        color: #1b1e16;
+        background: #c2a46b;
+      }
+      #hud .hud-toggle:disabled {
+        color: #5e6350;
+        background: transparent;
+        box-shadow: inset 0 0 0 2px #5e6350;
       }
       /* The End screen covers the canvas, so the map takes no clicks while it's open. */
       #stage {
@@ -164,7 +184,8 @@
         font: 10px monospace;
         color: #a2a58f;
       }
-      #end-screen {
+      #end-screen,
+      #pause-menu {
         position: absolute;
         inset: 0;
         display: flex;
@@ -174,31 +195,77 @@
         font: 16px monospace;
         color: #e4e0c8;
       }
-      /* `display: flex` above would otherwise override the hidden attribute. */
-      #end-screen[hidden] {
+      /* `display: flex` above would otherwise override the hidden attribute. The pause menu is styled like the End screen. */
+      #end-screen[hidden],
+      #pause-menu[hidden] {
         display: none;
       }
-      #end-screen [role='dialog'] {
+      #end-screen [role='dialog'],
+      #pause-menu [role='dialog'] {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 14px;
-        padding: 24px 40px;
+        gap: 10px;
+        box-sizing: border-box;
+        max-height: calc(100% - 16px);
+        overflow-y: auto;
+        padding: 16px 24px;
         background: #262a1f;
         border: 2px solid #c2a46b;
         border-radius: 4px;
       }
-      #end-screen h2 {
+      #end-screen h2,
+      #pause-menu h2 {
         margin: 0;
         font-size: 32px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #f0c95a;
       }
-      #end-screen p {
+      #end-screen p,
+      #pause-menu p {
         margin: 0;
       }
-      #end-screen button {
+      /* The damage report: small tables side by side, wrapping as the dialog narrows. */
+      #end-screen .report {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 10px 20px;
+        font-size: 12px;
+      }
+      #end-screen table {
+        border-collapse: collapse;
+      }
+      #end-screen caption {
+        padding-bottom: 2px;
+        text-align: left;
+        font-weight: bold;
+        color: #c2a46b;
+      }
+      #end-screen th,
+      #end-screen td {
+        padding: 1px 6px;
+        text-align: right;
+        font-weight: normal;
+        white-space: nowrap;
+      }
+      #end-screen th[scope='row'],
+      #end-screen thead th:first-child {
+        text-align: left;
+      }
+      #end-screen thead th {
+        border-bottom: 1px solid #5b6b3a;
+        color: #a2a58f;
+      }
+      #end-screen tfoot th,
+      #end-screen tfoot td {
+        border-top: 1px solid #5b6b3a;
+        font-weight: bold;
+      }
+      #end-screen button,
+      #pause-menu button {
         padding: 6px 22px;
         font: bold 16px monospace;
         color: #1b1e16;
@@ -207,9 +274,18 @@
         border-radius: 3px;
         cursor: pointer;
       }
-      #end-screen button:focus-visible {
+      #end-screen button:focus-visible,
+      #pause-menu button:focus-visible {
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
+      }
+      #pause-menu button {
+        min-width: 180px;
+      }
+      #pause-menu button:disabled {
+        color: #a2a58f;
+        background: #5e6350;
+        cursor: default;
       }
       /* The tower panel sits over the top-right of the map; the End screen, after it, covers it. */
       #tower-panel {
@@ -308,6 +384,87 @@
         border-radius: 3px;
         cursor: pointer;
       }
+      /* The Main menu and Level select cover the whole page; the game's UI is hidden behind them, out of the accessibility tree too. */
+      #app[data-screen] :is(#hud, #build-bar, #tower-panel) {
+        display: none;
+      }
+      #menu,
+      #level-select {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: #1b1e16;
+        font: 16px monospace;
+        color: #e4e0c8;
+      }
+      /* `display: flex` above would otherwise override the hidden attribute. */
+      #menu[hidden],
+      #level-select[hidden] {
+        display: none;
+      }
+      #menu h1,
+      #level-select h1 {
+        margin: 0 0 18px;
+        font-size: 40px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #f0c95a;
+      }
+      #menu button,
+      #level-select > button {
+        width: 200px;
+        padding: 8px 0;
+        font: bold 18px monospace;
+        color: #1b1e16;
+        background: #c2a46b;
+        border: 0;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #menu button:disabled {
+        background: #5e6350;
+        color: #a2a58f;
+        cursor: default;
+      }
+      #menu button:focus-visible,
+      #level-select button:focus-visible {
+        outline: 2px solid #f0c95a;
+        outline-offset: 2px;
+      }
+      #level-select ul {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
+        margin: 0 0 18px;
+        padding: 0 16px;
+        list-style: none;
+      }
+      /* A map: its preview, then its name. */
+      #level-select button.map {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        font: bold 16px monospace;
+        color: #e4e0c8;
+        background: #262a1f;
+        border: 2px solid #5e6350;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #level-select button.map:hover {
+        border-color: #c2a46b;
+      }
+      #level-select canvas {
+        display: block;
+        max-width: 100%;
+      }
       #version {
         position: fixed;
         right: 6px;
@@ -325,9 +482,12 @@
         <div id="game"></div>
         <div id="tower-panel" hidden></div>
         <div id="end-screen" hidden></div>
+        <div id="pause-menu" hidden></div>
       </div>
       <nav id="build-bar" aria-label="Build"></nav>
     </div>
+    <main id="menu" hidden></main>
+    <main id="level-select" hidden></main>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
