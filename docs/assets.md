@@ -1,6 +1,6 @@
 # Third-party assets
 
-Every art, audio and font file we didn't make ourselves must be traceable to its source and license. CI enforces this from v0.4.0 (#60).
+Every art, audio and font file we didn't make ourselves must be traceable to its source and license. CI enforces this (#60): `npm run check:assets`, part of `npm run check`, fails on a file under `assets/` that no manifest `files` glob covers, a license off the allowlist (CC-BY without attribution, OFL on non-fonts), a pack folder without a license file, or a `CREDITS.md` that differs from `npm run credits`.
 
 ## Allowed licenses
 

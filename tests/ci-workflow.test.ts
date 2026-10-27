@@ -29,12 +29,13 @@ describe('ci workflow', () => {
     }
   });
 
-  it('ci runs npm ci, then typecheck, lint, format check, test, build and the itch.io build check in that order', () => {
+  it('ci runs npm ci, then typecheck, lint, format check, asset licenses, test, build and the itch.io build check in that order', () => {
     expect(runs(job('ci'))).toEqual([
       'npm ci',
       'npm run typecheck',
       'npm run lint',
       'npm run format:check',
+      'npm run check:assets',
       'npm test',
       'npm run build',
       'node scripts/itch-build.ts dist',
