@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
+import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
@@ -24,6 +25,8 @@ const app = document.getElementById('app');
 if (!app) throw new Error('index.html has no #app element');
 const menuRoot = document.getElementById('menu');
 if (!menuRoot) throw new Error('index.html has no #menu element');
+const levelSelectRoot = document.getElementById('level-select');
+if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
 const flags = parseTestFlags(window.location.search);
 const gameScene = new GameScene({
@@ -49,7 +52,12 @@ const game = new Phaser.Game({
   // The mouse and two fingers, for a pinch.
   input: { activePointers: 2 },
   backgroundColor: '#1b1e16',
-  scene: [new BootScene(flags), new MenuScene({ app, menuRoot }), gameScene],
+  scene: [
+    new BootScene(flags),
+    new MenuScene({ app, menuRoot }),
+    new LevelSelectScene({ app, root: levelSelectRoot }),
+    gameScene,
+  ],
 });
 // Phaser resizes on window resizes only; collapsing the build bar or the HUD wrapping resizes the stage without one.
 new ResizeObserver(() => {
