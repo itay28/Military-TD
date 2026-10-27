@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { Phase } from '../sim/game';
 import { mountPauseMenu, type PauseMenu, type PauseMenuOptions } from './pauseMenu';
 
@@ -124,9 +124,63 @@ describe('mountPauseMenu', () => {
     expect(button('quit')!.disabled).toBe(true);
   });
 
-  it('disables Settings until it exists', () => {
+  it('disables Settings when it is given no Settings screen to open', () => {
     mount().open();
     expect(button('settings')!.disabled).toBe(true);
+  });
+
+  describe('Settings', () => {
+    let onBack: () => void;
+    let screen: { close: Mock<() => void>; back: Mock<() => void> };
+    const openSettings = vi.fn((back: () => void) => {
+      onBack = back;
+      return screen;
+    });
+    beforeEach(() => {
+      openSettings.mockClear();
+      // As the real screen does: back() closes it, then calls the opener's onBack.
+      screen = { close: vi.fn(), back: vi.fn(() => onBack()) };
+    });
+
+    it('opens the Settings screen in place of the Paused dialog, still paused', () => {
+      const menu = mount({ openSettings });
+      menu.open();
+      button('settings')!.click();
+      expect(openSettings).toHaveBeenCalledOnce();
+      expect(dialog()!.hidden).toBe(true);
+      expect(menu.paused).toBe(true);
+      expect(buildBar.inert).toBe(true);
+    });
+
+    it('comes back to the Paused dialog with Settings focused', () => {
+      const menu = mount({ openSettings });
+      menu.open();
+      button('settings')!.click();
+      onBack();
+      expect(dialog()!.hidden).toBe(false);
+      expect(menu.paused).toBe(true);
+      expect(document.activeElement).toBe(button('settings'));
+    });
+
+    it('makes Esc go back from Settings rather than resume', () => {
+      const menu = mount({ openSettings });
+      menu.open();
+      button('settings')!.click();
+      pressKey('Escape');
+      expect(screen.back).toHaveBeenCalledOnce();
+      expect(menu.paused).toBe(true);
+      expect(dialog()!.hidden).toBe(false);
+      pressKey('Escape');
+      expect(menu.paused).toBe(false);
+    });
+
+    it('closes an open Settings screen when destroyed', () => {
+      const menu = mount({ openSettings });
+      menu.open();
+      button('settings')!.click();
+      menu.destroy();
+      expect(screen.close).toHaveBeenCalledOnce();
+    });
   });
 
   it('makes the blocked areas inert only while paused', () => {

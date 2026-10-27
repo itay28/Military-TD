@@ -8,7 +8,7 @@ test('a player opening the game sees the Main menu, not the HUD or build bar', a
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Military TD' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Play' })).toBeFocused();
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeEnabled();
   await expect(page.locator('#hud')).toBeHidden();
   await expect(page.locator('#build-bar')).toBeHidden();
   await expect(page.locator('#tower-panel')).toBeHidden();
