@@ -4,7 +4,7 @@ import {
   commentNoSize,
   github,
   HOLD_LABEL,
-  INFRA_LABEL,
+  isInfra,
   MAX_SIZE_REQUESTS,
   NEEDS_INFO_LABEL,
   NEEDS_YOU_LABEL,
@@ -429,7 +429,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         labelled: c.labels?.nodes.some((l) => l.name === READY_LABEL) ?? false,
         blocked: (c.issueDependenciesSummary?.blockedBy ?? 0) > 0,
         milestone: c.milestone?.number ?? null,
-        infra: labels.includes(INFRA_LABEL) || node.area?.name === 'infra',
+        infra: isInfra(labels, node.area?.name),
       });
       labelled.push({
         number: c.number,
