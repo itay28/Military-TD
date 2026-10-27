@@ -139,6 +139,18 @@ describe('Tower panel', () => {
     expect(root.hidden).toBe(true);
   });
 
+  it('marks an Escape that deselects as handled, so it does not also pause', () => {
+    const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]));
+    const escape = () => new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    const idle = escape();
+    document.dispatchEvent(idle);
+    expect(idle.defaultPrevented).toBe(false);
+    panel.select(1);
+    const deselecting = escape();
+    document.dispatchEvent(deselecting);
+    expect(deselecting.defaultPrevented).toBe(true);
+  });
+
   it('hides and deselects on the next update once the tower is gone', () => {
     const game = fakeGame([rifleNest(1)]);
     const panel = mountTowerPanel(root, game);
