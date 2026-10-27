@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createMap, type Tile } from '../sim/map';
-import { MVP_MAP } from './maps';
+import { MAPS, mapById, MVP_MAP } from './maps';
 
 function edgesOf({ col, row }: Tile, cols: number, rows: number): string[] {
   return [col === 0 && 'left', col === cols - 1 && 'right', row === 0 && 'top', row === rows - 1 && 'bottom'].filter(
@@ -21,5 +21,34 @@ describe('MVP map', () => {
     expect(entry).toHaveLength(1);
     expect(exit).toHaveLength(1);
     expect(exit).not.toEqual(entry);
+  });
+});
+
+describe('map registry', () => {
+  it('is never empty (GameScene defaults to the first map)', () => {
+    expect(MAPS.length).toBeGreaterThan(0);
+  });
+
+  it('starts with the MVP map', () => {
+    expect(MAPS[0]?.data).toBe(MVP_MAP);
+  });
+
+  it('has unique ids', () => {
+    const ids = MAPS.map(({ id }) => id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it.each(MAPS)('$id: its id matches its map data, it has a name, and the map is valid', ({ id, name, data }) => {
+    expect(data.id).toBe(id);
+    expect(name.trim()).not.toBe('');
+    expect(() => createMap(data)).not.toThrow();
+  });
+
+  it('finds an entry by id', () => {
+    expect(mapById('mvp').data).toBe(MVP_MAP);
+  });
+
+  it('throws for an unknown id, naming the ones there are', () => {
+    expect(() => mapById('nope')).toThrow(/No map "nope".*mvp/);
   });
 });

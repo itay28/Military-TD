@@ -384,11 +384,12 @@
         border-radius: 3px;
         cursor: pointer;
       }
-      /* The Main menu covers the whole page; the game's UI is hidden behind it, out of the accessibility tree too. */
-      #app[data-screen='menu'] :is(#hud, #build-bar, #tower-panel) {
+      /* The Main menu and Level select cover the whole page; the game's UI is hidden behind them, out of the accessibility tree too. */
+      #app[data-screen] :is(#hud, #build-bar, #tower-panel) {
         display: none;
       }
-      #menu {
+      #menu,
+      #level-select {
         position: fixed;
         inset: 0;
         display: flex;
@@ -401,17 +402,20 @@
         color: #e4e0c8;
       }
       /* `display: flex` above would otherwise override the hidden attribute. */
-      #menu[hidden] {
+      #menu[hidden],
+      #level-select[hidden] {
         display: none;
       }
-      #menu h1 {
+      #menu h1,
+      #level-select h1 {
         margin: 0 0 18px;
         font-size: 40px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #f0c95a;
       }
-      #menu button {
+      #menu button,
+      #level-select > button {
         width: 200px;
         padding: 8px 0;
         font: bold 18px monospace;
@@ -426,9 +430,40 @@
         color: #a2a58f;
         cursor: default;
       }
-      #menu button:focus-visible {
+      #menu button:focus-visible,
+      #level-select button:focus-visible {
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
+      }
+      #level-select ul {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
+        margin: 0 0 18px;
+        padding: 0 16px;
+        list-style: none;
+      }
+      /* A map: its preview, then its name. */
+      #level-select button.map {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        font: bold 16px monospace;
+        color: #e4e0c8;
+        background: #262a1f;
+        border: 2px solid #5e6350;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #level-select button.map:hover {
+        border-color: #c2a46b;
+      }
+      #level-select canvas {
+        display: block;
+        max-width: 100%;
       }
       #version {
         position: fixed;
@@ -452,6 +487,7 @@
       <nav id="build-bar" aria-label="Build"></nav>
     </div>
     <main id="menu" hidden></main>
+    <main id="level-select" hidden></main>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
