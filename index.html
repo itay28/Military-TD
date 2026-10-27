@@ -28,48 +28,68 @@
         height: 100dvh;
         padding: 6px;
       }
+      /* The HUD is three groups: the stats, a message slot and the buttons. The buttons and the HUD's height never
+         depend on what the texts say, so a button stays where the player last saw it (#274). */
       #hud {
         grid-area: hud;
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 6px 12px;
         box-sizing: border-box;
         min-height: 36px;
         padding: 0 8px;
         font: 16px monospace;
         color: #e4e0c8;
       }
-      /* A phone: the HUD wraps and shrinks rather than pushing the page wider. */
-      @media (max-width: 640px), (max-height: 480px) {
-        #hud {
-          flex-wrap: wrap;
-          gap: 4px 12px;
-          min-height: 28px;
-          font-size: 13px;
-        }
-        #hud button {
-          padding: 3px 10px;
-          font-size: 13px;
-        }
+      #hud .hud-stats {
+        display: flex;
+        flex: none;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      /* Fixed widths, so a figure growing a digit doesn't push the others. */
+      #hud [data-testid='hud-money'] {
+        min-width: 9ch;
+      }
+      #hud [data-testid='hud-lives'] {
+        min-width: 8ch;
+      }
+      #hud [data-testid='hud-wave'] {
+        min-width: 11ch;
+      }
+      #hud [data-testid='hud-dps'] {
+        min-width: 7ch;
+      }
+      /* The banner and the countdown take turns here. The slot takes the room that is left and clips a text too long
+         for it, so what it says never moves anything. */
+      #hud .hud-message {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      #hud .hud-message > * {
+        display: inline;
       }
       #hud .hud-banner {
         color: #f0c95a;
         font-weight: bold;
       }
-      #hud button {
+      #hud .hud-controls {
+        display: flex;
+        flex: none;
+        gap: 8px;
         margin-left: auto;
-        order: 1;
-        padding: 4px 14px;
+      }
+      #hud button {
+        padding: 4px 9px;
         font: bold 15px monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
         border-radius: 3px;
         cursor: pointer;
-      }
-      /* The Pause button sits right of Start Wave, whose auto margin pushes both to the end. */
-      #hud [data-testid='pause'] {
-        margin-left: 8px;
       }
       #hud button:disabled {
         background: #5e6350;
@@ -80,9 +100,8 @@
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
       }
-      /* A toggle: outlined when off, filled when on. It sits right after Start Wave. */
+      /* A toggle: outlined when off, filled when on. */
       #hud .hud-toggle {
-        margin-left: 0;
         color: #c2a46b;
         background: transparent;
         box-shadow: inset 0 0 0 2px #c2a46b;
@@ -95,6 +114,35 @@
         color: #5e6350;
         background: transparent;
         box-shadow: inset 0 0 0 2px #5e6350;
+      }
+      /* A phone: a smaller font. After the rules above, so it wins over them. */
+      @media (max-width: 640px), (max-height: 480px) {
+        #hud {
+          min-height: 28px;
+          padding: 0 4px;
+          font-size: 13px;
+        }
+        #hud button {
+          padding: 3px 8px;
+          font-size: 13px;
+        }
+      }
+      /* Too narrow for one row: three fixed rows, stats, buttons, message. The message row keeps its height when empty. */
+      @media (max-width: 879px) and (min-height: 481px), (max-width: 779px) {
+        #hud {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          justify-items: start;
+        }
+        #hud .hud-message {
+          justify-self: stretch;
+          height: 1.25em;
+          line-height: 1.25em;
+        }
+        #hud .hud-controls {
+          grid-row: 2;
+          margin-left: 0;
+        }
       }
       /* The End screen covers the canvas, so the map takes no clicks while it's open. */
       #stage {
