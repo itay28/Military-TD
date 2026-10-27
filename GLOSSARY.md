@@ -36,6 +36,7 @@
 | **Wave** | A scheduled set of enemies, made of one or more wave groups that spawn in parallel. Cleared when every group has spawned and no enemy is left. | round, level |
 | **Wave group** | Part of a wave: a number of enemies of one kind, the first a delay after the wave starts, then one every spacing. | squad |
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
+| **Auto-start** | A HUD toggle (`setAutoStart`), off in a new game: while it is on, the next wave starts by itself `AUTO_START_DELAY_MS` (5 s) of game time after a wave is cleared, or after it is turned on in the Build phase. The HUD shows the countdown ("Next wave in N"). Start Wave still starts the wave at once. | auto-play |
 | **Victory / Defeat** | How a game ends: the last wave cleared with Lives left / Lives reaching 0. Either one stops the Simulation. | win, game over |
 | **Main menu** | The title screen the game opens on (the `Menu` scene): **Play** starts a new game on the MVP map, **Settings** opens the settings (#48; disabled until it exists). The HUD, Build bar and tower panel are hidden while it shows. Test mode skips it unless `?menu=1`. | title screen, start screen |
 | **End screen** | The overlay over the map once the game ends: Victory or Defeat, the waves survived (waves cleared), the **Damage report**, and **Restart**, which starts a fresh game. | game over screen |
