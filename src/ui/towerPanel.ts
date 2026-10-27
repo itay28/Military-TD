@@ -84,7 +84,7 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
     setText(heading, TOWER_NAMES[tower.kind]);
     setText(level, `Level ${tower.level}`);
     setText(damage, String(tower.damage));
-    setText(fireRate, `${tower.fireRate}/s`);
+    setText(fireRate, `${Number(tower.fireRate.toFixed(2))}/s`);
     setText(range, `${tower.range} tiles`);
     setText(targets, tower.targets.map((layer) => LAYER_NAME[layer]).join(', '));
     setText(dps, waveDps(figures?.wave.damage ?? 0, stats.wave.elapsedMs).toFixed(1));
