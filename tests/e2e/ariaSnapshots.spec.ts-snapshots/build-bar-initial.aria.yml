@@ -1,0 +1,6 @@
+- navigation "Build":
+  - button "Build bar" [expanded]: ▶
+  - button "Rifle Nest (50)": 50 1
+  - button "AA Gun (75)": 75 2
+  - button "Cannon (100)": 100 3
+  - button "Mortar (125)" [disabled]: 125 4

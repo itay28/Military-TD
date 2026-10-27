@@ -46,7 +46,7 @@ describe('Build bar', () => {
   it('lists every kind with its name, cost and hotkey, in a two-column grid', () => {
     mountBuildBar(root, wallet(500), OPTIONS);
     expect(buttons().map((b) => b.dataset.testid)).toEqual(['build-rifle', 'build-cannon', 'build-mortar']);
-    expect(buttons().map((b) => b.getAttribute('aria-label'))).toEqual(['Rifle', 'Cannon', 'Mortar']);
+    expect(buttons().map((b) => b.getAttribute('aria-label'))).toEqual(['Rifle (50)', 'Cannon (120)', 'Mortar (200)']);
     expect(button('cannon').title).toBe('Cannon (2): 120');
     expect(button('cannon').textContent).toContain('120');
     expect(button('cannon').querySelector('kbd')?.textContent).toBe('2');
