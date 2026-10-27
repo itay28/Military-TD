@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
+import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
@@ -34,6 +35,8 @@ if (!settingsRoot) throw new Error('index.html has no #settings element');
 // One set of settings for the whole visit, shared by both menus and every game. Saving them is #49.
 const settings = createSettings();
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
+const levelSelectRoot = document.getElementById('level-select');
+if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
 const flags = parseTestFlags(window.location.search);
 const gameScene = new GameScene({
@@ -62,7 +65,12 @@ const game = new Phaser.Game({
   // The mouse and two fingers, for a pinch.
   input: { activePointers: 2 },
   backgroundColor: '#1b1e16',
-  scene: [new BootScene(flags), new MenuScene({ app, menuRoot, openSettings }), gameScene],
+  scene: [
+    new BootScene(flags),
+    new MenuScene({ app, menuRoot, openSettings }),
+    new LevelSelectScene({ app, root: levelSelectRoot }),
+    gameScene,
+  ],
 });
 // Phaser resizes on window resizes only; collapsing the build bar or the HUD wrapping resizes the stage without one.
 new ResizeObserver(() => {

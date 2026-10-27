@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { MAPS } from '../../src/data/maps';
 import { openGame, openMenu, state, view } from './helpers';
 
 // From #48: the Settings screen, opened from the Main menu or the pause menu, and both settings taking effect.
@@ -48,6 +49,7 @@ test('a new game from the Main menu starts at the default game speed', async ({ 
   await page.getByRole('radio', { name: '×2' }).check();
   await page.getByRole('button', { name: 'Back' }).click();
   await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: MAPS[0]!.name }).click();
 
   await expect(speedButton(page)).toHaveAccessibleName('Game speed ×2');
 });
