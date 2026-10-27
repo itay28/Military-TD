@@ -30,8 +30,11 @@ export interface EntityPainter extends MapPainter {
 
 // Enemies, towers, ghosts and range rings are drawn around the local origin; the scene positions each one's Graphics.
 
-/** A circle or square in its kind's color (air kinds get an offset shadow, rotor kinds an X), with its HP bar. */
-export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
+/**
+ * A circle or square in its kind's color (air kinds get an offset shadow, rotor kinds an X turned `rotorAngle`
+ * radians), with its HP bar.
+ */
+export function drawEnemy(painter: EntityPainter, enemy: Enemy, rotorAngle = 0): void {
   const style = ENEMY_STYLE[enemy.kind];
   const { shape, radius, color } = style;
   if (enemy.layer === 'air') {
@@ -42,10 +45,15 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   if (shape === 'circle') painter.fillCircle(0, 0, radius);
   else painter.fillRect(-radius, -radius, radius * 2, radius * 2);
   if ('rotor' in style) {
+    // The blade tips (s, s) and (s, -s), turned by rotorAngle; each blade runs from a tip to its opposite.
     const s = style.rotor;
+    const cos = Math.cos(rotorAngle);
+    const sin = Math.sin(rotorAngle);
+    const a = { x: s * (cos - sin), y: s * (sin + cos) };
+    const b = { x: s * (cos + sin), y: s * (sin - cos) };
     painter.lineStyle(ROTOR.width, ROTOR.color);
-    painter.lineBetween(-s, -s, s, s);
-    painter.lineBetween(-s, s, s, -s);
+    painter.lineBetween(-a.x, -a.y, a.x, a.y);
+    painter.lineBetween(-b.x, -b.y, b.x, b.y);
   }
   drawHpBar(painter, enemy);
 }

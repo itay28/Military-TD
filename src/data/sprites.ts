@@ -13,7 +13,7 @@ export type SpriteKind = TowerKind | EnemyKind | TileType;
 
 /**
  * The atlas frame for each kind (docs/assets.md → Sprite per kind), or null to keep its shape. One frame per kind
- * for now: tower bases come with #41, facing with #42, road orientation with #43.
+ * for now: tower bases come with #41, road orientation with #43.
  */
 export const SPRITES = {
   rifleNest: 'towerDefense_tile245',
@@ -32,3 +32,14 @@ export const SPRITES = {
 export function spriteFor(kind: SpriteKind): string | null {
   return SPRITES[kind];
 }
+
+/**
+ * The way each enemy frame faces, in radians on the canvas (0 east, π/2 south), so the scene can turn it to its
+ * heading. The Kenney Tower Defense units face east; the Tanks pack body faces north. A kind without a frame faces 0.
+ */
+export const SPRITE_HEADING = {
+  infantry: 0,
+  jeep: 0,
+  tank: -Math.PI / 2,
+  helicopter: 0,
+} as const satisfies Record<EnemyKind, number>;

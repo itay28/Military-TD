@@ -1,3 +1,4 @@
+import type { EnemyKind } from '../data/enemies';
 import type { Pixel } from '../scenes/coords';
 import type { Game, GameState } from '../sim/game';
 import type { Tile } from '../sim/map';
@@ -37,6 +38,16 @@ export interface TestView {
   readonly drawOrder: readonly string[];
   /** Whether the sprite atlas loaded. Without it, everything is drawn as shapes. */
   readonly sprites: boolean;
+  /**
+   * Each enemy drawn: `facing` is the way it is heading, in radians on the canvas (0 east, π/2 south); `frame` its
+   * movement animation frame (always 0 with `?anim=0`).
+   */
+  readonly enemies: readonly {
+    readonly id: number;
+    readonly kind: EnemyKind;
+    readonly facing: number;
+    readonly frame: number;
+  }[];
 }
 
 /** `window.__TD__` with `?test=1` (ADR-0003). */

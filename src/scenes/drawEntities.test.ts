@@ -157,6 +157,19 @@ describe('drawEnemy (Helicopter)', () => {
     ]);
   });
 
+  it('turns the rotor by rotorAngle: a quarter of its 90° symmetry sits it square', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, helicopter, Math.PI / 4);
+    const d = ENEMY_STYLE.helicopter.rotor * Math.SQRT2; // the blade tip's distance from the hub
+    const lines = calls.filter((c) => c[0] === 'lineBetween').map(([, ...xy]) => xy);
+    const expected = [
+      [0, -d, 0, d],
+      [-d, 0, d, 0],
+    ];
+    expect(lines).toHaveLength(2);
+    lines.forEach((line, i) => line.forEach((v, j) => expect(v).toBeCloseTo(expected[i]![j]!)));
+  });
+
   it('gives a ground enemy no rotor', () => {
     const { painter, calls } = recordingPainter();
     drawEnemy(painter, infantry(30));

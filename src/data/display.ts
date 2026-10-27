@@ -34,6 +34,13 @@ export const ROTOR = { color: 0xe5e1cf, width: 2 } as const;
 /** The shadow under an air enemy, offset in pixels so it reads as flying. */
 export const AIR_SHADOW = { offsetX: 4, offsetY: 10, color: 0x000000, alpha: 0.3 } as const;
 
+/**
+ * The enemies' movement animation, on real time (off with `?anim=0`): a `frames`-step cycle, one step every `frameMs`.
+ * Each enemy starts `phaseMs` × its id into the cycle, so a group doesn't move in lockstep. A ground sprite's scale
+ * follows `bob` (a step), the Helicopter's rotor turns a quarter turn over the cycle (an X repeats every 90°).
+ */
+export const ENEMY_ANIM = { frameMs: 120, frames: 3, phaseMs: 130, bob: [1, 1.06, 1.03] } as const;
+
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
 
