@@ -5,7 +5,9 @@ import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
+import { createSettings } from './settings/settings';
 import { SCENARIOS } from './testing/scenarios';
+import { mountSettingsScreen, type OpenSettings } from './ui/settingsScreen';
 import { showVersion } from './ui/version';
 
 const versionEl = document.getElementById('version');
@@ -27,6 +29,12 @@ const app = document.getElementById('app');
 if (!app) throw new Error('index.html has no #app element');
 const menuRoot = document.getElementById('menu');
 if (!menuRoot) throw new Error('index.html has no #menu element');
+const settingsRoot = document.getElementById('settings');
+if (!settingsRoot) throw new Error('index.html has no #settings element');
+
+// One set of settings for the whole visit, shared by both menus and every game. Saving them is #49.
+const settings = createSettings();
+const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
@@ -38,6 +46,8 @@ const gameScene = new GameScene({
   towerPanelRoot,
   pauseMenuRoot,
   flags,
+  settings,
+  openSettings,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {
     if (flags.test) window.__TD__ ??= createTestApi(gameScene.testHooks(), SCENARIOS);
@@ -57,7 +67,7 @@ const game = new Phaser.Game({
   backgroundColor: '#1b1e16',
   scene: [
     new BootScene(flags),
-    new MenuScene({ app, menuRoot }),
+    new MenuScene({ app, menuRoot, openSettings }),
     new LevelSelectScene({ app, root: levelSelectRoot }),
     gameScene,
   ],
