@@ -49,6 +49,12 @@ export interface Scenario extends GameSetup {
   readonly script?: readonly ScriptStep[];
   /** A bot that starts the next wave whenever the game is in the Build phase, so a run can play a whole game. */
   readonly autoStartWaves?: boolean;
+  /**
+   * A strategy that plays like a player: called every tick, after the script and before `autoStartWaves`, with the
+   * state as it stands, and the commands it returns are given in order. Keep it a function of the state alone,
+   * so runs stay deterministic.
+   */
+  readonly bot?: (state: GameState) => readonly ScenarioCommand[];
   readonly until: StopCondition;
   /** Stops a run that hasn't met `until` by then, with outcome `timeout`. Defaults to an hour of game time. */
   readonly maxTicks?: number;
@@ -162,6 +168,7 @@ export function runScenario(scenario: Scenario): ScenarioResult {
   };
   for (;;) {
     for (const step of script) if (step.atTick === ticks) issue(step.command);
+    for (const command of scenario.bot?.(game.state) ?? []) issue(command);
     const { phase, waveNumber, totalWaves } = game.state;
     if (scenario.autoStartWaves && phase === 'build' && waveNumber < totalWaves) issue({ type: 'startWave' });
     const done = outcome();

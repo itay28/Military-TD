@@ -15,7 +15,7 @@
 | **Refund** | The Money a sold tower gives back: `floor(SELL_REFUND × spent)`, where `spent` is its placement cost plus every upgrade, and `SELL_REFUND` is 0.7. | |
 | **Upgrade** | Raising a tower one level for that level's cost (`upgradeTower`), in the Build or Wave phase. Level 2 adds **optics** (more range), level 3 a **heavier weapon** (more damage and fire rate). The tower keeps its tile and cooldown. | |
 | **Cannon** | An anti-tank gun: slow-firing, ground only, one target, high damage, and Armor pierce enough for a Tank. Wasteful against Infantry: most of each hit is overkill. | artillery, AT gun |
-| **AA Gun** | A tower that hits Air and Ground (ADR-0007: no hard counters). Cheap rapid fire of light rounds, so Armor blunts it (cost 75, 4 shots/s, damage 8, range 3). Drawn as a rust-brown circle. | flak, anti-air |
+| **AA Gun** | A tower that hits Air and Ground (ADR-0007: no hard counters). Rapid fire of light rounds, so heavy Armor blunts it (cost 75, 3 shots/s, damage 13, range 3). Drawn as a rust-brown circle. | flak, anti-air |
 | **Range** | How far a tower can hit, in tiles from its tile center. The **range ring** shows it while the pointer is over the tower. | reach, radius |
 | **Minimum range** | The dead zone around a tower's tile center that it can't fire into (`minRange`, exclusive): an enemy at or inside it is never a target, even when it's the only one in Range. The range ring shows it as an inner circle, on the Ghost too. | dead zone, blind spot |
 | **Ghost** | The see-through tower and range ring under the pointer, showing where a click would place one: green if `placeTower` would succeed, red if not. None over a standing tower, which shows its own range ring. | preview, hologram |
@@ -24,8 +24,8 @@
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
 | **Enemy** | A unit that walks the Path. Kinds: **Infantry**, **Jeep**, **Tank**, **Helicopter**. | creep, mob |
 | **Jeep** | A fast, light ground enemy: 20 HP, 3 tiles/s (twice Infantry), no armor. Tests tower fire rate and coverage, and outruns slow shots. | car, scout |
-| **Tank** | A slow, heavy ground Enemy with 200 HP and Armor 5, so a Rifle Nest hit does only 5. Leaking costs 5 Lives; killing it pays 25. | boss, heavy |
-| **Helicopter** | An Enemy on the Air layer. It follows the Path like Infantry but only towers that list `air` in `targets` can hit it. Light Armor (2): a Rifle Nest hit does 8. Drawn above ground enemies with a shadow offset below it. Costs 2 Lives if it leaks. | chopper, flyer |
+| **Tank** | A slow, heavy ground Enemy with 250 HP and Armor 8, so a Rifle Nest hit does only 2. Leaking costs 5 Lives; killing it pays 25. | boss, heavy |
+| **Helicopter** | An Enemy on the Air layer. It follows the Path like Infantry but only towers that list `air` in `targets` can hit it. Light Armor (4): a Rifle Nest hit does 6, an AA Gun hit 9. Drawn above ground enemies with a shadow offset below it. Costs 2 Lives if it leaks. | chopper, flyer |
 | **Layer** | Where an enemy moves: **Ground** or **Air**. Each tower lists the layers it can hit (`targets`) and ignores enemies on the others. | domain, altitude |
 | **Armor** | A flat amount an enemy takes off every hit: a hit removes `damage − armor`, but always at least 1 HP. | defense, resistance |
 | **Armor pierce** | How much of the target's Armor a tower's hits ignore (`armorPierce`, 0 by default). It cancels Armor up to its value and never adds damage. | penetration |

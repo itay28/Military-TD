@@ -45,8 +45,8 @@ describe('Money', () => {
     game.placeTower('rifleNest', { col: 1, row: 2 });
     game.startWave();
     runWave(game);
-    expect(seen).toEqual([{ reward: 5, money: 55 }]);
-    expect(game.state.money).toBe(55);
+    expect(seen).toEqual([{ reward: 4, money: 54 }]);
+    expect(game.state.money).toBe(54);
   });
 
   it('a leaked enemy pays no Reward', () => {
