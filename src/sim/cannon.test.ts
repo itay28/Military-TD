@@ -27,8 +27,8 @@ const enemy = (id: number, stats: Partial<Enemy> = {}): Enemy => ({
   ...stats,
 });
 
-/** A Tank stand-in: armor 5, 150 HP. A Rifle Nest does it 5 a hit; a Cannon, 60. */
-const tank = (id: number): Enemy => enemy(id, { armor: 5, hp: 150, maxHp: 150 });
+/** A Tank stand-in: armor 8, 150 HP. A Rifle Nest does it 2 a hit; a Cannon, 60. */
+const tank = (id: number): Enemy => enemy(id, { armor: 8, hp: 150, maxHp: 150 });
 
 describe('Cannon', () => {
   it('has its starting stats: anti-tank, ground only', () => {
@@ -37,18 +37,18 @@ describe('Cannon', () => {
       range: 3,
       fireRate: 0.5,
       damage: 60,
-      armorPierce: 5,
+      armorPierce: 8,
       targets: ['ground'],
     });
   });
 
-  it('does its full 60 to a Tank: armor 5 is pierced', () => {
+  it('does its full 60 to a Tank: armor 8 is pierced', () => {
     const fired = fireTowers([tower(1, 'cannon')], [tank(7)], 0);
     expect(fired.shots[0]!.hits).toEqual([{ enemyId: 7, damage: 60 }]);
   });
 
   it('ignores armor only up to its pierce', () => {
-    const fired = fireTowers([tower(1, 'cannon')], [enemy(7, { armor: 8, hp: 300 })], 0);
+    const fired = fireTowers([tower(1, 'cannon')], [enemy(7, { armor: 11, hp: 300 })], 0);
     expect(fired.shots[0]!.hits).toEqual([{ enemyId: 7, damage: 57 }]);
   });
 

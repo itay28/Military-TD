@@ -141,9 +141,25 @@ tests/
 | --- | --- |
 | Grid | 16 × 10 tiles, 48 px each → 768 × 480 canvas |
 | Start money / lives | 100 / 20 |
-| Rifle Nest | cost 50, range 2.5 tiles, 2 shots/s, 10 damage |
-| Infantry | 30 HP, 1.5 tiles/s, reward 5, leak cost 1 life |
+| Rifle Nest | cost 50, range 2.5 tiles, 2 shots/s, 10 damage; ground and air |
+| AA Gun | cost 75, range 3, 3 shots/s, 13 damage; air and ground |
+| Cannon | cost 100, range 3, 0.5 shots/s, 60 damage, armor pierce 8; ground |
+| Mortar | cost 125, range 1.5–5, one shell per 3 s, 40 damage inner ring (0.6) / 20 outer (1.25), 1 s flight; ground |
+| Upgrades | level 2 (80% of cost): +0.5 range; level 3 (140%): +60% damage, +25% fire rate. Selling refunds 70% after 2 s |
+| Infantry | 30 HP, 1.5 tiles/s, armor 0, reward 4, leak cost 1 life |
+| Jeep | 20 HP, 3 tiles/s, armor 0, reward 3, leak cost 1 |
+| Tank | 250 HP, 0.6 tiles/s, armor 8, reward 25, leak cost 5 |
+| Helicopter | 130 HP, 1.2 tiles/s, armor 4, air, reward 10, leak cost 2 |
 | Waves | 10, below (`src/data/waves.ts`) |
+
+**Balance checks (#230).** `src/data/counterMatrix.test.ts` requires every enemy kind to have at least two towers whose damage per second per Money against it is at least half the best tower's (ADR-0007). The balance bots in `tests/scenarios/bot-*.scenario.ts` play all 10 waves (`npm run scenario -- bot-balanced`); at these numbers:
+
+| Bot | Strategy | Outcome |
+| --- | --- | --- |
+| `bot-idle` | builds nothing | Defeat on wave 2 |
+| `bot-rifle-spam` | Rifle Nests only, as Money allows | Defeat on wave 9 (Tanks) |
+| `bot-no-aa` | `bot-balanced` with Rifle Nests for the AA Guns | Victory, 6 Lives (14 lost on Helicopter waves) |
+| `bot-balanced` | all four kinds, with upgrades | Victory, 13 Lives (2 lost on Helicopter waves) |
 
 **Wave schedule.** Each new kind first comes alone, in small numbers, then mixes with the others. A group is count × kind, spacing between spawns, and a delay before its first spawn (#140); groups in a wave run in parallel. Tuning: #16.
 
