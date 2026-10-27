@@ -21,8 +21,8 @@ export function importTiledMap(id: string, json: unknown): MapData {
   };
   if (!isObject(json)) return fail('not a Tiled map (expected a JSON object)');
   if (!Array.isArray(json.layers)) return fail('not a Tiled map ("layers" must be an array)');
-  if (json.orientation !== 'orthogonal') fail(`the map must be orthogonal, not ${String(json.orientation)}`);
-  if (json.infinite) fail('infinite maps are not supported (untick Infinite in Map Properties)');
+  if (json.orientation !== 'orthogonal') return fail(`the map must be orthogonal, not ${String(json.orientation)}`);
+  if (json.infinite) return fail('infinite maps are not supported (untick Infinite in Map Properties)');
   const cols = json.width;
   const rows = json.height;
   const tileW = json.tilewidth;
@@ -37,19 +37,20 @@ export function importTiledMap(id: string, json: unknown): MapData {
   const ground = layers.find((layer) => layer.type === 'tilelayer' && layer.name === 'ground');
   if (!ground) return fail('needs a "ground" tile layer');
   if (ground.width !== cols || ground.height !== rows)
-    fail(`the ground layer is ${String(ground.width)}×${String(ground.height)}; the map is ${cols}×${rows}`);
+    return fail(`the ground layer is ${String(ground.width)}×${String(ground.height)}; the map is ${cols}×${rows}`);
   if (!Array.isArray(ground.data))
     return fail(`the ground layer's data must be CSV (an array of GIDs), not ${String(ground.encoding ?? 'encoded')}`);
   if (ground.data.length !== cols * rows)
-    fail(`the ground layer has ${ground.data.length} tiles; a ${cols}×${rows} map needs ${cols * rows} tiles`);
+    return fail(`the ground layer has ${ground.data.length} tiles; a ${cols}×${rows} map needs ${cols * rows} tiles`);
 
   const buildable: Tile[] = [];
   ground.data.forEach((raw: unknown, i) => {
     const tile = { col: i % cols, row: Math.floor(i / cols) };
     if (typeof raw !== 'number') return fail(`ground tile ${tileKey(tile)} is not a GID`);
     const gid = (raw & ~GID_FLAGS) >>> 0;
+    // GID 0 is Tiled's empty tile: allowed, never buildable.
     if (gid !== 0 && !buildableGids.has(gid))
-      fail(`ground tile ${tileKey(tile)} has GID ${gid}, which no tileset holds`);
+      return fail(`ground tile ${tileKey(tile)} has GID ${gid}, which no tileset holds`);
     if (buildableGids.get(gid)) buildable.push(tile);
   });
 
@@ -61,19 +62,24 @@ export function importTiledMap(id: string, json: unknown): MapData {
   if (polylines.length !== 1)
     return fail(`the "path" layer needs exactly one polyline object, found ${polylines.length}`);
   const [line] = polylines as [Json];
-  const originX = Number(line.x ?? 0);
-  const originY = Number(line.y ?? 0);
+  const originX = line.x === undefined ? 0 : line.x;
+  const originY = line.y === undefined ? 0 : line.y;
+  if (typeof originX !== 'number' || typeof originY !== 'number')
+    return fail('the path polyline needs numeric x and y');
   // Each point snaps to the tile it falls in, i.e. to that tile's centre.
-  const waypoints = (line.polyline as unknown[]).filter(isObject).map((point) => ({
-    col: Math.floor((originX + Number(point.x)) / tileW),
-    row: Math.floor((originY + Number(point.y)) / tileW),
+  const points = line.polyline as unknown[];
+  if (!points.every((p) => isObject(p) && Number.isFinite(p.x) && Number.isFinite(p.y)))
+    return fail('every point of the path polyline needs numeric x and y');
+  const waypoints = (points as { x: number; y: number }[]).map((point) => ({
+    col: Math.floor((originX + point.x) / tileW),
+    row: Math.floor((originY + point.y) / tileW),
   }));
 
   const data: MapData = { id, cols, rows, waypoints, buildable };
   const map = createMap(data);
   const usable = buildable.filter((tile) => !map.isPath(tile)).length;
   if (usable < MIN_BUILDABLE_TILES)
-    fail(`has ${usable} buildable tiles off the Path; a map needs at least ${MIN_BUILDABLE_TILES}`);
+    return fail(`has ${usable} buildable tiles off the Path; a map needs at least ${MIN_BUILDABLE_TILES}`);
   return data;
 }
 
@@ -83,10 +89,10 @@ function readTilesets(tilesets: unknown, tilePx: number, fail: (reason: string) 
   if (!Array.isArray(tilesets)) return gids;
   for (const tileset of tilesets.filter(isObject)) {
     if (typeof tileset.source === 'string')
-      fail(`tileset "${tileset.source}" is external; embed it in the map (Tilesets → Embed Tileset)`);
+      return fail(`tileset "${tileset.source}" is external; embed it in the map (Tilesets → Embed Tileset)`);
     const name = String(tileset.name);
     if (tileset.tilewidth !== tilePx || tileset.tileheight !== tilePx)
-      fail(
+      return fail(
         `tileset "${name}" has ${String(tileset.tilewidth)}×${String(tileset.tileheight)} px tiles; the map's are ${tilePx}×${tilePx}`,
       );
     const firstGid = Number(tileset.firstgid);

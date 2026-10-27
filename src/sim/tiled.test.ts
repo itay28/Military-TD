@@ -133,6 +133,16 @@ describe('importTiledMap', () => {
     ['encoded ground data', (m) => (layer(m, 'ground').data = 'AAAA'), /CSV/],
     ['a GID that no tileset has', (m) => (groundData(m)[3] = 7), /GID 7/],
     ['no path layer', (m) => (layer(m, 'path').name = 'route'), /"path" object layer/],
+    [
+      'a polyline point without a number',
+      (m) => (((layer(m, 'path').objects as Json[])[0]!.polyline as Json[])[1]!.x = 'left'),
+      /numeric x and y/,
+    ],
+    [
+      'a polyline origin that is not a number',
+      (m) => ((layer(m, 'path').objects as Json[])[0]!.x = null),
+      /numeric x and y/,
+    ],
     ['a path layer without a polyline', (m) => (layer(m, 'path').objects = []), /one polyline/],
     [
       'a Path that starts off the edge',
