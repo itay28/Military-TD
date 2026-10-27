@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { frameMs, parseTestFlags } from './flags';
+import { firstScene, frameMs, parseTestFlags } from './flags';
 
 describe('parseTestFlags', () => {
   it('with no flags, test mode is off and the game runs in real time with animation', () => {
-    expect(parseTestFlags('')).toEqual({ test: false, manualStep: false, anim: true, speed: 1 });
+    expect(parseTestFlags('')).toEqual({ test: false, manualStep: false, anim: true, speed: 1, menu: false });
   });
 
   it('reads test=1, step=manual, anim=0 and speed=N', () => {
@@ -12,6 +12,7 @@ describe('parseTestFlags', () => {
       manualStep: true,
       anim: false,
       speed: 4,
+      menu: false,
     });
   });
 
@@ -21,6 +22,7 @@ describe('parseTestFlags', () => {
       manualStep: false,
       anim: true,
       speed: 1,
+      menu: false,
     });
   });
 
@@ -44,5 +46,20 @@ describe('frameMs', () => {
 
   it('scales the frame time by speed', () => {
     expect(frameMs(parseTestFlags('?speed=4'), 16)).toBe(64);
+  });
+});
+
+describe('firstScene', () => {
+  it('opens the Main menu for a player', () => {
+    expect(firstScene(parseTestFlags(''))).toBe('Menu');
+  });
+
+  it('goes straight to the Game in test mode, so specs start in the Build phase', () => {
+    expect(firstScene(parseTestFlags('?test=1'))).toBe('Game');
+  });
+
+  it('opens the Main menu in test mode with menu=1', () => {
+    expect(parseTestFlags('?test=1&menu=1').menu).toBe(true);
+    expect(firstScene(parseTestFlags('?test=1&menu=1'))).toBe('Menu');
   });
 });

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
+import { MenuScene } from './scenes/MenuScene';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
 import { SCENARIOS } from './testing/scenarios';
@@ -18,6 +19,11 @@ const endScreenRoot = document.getElementById('end-screen');
 if (!endScreenRoot) throw new Error('index.html has no #end-screen element');
 const towerPanelRoot = document.getElementById('tower-panel');
 if (!towerPanelRoot) throw new Error('index.html has no #tower-panel element');
+
+const app = document.getElementById('app');
+if (!app) throw new Error('index.html has no #app element');
+const menuRoot = document.getElementById('menu');
+if (!menuRoot) throw new Error('index.html has no #menu element');
 
 const flags = parseTestFlags(window.location.search);
 const gameScene = new GameScene({
@@ -43,7 +49,7 @@ const game = new Phaser.Game({
   // The mouse and two fingers, for a pinch.
   input: { activePointers: 2 },
   backgroundColor: '#1b1e16',
-  scene: [BootScene, gameScene],
+  scene: [new BootScene(flags), new MenuScene({ app, menuRoot }), gameScene],
 });
 // Phaser resizes on window resizes only; collapsing the build bar or the HUD wrapping resizes the stage without one.
 new ResizeObserver(() => {

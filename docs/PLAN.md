@@ -84,7 +84,7 @@ MVP (v0.1.0):
           ◀──────────── End overlay (Victory | Defeat)
 ```
 
-From v0.3.0: Boot → Main menu (Play, Settings, Credits) → Level select → Game, with a Pause menu over Game and a damage report on the End screen.
+From v0.3.0: Boot → Main menu (Play, Settings; Credits joins it in v0.4.0, #61) → Level select → Game, with a Pause menu over Game and a damage report on the End screen.
 
 **Core loop (one wave):**
 
