@@ -5,7 +5,7 @@ import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
-import { createSettings } from './settings/settings';
+import { browserStorage, createMemoryStorage, createPersistedSettings } from './settings/persist';
 import { SCENARIOS } from './testing/scenarios';
 import { mountSettingsScreen, type OpenSettings } from './ui/settingsScreen';
 import { showVersion } from './ui/version';
@@ -32,13 +32,14 @@ if (!menuRoot) throw new Error('index.html has no #menu element');
 const settingsRoot = document.getElementById('settings');
 if (!settingsRoot) throw new Error('index.html has no #settings element');
 
-// One set of settings for the whole visit, shared by both menus and every game. Saving them is #49.
-const settings = createSettings();
+const flags = parseTestFlags(window.location.search);
+// One set of settings, shared by both menus and every game, saved between visits. Test mode keeps them in memory
+// unless ?persist=1, so e2e runs don't leak into each other.
+const settings = createPersistedSettings(flags.test && !flags.persist ? createMemoryStorage() : browserStorage());
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
-const flags = parseTestFlags(window.location.search);
 const gameScene = new GameScene({
   hudRoot,
   buildBarRoot,

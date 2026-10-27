@@ -9,12 +9,14 @@ export interface Position {
   readonly y: number;
 }
 
-/** A map as authored: grid size plus the Path as ordered waypoint tiles. */
+/** A map as authored: grid size, the Path as ordered waypoint tiles, and optionally where towers may go. */
 export interface MapData {
   readonly id: string;
   readonly cols: number;
   readonly rows: number;
   readonly waypoints: readonly Tile[];
+  /** The tiles a tower may stand on (Path tiles never count). Left out, every tile off the Path is buildable. */
+  readonly buildable?: readonly Tile[];
 }
 
 export interface GameMap extends MapData {
@@ -24,7 +26,7 @@ export interface GameMap extends MapData {
   readonly waypointPositions: readonly Position[];
   inBounds(tile: Tile): boolean;
   isPath(tile: Tile): boolean;
-  /** In bounds and not Path. Tower occupancy is game state, checked when placing. */
+  /** In bounds, not Path, and in `buildable` when the map lists it. Tower occupancy is game state, checked when placing. */
   isBuildable(tile: Tile): boolean;
 }
 
@@ -41,13 +43,14 @@ export function createMap(data: MapData): GameMap {
   const pathTiles = expandPath(data);
   const pathKeys = new Set(pathTiles.map(tileKey));
   const isPath = (tile: Tile) => pathKeys.has(tileKey(tile));
+  const buildableKeys = data.buildable && new Set(data.buildable.map(tileKey));
   return {
     ...data,
     pathTiles,
     waypointPositions: waypoints.map(tileCenter),
     inBounds,
     isPath,
-    isBuildable: (tile) => inBounds(tile) && !isPath(tile),
+    isBuildable: (tile) => inBounds(tile) && !isPath(tile) && (!buildableKeys || buildableKeys.has(tileKey(tile))),
   };
 }
 

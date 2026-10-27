@@ -9,14 +9,20 @@ export interface OpenOptions {
   readonly manualStep?: boolean;
   readonly anim?: boolean;
   readonly speed?: number;
+  /** Saves settings to `localStorage` (`persist=1`); test mode keeps them in memory otherwise. */
+  readonly persist?: boolean;
 }
 
 /** Opens the game in test mode and waits until `window.__TD__` is ready. */
-export async function openGame(page: Page, { manualStep = true, anim = false, speed }: OpenOptions = {}) {
+export async function openGame(
+  page: Page,
+  { manualStep = true, anim = false, speed, persist = false }: OpenOptions = {},
+) {
   const params = new URLSearchParams({ test: '1' });
   if (manualStep) params.set('step', 'manual');
   if (!anim) params.set('anim', '0');
   if (speed !== undefined) params.set('speed', String(speed));
+  if (persist) params.set('persist', '1');
   await page.goto(`/?${params}`);
   await page.waitForFunction(() => window.__TD__ !== undefined);
 }
