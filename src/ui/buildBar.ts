@@ -33,17 +33,15 @@ export interface BuildBar<K extends string = TowerKind> {
 
 /** One option per tower kind, in `TOWER_STATS` order, so a kind added there shows up on the bar. */
 export function buildOptions(): BuildOption[] {
-  return (Object.keys(TOWER_STATS) as TowerKind[]).map((kind) => ({
-    kind,
-    name: TOWER_NAMES[kind],
-    cost: TOWER_STATS[kind].cost,
-    icon: {
-      fill: TOWER_STYLE[kind].fill,
-      outline: TOWER_STYLE[kind].outline,
-      shape: TOWER_STYLE[kind].shape,
-      size: TOWER_STYLE[kind].size,
-    },
-  }));
+  return (Object.keys(TOWER_STATS) as TowerKind[]).map((kind) => {
+    const { fill, outline, shape, size } = TOWER_STYLE[kind];
+    return {
+      kind,
+      name: TOWER_NAMES[kind],
+      cost: TOWER_STATS[kind].cost,
+      icon: { fill, outline, shape, size },
+    };
+  });
 }
 
 /** Pixels of the icon box in `index.html`; the largest tower fills it. */
