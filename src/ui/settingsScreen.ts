@@ -20,7 +20,8 @@ const TITLE_ID = 'settings-title';
 
 /**
  * Builds the Settings screen inside `root`, a dialog over the whole page. It's a DOM form with labelled controls, so
- * tests can query it (ADR-0003). Each change goes into `settings` at once; there is nothing to apply or save here: the store saves itself.
+ * tests can query it (ADR-0003). Each change goes into `settings` at once; there is nothing to apply or save here:
+ * the store saves itself.
  */
 export function mountSettingsScreen(
   root: HTMLElement,
