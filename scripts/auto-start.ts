@@ -188,6 +188,10 @@ export interface SizingNeeds {
 }
 
 /** Infra is the `area:infra` label or the board's Area `infra` (#225). */
+export function isInfra(labels: readonly string[], boardArea?: string): boolean {
+  return labels.includes(INFRA_LABEL) || boardArea === 'infra';
+}
+
 export function sizingNeeds(
   labels: readonly string[],
   boardSize: string | undefined,
@@ -196,7 +200,7 @@ export function sizingNeeds(
 ): SizingNeeds {
   return {
     size: boardSize === undefined && !labels.some((l) => l.startsWith('size:')),
-    milestone: milestone === null && !labels.includes(INFRA_LABEL) && boardArea !== 'infra',
+    milestone: milestone === null && !isInfra(labels, boardArea),
   };
 }
 

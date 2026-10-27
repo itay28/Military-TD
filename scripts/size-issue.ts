@@ -9,16 +9,6 @@ import { graphql } from './board-sync.ts';
 
 const PROJECT_NUMBER = 4;
 
-/** True when the issue lacks a Size, or is game work with no milestone. */
-export function needsSizing(
-  labels: readonly string[],
-  boardSize: string | undefined,
-  milestone: number | string | null,
-): boolean {
-  const needs = sizingNeeds(labels, boardSize, milestone);
-  return needs.size || needs.milestone;
-}
-
 const ISSUE_QUERY = `query($number: Int!) {
   repository(owner: "itay28", name: "Military-TD") {
     issue(number: $number) {
