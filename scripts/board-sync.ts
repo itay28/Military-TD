@@ -20,6 +20,7 @@ import {
   type SizingCandidate,
   type StartIssue,
 } from './auto-start.ts';
+import { applyIdle, findIdleIssue, idleReasons, isStarved, planIdle, type IdleIssue } from './pipeline-idle.ts';
 
 // Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule
 // (docs/agents/issue-tracker.md → Project board). Run by .github/workflows/board-sync.yml on
@@ -27,7 +28,8 @@ import {
 // a missed event is fixed by the next one. It also copies `size:*`, `priority:*` and `area:*` labels
 // to the Size, Priority and Area fields (#205), and asks the sizing agent about issues that lack a
 // Size or (game work) a milestone (#225). The decisions are pure functions; the CLI at the
-// bottom only fetches and writes. With AUTO_SPAWN=on it then starts agents (scripts/auto-start.ts).
+// bottom only fetches and writes. With AUTO_SPAWN=on it then starts agents (scripts/auto-start.ts),
+// and warns when the pipeline is starved (scripts/pipeline-idle.ts, #226).
 
 const OWNER = 'itay28';
 const REPO = 'Military-TD';
@@ -333,7 +335,7 @@ interface BoardData {
   };
 }
 
-const PR_FIELDS = `nodes { number isDraft state baseRefName headRefName body closingIssuesReferences(first: 20) { nodes { number } } }`;
+const PR_FIELDS = `nodes { number isDraft state baseRefName headRefName body labels(first: 20) { nodes { name } } closingIssuesReferences(first: 20) { nodes { number } } }`;
 
 // Open PRs, the latest merged ones (a stacked PR merged into its parent keeps its issue In review),
 // and the open milestones (for the Ready rule).
@@ -353,6 +355,7 @@ interface PrNode {
   baseRefName: string;
   headRefName: string;
   body: string;
+  labels: { nodes: { name: string }[] };
   closingIssuesReferences: { nodes: { number: number }[] };
 }
 
@@ -471,8 +474,9 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       `::warning::${repository.open.totalCount} open PRs, only the first ${repository.open.nodes.length} were read; some cards may not move. Paginate PR_QUERY.`,
     );
   const prs = [...repository.open.nodes, ...repository.merged.nodes].map(
-    (pr): PullRequest & { head: string; number: number } => ({
+    (pr): PullRequest & { head: string; number: number; labels: string[] } => ({
       number: pr.number,
+      labels: pr.labels.nodes.map((l) => l.name),
       isDraft: pr.isDraft,
       state: pr.state,
       base: pr.baseRefName,
@@ -586,7 +590,10 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       ...(pr ? { pr: { number: pr.number, head: pr.head, draft: pr.isDraft, activity } } : {}),
     });
   }
-  for (const retry of planRetries(retryIssues, Date.now())) {
+  const retries = planRetries(retryIssues, Date.now());
+  // The issues an agent started on this run; the first one closes the idle issue (#226).
+  const started: number[] = [];
+  for (const retry of retries) {
     const what = `#${retry.issue}: retry ${retry.model} on ${retry.branch ?? retry.base} (no activity for 1 h)`;
     if (limited.has(retry.model)) {
       console.log(`${what}: skipped, the ${retry.model} routine refused a fire this run; retrying next run`);
@@ -602,18 +609,18 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         limited.add(retry.model);
         continue;
       }
+      started.push(retry.issue);
       console.log(what);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));
     }
   }
 
-  const plan = planStarts(
-    withFieldUpdates(startIssues, updates).map((i) => ({ ...i, status: moved.get(i.number) ?? i.status })),
-    openPrs,
-    order,
-    { defaultBranch, stack: autoStart.stack },
-  );
+  const startable = withFieldUpdates(startIssues, updates).map((i) => ({
+    ...i,
+    status: moved.get(i.number) ?? i.status,
+  }));
+  const plan = planStarts(startable, openPrs, order, { defaultBranch, stack: autoStart.stack });
   if (!plan.starts.length) console.log('Auto-start: nothing to start.');
   for (const start of plan.starts) {
     const what = `#${start.issue}: start ${start.model} on ${start.base}`;
@@ -631,9 +638,34 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         limited.add(start.model);
         continue;
       }
+      started.push(start.issue);
       console.log(what);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  // The idle warning (#226): nothing planned and no agent working opens (or updates) one `needs-you` issue.
+  const starved = isStarved(startable, retries.length + plan.starts.length);
+  if (starved || started.length) {
+    try {
+      const open = await findIdleIssue(token);
+      const labelsOf = new Map(labelled.map((l) => [l.number, l.labels]));
+      const idleIssues: IdleIssue[] = startable.map((i) => ({ ...i, labels: labelsOf.get(i.number) ?? [] }));
+      const titles = new Map(repository.milestones.nodes.map((m) => [m.number, m.title]));
+      const reasons = idleReasons(idleIssues, openPrs, order, titles, {
+        defaultBranch,
+        stack: autoStart.stack,
+        exclude: open?.number,
+      });
+      const action = planIdle(starved, started, open, reasons);
+      if (action) {
+        const target = action.action === 'open' ? 'a new issue' : `#${action.issue}`;
+        const what = `Pipeline idle: ${action.action}${action.action === 'update' && action.push ? ' and push' : ''} ${target}`;
+        console.log(`${what}${dryRun ? ' (dry run)' : ''}`);
+        if (!dryRun) await applyIdle(action, reasons, new Date().toISOString(), token);
+      }
+    } catch (error) {
+      failures.push(`Pipeline idle warning failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   for (const issue of plan.noSize) {
