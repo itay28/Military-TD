@@ -3,6 +3,10 @@ export interface MainMenuOptions {
   readonly app: HTMLElement;
   /** Called when the player presses Play. */
   readonly onPlay: () => void;
+  /** Called when the player presses Credits. */
+  readonly onCredits: () => void;
+  /** The button to focus: Play when the menu opens, Credits when coming back from the Credits screen. */
+  readonly initialFocus?: 'play' | 'credits';
 }
 
 export interface MainMenu {
@@ -11,7 +15,10 @@ export interface MainMenu {
 }
 
 /** Builds the Main menu inside `root`, a screen over the whole page. It's DOM, so tests can query it (ADR-0003). */
-export function mountMainMenu(root: HTMLElement, { app, onPlay }: MainMenuOptions): MainMenu {
+export function mountMainMenu(
+  root: HTMLElement,
+  { app, onPlay, onCredits, initialFocus = 'play' }: MainMenuOptions,
+): MainMenu {
   const doc = root.ownerDocument;
   const title = doc.createElement('h1');
   title.textContent = 'Military TD';
@@ -25,13 +32,19 @@ export function mountMainMenu(root: HTMLElement, { app, onPlay }: MainMenuOption
   settings.type = 'button';
   settings.textContent = 'Settings';
   settings.disabled = true;
-  root.append(title, play, settings);
+  const credits = doc.createElement('button');
+  credits.type = 'button';
+  credits.textContent = 'Credits';
+  const onCreditsClick = () => onCredits();
+  credits.addEventListener('click', onCreditsClick);
+  root.append(title, play, settings, credits);
   root.hidden = false;
   app.dataset.screen = 'menu';
-  play.focus();
+  (initialFocus === 'credits' ? credits : play).focus();
   return {
     destroy() {
       play.removeEventListener('click', onClick);
+      credits.removeEventListener('click', onCreditsClick);
       root.replaceChildren();
       root.hidden = true;
       delete app.dataset.screen;

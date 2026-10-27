@@ -2,3 +2,4 @@
   - heading "Military TD" [level=1]
   - button "Play"
   - button "Settings" [disabled]
+  - button "Credits"

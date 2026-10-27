@@ -33,9 +33,17 @@ test('the build bar marks the selected tower', async ({ page }) => {
   await expectAria(page.locator('#build-bar'), 'build-bar-selected.aria.yml');
 });
 
-test('the Main menu shows the title, Play, and Settings disabled', async ({ page }) => {
+test('the Main menu shows the title, Play, Settings disabled, and Credits', async ({ page }) => {
   await openMenu(page);
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
+});
+
+test('the Credits screen lists every pack with its author, license, link and attribution, then the game credits', async ({
+  page,
+}) => {
+  await openMenu(page);
+  await page.getByRole('button', { name: 'Credits' }).click();
+  await expectAria(page.locator('#menu'), 'credits.aria.yml');
 });
 
 test('the End screen after a won one-wave game shows the result and the damage report tables', async ({ page }) => {

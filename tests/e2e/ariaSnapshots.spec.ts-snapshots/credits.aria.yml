@@ -1,0 +1,21 @@
+- main:
+  - heading "Credits" [level=1]
+  - heading "Tower Defense (Top-Down)" [level=2]
+  - paragraph: Kenney, CC0-1.0
+  - link "https://kenney.nl/assets/tower-defense-top-down":
+    - /url: https://kenney.nl/assets/tower-defense-top-down
+  - paragraph: Tower Defense (Top-Down) by Kenney (kenney.nl), CC0
+  - heading "Top-down Tanks Remastered" [level=2]
+  - paragraph: Kenney, CC0-1.0
+  - link "https://kenney.nl/assets/top-down-tanks-remastered":
+    - /url: https://kenney.nl/assets/top-down-tanks-remastered
+  - paragraph: Top-down Tanks Remastered by Kenney (kenney.nl), CC0
+  - heading "UI Pack" [level=2]
+  - paragraph: Kenney, CC0-1.0
+  - link "https://kenney.nl/assets/ui-pack":
+    - /url: https://kenney.nl/assets/ui-pack
+  - paragraph: UI Pack by Kenney (kenney.nl), CC0
+  - heading "Military TD" [level=2]
+  - paragraph: "Engine: Phaser"
+  - paragraph: "Code license: UNLICENSED"
+  - button "Back"

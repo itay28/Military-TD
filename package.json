@@ -2,6 +2,7 @@
   "name": "military-td",
   "version": "0.2.0",
   "private": true,
+  "license": "UNLICENSED",
   "description": "A basic military-themed tower defense game.",
   "type": "module",
   "engines": {
