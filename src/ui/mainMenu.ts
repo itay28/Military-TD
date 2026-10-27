@@ -30,8 +30,9 @@ export function mountMainMenu(root: HTMLElement, { app, onPlay, openSettings }: 
   // Open, the Settings screen covers the menu, which goes inert behind it until Back.
   let settingsScreen: SettingsScreen | undefined;
   const onSettings = () => {
+    if (!openSettings) return;
     root.inert = true;
-    settingsScreen = openSettings!(() => {
+    settingsScreen = openSettings(() => {
       settingsScreen = undefined;
       root.inert = false;
       settings.focus();
