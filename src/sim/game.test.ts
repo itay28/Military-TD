@@ -17,7 +17,7 @@ const SMALL: MapData = {
   ],
 };
 
-const INFANTRY = { kind: 'infantry', hp: 30, maxHp: 30, speed: 1.5, reward: 5, leakCost: 1, armor: 0, layer: 'ground' };
+const INFANTRY = { kind: 'infantry', hp: 30, maxHp: 30, speed: 1.5, reward: 4, leakCost: 1, armor: 0, layer: 'ground' };
 
 // Two short waves: 2 Infantry 1000 ms apart, then 3 Infantry 500 ms apart.
 const TWO_WAVES: readonly WaveData[] = [
@@ -62,7 +62,7 @@ describe('createGame', () => {
       maxHp: 20,
       speed: 3,
       distance: 3,
-      reward: 4,
+      reward: 3,
       leakCost: 1,
     });
     expect(byId(infantry)?.distance).toBe(1.5);

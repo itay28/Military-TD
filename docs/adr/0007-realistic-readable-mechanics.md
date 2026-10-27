@@ -32,7 +32,7 @@ We want a player to understand the game with real-world logic: why a tank shrugs
 | Cannon | An anti-tank gun fires armor-piercing shells | One target, high damage, `armorPierce`; ground only |
 | Mortar | High-explosive shells arc in, with a blast | Minimum range, about 1 s flight time, splash in two rings (full / half); ground only |
 | Tank | Armor | Flat `armor` off each hit; a hit always does at least 1 |
-| Helicopter | Flies; light armor | `air` layer, `armor` 2 |
+| Helicopter | Flies; light armor | `air` layer, light `armor` (4 after the #230 balance pass) |
 | Selling | You can't pull a crew out of a fight instantly | Dismantling takes 2 s; the tower stops firing at once, refund when done |
 | Upgrades | Better equipment | Level 2: better optics (range); level 3: heavier weapon (damage, fire rate) |
 
