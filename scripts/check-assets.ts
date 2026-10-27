@@ -16,17 +16,17 @@ export interface AssetCheckInput {
   credits: string;
 }
 
-/** Regex for a manifest `files` glob: `**` crosses folders, `*` stays in one. */
+/** Regex for a manifest `files` glob: `**` crosses zero or more folders, `*` stays in one. */
 export function globToRegExp(glob: string): RegExp {
+  const segment = (part: string): string =>
+    part
+      .split('*')
+      .map((lit) => lit.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+      .join('[^/]*');
   const body = glob
-    .split('**')
-    .map((part) =>
-      part
-        .split('*')
-        .map((lit) => lit.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
-        .join('[^/]*'),
-    )
-    .join('.*');
+    .split('**/')
+    .map((part) => part.split('**').map(segment).join('.*'))
+    .join('(?:.*/)?');
   return new RegExp(`^${body}$`);
 }
 
@@ -44,13 +44,16 @@ export function listAssetFiles(dir: string): string[] {
 /** Problems that should fail CI; each names the file or entry and the fix. Empty means pass. */
 export function checkAssets({ manifest, files, credits }: AssetCheckInput): string[] {
   const errors: string[] = [];
-  const covered = (pack: Manifest['packs'][number]): string[] => {
-    const globs = pack.files.map(globToRegExp);
-    return files.filter((file) => globs.some((glob) => glob.test(file)));
-  };
+  const covered = new Map(
+    manifest.packs.map((pack) => {
+      const globs = pack.files.map(globToRegExp);
+      return [pack, files.filter((file) => globs.some((glob) => glob.test(file)))];
+    }),
+  );
+  const coveredFiles = new Set([...covered.values()].flat());
 
   for (const file of files) {
-    if (!manifest.packs.some((pack) => covered(pack).includes(file))) {
+    if (!coveredFiles.has(file)) {
       errors.push(
         `${file}: not covered by any entry in assets/manifest.json. Add it to a pack's "files" (or add a pack) per docs/assets.md.`,
       );
@@ -58,7 +61,7 @@ export function checkAssets({ manifest, files, credits }: AssetCheckInput): stri
   }
 
   for (const pack of manifest.packs) {
-    const own = covered(pack);
+    const own = covered.get(pack) ?? [];
     if (!LICENSES.includes(pack.license)) {
       errors.push(
         `manifest entry "${pack.id}": license "${pack.license}" is not allowed (${LICENSES.join(', ')}). Use a pack under an allowed license or drop it.`,

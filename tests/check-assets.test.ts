@@ -67,6 +67,12 @@ describe('globToRegExp', () => {
     expect(globToRegExp('assets/a/*.png').test('assets/a/b/c.png')).toBe(false);
     expect(globToRegExp('assets/a/*.png').test('assets/a/c.png')).toBe(true);
   });
+
+  it('lets **/ match zero folders, like gitignore', () => {
+    expect(globToRegExp('assets/a/**/*.png').test('assets/a/c.png')).toBe(true);
+    expect(globToRegExp('assets/a/**/*.png').test('assets/a/b/c/d.png')).toBe(true);
+    expect(globToRegExp('assets/a/**/*.png').test('assets/ab/c.png')).toBe(false);
+  });
 });
 
 describe('the committed assets', () => {
