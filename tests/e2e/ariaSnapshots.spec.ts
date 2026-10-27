@@ -13,7 +13,9 @@ async function expectAria(locator: Locator, name: string) {
   expect(`${await locator.ariaSnapshot()}\n`).toMatchSnapshot([name]);
 }
 
-test('the HUD at the start shows Money, Lives, Wave, DPS and a Start Wave button that is not disabled', async ({ page }) => {
+test('the HUD at the start shows Money, Lives, Wave, DPS and a Start Wave button that is not disabled', async ({
+  page,
+}) => {
   await openGame(page);
   await expectAria(page.locator('#hud'), 'hud-initial.aria.yml');
 });
