@@ -14,6 +14,10 @@ export const HOLD_LABEL = 'hold';
 export const NEEDS_YOU_LABEL = 'needs-you';
 /** An agent's open question to the maintainer: an intentional stop, never retried (#201). */
 export const NEEDS_INFO_LABEL = 'needs-info';
+/** Pipeline work: not tied to a game version, so it may have no milestone (#225). */
+export const INFRA_LABEL = 'area:infra';
+/** The label an issue needs before agents may pick it up (docs/agents/triage-labels.md). */
+export const READY_LABEL = 'ready-for-agent';
 /** Starts the comment auto-start posts before labelling an issue `needs-you`; the push carries it. */
 export const HANDOFF_MARKER = '<!-- auto-start:stuck -->';
 /** Hidden in the no-Size comment, so it's posted once. */
@@ -24,6 +28,10 @@ export const FIRED_MARKER = '<!-- auto-start:fired -->';
 export const DONE_MARKER = '<!-- auto-start:done -->';
 /** A fired session this long without a done marker or any activity is dead, and fired again. */
 export const RETRY_IDLE_MS = 60 * 60 * 1000;
+/** Left by Board sync when it dispatches *Size issue* for an issue, so it does that once (#225). */
+export const SIZE_REQUESTED_MARKER = '<!-- size-issue:requested -->';
+/** At most this many *Size issue* dispatches per Board sync run (#225). */
+export const MAX_SIZE_REQUESTS = 3;
 /** At most this many `auto-agent` issues In progress at once (#165). */
 export const MAX_AGENTS = 5;
 const FIRE_BETA = 'experimental-cc-routine-2026-04-01';
@@ -45,6 +53,8 @@ export interface StartIssue {
   /** Labelled `needs-you`: handed to the maintainer, e.g. after a setup error (#200). */
   readonly needsYou: boolean;
   readonly autoAgent: boolean;
+  /** Labelled `area:infra` (or Area `infra`): startable without a milestone (#225). */
+  readonly infra: boolean;
   readonly size: string | undefined;
   readonly priority: string | undefined;
   readonly milestone: number | null;
@@ -113,10 +123,11 @@ export function stackBase(blockedBy: readonly number[], prs: readonly OpenPr[], 
 /**
  * The issues to start this run. Startable: a Backlog/Ready card (or none) with no open PR, no
  * assignee, `ready-for-agent`, no `hold`, not a tracker, Size XS–L, and unblocked (or stackable
- * when `stack` is on). In the current milestone that is exactly the Ready column. Ordered by
- * Priority (P0 first, none last), then issue number; capped so at most `cap` `auto-agent` issues
- * are In progress. When the current milestone (`order[0]`) has nothing to start, the next one is
- * used (one milestone of look-ahead).
+ * when `stack` is on). In the current milestone that is exactly the Ready column. When the current
+ * milestone (`order[0]`) has nothing to start, the next one is used (one milestone of look-ahead).
+ * Infra issues without a milestone are startable in every run, next to that milestone's (#225);
+ * other issues without one never start. Ordered by Priority (P0 first, none last), then issue
+ * number; capped so at most `cap` `auto-agent` issues are In progress.
  */
 export function planStarts(
   issues: readonly StartIssue[],
@@ -126,40 +137,93 @@ export function planStarts(
 ): StartPlan {
   const running = issues.filter((i) => i.autoAgent && i.status === 'In progress').length;
   const slots = Math.max(0, cap - running);
-  const candidates = (milestone: number | undefined) => {
-    const starts: Start[] = [];
+  const candidates = (inScope: (i: StartIssue) => boolean) => {
+    const starts: { issue: StartIssue; start: Start }[] = [];
     const noSize: number[] = [];
-    if (milestone === undefined) return { starts, noSize };
-    const eligible = issues
-      .filter(
-        (i) =>
-          i.milestone === milestone &&
-          (i.status === undefined || i.status === 'Backlog' || i.status === 'Ready') &&
-          !i.assigned &&
-          !i.tracker &&
-          i.labelled &&
-          !i.hold &&
-          !i.needsYou &&
-          !prs.some((pr) => pr.issues.includes(i.number)),
-      )
-      .sort((a, b) => rank(a.priority) - rank(b.priority) || a.number - b.number);
+    const eligible = issues.filter(
+      (i) =>
+        inScope(i) &&
+        (i.status === undefined || i.status === 'Backlog' || i.status === 'Ready') &&
+        !i.assigned &&
+        !i.tracker &&
+        i.labelled &&
+        !i.hold &&
+        !i.needsYou &&
+        !prs.some((pr) => pr.issues.includes(i.number)),
+    );
     for (const i of eligible) {
       const base = i.blockedBy.length && !stack ? null : stackBase(i.blockedBy, prs, defaultBranch);
       if (base === null) continue;
       if (i.size === undefined) noSize.push(i.number);
-      else if (MODEL_BY_SIZE[i.size]) starts.push({ issue: i.number, base, model: MODEL_BY_SIZE[i.size]! });
+      else if (MODEL_BY_SIZE[i.size])
+        starts.push({ issue: i, start: { issue: i.number, base, model: MODEL_BY_SIZE[i.size]! } });
     }
     return { starts, noSize };
   };
-  const current = candidates(order[0]);
-  const plan = current.starts.length ? current : candidates(order[1]);
-  return { starts: plan.starts.slice(0, slots), noSize: [...new Set([...current.noSize, ...plan.noSize])] };
+  const inMilestone = (milestone: number | undefined) => (i: StartIssue) =>
+    milestone !== undefined && i.milestone === milestone;
+  const infra = candidates((i) => i.infra && i.milestone === null);
+  const current = candidates(inMilestone(order[0]));
+  const plan = current.starts.length ? current : candidates(inMilestone(order[1]));
+  const starts = [...infra.starts, ...plan.starts]
+    .sort((a, b) => rank(a.issue.priority) - rank(b.issue.priority) || a.issue.number - b.issue.number)
+    .map((s) => s.start);
+  return {
+    starts: starts.slice(0, slots),
+    noSize: [...new Set([...infra.noSize, ...current.noSize, ...plan.noSize])],
+  };
 }
 
 const rank = (priority: string | undefined) => {
   const i = PRIORITIES.indexOf(priority ?? '');
   return i < 0 ? PRIORITIES.length : i;
 };
+
+/** What an issue lacks before auto-start can pick it: a Size, and for game work a milestone (#225). */
+export interface SizingNeeds {
+  /** No Size on the board and no `size:*` label waiting for Board sync. */
+  readonly size: boolean;
+  /** Not infra, and no milestone. */
+  readonly milestone: boolean;
+}
+
+/** Infra is the `area:infra` label or the board's Area `infra` (#225). */
+export function sizingNeeds(
+  labels: readonly string[],
+  boardSize: string | undefined,
+  milestone: number | string | null,
+  boardArea?: string,
+): SizingNeeds {
+  return {
+    size: boardSize === undefined && !labels.some((l) => l.startsWith('size:')),
+    milestone: milestone === null && !labels.includes(INFRA_LABEL) && boardArea !== 'infra',
+  };
+}
+
+/** An open issue as the sizing backfill sees it. */
+export interface SizingCandidate {
+  readonly number: number;
+  readonly labels: readonly string[];
+  readonly size: string | undefined;
+  readonly area?: string | undefined;
+  readonly milestone: number | null;
+  readonly tracker: boolean;
+}
+
+/**
+ * The issues Board sync asks the sizing agent about (#225): `ready-for-agent`, not a tracker, no
+ * `hold`, `needs-info` or `needs-you`, and lacking a Size or (game work) a milestone.
+ */
+export function planSizingRequests(issues: readonly SizingCandidate[]): number[] {
+  const skip = [HOLD_LABEL, NEEDS_INFO_LABEL, NEEDS_YOU_LABEL];
+  return issues
+    .filter((i) => i.labels.includes(READY_LABEL) && !i.tracker && !i.labels.some((l) => skip.includes(l)))
+    .filter((i) => {
+      const needs = sizingNeeds(i.labels, i.size, i.milestone, i.area);
+      return needs.size || needs.milestone;
+    })
+    .map((i) => i.number);
+}
 
 /** A scheduled task's API trigger: its `/fire` URL and bearer token. */
 export interface Routine {
@@ -381,6 +445,34 @@ async function handOffIssue(n: number, model: Model, error: unknown, token: stri
       `implement-${model} routine at claude.ai/code/routines, then remove \`${NEEDS_YOU_LABEL}\` to start it again.`,
   });
   await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [NEEDS_YOU_LABEL] });
+}
+
+/**
+ * Dispatch *Size issue* (.github/workflows/size-issue.yml) for an issue, once: the marker comment
+ * left after the dispatch stops later runs. True if it dispatched. A failed dispatch leaves no
+ * marker, so the next run tries again.
+ */
+export async function requestSizing(
+  issue: number,
+  token: string,
+  ref: string,
+  fetchFn: Fetch = fetch,
+): Promise<boolean> {
+  const comments = (await (await github(fetchFn, token, 'GET', `issues/${issue}/comments?per_page=100`)).json()) as {
+    body?: string;
+  }[];
+  if (comments.some((c) => c.body?.includes(SIZE_REQUESTED_MARKER))) return false;
+  await github(fetchFn, token, 'POST', 'actions/workflows/size-issue.yml/dispatches', {
+    ref,
+    inputs: { issue: String(issue) },
+  });
+  await github(fetchFn, token, 'POST', `issues/${issue}/comments`, {
+    body:
+      'Board sync asked the sizing agent to size this issue: it has no Size, or it is game work with no ' +
+      'milestone (docs/agents/issue-tracker.md → Auto-start).\n\n' +
+      SIZE_REQUESTED_MARKER,
+  });
+  return true;
 }
 
 /** Ask for a Size on an issue auto-start skipped for lacking one; once. True if it commented. */

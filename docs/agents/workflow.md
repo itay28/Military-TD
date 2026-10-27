@@ -34,9 +34,9 @@ How every change gets made, by agents and humans alike. The rules are short; fol
 ## Steps for one issue
 
 ### 0. Pick
-- Pick an open issue in the **current milestone** with `ready-for-agent`, no open blockers, and no assignee. The order in `docs/PLAN.md` helps.
+- Pick an open issue in the **current milestone** (or an `area:infra` issue with no milestone, which can be done at any time) with `ready-for-agent`, no open blockers, and no assignee. The order in `docs/PLAN.md` helps.
 - Assign yourself. *Board sync* then moves the card to *In progress* (see **Project board** in `docs/agents/issue-tracker.md`).
-- No issue for the work yet? Create one first, under the right epic with its area label and milestone, plus `size:*` and `priority:*` labels (*Board sync* copies them to the board; `docs/agents/issue-tracker.md` → **Project board**). Every PR closes an issue.
+- No issue for the work yet? Create one first, under the right epic with its area label and milestone (game work always has one; `area:infra` work may have none, #225), plus `size:*` and `priority:*` labels (*Board sync* copies them to the board; `docs/agents/issue-tracker.md` → **Project board**). Every PR closes an issue.
 - `needs-triage` issues get planned first (step 1, via `/triage` or `/grill-with-docs`), then relabelled `ready-for-agent`. Don't implement them directly.
 
 ### 0b. Open a session tracker

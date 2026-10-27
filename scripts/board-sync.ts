@@ -4,14 +4,20 @@ import {
   commentNoSize,
   github,
   HOLD_LABEL,
+  INFRA_LABEL,
+  MAX_SIZE_REQUESTS,
   NEEDS_INFO_LABEL,
   NEEDS_YOU_LABEL,
   planRetries,
+  planSizingRequests,
   planStarts,
+  READY_LABEL,
+  requestSizing,
   retryIssue,
   startIssue,
   type RetryIssue,
   type Routines,
+  type SizingCandidate,
   type StartIssue,
 } from './auto-start.ts';
 
@@ -19,7 +25,8 @@ import {
 // (docs/agents/issue-tracker.md → Project board). Run by .github/workflows/board-sync.yml on
 // every PR or assignment change and on a schedule. Each run reconciles the whole board, so
 // a missed event is fixed by the next one. It also copies `size:*`, `priority:*` and `area:*` labels
-// to the Size, Priority and Area fields (#205). The decisions are pure functions; the CLI at the
+// to the Size, Priority and Area fields (#205), and asks the sizing agent about issues that lack a
+// Size or (game work) a milestone (#225). The decisions are pure functions; the CLI at the
 // bottom only fetches and writes. With AUTO_SPAWN=on it then starts agents (scripts/auto-start.ts).
 
 const OWNER = 'itay28';
@@ -28,8 +35,6 @@ const PROJECT_NUMBER = 4;
 
 export type CardStatus = 'Backlog' | 'Ready' | 'In progress' | 'In review';
 
-/** The label an issue needs before agents may pick it up (docs/agents/triage-labels.md). */
-const READY_LABEL = 'ready-for-agent';
 /** Labels of issues that track other work rather than being work (see `BoardIssue.tracker`). */
 const TRACKER_LABELS = ['release', 'epic'];
 
@@ -57,6 +62,8 @@ export interface BoardIssue {
   /** Has open native "blocked by" dependencies. */
   readonly blocked: boolean;
   readonly milestone: number | null;
+  /** Labelled `area:infra` (or Area `infra`): needs no milestone to be Ready (#225). */
+  readonly infra: boolean;
 }
 
 /** An open milestone, as the repo query returns it. */
@@ -120,9 +127,9 @@ export function currentMilestone(milestones: readonly Milestone[]): number | nul
  * The Status an issue's card should have, or undefined to leave it:
  * a PR ready for review (or a stacked PR merged into its parent) → In review; a draft PR, or
  * assigned with no PR → In progress. With no PR and no assignee, a Backlog or Ready card follows
- * the Ready rule: current milestone, `ready-for-agent` and no open blockers → Ready, else Backlog.
- * Without an open milestone nothing is Ready. Done cards and trackers (release issues, epics)
- * are never moved; In progress and In review cards with no PR and no assignee stay put.
+ * the Ready rule: current milestone (or infra with no milestone, #225), `ready-for-agent` and no
+ * open blockers → Ready, else Backlog. Without an open milestone only that infra work is Ready.
+ * Done cards and trackers (release issues, epics) are never moved; In progress and In review cards with no PR and no assignee stay put.
  */
 export function desiredStatus(
   issue: BoardIssue,
@@ -137,7 +144,8 @@ export function desiredStatus(
   const drafting = prs.some((pr) => pr.state === 'OPEN' && pr.isDraft);
   let target: CardStatus | undefined = inReview ? 'In review' : drafting || issue.assigned ? 'In progress' : undefined;
   if (!target && (issue.status === undefined || issue.status === 'Backlog' || issue.status === 'Ready')) {
-    const startable = current !== null && issue.milestone === current && issue.labelled && !issue.blocked;
+    const inScope = issue.milestone === null ? issue.infra : current !== null && issue.milestone === current;
+    const startable = inScope && issue.labelled && !issue.blocked;
     target = startable ? 'Ready' : 'Backlog';
   }
   return target === issue.status ? undefined : target;
@@ -397,6 +405,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   const issues: BoardIssue[] = [];
   const startIssues: StartIssue[] = [];
   const labelled: LabelledItem[] = [];
+  const sizing: SizingCandidate[] = [];
   const claimed: Omit<RetryIssue, 'comments' | 'pr'>[] = [];
   let project: BoardData['user']['projectV2'] | undefined;
   let cursor: string | null = null;
@@ -411,6 +420,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       const c = node.content;
       if (c?.number === undefined || c.state !== 'OPEN' || c.repository?.nameWithOwner !== `${OWNER}/${REPO}`) continue;
       items.set(c.number, node.id);
+      const labels = c.labels?.nodes.map((l) => l.name) ?? [];
       issues.push({
         number: c.number,
         status: node.fieldValueByName?.name,
@@ -419,12 +429,20 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         labelled: c.labels?.nodes.some((l) => l.name === READY_LABEL) ?? false,
         blocked: (c.issueDependenciesSummary?.blockedBy ?? 0) > 0,
         milestone: c.milestone?.number ?? null,
+        infra: labels.includes(INFRA_LABEL) || node.area?.name === 'infra',
       });
-      const labels = c.labels?.nodes.map((l) => l.name) ?? [];
       labelled.push({
         number: c.number,
         labels,
         fields: { Size: node.size?.name, Priority: node.priority?.name, Area: node.area?.name },
+      });
+      sizing.push({
+        number: c.number,
+        labels,
+        size: node.size?.name,
+        area: node.area?.name,
+        milestone: c.milestone?.number ?? null,
+        tracker: issues.at(-1)!.tracker,
       });
       startIssues.push({
         ...issues.at(-1)!,
@@ -510,6 +528,27 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     for (const label of update.removeLabels) {
       if (!dryRun) await removeLabel(token, update.issue, label);
       console.log(`#${update.issue}: removed label ${label}${dryRun ? ' (dry run)' : ''}`);
+    }
+  }
+
+  // Ask the sizing agent about issues that lack a Size or a milestone (#225), a few per run.
+  // A `size:*` label copied this run still counts as a Size: the issue keeps it until the board has it.
+  const unsized = planSizingRequests(sizing);
+  let requested = 0;
+  for (const issue of unsized) {
+    if (requested >= MAX_SIZE_REQUESTS) break;
+    if (dryRun) {
+      console.log(`#${issue}: needs sizing, would ask the sizing agent (dry run)`);
+      requested++;
+      continue;
+    }
+    try {
+      if (await requestSizing(issue, token, defaultBranch)) {
+        console.log(`#${issue}: needs sizing, asked the sizing agent`);
+        requested++;
+      }
+    } catch (error) {
+      console.log(`::warning::#${issue}: asking the sizing agent failed: ${String(error)}`);
     }
   }
 

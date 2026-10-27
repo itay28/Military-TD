@@ -25,15 +25,22 @@ describe('size issue workflow', () => {
     expect(yaml).toContain('docs/agents/prompts/size.md');
   });
 
-  it('allows reading, adding labels and commenting on the one issue, nothing else', () => {
+  it('allows reading, adding labels, setting the milestone and commenting on the one issue, nothing else', () => {
     expect(allowedTools).toEqual([
       'Read',
       'Glob',
       'Grep',
       'Bash(gh issue view ${{ env.ISSUE }} *)',
       'Bash(gh issue edit ${{ env.ISSUE }} --add-label *)',
+      'Bash(gh issue edit ${{ env.ISSUE }} --milestone *)',
       'Bash(gh issue comment ${{ env.ISSUE }} *)',
+      'Bash(gh api repos/${{ github.repository }}/milestones*)',
     ]);
+  });
+
+  it('tells the agent what the issue lacks: a Size, a milestone or both (#225)', () => {
+    expect(yaml).toContain('Needs a Size: ${{ steps.check.outputs.size }}');
+    expect(yaml).toContain('Needs a milestone: ${{ steps.check.outputs.milestone }}');
   });
 
   it('dispatches Board sync afterwards, since labels added by GITHUB_TOKEN start no workflow', () => {
