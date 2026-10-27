@@ -7,13 +7,12 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
-# A newer title or push makes the older run moot.
-concurrency:
-  group: pr-title-${{ github.ref }}
-  cancel-in-progress: true
-
+# No concurrency group: a push and a title edit at once (release-please) start two runs on the
+# same commit, and cancelling one would show a ✗ next to the green one (#257). Both runs check
+# the PR's current title, so they agree.
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   pr-title:
@@ -28,8 +27,14 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # The title goes through env, never straight into the shell, so a title can't inject commands.
+      # The title is read when the run starts, not from the event, so an older run can't report a
+      # stale title. It goes through a variable, never straight into the shell, so a title can't
+      # inject commands.
       - name: Check PR title
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: node scripts/pr-title.ts
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          PR_TITLE="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .title)"
+          export PR_TITLE
+          node scripts/pr-title.ts
