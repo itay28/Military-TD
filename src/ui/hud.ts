@@ -4,7 +4,7 @@ import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 
 /** The parts of the Game the HUD reads and commands. */
-export type HudGame = Pick<Game, 'state' | 'events' | 'startWave'>;
+export type HudGame = Pick<Game, 'state' | 'events' | 'startWave' | 'setAutoStart'>;
 
 /** The player's game speed, which the scene owns: the HUD shows it and sets the next one on click. */
 export interface HudSpeed {
@@ -37,6 +37,14 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   startWave.dataset.testid = 'start-wave';
   startWave.textContent = 'Start Wave';
   root.append(startWave);
+  // A toggle button: aria-pressed says whether it's on. Not "Auto-start waves": that name would also match "Start Wave".
+  const autoStart = doc.createElement('button');
+  autoStart.type = 'button';
+  autoStart.dataset.testid = 'auto-start';
+  autoStart.className = 'hud-toggle';
+  autoStart.textContent = 'Auto-start';
+  root.append(autoStart);
+  const nextWave = field('hud-next-wave');
   const speedButton = doc.createElement('button');
   speedButton.type = 'button';
   speedButton.dataset.testid = 'game-speed';
@@ -68,6 +76,9 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     // The wave figures freeze when the wave ends, so between waves this keeps showing the last wave's DPS.
     setText(dps, state.waveNumber === 0 ? 'DPS –' : `DPS ${Math.round(waveDps(damage, elapsedMs))}`);
     setDisabled(startWave, state.phase !== 'build');
+    const pressed = String(state.autoStart);
+    if (autoStart.getAttribute('aria-pressed') !== pressed) autoStart.setAttribute('aria-pressed', pressed);
+    setDisabled(autoStart, isGameOver(state.phase));
     const shown = speed.get();
     setText(speedButton, `×${shown}`);
     if (speedButton.getAttribute('aria-label') !== `Game speed ×${shown}`)
@@ -77,6 +88,10 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
     const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
     setText(banner, showBanner ? bannerText : '');
+    // The countdown waits for the banner to go, so the HUD isn't too wide for one line.
+    const { autoStartAtMs } = state;
+    const counting = autoStartAtMs !== undefined && !showBanner;
+    setText(nextWave, counting ? `Next wave in ${Math.ceil((autoStartAtMs - state.timeMs) / 1000)}` : '');
   };
   const offWaveCleared = game.events.on('waveCleared', ({ waveNumber }) => {
     bannerText = `Wave ${waveNumber} cleared`;
@@ -85,6 +100,10 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   // The sim decides; a refused start changes nothing. Redraw at once so a second click can't land first.
   startWave.addEventListener('click', () => {
     game.startWave();
+    update();
+  });
+  autoStart.addEventListener('click', () => {
+    game.setAutoStart(!game.state.autoStart);
     update();
   });
   speedButton.addEventListener('click', () => {
