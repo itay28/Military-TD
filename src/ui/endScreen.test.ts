@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
+import { damageReport } from '../sim/report';
 import { mountEndScreen } from './endScreen';
 
 // Path 6 tiles long: an Infantry (1.5 tiles/s) leaks after 4000 ms.
@@ -140,5 +141,86 @@ describe('End screen', () => {
     end.destroy();
     end.update();
     expect(root.hidden).toBe(true);
+  });
+});
+
+describe('damage report', () => {
+  /** Rifle Nest 1 beside the Path plays every wave; Rifle Nest 2 is sold during wave 1. Ends in Victory. */
+  const played = () => {
+    const game = newGame();
+    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    game.placeTower('rifleNest', { col: 2, row: 2 });
+    const second = game.placeTower('rifleNest', { col: 4, row: 2 });
+    game.startWave();
+    if (second.ok) game.sellTower(second.towerId);
+    for (let t = 0; t < LEAK_MS; t += 50) game.tick(50);
+    playWave(game);
+    playWave(game);
+    end.update();
+    expect(game.state.phase).toBe('victory');
+    return game;
+  };
+  const table = (caption: string) =>
+    [...root.querySelectorAll('table')].find((t) => t.querySelector('caption')?.textContent === caption);
+  const headers = (caption: string) => [...table(caption)!.querySelectorAll('thead th')].map((th) => th.textContent);
+  const rows = (caption: string, section = 'tbody') =>
+    [...table(caption)!.querySelectorAll(`${section} tr`)].map((tr) =>
+      [...tr.querySelectorAll('th, td')].map((cell) => cell.textContent),
+    );
+
+  it('lists every tower with its kind, tile, damage, kills and DPS, sold ones marked', () => {
+    const game = played();
+    expect(headers('By tower')).toEqual(['Tower', 'Tile', 'Damage', 'Kills', 'DPS']);
+    const [first, second] = damageReport(game.state.stats).towers;
+    expect(first!.damage).toBeGreaterThan(0);
+    expect(rows('By tower')).toEqual([
+      ['Rifle Nest', '2, 2', String(first!.damage), String(first!.kills), first!.dps.toFixed(1)],
+      ['Rifle Nest (sold)', '4, 2', String(second!.damage), String(second!.kills), second!.dps.toFixed(1)],
+    ]);
+  });
+
+  it('sums each tower type', () => {
+    const game = played();
+    expect(headers('By tower type')).toEqual(['Type', 'Towers', 'Damage', 'Kills', 'DPS']);
+    const [kind] = damageReport(game.state.stats).kinds;
+    expect(rows('By tower type')).toEqual([
+      ['Rifle Nest', '2', String(kind!.damage), String(kind!.kills), kind!.dps.toFixed(1)],
+    ]);
+  });
+
+  it('has a row per wave, with a total row', () => {
+    const game = played();
+    const report = damageReport(game.state.stats);
+    expect(headers('By wave')).toEqual(['Wave', 'Time', 'Damage', 'Kills', 'DPS']);
+    expect(rows('By wave')).toEqual(
+      report.waves.map((w) => [
+        String(w.waveNumber),
+        `${(w.elapsedMs / 1000).toFixed(1)} s`,
+        String(w.damage),
+        String(w.kills),
+        w.dps.toFixed(1),
+      ]),
+    );
+    expect(rows('By wave')).toHaveLength(3);
+    const { total } = report;
+    expect(rows('By wave', 'tfoot')).toEqual([
+      [
+        'Total',
+        `${(total.elapsedMs / 1000).toFixed(1)} s`,
+        String(total.damage),
+        String(total.kills),
+        total.dps.toFixed(1),
+      ],
+    ]);
+  });
+
+  it('says so when no tower was placed', () => {
+    const game = newGame(1);
+    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    playWave(game);
+    end.update();
+    expect(byTestId('no-towers')?.textContent).toBe('No towers were placed.');
+    expect(table('By tower')).toBeUndefined();
+    expect(rows('By wave')).toHaveLength(1);
   });
 });

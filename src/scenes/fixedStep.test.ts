@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFixedStep } from './fixedStep';
+import { MAX_GAME_SPEED } from './gameSpeed';
 
 const STEP = 1000 / 60;
 
@@ -31,6 +32,12 @@ describe('createFixedStep', () => {
     const { loop } = setup(5);
     expect(loop.advance(1000)).toBe(5);
     expect(loop.advance(STEP)).toBe(1);
+  });
+
+  it('with the cap scaled by the game speed, runs 4 steps for one 60 fps frame at ×4', () => {
+    const { loop } = setup(5 * MAX_GAME_SPEED);
+    expect(loop.advance(STEP * MAX_GAME_SPEED)).toBe(4);
+    expect(loop.advance(1000)).toBe(5 * MAX_GAME_SPEED);
   });
 
   it('ignores negative and non-finite frame deltas', () => {

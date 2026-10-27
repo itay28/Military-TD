@@ -23,6 +23,7 @@ import {
 } from './drawEntities';
 import { drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
+import { MAX_GAME_SPEED, type GameSpeed } from './gameSpeed';
 import { createGestures, type Gesture, type Gestures } from './gestures';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { interpolatePosition, snapshotPositions } from './interpolate';
@@ -99,6 +100,8 @@ export class GameScene extends Phaser.Scene {
   private mapId: string = MAPS[0]!.id;
   private sim!: Game;
   private loop!: FixedStep;
+  /** The player's game speed. Each game starts at ×1. */
+  private gameSpeed: GameSpeed = 1;
   private hud!: Hud;
   private buildBar!: BuildBar;
   private endScreen!: EndScreen;
@@ -175,7 +178,7 @@ export class GameScene extends Phaser.Scene {
         center: { x: this.rangeRing.x, y: this.rangeRing.y },
       },
       tracers: this.tracers.active(),
-      ghost: { visible: this.ghostGraphics.visible },
+      ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
     };
@@ -194,11 +197,12 @@ export class GameScene extends Phaser.Scene {
     this.selectedRingKey = undefined;
     this.ghost = undefined;
     this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
+    this.gameSpeed = 1;
     drawMap(onLayer(this.add.graphics(), 'map'), this.sim.state.map);
     this.loop = createFixedStep({
       stepMs: TICK_MS,
-      // Scaled with ?speed, so the cap doesn't pull a faster loop back to real time.
-      maxStepsPerFrame: MAX_TICKS_PER_FRAME * Math.ceil(this.flags.speed),
+      // Scaled with ?speed and the fastest game speed, so the cap doesn't pull a faster loop back to real time.
+      maxStepsPerFrame: MAX_TICKS_PER_FRAME * Math.ceil(this.flags.speed) * MAX_GAME_SPEED,
       step: () => this.tickOnce(),
     });
 
@@ -277,7 +281,10 @@ export class GameScene extends Phaser.Scene {
       this.floatingTexts.add(`+${refund}`, toPixels(tileCenter(tile))),
     );
 
-    this.hud = mountHud(this.hudRoot, this.sim);
+    this.hud = mountHud(this.hudRoot, this.sim, {
+      get: () => this.gameSpeed,
+      set: (speed) => (this.gameSpeed = speed),
+    });
     this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
@@ -308,7 +315,8 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * The map starts zoomed to fit the canvas, which fills the window. A drag pans it and the wheel or a pinch zooms
-   * it; only a tap (a press that doesn't move) acts on the map, so moving the map never places a tower.
+   * it; only a tap (a press that doesn't move) acts on the map, so moving the map never places a tower. The one
+   * exception is touch: with a kind selected, a one-finger drag moves the Ghost and lifting places the tower.
    */
   private setUpCamera(): void {
     // Origin at the top-left corner, so a screen pixel shows the world point `scroll + screen / zoom` (camera.ts).
@@ -323,11 +331,16 @@ export class GameScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, onResize));
 
-    this.gestures = createGestures({ dragThresholdPx: CAMERA.dragThresholdPx });
+    // A touch drag places a tower when a tap would: a kind is selected and no tower is, so the tower panel, the one
+    // panel over the map, is closed.
+    this.gestures = createGestures({
+      dragThresholdPx: CAMERA.dragThresholdPx,
+      placing: () => this.buildBar.selected !== undefined && this.towerPanel.selectedId === undefined,
+    });
     const screen = (pointer: Phaser.Input.Pointer): Pixel => ({ x: pointer.x, y: pointer.y });
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 0) return;
-      this.onGesture(this.gestures.down(pointer.id, screen(pointer)));
+      this.onGesture(this.gestures.down(pointer.id, screen(pointer), pointer.wasTouch));
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       this.onGesture(this.gestures.move(pointer.id, screen(pointer)));
@@ -338,8 +351,11 @@ export class GameScene extends Phaser.Scene {
       // A lifted finger hovers nothing, so it leaves no Ghost or range ring behind; a mouse still hovers.
       if (pointer.wasTouch) this.pointerTile = undefined;
     });
-    // Released off the canvas: never a tap.
-    this.input.on('pointerupoutside', () => this.gestures.cancel());
+    // Released off the canvas, or over the build bar beside it: never a tap or a placement.
+    this.input.on('pointerupoutside', (pointer: Phaser.Input.Pointer) => {
+      this.gestures.cancel();
+      if (pointer.wasTouch) this.pointerTile = undefined;
+    });
     this.input.on('wheel', (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
       this.fitted = false;
       this.setView(zoomAt(this.view, Math.exp(-dy * CAMERA.wheelZoomPerPx), screen(pointer), this.cameraBounds()));
@@ -349,6 +365,11 @@ export class GameScene extends Phaser.Scene {
   private onGesture(gesture: Gesture | undefined): void {
     if (!gesture) return;
     if (gesture.type === 'tap') return this.tapAt(screenToWorld(this.view, gesture.point));
+    if (gesture.type === 'aim') {
+      this.pointerTile = pixelToTile(screenToWorld(this.view, gesture.point));
+      return;
+    }
+    if (gesture.type === 'place') return this.placeAtPoint(screenToWorld(this.view, gesture.point));
     this.fitted = false;
     const bounds = this.cameraBounds();
     const panned = panBy(this.view, gesture.dx, gesture.dy, bounds);
@@ -374,6 +395,14 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Places the selected kind on the tile at world pixel `at`, where an aiming drag lifted. */
+  private placeAtPoint(at: Pixel): void {
+    const kind = this.buildBar.selected;
+    if (!kind) return;
+    const refusal = placeAt(this.sim, kind, pixelToTile(at));
+    if (refusal) this.floatingTexts.add(refusal, at);
+  }
+
   /** One fixed tick of the game, from the real-time loop or test mode's step(). */
   private tickOnce(): void {
     this.previousPositions = snapshotPositions(this.sim.state.enemies);
@@ -385,7 +414,7 @@ export class GameScene extends Phaser.Scene {
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
-    this.loop.advance(frameMs(this.flags, deltaMs));
+    this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
     this.hud.update();
     this.buildBar.update();
     this.endScreen.update();
