@@ -84,3 +84,27 @@ test('Always show tower ranges draws every tower’s range ring, live', async ({
   await page.getByRole('checkbox', { name: 'Always show tower ranges' }).uncheck();
   await expect.poll(async () => (await view(page)).rangeRings).toEqual([]);
 });
+
+// From #49: settings are saved to localStorage. Test mode keeps them in memory unless `persist=1`.
+
+test('a changed setting is still set after a reload (persist=1)', async ({ page }) => {
+  await openGame(page, { persist: true });
+  await openSettingsFromPause(page);
+  await page.getByRole('radio', { name: '×2' }).check();
+  await page.getByRole('checkbox', { name: 'Always show tower ranges' }).check();
+
+  await openGame(page, { persist: true });
+  await openSettingsFromPause(page);
+  await expect(page.getByRole('radio', { name: '×2' })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Always show tower ranges' })).toBeChecked();
+});
+
+test('test mode keeps settings in memory by default, so runs do not leak into each other', async ({ page }) => {
+  await openGame(page);
+  await openSettingsFromPause(page);
+  await page.getByRole('radio', { name: '×4' }).check();
+
+  await openGame(page);
+  await openSettingsFromPause(page);
+  await expect(page.getByRole('radio', { name: '×1' })).toBeChecked();
+});
