@@ -349,6 +349,52 @@
         border-radius: 3px;
         cursor: pointer;
       }
+      /* The Main menu covers the whole page; the game's UI is hidden behind it, out of the accessibility tree too. */
+      #app[data-screen='menu'] :is(#hud, #build-bar, #tower-panel) {
+        display: none;
+      }
+      #menu {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: #1b1e16;
+        font: 16px monospace;
+        color: #e4e0c8;
+      }
+      /* `display: flex` above would otherwise override the hidden attribute. */
+      #menu[hidden] {
+        display: none;
+      }
+      #menu h1 {
+        margin: 0 0 18px;
+        font-size: 40px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #f0c95a;
+      }
+      #menu button {
+        width: 200px;
+        padding: 8px 0;
+        font: bold 18px monospace;
+        color: #1b1e16;
+        background: #c2a46b;
+        border: 0;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #menu button:disabled {
+        background: #5e6350;
+        color: #a2a58f;
+        cursor: default;
+      }
+      #menu button:focus-visible {
+        outline: 2px solid #f0c95a;
+        outline-offset: 2px;
+      }
       #version {
         position: fixed;
         right: 6px;
@@ -369,6 +415,7 @@
       </div>
       <nav id="build-bar" aria-label="Build"></nav>
     </div>
+    <main id="menu" hidden></main>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
