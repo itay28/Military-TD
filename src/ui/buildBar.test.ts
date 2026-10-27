@@ -6,9 +6,9 @@ import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
 
 // Only the Rifle Nest exists today, so most tests use made-up kinds to have more than one.
 const OPTIONS: readonly BuildOption<'rifle' | 'cannon' | 'mortar'>[] = [
-  { kind: 'rifle', name: 'Rifle', cost: 50, icon: { fill: 0x112233, outline: 0xffffff } },
-  { kind: 'cannon', name: 'Cannon', cost: 120, icon: { fill: 0x445566, outline: 0xffffff } },
-  { kind: 'mortar', name: 'Mortar', cost: 200, icon: { fill: 0x778899, outline: 0xffffff } },
+  { kind: 'rifle', name: 'Rifle', cost: 50, icon: { fill: 0x112233, outline: 0xffffff, shape: 'square', size: 32 } },
+  { kind: 'cannon', name: 'Cannon', cost: 120, icon: { fill: 0x445566, outline: 0xffffff, shape: 'square', size: 36 } },
+  { kind: 'mortar', name: 'Mortar', cost: 200, icon: { fill: 0x778899, outline: 0xffffff, shape: 'circle', size: 18 } },
 ];
 
 let root: HTMLElement;
@@ -35,6 +35,8 @@ describe('buildOptions', () => {
         icon: {
           fill: TOWER_STYLE[kind as keyof typeof TOWER_STATS].fill,
           outline: TOWER_STYLE[kind as keyof typeof TOWER_STATS].outline,
+          shape: TOWER_STYLE[kind as keyof typeof TOWER_STATS].shape,
+          size: TOWER_STYLE[kind as keyof typeof TOWER_STATS].size,
         },
       })),
     );
@@ -60,6 +62,31 @@ describe('Build bar', () => {
     const icon = button('cannon').querySelector<HTMLElement>('.build-icon')!;
     expect(icon.style.backgroundColor).toMatch(/#445566|rgb\(68, 85, 102\)/);
     expect(icon.style.borderColor).toMatch(/#ffffff|rgb\(255, 255, 255\)/);
+  });
+
+  it('draws round icons for circle kinds and square ones for square kinds', () => {
+    mountBuildBar(root, wallet(500), OPTIONS);
+    const radius = (kind: string) => button(kind).querySelector<HTMLElement>('.build-icon')!.style.borderRadius;
+    expect(radius('rifle')).toBe('');
+    expect(radius('mortar')).toBe('50%');
+  });
+
+  it('matches every kind icon shape to TOWER_STYLE, so a new kind cannot drift', () => {
+    const options = buildOptions();
+    mountBuildBar(root, wallet(500), options);
+    for (const { kind } of options) {
+      const icon = button(kind).querySelector<HTMLElement>('.build-icon')!;
+      expect(icon.style.borderRadius === '50%', kind).toBe(TOWER_STYLE[kind].shape === 'circle');
+    }
+  });
+
+  it('keeps icon sizes relative: the largest fills the box, smaller towers are scaled down', () => {
+    mountBuildBar(root, wallet(500), OPTIONS);
+    const width = (kind: string) => parseFloat(button(kind).querySelector<HTMLElement>('.build-icon')!.style.width);
+    expect(width('cannon')).toBe(24);
+    expect(width('rifle')).toBeCloseTo((24 * 32) / 36);
+    expect(width('mortar')).toBeCloseTo(12);
+    expect(button('cannon').querySelector<HTMLElement>('.build-icon')!.style.height).toBe('24px');
   });
 
   it('selects no kind at the start, so a click on the map builds nothing until the player picks one', () => {
