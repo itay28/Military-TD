@@ -37,10 +37,12 @@
 | **Wave group** | Part of a wave: a number of enemies of one kind, the first a delay after the wave starts, then one every spacing. | squad |
 | **Build phase / Wave phase** | Between waves / while a wave is active. | |
 | **Victory / Defeat** | How a game ends: the last wave cleared with Lives left / Lives reaching 0. Either one stops the Simulation. | win, game over |
-| **End screen** | The overlay over the map once the game ends: Victory or Defeat, the waves survived (waves cleared), and **Restart**, which starts a fresh game. | game over screen |
+| **End screen** | The overlay over the map once the game ends: Victory or Defeat, the waves survived (waves cleared), the **Damage report**, and **Restart**, which starts a fresh game. | game over screen |
 | **Leak** | An enemy reaching the Path end. It costs Lives. | escape |
 | **Lives** | How many leaks the player can survive. Defeat at 0. | health, HP (HP is for enemies) |
 | **Wave DPS** | Damage per second during the current wave only: damage dealt this wave ÷ time since the wave started. Per tower or in total. Resets when a wave starts. | |
+| **Wave time** | The time a wave ran, from its start until it was cleared or lost. A tower's wave time is the part of it the tower stood on the map (while dismantling too). | |
+| **Damage report** | The End screen's breakdown of damage, kills and DPS: by tower (sold towers kept, marked sold), by tower type, and by wave with a total. A tower's DPS is its damage ÷ its own wave time; a wave's is its damage ÷ its wave time; a tower type's and the total's are their damage ÷ the whole game's wave time (every wave's added up). Each time is floored at 1 s, like Wave DPS; a tower that never stood in a wave shows 0. | stats screen |
 | **Scenario** | A declarative game setup plus a script of timed commands, run headlessly by `runScenario()` to test a situation. | fixture, level (for tests) |
 | **Test mode** | The browser game started with `?test=1` (plus `step`, `anim`, `speed` flags), exposing `window.__TD__` for automated UI tests. | debug mode |
 | **Release issue** | The issue that stands in for a milestone on the project board: `Release v0.N.0`, labelled `release`. It moves across the board as the milestone is worked, reported and released, and it doesn't count when deciding whether the milestone is done (`docs/agents/releasing.md` → **Milestone release**). | milestone issue |
