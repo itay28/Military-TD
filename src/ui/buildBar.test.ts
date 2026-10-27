@@ -110,6 +110,18 @@ describe('Build bar', () => {
     expect(bar.selected).toBeUndefined();
   });
 
+  it('marks an Escape that clears a selection as handled, so it does not also pause', () => {
+    mountBuildBar(root, wallet(500), OPTIONS);
+    const escape = () => new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    const idle = escape();
+    document.dispatchEvent(idle);
+    expect(idle.defaultPrevented).toBe(false);
+    pressKey('1');
+    const clearing = escape();
+    document.dispatchEvent(clearing);
+    expect(clearing.defaultPrevented).toBe(true);
+  });
+
   it('the toggle collapses the bar and expands it again', () => {
     const bar = mountBuildBar(root, wallet(500), OPTIONS);
     expect(bar.collapsed).toBe(false);
