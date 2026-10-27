@@ -1,6 +1,6 @@
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Tile } from './map';
-import { waveDps, type CombatStats, type DamageCount } from './stats';
+import { ZERO, waveDps, type CombatStats, type DamageCount } from './stats';
 
 /** Damage, kills and damage per second, for one row of the damage report. */
 export interface ReportFigures extends DamageCount {
@@ -36,8 +36,6 @@ export interface DamageReport {
   /** The whole game; `elapsedMs` is every finished wave's duration added up. */
   readonly total: ReportFigures & { readonly elapsedMs: number };
 }
-
-const ZERO: DamageCount = { damage: 0, kills: 0 };
 
 /** Damage per second, or 0 for no time at all (a tower that never stood in a wave). */
 const dps = (damage: number, elapsedMs: number): number => (elapsedMs > 0 ? waveDps(damage, elapsedMs) : 0);

@@ -34,7 +34,7 @@ export interface WaveRecord extends DamageCount {
   readonly towers: Readonly<Record<number, DamageCount>>;
 }
 
-const ZERO: DamageCount = { damage: 0, kills: 0 };
+export const ZERO: DamageCount = { damage: 0, kills: 0 };
 
 export const emptyStats = (): CombatStats => ({
   total: ZERO,
