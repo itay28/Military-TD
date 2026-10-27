@@ -275,6 +275,18 @@
         border: 2px solid #c2a46b;
         border-radius: 4px;
       }
+      /* Scroll cue: a glow on an edge with hidden content.
+         The `local` cover layers hide it where nothing is clipped. */
+      #end-screen [role='dialog'] {
+        background:
+          linear-gradient(#262a1f 30%, rgb(38 42 31 / 0)) top / 100% 24px local no-repeat,
+          linear-gradient(rgb(38 42 31 / 0), #262a1f 70%) bottom / 100% 24px local no-repeat,
+          radial-gradient(farthest-side at 50% 0, rgb(240 201 90 / 0.5), rgb(240 201 90 / 0)) top / 100% 10px scroll
+            no-repeat,
+          radial-gradient(farthest-side at 50% 100%, rgb(240 201 90 / 0.5), rgb(240 201 90 / 0)) bottom / 100% 10px
+            scroll no-repeat,
+          #262a1f;
+      }
       #end-screen h2,
       #pause-menu h2 {
         margin: 0;
