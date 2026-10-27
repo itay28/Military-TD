@@ -34,7 +34,15 @@ describe('canvasPainter', () => {
     const painter = canvasPainter(ctx, 0.5);
     painter.lineStyle(1, 0x000000, 0.15);
     painter.lineBetween(0, 0, 96, 0);
-    expect(calls).toEqual(['from 0,0', 'to 48,0', 'stroke #000000 0.15 1']);
+    expect(calls).toEqual(['from 0,0', 'to 48,0', 'stroke #000000 0.15 0.5']);
+  });
+
+  it('scales the line width with the coordinates', () => {
+    const { ctx, calls } = recordingContext();
+    const painter = canvasPainter(ctx, 0.25);
+    painter.lineStyle(4, 0x000000);
+    painter.lineBetween(0, 0, 8, 0);
+    expect(calls).toEqual(['from 0,0', 'to 2,0', 'stroke #000000 1 1']);
   });
 
   it('a new fill colour resets the alpha a line set', () => {

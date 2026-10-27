@@ -25,6 +25,10 @@ describe('MVP map', () => {
 });
 
 describe('map registry', () => {
+  it('is never empty (GameScene defaults to the first map)', () => {
+    expect(MAPS.length).toBeGreaterThan(0);
+  });
+
   it('starts with the MVP map', () => {
     expect(MAPS[0]?.data).toBe(MVP_MAP);
   });

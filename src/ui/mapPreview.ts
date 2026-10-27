@@ -24,7 +24,7 @@ export function canvasPainter(ctx: PreviewContext, scale: number): MapPainter {
       ctx.fillRect(x * scale, y * scale, width * scale, height * scale);
     },
     lineStyle(lineWidth, color, alpha = 1) {
-      ctx.lineWidth = lineWidth;
+      ctx.lineWidth = lineWidth * scale;
       ctx.strokeStyle = css(color);
       ctx.globalAlpha = alpha;
     },
