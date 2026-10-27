@@ -132,6 +132,8 @@ export function currentMilestone(milestones: readonly Milestone[]): number | nul
  * the Ready rule: current milestone (or infra with no milestone, #225), `ready-for-agent` and no
  * open blockers → Ready, else Backlog. Without an open milestone only that infra work is Ready.
  * Done cards and trackers (release issues, epics) are never moved; In progress and In review cards with no PR and no assignee stay put.
+ * A PR merged into the default branch leaves the card alone: GitHub closes the issue and moves it to Done,
+ * and a run that read the board before the close must not overwrite that (#258).
  */
 export function desiredStatus(
   issue: BoardIssue,
@@ -140,6 +142,7 @@ export function desiredStatus(
   current: number | null = null,
 ): CardStatus | undefined {
   if (issue.tracker || issue.status === 'Done') return undefined;
+  if (prs.some((pr) => pr.state === 'MERGED' && pr.base === defaultBranch)) return undefined;
   const inReview = prs.some(
     (pr) => (pr.state === 'OPEN' && !pr.isDraft) || (pr.state === 'MERGED' && pr.base !== defaultBranch),
   );
