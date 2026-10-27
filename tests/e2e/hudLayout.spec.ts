@@ -4,6 +4,7 @@ import { AUTO_START_DELAY_MS } from '../../src/data/waves';
 import { clickTile, openGame, selectKind } from './helpers';
 
 const BESIDE_PATH = { col: 1, row: 3 };
+const SECOND_BESIDE_PATH = { col: 2, row: 3 };
 const DELAY_TICKS = Math.round(AUTO_START_DELAY_MS / TICK_MS);
 
 type Box = { x: number; y: number; width: number; height: number };
@@ -43,6 +44,8 @@ for (const viewport of [
     await selectKind(page);
     await clickTile(page, BESIDE_PATH);
     await check('a tower bought');
+    await clickTile(page, SECOND_BESIDE_PATH);
+    await check('two towers bought (Money 100 → 50 → 0)');
     for (let i = 0; i < 3; i++) {
       await page.getByTestId('game-speed').click();
       await check(`game speed ${i + 1}`);
@@ -65,6 +68,6 @@ for (const viewport of [
     await step(200);
     await expect(page.getByTestId('hud-wave')).toHaveText(/^Wave 2 \//);
     await check('the next wave auto-started');
-    expect(states).toHaveLength(11);
+    expect(states).toHaveLength(12);
   });
 }
