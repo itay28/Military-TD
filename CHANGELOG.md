@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/itay28/Military-TD/compare/v0.1.4...v0.2.0) (2026-10-27)
+
+
+### Bug Fixes
+
+* build bar icons match each tower's shape on the map ([#247](https://github.com/itay28/Military-TD/issues/247)) ([0fa8e8c](https://github.com/itay28/Military-TD/commit/0fa8e8c7a0230285f9ec0dfc085255aff1bc64b2))
+* tower panel content fits its box on every screen ([#248](https://github.com/itay28/Military-TD/issues/248)) ([01d50f6](https://github.com/itay28/Military-TD/commit/01d50f69cba69877c88f520b428196460cacce10))
+
+
+### Miscellaneous Chores
+
+* release 0.2.0 ([#252](https://github.com/itay28/Military-TD/issues/252)) ([d2829e5](https://github.com/itay28/Military-TD/commit/d2829e554380e12b1a958f130ce5301d7869f283))
+
 ## [0.1.4](https://github.com/itay28/Military-TD/compare/v0.1.3...v0.1.4) (2026-10-27)
 
 
