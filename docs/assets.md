@@ -2,6 +2,8 @@
 
 Every art, audio and font file we didn't make ourselves must be traceable to its source and license. CI enforces this from v0.4.0 (#60).
 
+**Art direction:** the long-term look is satellite-style milsim art with factions per map ([ADR-0009](adr/0009-satellite-milsim-art-and-factions.md), proposed). The Kenney packs are placeholders until a faction's realistic set is complete.
+
 ## Allowed licenses
 
 | License | OK? | Notes |
