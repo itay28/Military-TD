@@ -1,4 +1,5 @@
 import { isGameOver, type GameState } from '../sim/game';
+import type { OpenSettings, SettingsScreen } from './settingsScreen';
 
 /** The parts of the Game the pause menu reads. */
 export interface PauseMenuGame {
@@ -14,6 +15,8 @@ export interface PauseMenuOptions {
   readonly onRestart: () => void;
   /** Called when the player presses Quit to menu. Without it, Quit is disabled: there is no menu yet (#46). */
   readonly onQuit?: () => void;
+  /** Opens the Settings screen in place of the Paused dialog. Without it, Settings is disabled. */
+  readonly openSettings?: OpenSettings;
 }
 
 export interface PauseMenu {
@@ -21,7 +24,7 @@ export interface PauseMenu {
   readonly paused: boolean;
   /** Opens the overlay. Does nothing once the game is over. */
   open(): void;
-  /** Closes the overlay and resumes. */
+  /** Closes the overlay, and the Settings screen if it is open, and resumes. */
   close(): void;
   /** Keeps the Pause button and the overlay in step with the game; call once per frame. Writes only on a change. */
   update(): void;
@@ -39,7 +42,7 @@ const TITLE_ID = 'pause-menu-title';
 export function mountPauseMenu(
   root: HTMLElement,
   game: PauseMenuGame,
-  { buttonRoot, blocked, onRestart, onQuit }: PauseMenuOptions,
+  { buttonRoot, blocked, onRestart, onQuit, openSettings }: PauseMenuOptions,
 ): PauseMenu {
   const doc = root.ownerDocument;
   const makeButton = (testId: string, text: string, onClick?: () => void) => {
@@ -57,6 +60,7 @@ export function mountPauseMenu(
   const setPaused = (value: boolean) => {
     if (paused === value) return;
     paused = value;
+    if (!paused) closeSettings();
     root.hidden = !paused;
     for (const area of blocked) area.inert = paused;
     if (paused) resume.focus();
@@ -65,6 +69,11 @@ export function mountPauseMenu(
     if (!destroyed && !isGameOver(game.state.phase)) setPaused(true);
   };
   const close = () => setPaused(false);
+  const closeSettings = () => {
+    settingsScreen?.close();
+    settingsScreen = undefined;
+    dialog.hidden = false;
+  };
 
   const pause = makeButton('pause', 'Pause', open);
   buttonRoot.append(pause);
@@ -77,12 +86,26 @@ export function mountPauseMenu(
   heading.id = TITLE_ID;
   heading.textContent = 'Paused';
   const resume = makeButton('resume', 'Resume', close);
+  // Open, the Settings screen takes the Paused dialog's place; the game stays paused, and Back brings the dialog back.
+  let settingsScreen: SettingsScreen | undefined;
+  const settings = makeButton(
+    'settings',
+    'Settings',
+    openSettings &&
+      (() => {
+        dialog.hidden = true;
+        settingsScreen = openSettings(() => {
+          settingsScreen = undefined;
+          dialog.hidden = false;
+          settings.focus();
+        });
+      }),
+  );
   dialog.append(
     heading,
     resume,
     makeButton('pause-restart', 'Restart', () => onRestart()),
-    // Settings (#48) doesn't exist yet.
-    makeButton('settings', 'Settings'),
+    settings,
     makeButton('quit', 'Quit to menu', onQuit && (() => onQuit())),
   );
   root.append(dialog);
@@ -92,7 +115,10 @@ export function mountPauseMenu(
   const swallowKeysWhilePaused = (event: KeyboardEvent) => {
     if (!paused) return;
     event.stopPropagation();
-    if (event.key === 'Escape' && !event.repeat) close();
+    if (event.key !== 'Escape' || event.repeat) return;
+    // From Settings, Esc goes back to the Paused dialog rather than resuming.
+    if (settingsScreen) settingsScreen.back();
+    else close();
   };
   // Esc pauses last, so one that cancelled something first (a tower selection, a build kind) doesn't also pause.
   const pauseOnEscape = (event: KeyboardEvent) => {

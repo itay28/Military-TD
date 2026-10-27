@@ -22,10 +22,44 @@ describe('Main menu', () => {
     expect(button('Settings')?.type).toBe('button');
   });
 
-  it('disables Settings until the Settings screen exists (#48)', () => {
+  it('disables Settings when it is given no Settings screen to open', () => {
     mountMainMenu(root, { app, onPlay: () => {} });
     expect(button('Play')?.disabled).toBe(false);
     expect(button('Settings')?.disabled).toBe(true);
+  });
+
+  it('opens the Settings screen from Settings, with the menu inert behind it', () => {
+    const openSettings = vi.fn(() => ({ close: () => {}, back: () => {} }));
+    mountMainMenu(root, { app, onPlay: () => {}, openSettings });
+    expect(button('Settings')?.disabled).toBe(false);
+    button('Settings')!.click();
+    expect(openSettings).toHaveBeenCalledOnce();
+    expect(root.inert).toBe(true);
+  });
+
+  it('comes back from Settings with the menu usable and Settings focused', () => {
+    let onBack = () => {};
+    mountMainMenu(root, {
+      app,
+      onPlay: () => {},
+      openSettings: (back) => {
+        onBack = back;
+        return { close: () => {}, back: () => {} };
+      },
+    });
+    button('Settings')!.click();
+    onBack();
+    expect(root.inert).toBe(false);
+    expect(document.activeElement).toBe(button('Settings'));
+  });
+
+  it('closes an open Settings screen when destroyed', () => {
+    const close = vi.fn();
+    const menu = mountMainMenu(root, { app, onPlay: () => {}, openSettings: () => ({ close, back: () => {} }) });
+    button('Settings')!.click();
+    menu.destroy();
+    expect(close).toHaveBeenCalledOnce();
+    expect(root.inert).toBe(false);
   });
 
   it('calls onPlay when the player presses Play', () => {

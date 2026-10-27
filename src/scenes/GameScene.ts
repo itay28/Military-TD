@@ -7,6 +7,7 @@ import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
 import { setUpGame, type GameSetup } from '../sim/scenario';
+import type { SettingsStore } from '../settings/settings';
 import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
@@ -38,6 +39,7 @@ import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
+import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { createViewSync, type ViewSync } from './viewSync';
 
@@ -47,6 +49,7 @@ const MAX_TICKS_PER_FRAME = 5;
 const towerCenter = (tower: Tower): Pixel => toPixels(tileCenter(tower.tile));
 /** What a drawn range ring depends on: the tower, and its range, which an upgrade can change. */
 const ringKey = (tower: Tower): string => `${tower.id}@${tower.range}`;
+const ringKeyTowerId = (key: string): number => Number(key.split('@')[0]);
 
 /** Draw order, back to front. */
 const DEPTH = {
@@ -93,6 +96,10 @@ export interface GameSceneOptions {
   readonly pauseMenuRoot: HTMLElement;
   /** Test mode's URL flags (ADR-0003). */
   readonly flags: TestFlags;
+  /** The player's settings, read live: each game starts at the default speed, and range rings follow every frame. */
+  readonly settings: SettingsStore;
+  /** Opens the Settings screen, from the pause menu. */
+  readonly openSettings: OpenSettings;
   /** Called at the end of every create(), the first game's and each restart's. */
   readonly onCreate?: () => void;
 }
@@ -105,6 +112,8 @@ export class GameScene extends Phaser.Scene {
   private readonly towerPanelRoot: HTMLElement;
   private readonly pauseMenuRoot: HTMLElement;
   private readonly flags: TestFlags;
+  private readonly settings: SettingsStore;
+  private readonly openSettings: OpenSettings;
   private readonly onCreate: (() => void) | undefined;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
   private setup: GameSetup = {};
@@ -112,7 +121,7 @@ export class GameScene extends Phaser.Scene {
   private mapId: string = MAPS[0]!.id;
   private sim!: Game;
   private loop!: FixedStep;
-  /** The player's game speed. Each game starts at ×1. */
+  /** The player's game speed. Each game starts at the default speed in the settings. */
   private gameSpeed: GameSpeed = 1;
   private hud!: Hud;
   private buildBar!: BuildBar;
@@ -127,6 +136,8 @@ export class GameScene extends Phaser.Scene {
   private shellGraphics!: Phaser.GameObjects.Graphics;
   private rangeRing!: Phaser.GameObjects.Graphics;
   private selectedRing!: Phaser.GameObjects.Graphics;
+  /** With Always show tower ranges: every tower's range ring but the selected one's, which `selectedRing` draws. */
+  private allRings!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
   /** The ghost last drawn, and its kind, so it is redrawn only when its tile, colour or kind changes. */
   private ghost: (Ghost & { readonly kind: TowerKind }) | undefined;
@@ -140,6 +151,9 @@ export class GameScene extends Phaser.Scene {
   private hoveredRingKey: string | undefined;
   /** The selected tower whose range ring is drawn, as its `ringKey`. */
   private selectedRingKey: string | undefined;
+  /** The towers `allRings` draws now, by id, and their `ringKey`s joined, so the rings are redrawn only on a change. */
+  private allRingIds: readonly number[] = [];
+  private allRingsKey = '';
   /** Where the camera looks. */
   private view!: CameraView;
   /** Whether the player has not panned or zoomed yet, so a resize fits the whole map again. */
@@ -153,6 +167,8 @@ export class GameScene extends Phaser.Scene {
     towerPanelRoot,
     pauseMenuRoot,
     flags,
+    settings,
+    openSettings,
     onCreate,
   }: GameSceneOptions) {
     super('Game');
@@ -162,6 +178,8 @@ export class GameScene extends Phaser.Scene {
     this.towerPanelRoot = towerPanelRoot;
     this.pauseMenuRoot = pauseMenuRoot;
     this.flags = flags;
+    this.settings = settings;
+    this.openSettings = openSettings;
     this.onCreate = onCreate;
   }
 
@@ -196,9 +214,13 @@ export class GameScene extends Phaser.Scene {
     return {
       rangeRing: {
         visible: this.rangeRing.visible,
-        towerId: this.hoveredRingKey ? Number(this.hoveredRingKey.split('@')[0]) : null,
+        towerId: this.hoveredRingKey ? ringKeyTowerId(this.hoveredRingKey) : null,
         center: { x: this.rangeRing.x, y: this.rangeRing.y },
       },
+      rangeRings: [
+        ...this.allRingIds,
+        ...[this.selectedRingKey, this.hoveredRingKey].flatMap((key) => (key ? [ringKeyTowerId(key)] : [])),
+      ].sort((a, b) => a - b),
       tracers: this.tracers.active(),
       ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
@@ -249,9 +271,11 @@ export class GameScene extends Phaser.Scene {
     this.pointerTile = undefined;
     this.hoveredRingKey = undefined;
     this.selectedRingKey = undefined;
+    this.allRingIds = [];
+    this.allRingsKey = '';
     this.ghost = undefined;
     this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
-    this.gameSpeed = 1;
+    this.gameSpeed = this.settings.get().defaultSpeed;
     this.drawMapView();
     this.loop = createFixedStep({
       stepMs: TICK_MS,
@@ -328,6 +352,7 @@ export class GameScene extends Phaser.Scene {
 
     this.rangeRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
     this.selectedRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
+    this.allRings = onLayer(this.add.graphics(), 'rangeRing');
     this.input.on('gameout', () => (this.pointerTile = undefined));
 
     this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
@@ -357,6 +382,7 @@ export class GameScene extends Phaser.Scene {
       buttonRoot: this.hudRoot,
       blocked: [this.hudRoot, this.buildBarRoot, this.towerPanelRoot],
       onRestart: () => this.scene.restart(),
+      openSettings: this.openSettings,
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.hud.destroy();
@@ -511,13 +537,16 @@ export class GameScene extends Phaser.Scene {
       ),
     );
     drawBlasts(this.shellGraphics, this.blasts.active());
+    // Every frame too, so a setting switched on the Settings screen shows at once.
+    const { showAllRanges } = this.settings.get();
+    this.showAllRings(showAllRanges ? towers.filter((tower) => tower !== selected) : []);
     // Checked every frame, not only on pointer moves, so a tower that appears under a still pointer shows its ring.
-    // The selected tower's ring is drawn already.
+    // The selected tower's ring is drawn already, and with Always show tower ranges every other one is too.
     const hovered = this.pointerTile && towerAt(towers, this.pointerTile);
     this.hoveredRingKey = this.showRing(
       this.rangeRing,
       this.hoveredRingKey,
-      hovered === selected ? undefined : hovered,
+      hovered === selected || showAllRanges ? undefined : hovered,
     );
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.
     // None while a tower is selected, since a click then only deselects.
@@ -542,6 +571,21 @@ export class GameScene extends Phaser.Scene {
     const { x, y } = towerCenter(tower);
     drawRangeRing(ring.setPosition(x, y), tower);
     return key;
+  }
+
+  /** Draws the range rings of `towers` on `allRings`, redrawing only when the towers or their ranges change. */
+  private showAllRings(towers: readonly Tower[]): void {
+    const key = towers.map(ringKey).join(',');
+    if (key === this.allRingsKey) return;
+    this.allRingsKey = key;
+    this.allRingIds = towers.map((tower) => tower.id);
+    this.allRings.clear();
+    for (const tower of towers) {
+      const { x, y } = towerCenter(tower);
+      this.allRings.translateCanvas(x, y);
+      drawRangeRing(this.allRings, tower);
+      this.allRings.translateCanvas(-x, -y);
+    }
   }
 
   /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none or no kind is selected. */
