@@ -24,6 +24,7 @@ function fakeHooks(setup: GameSetup = {}): TestHooks & { load: ReturnType<typeof
 const EMPTY_VIEW: TestView = {
   rangeRing: { visible: false, towerId: null, center: { x: 0, y: 0 } },
   tracers: [],
+  effects: [],
   ghost: { visible: false, tile: null },
   camera: { scrollX: 0, scrollY: 0, zoom: 1 },
   drawOrder: ['map'],
@@ -130,6 +131,7 @@ describe('createTestApi', () => {
     const scene = {
       rangeRing: { visible: true, towerId: 1, center: { x: 72, y: 168 } },
       tracers: [{ from: { x: 72, y: 168 }, to: { x: 24, y: 120 }, alpha: 1 }],
+      effects: [{ kind: 'puff' as const, at: { x: 24, y: 120 }, progress: 0.5 }],
       ghost: { visible: true, tile: { col: 1, row: 2 } },
       camera: { scrollX: 10, scrollY: -20, zoom: 1.5 },
       drawOrder: ['map', 'towers', 'rangeRing'],

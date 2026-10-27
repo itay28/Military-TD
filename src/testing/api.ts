@@ -26,6 +26,12 @@ export interface TestView {
   readonly rangeRing: { readonly visible: boolean; readonly towerId: number | null; readonly center: Pixel };
   /** The tracers drawn on the next frame, each from a tower to where its shot hit. */
   readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
+  /** The combat effects (muzzle flash, explosion, death puff) drawn on the next frame. */
+  readonly effects: readonly {
+    readonly kind: 'muzzleFlash' | 'explosion' | 'puff';
+    readonly at: Pixel;
+    readonly progress: number;
+  }[];
   /**
    * The Ghost under the pointer: shown only while a mouse hovers, or a finger drags over, a tile with a build kind
    * selected. `tile` is null when it is hidden.

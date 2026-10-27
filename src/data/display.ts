@@ -137,3 +137,14 @@ export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015
 
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
+
+/**
+ * Combat effects: all small and over within `lifeMs`, so they never hide enemies, health bars or range rings. Each is
+ * a disc that fades out while growing by `growth` times its `radius` (in pixels).
+ */
+export const EFFECT = {
+  lifeMs: 250,
+  muzzleFlash: { color: 0xfff1b0, radius: 5, growth: 1 },
+  explosion: { color: 0xff8a3d, radius: 8, growth: 1.6 },
+  puff: { color: 0xc9c9c9, radius: 6, growth: 1.5 },
+} as const;
