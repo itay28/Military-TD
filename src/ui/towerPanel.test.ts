@@ -29,6 +29,7 @@ const rifleNest = (id: number): Tower => ({
 
 // Tower 1 has dealt 70 damage and 2 kills in all, 35 of it this wave, 10 s in.
 const PLAYED: CombatStats = {
+  ...emptyStats(),
   total: { damage: 70, kills: 2 },
   wave: { damage: 35, kills: 1, elapsedMs: 10_000 },
   towers: { 1: { total: { damage: 70, kills: 2 }, wave: { damage: 35, kills: 1 } } },
