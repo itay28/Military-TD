@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.3.0](https://github.com/itay28/Military-TD/compare/v0.2.0...v0.3.0) (2026-10-27)
+
+
+### Features
+
+* auto-start waves option ([#251](https://github.com/itay28/Military-TD/issues/251)) ([4b2ef7b](https://github.com/itay28/Military-TD/commit/4b2ef7bde4b329b8793cd90b5237fa6ba25a5d54))
+* drag to place a tower on touch ([#250](https://github.com/itay28/Military-TD/issues/250)) ([9615cf7](https://github.com/itay28/Military-TD/commit/9615cf743aa0c8ab761e6fa1451b699ff846c799))
+* End screen damage report ([#234](https://github.com/itay28/Military-TD/issues/234)) ([eab9bbd](https://github.com/itay28/Military-TD/commit/eab9bbd821cb3b6c3cb461a4930ddf1ce43318b0))
+* game speed toggle (×1 / ×2 / ×4) ([#231](https://github.com/itay28/Military-TD/issues/231)) ([db162eb](https://github.com/itay28/Military-TD/commit/db162eb2d63be73aa194147890d91b413da48d8f))
+* level select screen ([#236](https://github.com/itay28/Military-TD/issues/236)) ([afb27b2](https://github.com/itay28/Military-TD/commit/afb27b25c7fc71dddbbe8bfbfbd1f0348abb5df7))
+* main menu scene ([#233](https://github.com/itay28/Military-TD/issues/233)) ([2b21f19](https://github.com/itay28/Military-TD/commit/2b21f195cc92b4be14735ca23d38bf96bebcd0a9))
+* pause menu (resume, restart, quit) ([#235](https://github.com/itay28/Military-TD/issues/235)) ([436a28a](https://github.com/itay28/Military-TD/commit/436a28a6aa1ec6b629eb61ade1197bbadc2f05f7))
+* persist settings in localStorage ([#263](https://github.com/itay28/Military-TD/issues/263)) ([5a53fc8](https://github.com/itay28/Military-TD/commit/5a53fc8be250546eef089ab294b50d3ead140cc2))
+* Settings screen (default game speed, always show tower ranges) ([#262](https://github.com/itay28/Military-TD/issues/262)) ([a772d03](https://github.com/itay28/Military-TD/commit/a772d0304d1ea9809b6c9e7c7be0942a2be6101e))
+
+
+### Bug Fixes
+
+* Board sync leaves a card alone once its PR merged into main ([#259](https://github.com/itay28/Military-TD/issues/259)) ([2f75618](https://github.com/itay28/Military-TD/commit/2f756180bc00047d63434758411b3b22067d638d))
+* PR title check never leaves a cancelled run on a PR ([#261](https://github.com/itay28/Military-TD/issues/261)) ([ef37352](https://github.com/itay28/Military-TD/commit/ef373524dbd1b81feecda2a6c0116363dc8296e0))
+
+
+### Miscellaneous Chores
+
+* release 0.3.0 ([#270](https://github.com/itay28/Military-TD/issues/270)) ([4335b07](https://github.com/itay28/Military-TD/commit/4335b077a106fe0ed280fe39d63a2b654223ba36))
+
 ## [0.2.0](https://github.com/itay28/Military-TD/compare/v0.1.4...v0.2.0) (2026-10-27)
 
 
