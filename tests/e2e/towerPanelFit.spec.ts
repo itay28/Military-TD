@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { TOWER_STATS, type TowerKind } from '../../src/data/towers';
+import { towerLevels } from '../../src/sim/towers';
 import { openGame, state, tileToScreen } from './helpers';
 
 const VIEWPORTS = [
@@ -8,7 +9,6 @@ const VIEWPORTS = [
   { name: 'phone landscape', width: 844, height: 390 },
 ] as const;
 const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
-const MAX_LEVEL = 3;
 
 /** Selects tower `kind` (placed by the every-tower-kind scenario) at `level`, by commands and a click on its tile. */
 async function openPanel(page: Page, kind: TowerKind, level: number) {
@@ -27,7 +27,7 @@ for (const { name, ...viewport } of VIEWPORTS) {
   test.describe(`on ${name} (${viewport.width} × ${viewport.height})`, () => {
     test.use({ viewport });
     for (const kind of KINDS) {
-      for (const level of [1, MAX_LEVEL]) {
+      for (const level of [1, towerLevels(kind).length]) {
         test(`the ${kind} panel at level ${level} fits its box and the screen`, async ({ page }) => {
           await openPanel(page, kind, level);
           const overflowing = await page.evaluate(() => {
