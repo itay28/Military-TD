@@ -73,6 +73,10 @@ The plan named *Top-down Tanks Redux*. Kenney now publishes that set as *Top-dow
 
 Map and effects: `tileGrass1`/`tileGrass2` ground, `tileGrass_road{East,North,CornerLL,LR,UL,UR}` for the Path, `td130`/`td131` bushes, `td135`–`td137` rocks, `treeGreen_small`/`treeGreen_large` (#43); `shotOrange` and `td295` muzzle flash, `explosion1`–`3`, `explosionSmoke1`–`3`, `td019`–`td021` smoke (#44).
 
+### Tileset (#43)
+
+The map is drawn from these frames (`src/scenes/tileset.ts`, frame tables in `src/data/sprites.ts`): `tileGrass1` on buildable tiles; on the Path, the road straight or bend that joins the tiles before and after it in walking order (the ends join the grid edge; Kenney names a bend by the corner it wraps around, so `CornerUR` joins north and east); on a non-buildable tile off the Path, `tileGrass2` tinted darker with one tree, bush or rock, picked from a seed made of the map id and the tile. Faint grid lines go over the ground, under the decorations. If the atlas lacks any of these frames, the whole map is drawn as flat colours.
+
 ### Atlas (#40)
 
 The game loads one texture atlas, `assets/atlas/sprites.{png,json}` (Phaser JSON hash), not the PNGs above. `npm run atlas` (`scripts/atlas.ts`) packs every PNG of the Tower Defense and Tanks packs into it, one 64 px cell each, frame name = file name without `.png`; rerun it and commit the output after adding or changing a sprite (a test fails while the committed atlas differs from a fresh build). The atlas holds both packs' pixels, so both manifest entries list it. Which frame each kind is drawn with: `src/data/sprites.ts`; a kind without one (Helicopter), or any kind when the atlas fails to load, keeps its shape.

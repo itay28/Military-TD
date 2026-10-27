@@ -28,6 +28,7 @@ const EMPTY_VIEW: TestView = {
   camera: { scrollX: 0, scrollY: 0, zoom: 1 },
   drawOrder: ['map'],
   sprites: true,
+  mapTiles: 'sprites',
 };
 
 const api = (hooks: TestHooks, scenarios: ScenarioLoaders = {}) => createTestApi(hooks, scenarios);
@@ -134,6 +135,7 @@ describe('createTestApi', () => {
       camera: { scrollX: 10, scrollY: -20, zoom: 1.5 },
       drawOrder: ['map', 'towers', 'rangeRing'],
       sprites: true,
+      mapTiles: 'sprites' as const,
     };
     const hooks = { ...fakeHooks(), view: () => scene };
     const view = api(hooks).view();

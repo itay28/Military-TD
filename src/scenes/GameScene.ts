@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CAMERA, DISMANTLE, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
-import { ATLAS_KEY, TILE_TYPES, spriteFor, type SpriteKind } from '../data/sprites';
+import { ATLAS_KEY, spriteFor, type SpriteKind } from '../data/sprites';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { MAPS, mapById } from '../data/maps';
 import type { Enemy } from '../sim/enemies';
@@ -24,7 +24,7 @@ import {
   drawTower,
   drawTracers,
 } from './drawEntities';
-import { drawGrid, drawMap, tileType } from './drawMap';
+import { drawGrid, drawMap } from './drawMap';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, type GameSpeed } from './gameSpeed';
 import { createGestures, type Gesture, type Gestures } from './gestures';
@@ -34,6 +34,7 @@ import { ghostAt, placeAt, type Ghost } from './placement';
 import { resolveClick } from './selection';
 import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
+import { TILESET_FRAMES, tileArt } from './tileset';
 import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
@@ -112,6 +113,8 @@ export class GameScene extends Phaser.Scene {
   private mapId: string = MAPS[0]!.id;
   private sim!: Game;
   private loop!: FixedStep;
+  /** How the map was drawn, for the test view. */
+  private mapTiles: TestView['mapTiles'] = 'shapes';
   /** The player's game speed. Each game starts at ×1. */
   private gameSpeed: GameSpeed = 1;
   private hud!: Hud;
@@ -204,14 +207,19 @@ export class GameScene extends Phaser.Scene {
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
       sprites: this.textures.exists(ATLAS_KEY),
+      mapTiles: this.mapTiles,
     };
+  }
+
+  /** Whether the atlas loaded with this frame in it. */
+  private hasFrame(frame: string): boolean {
+    return this.textures.exists(ATLAS_KEY) && this.textures.get(ATLAS_KEY).has(frame);
   }
 
   /** The atlas frame `kind` is drawn with, or null to draw its shape: it has none, or the atlas didn't load. */
   private frameFor(kind: SpriteKind): string | null {
     const frame = spriteFor(kind);
-    if (frame === null || !this.textures.exists(ATLAS_KEY)) return null;
-    return this.textures.get(ATLAS_KEY).has(frame) ? frame : null;
+    return frame !== null && this.hasFrame(frame) ? frame : null;
   }
 
   /** A sprite of `kind` and a Graphics over it on `layer`, both at `at`; no sprite when `kind` has no frame. */
@@ -223,19 +231,28 @@ export class GameScene extends Phaser.Scene {
     return { sprite, graphics: onLayer(this.add.graphics(), layer).setPosition(x, y) };
   }
 
-  /** The map's tiles as sprites with the grid on top, or as shapes when the atlas lacks a tile frame. */
-  private drawMapView(): void {
+  /**
+   * The map from the tileset: ground and road tiles, the grid, then decorations over it. Flat shapes instead when the
+   * atlas lacks any tileset frame. Returns which it drew.
+   */
+  private drawMapView(): 'sprites' | 'shapes' {
     const { map } = this.sim.state;
-    if (!TILE_TYPES.every((type) => this.frameFor(type) !== null))
-      return drawMap(onLayer(this.add.graphics(), 'map'), map);
-    for (let row = 0; row < map.rows; row++) {
-      for (let col = 0; col < map.cols; col++) {
-        const tile = { col, row };
-        const { x, y } = toPixels(tileCenter(tile));
-        onLayer(this.add.image(x, y, ATLAS_KEY, this.frameFor(tileType(map, tile))!), 'map').setScale(SPRITE_SCALE);
-      }
+    if (!TILESET_FRAMES.every((frame) => this.hasFrame(frame))) {
+      drawMap(onLayer(this.add.graphics(), 'map'), map);
+      return 'shapes';
+    }
+    const art = tileArt(map);
+    const addTile = (tile: Tile, frame: string) => {
+      const { x, y } = toPixels(tileCenter(tile));
+      return onLayer(this.add.image(x, y, ATLAS_KEY, frame), 'map').setScale(SPRITE_SCALE);
+    };
+    for (const { tile, ground, tint } of art) {
+      const image = addTile(tile, ground);
+      if (tint !== undefined) image.setTint(tint);
     }
     drawGrid(onLayer(this.add.graphics(), 'map'), map);
+    for (const { tile, decoration } of art) if (decoration !== null) addTile(tile, decoration);
+    return 'sprites';
   }
 
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
@@ -252,7 +269,7 @@ export class GameScene extends Phaser.Scene {
     this.ghost = undefined;
     this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
     this.gameSpeed = 1;
-    this.drawMapView();
+    this.mapTiles = this.drawMapView();
     this.loop = createFixedStep({
       stepMs: TICK_MS,
       // Scaled with ?speed and the fastest game speed, so the cap doesn't pull a faster loop back to real time.

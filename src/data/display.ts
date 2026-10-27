@@ -13,10 +13,13 @@ export const CANVAS_HEIGHT = GRID_ROWS * TILE_PX;
 /** Atlas sprites are drawn at this scale: a 64 px Kenney tile fills one map tile. */
 export const SPRITE_SCALE = TILE_PX / 64;
 
-/** How the map is drawn with shapes (before the v0.4 tileset). */
+/** How the map is drawn with shapes, when the atlas is missing, and the tint for the tileset's blocked ground. */
 export const MAP_STYLE = {
   path: 0xc2a46b, // sand
   buildable: 0x5b6b3a, // olive
+  blocked: 0x3a4526, // dark olive
+  /** Tints the blocked ground sprite, so it reads darker than buildable grass even before its decoration. */
+  blockedTint: 0xa8b0a0,
   grid: { color: 0x000000, alpha: 0.15, width: 1 },
 } as const;
 
@@ -88,6 +91,8 @@ export const GHOST = {
   fillAlpha: 0.35,
   ringAlpha: 0.8,
   ringWidth: 1,
+  /** A dark edge under the shape and range ring, so a green ghost still reads on grass (#43). */
+  outline: { color: 0x1b2412, alpha: 0.6, width: 3 },
 } as const;
 
 /** The message that floats up from a refused click. */

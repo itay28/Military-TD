@@ -254,6 +254,9 @@ describe('drawTower for the AA Gun', () => {
     expect(calls).toEqual([
       ['fillStyle', GHOST.placeable, GHOST.fillAlpha],
       ['fillCircle', 0, 0, TOWER_STYLE.aaGun.size / 2],
+      ['lineStyle', GHOST.outline.width, GHOST.outline.color, GHOST.outline.alpha],
+      ['strokeCircle', 0, 0, TOWER_STYLE.aaGun.size / 2],
+      ['strokeCircle', 0, 0, 3 * TILE_PX],
       ['lineStyle', GHOST.ringWidth, GHOST.placeable, GHOST.ringAlpha],
       ['strokeCircle', 0, 0, 3 * TILE_PX],
     ]);
@@ -332,11 +335,14 @@ describe('drawGhost', () => {
   const ghostCalls = (color: number) => [
     ['fillStyle', color, GHOST.fillAlpha],
     ['fillRect', -half, -half, size, size],
+    ['lineStyle', GHOST.outline.width, GHOST.outline.color, GHOST.outline.alpha],
+    ['strokeRect', -half, -half, size, size],
+    ['strokeCircle', 0, 0, 2.5 * TILE_PX],
     ['lineStyle', GHOST.ringWidth, color, GHOST.ringAlpha],
     ['strokeCircle', 0, 0, 2.5 * TILE_PX],
   ];
 
-  it('draws a see-through tower square and its range ring in green where placement would succeed', () => {
+  it('draws a see-through tower square and its range ring in green where placement would succeed, both edged in a dark outline so they read on grass and road', () => {
     const { painter, calls } = recordingPainter();
     drawGhost(painter, 'rifleNest', true);
     expect(calls).toEqual(ghostCalls(GHOST.placeable));
@@ -354,6 +360,10 @@ describe('drawGhost', () => {
     expect(calls).toEqual([
       ['fillStyle', GHOST.placeable, GHOST.fillAlpha],
       ['fillCircle', 0, 0, TOWER_STYLE.mortar.size / 2],
+      ['lineStyle', GHOST.outline.width, GHOST.outline.color, GHOST.outline.alpha],
+      ['strokeCircle', 0, 0, TOWER_STYLE.mortar.size / 2],
+      ['strokeCircle', 0, 0, 5 * TILE_PX],
+      ['strokeCircle', 0, 0, 1.5 * TILE_PX],
       ['lineStyle', GHOST.ringWidth, GHOST.placeable, GHOST.ringAlpha],
       ['strokeCircle', 0, 0, 5 * TILE_PX],
       ['strokeCircle', 0, 0, 1.5 * TILE_PX],

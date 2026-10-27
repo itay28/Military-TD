@@ -114,10 +114,15 @@ export function drawRangeRing(painter: EntityPainter, tower: Tower): void {
 /** A see-through tower of `kind` and its range rings, green if it can be placed here, red if not. */
 export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: boolean): void {
   const color = placeable ? GHOST.placeable : GHOST.blocked;
+  const radii = rangeRingRadii(TOWER_STATS[kind]);
   painter.fillStyle(color, GHOST.fillAlpha);
   paintShape(painter, TOWER_STYLE[kind]);
+  // The dark outline goes under the coloured ring, so the ring keeps its colour with a dark edge either side.
+  painter.lineStyle(GHOST.outline.width, GHOST.outline.color, GHOST.outline.alpha);
+  paintShape(painter, TOWER_STYLE[kind], true);
+  for (const radius of radii) painter.strokeCircle(0, 0, radius);
   painter.lineStyle(GHOST.ringWidth, color, GHOST.ringAlpha);
-  for (const radius of rangeRingRadii(TOWER_STATS[kind])) painter.strokeCircle(0, 0, radius);
+  for (const radius of radii) painter.strokeCircle(0, 0, radius);
 }
 
 /** Each tracer as a line in canvas pixels, in its tower's style, at its current alpha. */

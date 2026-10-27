@@ -11,7 +11,7 @@ export interface MapPainter {
   lineBetween(x1: number, y1: number, x2: number, y2: number): void;
 }
 
-/** Fills each tile by kind (Path or buildable), then draws faint grid lines on every tile edge. */
+/** Fills each tile by kind (Path, buildable or blocked), then draws faint grid lines on every tile edge. */
 export function drawMap(painter: MapPainter, map: GameMap): void {
   for (let row = 0; row < map.rows; row++) {
     for (let col = 0; col < map.cols; col++) {
@@ -24,9 +24,10 @@ export function drawMap(painter: MapPainter, map: GameMap): void {
   drawGrid(painter, map);
 }
 
-/** What `tile` is drawn as: Path or buildable. */
+/** What `tile` is drawn as: Path, buildable, or blocked (neither). */
 export function tileType(map: GameMap, tile: Tile): TileType {
-  return map.isPath(tile) ? 'path' : 'buildable';
+  if (map.isPath(tile)) return 'path';
+  return map.isBuildable(tile) ? 'buildable' : 'blocked';
 }
 
 /** Faint grid lines on every tile edge. Drawn over the tile sprites too. */
