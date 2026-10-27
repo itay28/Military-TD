@@ -19,6 +19,7 @@ export type ScenarioCommand =
   | { readonly type: 'upgradeTower'; readonly towerId: number }
   | { readonly type: 'sellTower'; readonly towerId: number }
   | { readonly type: 'startWave' }
+  | { readonly type: 'setAutoStart'; readonly on: boolean }
   | { readonly type: 'spawnEnemy'; readonly kind: EnemyKind };
 
 /** Runs `command` after `atTick` ticks: 0 is before the first tick. */
@@ -189,6 +190,8 @@ export function applyCommand(game: Game, command: ScenarioCommand): CommandOutco
       return game.sellTower(command.towerId);
     case 'startWave':
       return game.startWave();
+    case 'setAutoStart':
+      return game.setAutoStart(command.on);
     case 'spawnEnemy':
       return { ok: true, enemyId: game.spawnEnemy(command.kind) };
   }
