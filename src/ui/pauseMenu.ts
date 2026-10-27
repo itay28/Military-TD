@@ -89,18 +89,18 @@ export function mountPauseMenu(
   root.hidden = true;
 
   // While paused, keys stop at the window, before the build bar's and tower panel's shortcuts see them: Esc resumes.
-  const onKeyCapture = (event: KeyboardEvent) => {
+  const swallowKeysWhilePaused = (event: KeyboardEvent) => {
     if (!paused) return;
     event.stopPropagation();
     if (event.key === 'Escape' && !event.repeat) close();
   };
   // Esc pauses last, so one that cancelled something first (a tower selection, a build kind) doesn't also pause.
-  const onKeyBubble = (event: KeyboardEvent) => {
+  const pauseOnEscape = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && !event.repeat && !event.defaultPrevented) open();
   };
   const win = doc.defaultView!;
-  win.addEventListener('keydown', onKeyCapture, true);
-  win.addEventListener('keydown', onKeyBubble);
+  win.addEventListener('keydown', swallowKeysWhilePaused, true);
+  win.addEventListener('keydown', pauseOnEscape);
 
   return {
     get paused() {
@@ -116,8 +116,8 @@ export function mountPauseMenu(
     destroy() {
       close();
       destroyed = true;
-      win.removeEventListener('keydown', onKeyCapture, true);
-      win.removeEventListener('keydown', onKeyBubble);
+      win.removeEventListener('keydown', swallowKeysWhilePaused, true);
+      win.removeEventListener('keydown', pauseOnEscape);
       pause.remove();
       root.replaceChildren();
       root.hidden = true;
