@@ -8,6 +8,8 @@ export interface TestFlags {
   readonly anim: boolean;
   /** `?speed=N`: the real-time loop runs N× faster. 1 unless N is a positive finite number. */
   readonly speed: number;
+  /** `?menu=1`: test mode opens on the Main menu instead of going straight to the Game. */
+  readonly menu: boolean;
 }
 
 export function parseTestFlags(search: string): TestFlags {
@@ -18,6 +20,7 @@ export function parseTestFlags(search: string): TestFlags {
     manualStep: params.get('step') === 'manual',
     anim: params.get('anim') !== '0',
     speed: Number.isFinite(speed) && speed > 0 ? speed : 1,
+    menu: params.get('menu') === '1',
   };
 }
 
@@ -27,4 +30,9 @@ export function parseTestFlags(search: string): TestFlags {
  */
 export function frameMs({ manualStep, speed }: TestFlags, deltaMs: number, gameSpeed = 1): number {
   return manualStep ? 0 : deltaMs * speed * gameSpeed;
+}
+
+/** The scene Boot starts: the Main menu for a player; the Game in test mode, so specs start in the Build phase. */
+export function firstScene({ test, menu }: TestFlags): 'Menu' | 'Game' {
+  return test && !menu ? 'Game' : 'Menu';
 }
