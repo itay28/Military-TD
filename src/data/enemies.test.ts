@@ -14,7 +14,7 @@ describe('tank', () => {
     expect(ENEMY_STYLE.tank.color).not.toBe(ENEMY_STYLE.infantry.color);
   });
 
-  it('takes 8 off a Rifle Nest hit', () => {
+  it('takes only 2 from a Rifle Nest hit', () => {
     const { damage } = TOWER_STATS.rifleNest;
     const { armor, maxHp } = ENEMY_STATS.tank;
     expect(damageTaken(damage, armor, 0, maxHp)).toBe(2);

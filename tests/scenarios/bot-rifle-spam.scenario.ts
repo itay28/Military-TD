@@ -3,7 +3,7 @@ import { buildOrder } from './bots';
 import { defineScenario } from './define';
 
 /** Tiles along the Path, the ones covering the most of it first. */
-export const RIFLE_TILES = [
+const RIFLE_TILES = [
   { col: 4, row: 6 },
   { col: 7, row: 6 },
   { col: 9, row: 3 },

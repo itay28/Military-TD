@@ -1,3 +1,4 @@
+import type { EnemyKind } from '../../src/data/enemies';
 import type { TowerKind } from '../../src/data/towers';
 import type { GameState } from '../../src/sim/game';
 import type { Tile } from '../../src/sim/map';
@@ -46,6 +47,6 @@ export function livesLostDuring(result: ScenarioResult, waves: readonly number[]
 }
 
 /** The numbers (from 1) of the waves with at least one group of `kind`. */
-export function wavesWith(waves: readonly WaveData[], kind: string): number[] {
+export function wavesWith(waves: readonly WaveData[], kind: EnemyKind): number[] {
   return waves.flatMap((wave, i) => (wave.groups.some((group) => group.kind === kind) ? [i + 1] : []));
 }
