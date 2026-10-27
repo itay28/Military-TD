@@ -47,6 +47,18 @@ describe('frameMs', () => {
   it('scales the frame time by speed', () => {
     expect(frameMs(parseTestFlags('?speed=4'), 16)).toBe(64);
   });
+
+  it('scales a frame by the game speed', () => {
+    expect(frameMs(parseTestFlags(''), 16, 4)).toBe(64);
+  });
+
+  it('multiplies the game speed by the speed flag', () => {
+    expect(frameMs(parseTestFlags('?speed=3'), 16, 2)).toBe(96);
+  });
+
+  it.each([1, 2, 4] as const)('feeds nothing with step=manual at game speed ×%i', (gameSpeed) => {
+    expect(frameMs(parseTestFlags('?step=manual'), 16, gameSpeed)).toBe(0);
+  });
 });
 
 describe('firstScene', () => {

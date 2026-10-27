@@ -24,9 +24,12 @@ export function parseTestFlags(search: string): TestFlags {
   };
 }
 
-/** The real time a frame of `deltaMs` feeds the fixed step: none with manual stepping, scaled by speed otherwise. */
-export function frameMs({ manualStep, speed }: TestFlags, deltaMs: number): number {
-  return manualStep ? 0 : deltaMs * speed;
+/**
+ * The time a frame of `deltaMs` feeds the fixed step: none with manual stepping, otherwise scaled by the `?speed`
+ * flag and the player's game speed.
+ */
+export function frameMs({ manualStep, speed }: TestFlags, deltaMs: number, gameSpeed = 1): number {
+  return manualStep ? 0 : deltaMs * speed * gameSpeed;
 }
 
 /** The scene Boot starts: the Main menu for a player; the Game in test mode, so specs start in the Build phase. */

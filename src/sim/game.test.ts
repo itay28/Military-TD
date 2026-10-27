@@ -418,4 +418,72 @@ describe('combat stats', () => {
     game.tick(1000);
     expect(game.state.stats.wave.elapsedMs).toBe(frozen);
   });
+
+  it('lists a placed tower with its kind and tile', () => {
+    const game = newGame();
+    const placed = tower(game);
+    const id = placed.ok ? placed.towerId : -1;
+    expect(game.state.stats.placed[id]).toEqual({
+      kind: 'rifleNest',
+      tile: { col: 2, row: 2 },
+      waveMs: 0,
+      sold: false,
+    });
+  });
+
+  it('a tower gains wave time only while a wave runs', () => {
+    const game = newGame();
+    const placed = tower(game);
+    const id = placed.ok ? placed.towerId : -1;
+    run(game, 60);
+    expect(game.state.stats.placed[id]!.waveMs).toBe(0);
+    game.startWave();
+    while (game.state.phase === 'wave') game.tick(TICK_MS);
+    const { waveMs } = game.state.stats.placed[id]!;
+    expect(waveMs).toBeCloseTo(game.state.stats.wave.elapsedMs);
+    run(game, 60);
+    expect(game.state.stats.placed[id]!.waveMs).toBe(waveMs);
+  });
+
+  it('a cleared wave adds a history row with its totals, duration and per-tower figures', () => {
+    const game = newGame();
+    const placed = tower(game);
+    const id = placed.ok ? placed.towerId : -1;
+    game.startWave();
+    while (game.state.phase === 'wave') game.tick(TICK_MS);
+    const { stats } = game.state;
+    expect(stats.waves).toEqual([
+      {
+        waveNumber: 1,
+        damage: stats.wave.damage,
+        kills: stats.wave.kills,
+        elapsedMs: stats.wave.elapsedMs,
+        towers: { [id]: { damage: stats.wave.damage, kills: stats.wave.kills } },
+      },
+    ]);
+    expect(stats.wave.damage).toBeGreaterThan(0);
+  });
+
+  it('Defeat records the lost wave', () => {
+    const game = newGame(1);
+    game.startWave();
+    while (game.state.phase === 'wave') game.tick(TICK_MS);
+    expect(game.state.phase).toBe('defeat');
+    expect(game.state.stats.waves).toHaveLength(1);
+    expect(game.state.stats.waves[0]).toMatchObject({ waveNumber: 1, elapsedMs: game.state.stats.wave.elapsedMs });
+  });
+
+  it('a sold tower stays in the stats, marked sold, with its figures', () => {
+    const game = newGame();
+    const placed = tower(game);
+    const id = placed.ok ? placed.towerId : -1;
+    game.startWave();
+    while (game.state.phase === 'wave') game.tick(TICK_MS);
+    const before = game.state.stats.towers[id];
+    game.sellTower(id);
+    run(game, 180);
+    expect(game.state.towers).toHaveLength(0);
+    expect(game.state.stats.placed[id]!.sold).toBe(true);
+    expect(game.state.stats.towers[id]).toEqual(before);
+  });
 });

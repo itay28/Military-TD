@@ -4,7 +4,17 @@ import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
 import { createMap, type GameMap, type MapData, type Position, type Tile } from './map';
 import { createShell, landShells, type Shell, type ShellLanding } from './shells';
-import { emptyStats, recordShots, resetWave, withWaveElapsed, type CombatStats } from './stats';
+import {
+  addTower,
+  addWaveTime,
+  emptyStats,
+  endWave,
+  markSold,
+  recordShots,
+  resetWave,
+  withWaveElapsed,
+  type CombatStats,
+} from './stats';
 import { fireTowers, nextLevel, towerAt, type Shot, type Tower } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
@@ -226,17 +236,28 @@ export function createGame(config: GameConfig): Game {
       state.shells = [...landing.shells, ...launched];
       const kills = [...landing.kills, ...fired.kills];
       for (const enemy of kills) state.money += enemy.reward;
-      state.stats = recordShots(state.stats, fired.shots, new Set(kills.map((enemy) => enemy.id)));
-      if (wave) state.stats = withWaveElapsed(state.stats, state.timeMs - wave.startMs);
+      // Shells landed before towers fired, so their hits come first.
+      const strikes = [...landing.landed, ...fired.shots];
+      state.stats = recordShots(state.stats, strikes, new Set(kills.map((enemy) => enemy.id)));
+      if (wave) {
+        state.stats = withWaveElapsed(state.stats, state.timeMs - wave.startMs);
+        state.stats = addWaveTime(
+          state.stats,
+          state.towers.map((tower) => tower.id),
+          dtMs,
+        );
+      }
       const sold: { towerId: number; tile: Tile; refund: number }[] = [];
       let cleared = false;
       if (state.lives === 0) {
+        if (wave) state.stats = endWave(state.stats, state.waveNumber);
         wave = undefined;
         state.phase = 'defeat';
         state.shells = [];
       } else if (wave?.schedule.finished && state.enemies.length === 0) {
         cleared = true;
         wave = undefined;
+        state.stats = endWave(state.stats, state.waveNumber);
         state.wavesCleared++;
         state.phase = state.waveNumber === state.totalWaves ? 'victory' : 'build';
         if (state.phase === 'victory') state.shells = [];
@@ -249,6 +270,7 @@ export function createGame(config: GameConfig): Game {
           if (dismantleMs > DISMANTLE_EPSILON) return [{ ...tower, dismantleMs }];
           const refund = Math.floor(SELL_REFUND * tower.spent);
           state.money += refund;
+          state.stats = markSold(state.stats, tower.id);
           sold.push({ towerId: tower.id, tile: tower.tile, refund });
           return [];
         });
@@ -293,6 +315,7 @@ export function createGame(config: GameConfig): Game {
       const stats = TOWER_STATS[kind];
       const towerId = nextId++;
       state.money -= stats.cost;
+      state.stats = addTower(state.stats, towerId, kind, tile);
       state.towers.push({ ...stats, id: towerId, kind, tile, cooldownMs: 0, level: 1, spent: stats.cost });
       return { ok: true, towerId };
     },
