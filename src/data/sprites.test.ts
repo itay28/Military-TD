@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from './enemies';
-import { SPRITES, TILE_TYPES, spriteFor } from './sprites';
+import { SPRITES, TILE_TYPES, TOWER_BASES, TURRET_FACING, spriteFor } from './sprites';
 import { TOWER_STATS } from './towers';
 
 const atlas = JSON.parse(readFileSync('assets/atlas/sprites.json', 'utf8')) as { frames: Record<string, unknown> };
@@ -25,5 +25,13 @@ describe('spriteFor', () => {
 
   it('gives the Path and buildable tiles different frames', () => {
     expect(spriteFor('path')).not.toBe(spriteFor('buildable'));
+  });
+
+  it('gives every tower kind a base and a turret frame the atlas has', () => {
+    for (const kind of Object.keys(TOWER_STATS) as (keyof typeof TOWER_STATS)[]) {
+      expect(Object.keys(atlas.frames), kind).toContain(TOWER_BASES[kind]);
+      expect(Object.keys(atlas.frames), kind).toContain(spriteFor(kind));
+      expect(TURRET_FACING[kind], kind).toBeTypeOf('number');
+    }
   });
 });
