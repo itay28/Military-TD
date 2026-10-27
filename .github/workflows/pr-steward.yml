@@ -36,10 +36,13 @@ permissions:
 jobs:
   pr-steward:
     name: pr-steward
-    # Comments on plain issues don't concern PRs; fork PRs get no secrets.
+    # Comments on plain issues don't concern PRs; fork PRs get no secrets. In a public repo anyone
+    # can comment, so only the maintainer's comments and reviews start a run (#221).
     if: >-
-      (github.event_name != 'issue_comment' || github.event.issue.pull_request) &&
-      (github.event_name != 'pull_request_review' || !github.event.pull_request.head.repo.fork)
+      (github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))) &&
+      (github.event_name != 'pull_request_review' || (!github.event.pull_request.head.repo.fork &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
