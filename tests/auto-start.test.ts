@@ -1,14 +1,21 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import {
   AUTO_AGENT_LABEL,
+  DONE_MARKER,
+  FIRED_MARKER,
   HANDOFF_MARKER,
   classifyFireError,
   commentNoSize,
+  firedComment,
   NO_SIZE_MARKER,
+  planRetries,
   planStarts,
+  retryIssue,
+  retryText,
   stackBase,
   startIssue,
   type OpenPr,
+  type RetryIssue,
   type Routines,
   type StartIssue,
 } from '../scripts/auto-start';
@@ -206,7 +213,11 @@ describe('startIssue: claim, then fire', () => {
   it('assigns the maintainer and adds auto-agent before firing the routine for its model', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await startIssue(start, 'gh-token', routines, fetchFn);
-    expect(calls(fetchFn)).toEqual([`POST ${api}/assignees`, `POST ${api}/labels`, 'POST https://fire.example/opus']);
+    expect(calls(fetchFn).slice(0, 3)).toEqual([
+      `POST ${api}/assignees`,
+      `POST ${api}/labels`,
+      'POST https://fire.example/opus',
+    ]);
     const [, assign] = fetchFn.mock.calls[0]!;
     expect(JSON.parse(assign.body as string)).toEqual({ assignees: ['itay28'] });
     const [, label] = fetchFn.mock.calls[1]!;
@@ -312,6 +323,27 @@ describe('startIssue: claim, then fire', () => {
     await expect(failure).rejects.toThrow(/fire broke/);
     await expect(failure).rejects.toThrow(/un-claiming failed/);
   });
+  it('posts the fired marker with the session link, model and base after a successful fire (#201)', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string) =>
+      url.startsWith('https://fire.example')
+        ? ok({ claude_code_session_url: 'https://claude.ai/code/session_1' })
+        : ok(),
+    );
+    await startIssue(start, 'gh-token', routines, fetchFn);
+    expect(calls(fetchFn)[3]).toBe(`POST ${api}/comments`);
+    const { body } = JSON.parse(fetchFn.mock.calls[3]![1].body as string) as { body: string };
+    expect(body).toContain(FIRED_MARKER);
+    expect(body).toContain('https://claude.ai/code/session_1');
+    expect(body).toContain('model=opus base=feat/5-a');
+  });
+
+  it('still reports the start when posting the fired marker fails: the session is already running', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string) =>
+      url.endsWith('/comments') ? new Response('nope', { status: 500 }) : ok(),
+    );
+    await expect(startIssue(start, 'gh-token', routines, fetchFn)).resolves.toBe('started');
+    expect(calls(fetchFn)).not.toContain(`DELETE ${api}/assignees`);
+  });
 });
 
 describe('classifyFireError (#200)', () => {
@@ -376,5 +408,134 @@ describe('autoStartFromEnv: the AUTO_SPAWN switch', () => {
     expect(() => autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', ROUTINE_OPUS_TOKEN: '' })).toThrow(
       /ROUTINE_OPUS_TOKEN/,
     );
+  });
+});
+
+// Retries (#201): an implement session that ends without its done marker is fired again after 1 h of silence.
+const HOUR = 60 * 60 * 1000;
+const NOW = Date.parse('2026-10-26T12:00:00Z');
+const ago = (minutes: number) => new Date(NOW - minutes * 60 * 1000).toISOString();
+const fired = (minutes: number, model = 'opus', base = 'main') => ({
+  body: firedComment({ issue: 7, base, model: model as 'opus' | 'sonnet' }),
+  createdAt: ago(minutes),
+});
+const done = (minutes: number) => ({ body: `PR ready.\n\n${DONE_MARKER}`, createdAt: ago(minutes) });
+const said = (minutes: number) => ({ body: 'Tests red.', createdAt: ago(minutes) });
+const claimed = (over: Partial<RetryIssue> = {}): RetryIssue => ({
+  number: 7,
+  autoAgent: true,
+  hold: false,
+  needsYou: false,
+  needsInfo: false,
+  comments: [fired(61)],
+  ...over,
+});
+const retried = (issues: RetryIssue[]) => planRetries(issues, NOW).map((r) => r.issue);
+
+describe('planRetries: which claimed issues are dead (#201)', () => {
+  it('retries a fired issue with no done marker and no activity for 61 min', () => {
+    expect(retried([claimed()])).toEqual([7]);
+  });
+
+  it('leaves it alone at 59 min of silence', () => {
+    expect(retried([claimed({ comments: [fired(59)] })])).toEqual([]);
+    expect(retried([claimed({ comments: [fired(120), said(59)] })])).toEqual([]);
+  });
+
+  it('leaves it alone when a done marker came after the latest fired marker', () => {
+    expect(retried([claimed({ comments: [fired(180), done(120)] })])).toEqual([]);
+  });
+
+  it('retries when the latest fire came after a done marker', () => {
+    expect(retried([claimed({ comments: [fired(300), done(240), fired(120)] })])).toEqual([7]);
+  });
+
+  it('never retries needs-info, needs-you, hold or an issue auto-start did not claim', () => {
+    expect(retried([claimed({ needsInfo: true })])).toEqual([]);
+    expect(retried([claimed({ needsYou: true })])).toEqual([]);
+    expect(retried([claimed({ hold: true })])).toEqual([]);
+    expect(retried([claimed({ autoAgent: false })])).toEqual([]);
+  });
+
+  it('never retries an issue with no fired marker (claimed before #201)', () => {
+    expect(retried([claimed({ comments: [said(300)] })])).toEqual([]);
+  });
+
+  it('never retries an issue whose PR is ready: the steward owns it', () => {
+    const pr = { number: 40, head: 'fix/7-a', draft: false, activity: [ago(300)] };
+    expect(retried([claimed({ pr })])).toEqual([]);
+  });
+
+  it('counts a commit or comment on the draft PR as activity', () => {
+    const pr = { number: 40, head: 'fix/7-a', draft: true, activity: [ago(30)] };
+    expect(retried([claimed({ comments: [fired(300)], pr })])).toEqual([]);
+  });
+
+  it('fires the same model on the same base, carrying the draft PR branch and number', () => {
+    const pr = { number: 40, head: 'fix/7-a', draft: true, activity: [ago(90)] };
+    expect(planRetries([claimed({ comments: [fired(300, 'sonnet', 'feat/5-b')], pr })], NOW)).toEqual([
+      { issue: 7, base: 'feat/5-b', model: 'sonnet', branch: 'fix/7-a', pr: 40 },
+    ]);
+    expect(planRetries([claimed()], NOW)).toEqual([{ issue: 7, base: 'main', model: 'opus' }]);
+  });
+
+  it('takes the idle time as an option', () => {
+    expect(planRetries([claimed({ comments: [fired(30)] })], NOW, HOUR / 4).map((r) => r.issue)).toEqual([7]);
+  });
+});
+
+describe('planRetries: unparseable timestamps (#201)', () => {
+  it('does not retry an issue whose comment time fails to parse', () => {
+    expect(retried([claimed({ comments: [{ ...fired(61), createdAt: 'not a date' }] })])).toEqual([]);
+  });
+});
+
+describe('retryText (#201)', () => {
+  it('adds Branch and PR lines only when they exist', () => {
+    const plain = retryText({ issue: 7, base: 'main', model: 'opus' });
+    expect(plain).toContain('Issue: #7');
+    expect(plain).toContain('Base branch: main');
+    expect(plain).not.toContain('Branch: ');
+    expect(plain).not.toContain('PR:');
+    const full = retryText({ issue: 7, base: 'main', model: 'opus', branch: 'fix/7-a', pr: 40 });
+    expect(full).toContain('\nBranch: fix/7-a');
+    expect(full).toContain('\nPR: #40');
+  });
+});
+
+describe('retryIssue: fire again, keep the claim (#201)', () => {
+  const retry = { issue: 7, base: 'main', model: 'sonnet' as const, branch: 'fix/7-a', pr: 40 };
+  const api = 'https://api.github.com/repos/itay28/Military-TD/issues/7';
+
+  it('fires the same model with the retry text, then posts a new fired marker, without touching the claim', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await expect(retryIssue(retry, 'gh-token', routines, fetchFn)).resolves.toBe('started');
+    expect(calls(fetchFn)).toEqual(['POST https://fire.example/sonnet', `POST ${api}/comments`]);
+    const { text } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { text: string };
+    expect(text).toContain('PR: #40');
+    const { body } = JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string };
+    expect(body).toContain(FIRED_MARKER);
+  });
+
+  it('still reports the retry as started when posting the fired marker fails', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string) =>
+      url.startsWith('https://fire.example') ? ok() : new Response('boom', { status: 500 }),
+    );
+    await expect(retryIssue(retry, 'gh-token', routines, fetchFn)).resolves.toBe('started');
+  });
+
+  it('leaves it for a later run on a temporary refusal, posting nothing', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => new Response('busy', { status: 429 }));
+    await expect(retryIssue(retry, 'gh-token', routines, fetchFn)).resolves.toBe('later');
+    expect(calls(fetchFn)).toEqual(['POST https://fire.example/sonnet']);
+  });
+
+  it('hands the issue to the maintainer and throws on a setup error', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string) =>
+      url.startsWith('https://fire.example') ? new Response('bad token', { status: 401 }) : ok(),
+    );
+    await expect(retryIssue(retry, 'gh-token', routines, fetchFn)).rejects.toThrow(/#7/);
+    expect(calls(fetchFn)).toEqual(['POST https://fire.example/sonnet', `POST ${api}/comments`, `POST ${api}/labels`]);
+    expect(JSON.parse(fetchFn.mock.calls[2]![1].body as string)).toEqual({ labels: ['needs-you'] });
   });
 });

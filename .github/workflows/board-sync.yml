@@ -10,14 +10,15 @@ name: Board sync
 #
 # Auto-start: with the repo variable AUTO_SPAWN set to `on`, each run then claims startable
 # issues and fires the implement scheduled task (scripts/auto-start.ts; AUTO_STACK=on also
-# starts stacked issues). The ROUTINE_* secrets are the tasks' API trigger URLs and tokens.
+# starts stacked issues), and fires a dead implement session again after 1 h of silence (#201).
+# The ROUTINE_* secrets are the tasks' API trigger URLs and tokens.
 on:
   pull_request:
     types: [opened, reopened, edited, ready_for_review, converted_to_draft, closed]
   issues:
     types: [assigned, reopened, closed, labeled, unlabeled, milestoned, demilestoned]
   schedule:
-    - cron: '23 */6 * * *'
+    - cron: '23 * * * *'
   workflow_dispatch:
 
 # Runs queue instead of overlapping; each one reads the board fresh.
