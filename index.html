@@ -67,6 +67,10 @@
         border-radius: 3px;
         cursor: pointer;
       }
+      /* The Pause button sits right of Start Wave, whose auto margin pushes both to the end. */
+      #hud [data-testid='pause'] {
+        margin-left: 8px;
+      }
       #hud button:disabled {
         background: #5e6350;
         color: #a2a58f;
@@ -164,7 +168,8 @@
         font: 10px monospace;
         color: #a2a58f;
       }
-      #end-screen {
+      #end-screen,
+      #pause-menu {
         position: absolute;
         inset: 0;
         display: flex;
@@ -174,11 +179,13 @@
         font: 16px monospace;
         color: #e4e0c8;
       }
-      /* `display: flex` above would otherwise override the hidden attribute. */
-      #end-screen[hidden] {
+      /* `display: flex` above would otherwise override the hidden attribute. The pause menu is styled like the End screen. */
+      #end-screen[hidden],
+      #pause-menu[hidden] {
         display: none;
       }
-      #end-screen [role='dialog'] {
+      #end-screen [role='dialog'],
+      #pause-menu [role='dialog'] {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -188,17 +195,20 @@
         border: 2px solid #c2a46b;
         border-radius: 4px;
       }
-      #end-screen h2 {
+      #end-screen h2,
+      #pause-menu h2 {
         margin: 0;
         font-size: 32px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #f0c95a;
       }
-      #end-screen p {
+      #end-screen p,
+      #pause-menu p {
         margin: 0;
       }
-      #end-screen button {
+      #end-screen button,
+      #pause-menu button {
         padding: 6px 22px;
         font: bold 16px monospace;
         color: #1b1e16;
@@ -207,9 +217,18 @@
         border-radius: 3px;
         cursor: pointer;
       }
-      #end-screen button:focus-visible {
+      #end-screen button:focus-visible,
+      #pause-menu button:focus-visible {
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
+      }
+      #pause-menu button {
+        min-width: 180px;
+      }
+      #pause-menu button:disabled {
+        color: #a2a58f;
+        background: #5e6350;
+        cursor: default;
       }
       /* The tower panel sits over the top-right of the map; the End screen, after it, covers it. */
       #tower-panel {
@@ -321,6 +340,7 @@
         <div id="game"></div>
         <div id="tower-panel" hidden></div>
         <div id="end-screen" hidden></div>
+        <div id="pause-menu" hidden></div>
       </div>
       <nav id="build-bar" aria-label="Build"></nav>
     </div>

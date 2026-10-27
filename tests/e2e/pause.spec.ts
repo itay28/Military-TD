@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { START_MONEY } from '../../src/data/start';
-import { clickTile, openGame, selectKind, state, stepToEnd } from './helpers';
+import { clickTile, openGame, playToEnd, selectKind, state } from './helpers';
 
 const BESIDE_PATH = { col: 1, row: 3 };
 
@@ -85,7 +85,7 @@ test('Settings and Quit to menu are shown but disabled until they exist (#48, #4
 test('pausing is unavailable once the game is over', async ({ page }) => {
   await openGame(page);
   await page.getByRole('button', { name: 'Start Wave' }).click();
-  await stepToEnd(page);
+  await playToEnd(page);
   await expect(page.getByRole('dialog', { name: /Victory|Defeat/ })).toBeVisible();
   await expect(pauseButton(page)).toBeDisabled();
   await page.keyboard.press('Escape');

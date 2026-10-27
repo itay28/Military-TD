@@ -32,6 +32,7 @@ import { createTracers, type Tracers } from './tracers';
 import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
+import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { createViewSync, type ViewSync } from './viewSync';
 
@@ -78,6 +79,8 @@ export interface GameSceneOptions {
   readonly endScreenRoot: HTMLElement;
   /** The DOM element over the canvas the tower panel is drawn in (`#tower-panel` in index.html). */
   readonly towerPanelRoot: HTMLElement;
+  /** The DOM element over the canvas the pause menu is drawn in (`#pause-menu` in index.html). */
+  readonly pauseMenuRoot: HTMLElement;
   /** Test mode's URL flags (ADR-0003). */
   readonly flags: TestFlags;
   /** Called at the end of every create(), the first game's and each restart's. */
@@ -90,6 +93,7 @@ export class GameScene extends Phaser.Scene {
   private readonly buildBarRoot: HTMLElement;
   private readonly endScreenRoot: HTMLElement;
   private readonly towerPanelRoot: HTMLElement;
+  private readonly pauseMenuRoot: HTMLElement;
   private readonly flags: TestFlags;
   private readonly onCreate: (() => void) | undefined;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
@@ -100,6 +104,7 @@ export class GameScene extends Phaser.Scene {
   private buildBar!: BuildBar;
   private endScreen!: EndScreen;
   private towerPanel!: TowerPanel;
+  private pauseMenu!: PauseMenu;
   private enemyViews!: ViewSync<Enemy>;
   private towerViews!: ViewSync<Tower>;
   private tracers!: Tracers;
@@ -127,12 +132,21 @@ export class GameScene extends Phaser.Scene {
   private fitted = true;
   private gestures!: Gestures;
 
-  constructor({ hudRoot, buildBarRoot, endScreenRoot, towerPanelRoot, flags, onCreate }: GameSceneOptions) {
+  constructor({
+    hudRoot,
+    buildBarRoot,
+    endScreenRoot,
+    towerPanelRoot,
+    pauseMenuRoot,
+    flags,
+    onCreate,
+  }: GameSceneOptions) {
     super('Game');
     this.hudRoot = hudRoot;
     this.buildBarRoot = buildBarRoot;
     this.endScreenRoot = endScreenRoot;
     this.towerPanelRoot = towerPanelRoot;
+    this.pauseMenuRoot = pauseMenuRoot;
     this.flags = flags;
     this.onCreate = onCreate;
   }
@@ -274,11 +288,19 @@ export class GameScene extends Phaser.Scene {
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
     this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim);
+    // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
+    // build bar's and tower panel's Esc (cancel a selection) runs before its own (pause).
+    this.pauseMenu = mountPauseMenu(this.pauseMenuRoot, this.sim, {
+      buttonRoot: this.hudRoot,
+      blocked: [this.hudRoot, this.buildBarRoot, this.towerPanelRoot],
+      onRestart: () => this.scene.restart(),
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.hud.destroy();
       this.buildBar.destroy();
       this.endScreen.destroy();
       this.towerPanel.destroy();
+      this.pauseMenu.destroy();
     });
     this.onCreate?.();
   }
@@ -318,7 +340,8 @@ export class GameScene extends Phaser.Scene {
     this.gestures = createGestures({ dragThresholdPx: CAMERA.dragThresholdPx });
     const screen = (pointer: Phaser.Input.Pointer): Pixel => ({ x: pointer.x, y: pointer.y });
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.button !== 0) return;
+      // The pause overlay covers the canvas; this guards a press that lands anyway.
+      if (pointer.button !== 0 || this.pauseMenu.paused) return;
       this.onGesture(this.gestures.down(pointer.id, screen(pointer)));
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -372,7 +395,9 @@ export class GameScene extends Phaser.Scene {
     this.sim.tick(TICK_MS);
   }
 
-  override update(_time: number, deltaMs: number): void {
+  override update(_time: number, frameDeltaMs: number): void {
+    // Paused, no time passes: the sim doesn't tick and the cosmetics hold still (ADR-0002: the sim is untouched).
+    const deltaMs = this.pauseMenu.paused ? 0 : frameDeltaMs;
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
@@ -382,6 +407,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBar.update();
     this.endScreen.update();
     this.towerPanel.update();
+    this.pauseMenu.update();
 
     const { enemies, towers } = this.sim.state;
     this.towerViews.sync(towers);
