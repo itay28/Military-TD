@@ -179,6 +179,32 @@ describe('runScenario', () => {
     expect(result.finalState.lives).toBe(START_LIVES - 3);
   });
 
+  it('a bot sees the state every tick, before autoStartWaves, and its commands are issued and logged', () => {
+    const seen: number[] = [];
+    const result = runScenario({
+      map: SMALL,
+      waves: ONE_INFANTRY,
+      autoStartWaves: true,
+      bot: (state) => {
+        seen.push(state.timeMs);
+        return state.towers.length === 0 ? [{ type: 'placeTower', kind: 'rifleNest', tile: { col: 2, row: 2 } }] : [];
+      },
+      until: { ticks: 3 },
+    });
+    expect(seen).toEqual([0, TICK_MS, 2 * TICK_MS, 3 * TICK_MS].map((ms) => expect.closeTo(ms)));
+    const commands = result.events.filter((e) => e.type === 'command');
+    expect(commands.map((e) => [e.tick, e.command.type, e.result.ok])).toEqual([
+      [0, 'placeTower', true],
+      [0, 'startWave', true],
+    ]);
+    expect(result.finalState.towers).toHaveLength(1);
+  });
+
+  it('a bot that returns no commands changes nothing', () => {
+    const scenario = { map: SMALL, waves: ONE_INFANTRY, autoStartWaves: true, until: 'end' } as const;
+    expect(runScenario({ ...scenario, bot: () => [] }).events).toEqual(runScenario(scenario).events);
+  });
+
   it('the same scenario run twice gives an identical event log', () => {
     const scenario = {
       towers: [{ kind: 'rifleNest', tile: { col: 2, row: 3 } }],
