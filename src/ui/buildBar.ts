@@ -77,7 +77,8 @@ export function mountBuildBar<K extends string>(
     const button = doc.createElement('button');
     button.type = 'button';
     button.dataset.testid = `build-${option.kind}`;
-    button.setAttribute('aria-label', option.name);
+    // Name and cost, as the tower panel names its buttons ("Optics (40)"), so a screen reader hears the price.
+    button.setAttribute('aria-label', `${option.name} (${option.cost})`);
     button.title = `${option.name} (${hotkey}): ${option.cost}`;
     const icon = doc.createElement('span');
     icon.className = 'build-icon';
