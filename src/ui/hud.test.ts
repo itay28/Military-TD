@@ -5,7 +5,8 @@ import { AUTO_START_DELAY_MS } from '../data/waves';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { waveDps } from '../sim/stats';
-import { mountHud } from './hud';
+import type { GameSpeed } from '../scenes/gameSpeed';
+import { mountHud, type HudSpeed } from './hud';
 
 // Path 6 tiles long: an Infantry (1.5 tiles/s) leaks after 4000 ms.
 const SMALL: MapData = {
@@ -38,6 +39,12 @@ const playWave = (game: Game) => {
   game.tick(LEAK_MS);
 };
 
+/** A speed holder like the scene's: the HUD reads and sets it. */
+const fakeSpeed = (initial: GameSpeed = 1): HudSpeed => {
+  let speed = initial;
+  return { get: () => speed, set: (next) => (speed = next) };
+};
+
 let root: HTMLElement;
 const byTestId = (id: string) => root.querySelector<HTMLElement>(`[data-testid="${id}"]`);
 
@@ -48,7 +55,7 @@ beforeEach(() => {
 
 describe('HUD', () => {
   it('shows the starting Money, Lives and "Wave 0 / N"', () => {
-    mountHud(root, newGame());
+    mountHud(root, newGame(), fakeSpeed());
     expect(byTestId('hud-money')?.textContent).toBe('Money 100');
     expect(byTestId('hud-lives')?.textContent).toBe('Lives 20');
     expect(byTestId('hud-wave')?.textContent).toBe('Wave 0 / 2');
@@ -56,7 +63,7 @@ describe('HUD', () => {
 
   it('Lives drop on the next update after a leak', () => {
     const game = newGame();
-    const hud = mountHud(root, game);
+    const hud = mountHud(root, game, fakeSpeed());
     playWave(game);
     hud.update();
     expect(byTestId('hud-lives')?.textContent).toBe('Lives 19');
@@ -64,7 +71,7 @@ describe('HUD', () => {
 
   it('Money drops on the next update after a tower is placed', () => {
     const game = newGame();
-    const hud = mountHud(root, game);
+    const hud = mountHud(root, game, fakeSpeed());
     expect(game.placeTower('rifleNest', { col: 1, row: 0 })).toMatchObject({ ok: true });
     hud.update();
     expect(byTestId('hud-money')?.textContent).toBe('Money 50');
@@ -72,7 +79,7 @@ describe('HUD', () => {
 
   it('the wave counter shows the started wave', () => {
     const game = newGame();
-    const hud = mountHud(root, game);
+    const hud = mountHud(root, game, fakeSpeed());
     game.startWave();
     hud.update();
     expect(byTestId('hud-wave')?.textContent).toBe('Wave 1 / 2');
@@ -82,14 +89,14 @@ describe('HUD', () => {
     const button = () => root.querySelector<HTMLButtonElement>('button[data-testid="start-wave"]');
 
     it('is a "Start Wave" button, enabled in the Build phase', () => {
-      mountHud(root, newGame());
+      mountHud(root, newGame(), fakeSpeed());
       expect(button()?.textContent).toBe('Start Wave');
       expect(button()?.disabled).toBe(false);
     });
 
     it('clicking it starts the next wave', () => {
       const game = newGame();
-      mountHud(root, game);
+      mountHud(root, game, fakeSpeed());
       button()!.click();
       expect(game.state.phase).toBe('wave');
       expect(game.state.waveNumber).toBe(1);
@@ -97,7 +104,7 @@ describe('HUD', () => {
 
     it('is disabled during a wave, and enabled again once the wave is cleared', () => {
       const game = newGame();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       button()!.click();
       hud.update();
       expect(button()?.disabled).toBe(true);
@@ -109,7 +116,7 @@ describe('HUD', () => {
 
     it('is disabled after Victory', () => {
       const game = newGame();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       playWave(game);
       playWave(game);
       hud.update();
@@ -119,11 +126,69 @@ describe('HUD', () => {
 
     it('is disabled after Defeat', () => {
       const game = newGame(1);
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       playWave(game);
       hud.update();
       expect(game.state.phase).toBe('defeat');
       expect(button()?.disabled).toBe(true);
+    });
+  });
+
+  describe('Game speed', () => {
+    const button = () => root.querySelector<HTMLButtonElement>('button[data-testid="game-speed"]');
+
+    it('is a button showing ×1, with an accessible name', () => {
+      mountHud(root, newGame(), fakeSpeed());
+      expect(button()?.textContent).toBe('×1');
+      expect(button()?.getAttribute('aria-label')).toBe('Game speed ×1');
+      expect(button()?.disabled).toBe(false);
+    });
+
+    it('clicking it sets the next speed and shows it', () => {
+      const speed = fakeSpeed();
+      mountHud(root, newGame(), speed);
+      button()!.click();
+      expect(speed.get()).toBe(2);
+      expect(button()?.textContent).toBe('×2');
+      button()!.click();
+      button()!.click();
+      expect(speed.get()).toBe(1);
+      expect(button()?.getAttribute('aria-label')).toBe('Game speed ×1');
+    });
+
+    it('follows a speed set elsewhere on the next update', () => {
+      const speed = fakeSpeed();
+      const hud = mountHud(root, newGame(), speed);
+      speed.set(4);
+      hud.update();
+      expect(button()?.textContent).toBe('×4');
+      expect(button()?.getAttribute('aria-label')).toBe('Game speed ×4');
+    });
+
+    it('works during a wave', () => {
+      const game = newGame();
+      const speed = fakeSpeed();
+      const hud = mountHud(root, game, speed);
+      game.startWave();
+      hud.update();
+      button()!.click();
+      expect(speed.get()).toBe(2);
+    });
+
+    it('is disabled once the game is over', () => {
+      const game = newGame(1);
+      const hud = mountHud(root, game, fakeSpeed());
+      playWave(game);
+      hud.update();
+      expect(game.state.phase).toBe('defeat');
+      expect(button()?.disabled).toBe(true);
+    });
+
+    it('does not rewrite an unchanged label on update', () => {
+      const hud = mountHud(root, newGame(), fakeSpeed(2));
+      const label = button()!.firstChild;
+      hud.update();
+      expect(button()!.firstChild).toBe(label);
     });
   });
 
@@ -132,14 +197,14 @@ describe('HUD', () => {
     const banner = () => root.querySelector<HTMLElement>('[role="status"][data-testid="wave-banner"]');
 
     it('is an empty, visible status region at first', () => {
-      mountHud(root, newGame());
+      mountHud(root, newGame(), fakeSpeed());
       expect(banner()?.hidden).toBe(false);
       expect(banner()?.textContent).toBe('');
     });
 
     it('shows "Wave N cleared" when a wave is cleared', () => {
       const game = newGame();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       playWave(game);
       hud.update();
       expect(banner()?.textContent).toBe('Wave 1 cleared');
@@ -147,7 +212,7 @@ describe('HUD', () => {
 
     it('empties after WAVE_BANNER_MS of sim time', () => {
       const game = newGame();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       playWave(game);
       game.tick(WAVE_BANNER_MS - 1);
       hud.update();
@@ -159,7 +224,7 @@ describe('HUD', () => {
 
     it("doesn't stay up once the game is over", () => {
       const game = newGame();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       playWave(game);
       playWave(game);
       hud.update();
@@ -179,13 +244,13 @@ describe('HUD', () => {
       `DPS ${Math.round(waveDps(game.state.stats.wave.damage, game.state.stats.wave.elapsedMs))}`;
 
     it('shows "DPS –" before any wave', () => {
-      mountHud(root, armed());
+      mountHud(root, armed(), fakeSpeed());
       expect(dps()).toBe('DPS –');
     });
 
     it('shows the rounded wave DPS during a wave', () => {
       const game = armed();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       game.startWave();
       for (let t = 0; t < 1500; t += 100) game.tick(100);
       hud.update();
@@ -195,7 +260,7 @@ describe('HUD', () => {
 
     it("keeps the last wave's figure after waveCleared", () => {
       const game = armed();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       game.startWave();
       for (let t = 0; t < LEAK_MS; t += 100) game.tick(100);
       hud.update();
@@ -210,7 +275,7 @@ describe('HUD', () => {
 
     it("doesn't write to the DOM while the rounded value is unchanged", async () => {
       const game = armed();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       game.startWave();
       for (let t = 0; t < LEAK_MS; t += 100) game.tick(100);
       hud.update();
@@ -231,14 +296,14 @@ describe('HUD', () => {
     const nextWave = () => byTestId('hud-next-wave');
 
     it('is an "Auto-start" toggle button, off at first', () => {
-      mountHud(root, newGame());
+      mountHud(root, newGame(), fakeSpeed());
       expect(toggle()?.textContent).toBe('Auto-start');
       expect(toggle()?.getAttribute('aria-pressed')).toBe('false');
     });
 
     it('clicking it turns auto-start on in the sim, and clicking again turns it off', () => {
       const game = newGame();
-      mountHud(root, game);
+      mountHud(root, game, fakeSpeed());
       toggle()!.click();
       expect(game.state.autoStart).toBe(true);
       expect(toggle()?.getAttribute('aria-pressed')).toBe('true');
@@ -249,7 +314,7 @@ describe('HUD', () => {
 
     it('shows "Next wave in N", in whole seconds rounded up, while counting down', () => {
       const game = newGame();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       expect(nextWave()?.textContent).toBe('');
       toggle()!.click();
       expect(nextWave()?.textContent).toBe(`Next wave in ${AUTO_START_DELAY_MS / 1000}`);
@@ -260,7 +325,7 @@ describe('HUD', () => {
 
     it('shows no countdown while the "Wave N cleared" banner is up, then counts down', () => {
       const game = newGame();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       toggle()!.click();
       game.tick(AUTO_START_DELAY_MS);
       game.tick(LEAK_MS);
@@ -274,7 +339,7 @@ describe('HUD', () => {
 
     it('shows no countdown once the wave has started, or after it is turned off', () => {
       const game = newGame();
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       toggle()!.click();
       game.tick(AUTO_START_DELAY_MS);
       hud.update();
@@ -290,7 +355,7 @@ describe('HUD', () => {
 
     it('is disabled once the game is over', () => {
       const game = newGame(1);
-      const hud = mountHud(root, game);
+      const hud = mountHud(root, game, fakeSpeed());
       playWave(game);
       hud.update();
       expect(toggle()?.disabled).toBe(true);
@@ -299,7 +364,7 @@ describe('HUD', () => {
 
   it("update() doesn't rewrite text that hasn't changed", () => {
     const game = newGame();
-    const hud = mountHud(root, game);
+    const hud = mountHud(root, game, fakeSpeed());
     const writes: string[] = [];
     new MutationObserver((records) => writes.push(...records.map((r) => r.type))).observe(root, {
       subtree: true,
@@ -314,7 +379,7 @@ describe('HUD', () => {
 
   it('destroy() removes the HUD, and later game events leave it gone', () => {
     const game = newGame();
-    const hud = mountHud(root, game);
+    const hud = mountHud(root, game, fakeSpeed());
     hud.destroy();
     expect(root.children).toHaveLength(0);
     playWave(game);
