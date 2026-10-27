@@ -18,6 +18,14 @@ describe('PR steward workflow', () => {
     expect(yaml).toMatch(/^ {2}workflow_dispatch:/m);
   });
 
+  // A public repo lets anyone comment; only the maintainer's comments and reviews may wake it (#221).
+  it('skips comments and reviews from people outside the repo', () => {
+    for (const who of ['comment', 'review'])
+      expect(yaml).toContain(
+        `contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.${who}.author_association)`,
+      );
+  });
+
   it('runs hourly, so a round that died is retried soon after its 1 hour timeout (#196)', () => {
     expect(yaml).toMatch(/^ {4}- cron: '\d+ \* \* \* \*'\n/m);
   });

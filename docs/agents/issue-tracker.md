@@ -106,7 +106,7 @@ The current milestone is the open one with the earliest due date, else the lowes
 
 Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack), and check with Actions → *Board sync* → Run workflow; the log's auto-start lines say what started. Each start opens a session in the task's **History**.
 
-**PR steward** (`.github/workflows/pr-steward.yml` → `scripts/pr-steward.ts`, ADR-0008): gets each PR to merged. It runs after CI and the CI review finish, on every PR comment and review, on each push to `main`, every hour and on demand, and looks at every open PR:
+**PR steward** (`.github/workflows/pr-steward.yml` → `scripts/pr-steward.ts`, ADR-0008): gets each PR to merged. It runs after CI and the CI review finish, on every PR comment and review from the owner or a collaborator (others don't start it, #221; the same goes for `@claude` in `claude.yml`), on each push to `main`, every hour and on demand, and looks at every open PR:
 
 | The PR | Steward does |
 | --- | --- |
