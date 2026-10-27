@@ -7,7 +7,7 @@
 | **Tile** | One grid cell. Positions are measured in tiles. | cell, square |
 | **Path** | The ordered waypoints enemies walk from spawn to exit. Towers can't be built on Path tiles. | road, lane, track |
 | **Waypoint** | A tile where the Path turns, or its first or last tile. Consecutive waypoints share a row or a column; the tiles between them are **Path tiles**. | node, corner |
-| **Buildable tile** | A tile where a tower may be placed: not on the Path and not occupied. The map's `isBuildable` checks the first part; placement also checks occupancy. | |
+| **Buildable tile** | A tile where a tower may be placed: not on the Path, marked buildable when the map lists buildable tiles (a Map file does), and not occupied. The map's `isBuildable` checks the first part; placement also checks occupancy. | |
 | **Tower** | A placed defensive unit. Kinds: **Rifle Nest**, **Cannon**, **AA Gun**, **Mortar**. | turret |
 | **Level** | How far a tower has been upgraded: 1 when placed, up to 3. Each level has its own full stats (`TOWER_LEVELS`), and level pips on the tower show the upgrades. | tier, rank |
 | **Sell** | Starting a tower's **Dismantling** (`sellTower`), in the Build or Wave phase. When it ends the tower is gone, the tile is buildable again and the **Refund** is paid; the tower's combat stats stay. | demolish, destroy |
@@ -45,6 +45,8 @@
 | **Leak** | An enemy reaching the Path end. It costs Lives. | escape |
 | **Lives** | How many leaks the player can survive. Defeat at 0. | health, HP (HP is for enemies) |
 | **Wave DPS** | Damage per second during the current wave only: damage dealt this wave ÷ time since the wave started. Per tower or in total. Resets when a wave starts. | |
+| **Map file** | A map drawn in Tiled and saved as `maps/*.tmj`: a `ground` tile layer, tiles with the `buildable` property, and the Path as a polyline on a `path` layer. `importTiledMap` turns it into sim map data and rejects a broken one (ADR-0006). | level file |
+| **Reference bot** | The bot every Map file must beat: `bot-balanced`'s build order fitted to the map (`fitOrder`), each tower on the free buildable tile that covers the most Path. | |
 | **Wave time** | The time a wave ran, from its start until it was cleared or lost. A tower's wave time is the part of it the tower stood on the map (while dismantling too). | |
 | **Damage report** | The End screen's breakdown of damage, kills and DPS: by tower (sold towers kept, marked sold), by tower type, and by wave with a total. A tower's DPS is its damage ÷ its own wave time; a wave's is its damage ÷ its wave time; a tower type's and the total's are their damage ÷ the whole game's wave time (every wave's added up). Each time is floored at 1 s, like Wave DPS; a tower that never stood in a wave shows 0. | stats screen |
 | **Scenario** | A declarative game setup plus a script of timed commands, run headlessly by `runScenario()` to test a situation. | fixture, level (for tests) |
