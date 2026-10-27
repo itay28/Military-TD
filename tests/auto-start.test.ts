@@ -8,15 +8,21 @@ import {
   commentNoSize,
   firedComment,
   NO_SIZE_MARKER,
+  MAX_SIZE_REQUESTS,
   planRetries,
+  planSizingRequests,
   planStarts,
+  requestSizing,
   retryIssue,
+  SIZE_REQUESTED_MARKER,
+  sizingNeeds,
   retryText,
   stackBase,
   startIssue,
   type OpenPr,
   type RetryIssue,
   type Routines,
+  type SizingCandidate,
   type StartIssue,
 } from '../scripts/auto-start';
 import { autoStartFromEnv, milestoneOrder } from '../scripts/board-sync';
@@ -31,6 +37,7 @@ const issue = (number: number, over: Partial<StartIssue> = {}): StartIssue => ({
   hold: false,
   needsYou: false,
   autoAgent: false,
+  infra: false,
   size: 'S',
   priority: 'P1',
   milestone: 2,
@@ -135,6 +142,49 @@ describe('planStarts: look-ahead', () => {
     expect(
       numbers([issue(7, { milestone: 4, status: 'Backlog' }), issue(8, { milestone: null, status: 'Backlog' })]),
     ).toEqual([]);
+  });
+});
+
+// Infra work isn't tied to a game version, so it needs no milestone (#225).
+describe('planStarts: infra issues without a milestone', () => {
+  const infra = (number: number, over: Partial<StartIssue> = {}) =>
+    issue(number, { infra: true, milestone: null, ...over });
+
+  it('starts alongside the current milestone when it has work', () => {
+    expect(numbers([issue(1), infra(2)])).toEqual([1, 2]);
+  });
+
+  it('starts when the current milestone has nothing, and the look-ahead still runs', () => {
+    expect(numbers([infra(2)])).toEqual([2]);
+    expect(numbers([infra(2), issue(7, { milestone: 3, status: 'Backlog' })])).toEqual([2, 7]);
+  });
+
+  it('starts when no milestone is open', () => {
+    expect(planStarts([infra(2)], [], []).starts.map((s) => s.issue)).toEqual([2]);
+  });
+
+  it('never starts game work without a milestone', () => {
+    expect(numbers([issue(1, { milestone: null }), issue(2, { milestone: null, status: 'Backlog' })])).toEqual([]);
+  });
+
+  it('orders by Priority across infra and milestone issues', () => {
+    expect(
+      numbers([issue(1, { priority: 'P2' }), infra(2, { priority: 'P0' }), issue(3, { priority: 'P1' }), infra(4)]),
+    ).toEqual([2, 3, 4, 1]);
+  });
+
+  it('keeps the cap', () => {
+    const running = [1, 2, 3, 4].map((n) => issue(n, { status: 'In progress', assigned: true, autoAgent: true }));
+    expect(numbers([...running, issue(10, { priority: 'P2' }), infra(11, { priority: 'P1' })])).toEqual([11]);
+  });
+
+  it('still needs a Size, blockers cleared and no hold or needs-you', () => {
+    expect(planStarts([infra(2, { size: undefined })], [], order)).toEqual({ starts: [], noSize: [2] });
+    expect(numbers([infra(2, { blockedBy: [9] }), infra(3, { hold: true }), infra(4, { needsYou: true })])).toEqual([]);
+  });
+
+  it('follows its milestone when it has one', () => {
+    expect(numbers([infra(2, { milestone: 3, status: 'Backlog' }), issue(1)])).toEqual([1]);
   });
 });
 
@@ -377,6 +427,94 @@ describe('commentNoSize', () => {
     const fetchFn = vi.fn<Fetch>(async () => ok([{ body: `Needs a Size.\n${NO_SIZE_MARKER}` }]));
     expect(await commentNoSize(4, 'gh-token', fetchFn)).toBe(false);
     expect(calls(fetchFn)).toEqual([`GET ${api}?per_page=100`]);
+  });
+});
+
+describe('sizingNeeds (#225)', () => {
+  it('needs a Size with no board Size and no size label', () => {
+    expect(sizingNeeds(['area:ui'], undefined, 2)).toEqual({ size: true, milestone: false });
+    expect(sizingNeeds(['area:ui', 'size:S'], undefined, 2)).toEqual({ size: false, milestone: false });
+    expect(sizingNeeds(['area:ui'], 'M', 2)).toEqual({ size: false, milestone: false });
+  });
+
+  it('needs a milestone for game work without one', () => {
+    expect(sizingNeeds(['area:towers'], 'M', null)).toEqual({ size: false, milestone: true });
+    expect(sizingNeeds([], undefined, null)).toEqual({ size: true, milestone: true });
+  });
+
+  it('needs nothing for a sized infra issue without a milestone', () => {
+    expect(sizingNeeds(['area:infra'], 'S', null)).toEqual({ size: false, milestone: false });
+    expect(sizingNeeds([], 'S', null, 'infra')).toEqual({ size: false, milestone: false });
+  });
+});
+
+describe('planSizingRequests: the Board sync backfill (#225)', () => {
+  const candidate = (number: number, over: Partial<SizingCandidate> = {}): SizingCandidate => ({
+    number,
+    labels: ['ready-for-agent', 'area:ui'],
+    size: undefined,
+    milestone: 2,
+    tracker: false,
+    ...over,
+  });
+
+  it('asks for unsized issues and game work without a milestone', () => {
+    expect(planSizingRequests([candidate(1), candidate(2, { size: 'M', milestone: null })])).toEqual([1, 2]);
+  });
+
+  it('skips issues already sized and milestoned, and sized infra without a milestone', () => {
+    expect(
+      planSizingRequests([
+        candidate(1, { size: 'M' }),
+        candidate(2, { size: 'S', milestone: null, labels: ['ready-for-agent', 'area:infra'] }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('skips hold, needs-info, needs-you, trackers and issues not ready-for-agent', () => {
+    expect(
+      planSizingRequests([
+        candidate(1, { labels: ['ready-for-agent', 'hold'] }),
+        candidate(2, { labels: ['ready-for-agent', 'needs-info'] }),
+        candidate(3, { labels: ['ready-for-agent', 'needs-you'] }),
+        candidate(4, { tracker: true }),
+        candidate(5, { labels: ['needs-triage'] }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('keeps a few dispatches per run', () => {
+    expect(MAX_SIZE_REQUESTS).toBeGreaterThan(0);
+    expect(MAX_SIZE_REQUESTS).toBeLessThanOrEqual(5);
+  });
+});
+
+describe('requestSizing (#225)', () => {
+  const issues = 'https://api.github.com/repos/itay28/Military-TD/issues/4/comments';
+  const dispatch = 'https://api.github.com/repos/itay28/Military-TD/actions/workflows/size-issue.yml/dispatches';
+
+  it('dispatches Size issue for the issue, then leaves the marker', async () => {
+    const fetchFn = vi.fn<Fetch>(async (_url: string, init: RequestInit) => (init.method === 'GET' ? ok([]) : ok()));
+    expect(await requestSizing(4, 'gh-token', 'main', fetchFn)).toBe(true);
+    expect(calls(fetchFn)).toEqual([`GET ${issues}?per_page=100`, `POST ${dispatch}`, `POST ${issues}`]);
+    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ ref: 'main', inputs: { issue: '4' } });
+    expect((JSON.parse(fetchFn.mock.calls[2]![1].body as string) as { body: string }).body).toContain(
+      SIZE_REQUESTED_MARKER,
+    );
+  });
+
+  it('dispatches once per issue: not again when the marker is there', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok([{ body: `Sizing asked.\n${SIZE_REQUESTED_MARKER}` }]));
+    expect(await requestSizing(4, 'gh-token', 'main', fetchFn)).toBe(false);
+    expect(calls(fetchFn)).toEqual([`GET ${issues}?per_page=100`]);
+  });
+
+  it('leaves no marker when the dispatch fails, so the next run tries again', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url: string, init: RequestInit) =>
+      init.method === 'GET' ? ok([]) : url.endsWith('dispatches') ? new Response('nope', { status: 500 }) : ok(),
+    );
+    await expect(requestSizing(4, 'gh-token', 'main', fetchFn)).rejects.toThrow(/HTTP 500/);
+    expect(calls(fetchFn)).toEqual([`GET ${issues}?per_page=100`, `POST ${dispatch}`]);
   });
 });
 

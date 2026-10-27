@@ -2,6 +2,8 @@ name: Size issue
 
 # The sizing agent (#205): when an issue is labelled ready-for-agent and nobody sized it, Claude
 # (Sonnet) reads it and adds one size:* and one priority:* label, with a one-line comment on why.
+# Game work with no milestone also gets one (#225; area:infra issues need none). Board sync
+# dispatches it for issues the label event missed.
 # Board sync copies the labels to the board's Size and Priority fields, and auto-start can then
 # start it. Prompt: docs/agents/prompts/size.md. The check uses the PROJECT_TOKEN secret, since
 # GITHUB_TOKEN can't read a user-owned project; the agent itself only gets GITHUB_TOKEN.
@@ -55,8 +57,10 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             Read docs/agents/prompts/size.md and follow it for issue #${{ env.ISSUE }} in ${{ github.repository }}.
+            Needs a Size: ${{ steps.check.outputs.size }}
+            Needs a milestone: ${{ steps.check.outputs.milestone }}
             You are running in CI. Nobody can answer questions, so don't ask any.
-          claude_args: '--model sonnet --allowedTools "Read,Glob,Grep,Bash(gh issue view ${{ env.ISSUE }} *),Bash(gh issue edit ${{ env.ISSUE }} --add-label *),Bash(gh issue comment ${{ env.ISSUE }} *)"'
+          claude_args: '--model sonnet --allowedTools "Read,Glob,Grep,Bash(gh issue view ${{ env.ISSUE }} *),Bash(gh issue edit ${{ env.ISSUE }} --add-label *),Bash(gh issue edit ${{ env.ISSUE }} --milestone *),Bash(gh issue comment ${{ env.ISSUE }} *),Bash(gh api repos/${{ github.repository }}/milestones*)"'
 
       # Labels added with GITHUB_TOKEN start no workflow, but a dispatch does.
       - name: Run Board sync

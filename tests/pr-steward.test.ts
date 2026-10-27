@@ -513,7 +513,7 @@ describe('decide: milestone hold', () => {
     });
   });
 
-  it('merges issues without a milestone, and anything when no milestone is open', () => {
+  it('merges issues without a milestone (infra work, #225), and anything when no milestone is open', () => {
     expect(decide(pr({ closes: closing(null) }), now, 'main', v02).kind).toBe('merge');
     expect(decide(pr({ closes: closing(v03) }), now, 'main', null).kind).toBe('merge');
   });

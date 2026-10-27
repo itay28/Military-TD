@@ -20,7 +20,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 ### Organization
 
-Milestones are versions (`v0.1.0 — MVP` … `v1.0.0 — Release`). Every task is a sub-issue of one **epic** (parent issue labelled `epic`) and carries the matching `area:*` label (`core`, `towers`, `units`, `ui`, `art`, `infra`). New issues: pick the epic, area label, milestone, and add native "blocked by" dependencies.
+Milestones are versions (`v0.1.0 — MVP` … `v1.0.0 — Release`). Every task is a sub-issue of one **epic** (parent issue labelled `epic`) and carries the matching `area:*` label (`core`, `towers`, `units`, `ui`, `art`, `infra`). New issues: pick the epic, area label, milestone, and add native "blocked by" dependencies. Game work carries a milestone; `area:infra` issues may have none and are worked on at any time.
 
 The [project board](https://github.com/users/itay28/projects/4) tracks status. The *Board sync* Action moves Status from PRs and assignees (assign yourself, open the PR, mark it ready: the card follows); agents set Area, Priority and Size on new issues as `area:*`, `priority:*` and `size:*` labels, which *Board sync* copies to the board (a sizing agent sizes `ready-for-agent` issues nobody sized). How, and which token: `docs/agents/issue-tracker.md` → **Project board**.
 

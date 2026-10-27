@@ -47,6 +47,7 @@ const issue = (over: Partial<BoardIssue> = {}): BoardIssue => ({
   labelled: true,
   blocked: false,
   milestone: null,
+  infra: false,
   ...over,
 });
 
@@ -65,6 +66,14 @@ describe('desiredStatus: the Ready rule (no PR, no assignee)', () => {
     expect(desiredStatus({ ...readyCard, labelled: false }, [], 'main', current)).toBe('Backlog');
     expect(desiredStatus({ ...readyCard, milestone: 3 }, [], 'main', current)).toBe('Backlog');
     expect(desiredStatus({ ...readyCard, milestone: null }, [], 'main', current)).toBe('Backlog');
+  });
+
+  it('makes infra work without a milestone Ready, even with no open milestone (#225)', () => {
+    const infra = issue({ status: 'Backlog', infra: true });
+    expect(desiredStatus(infra, [], 'main', current)).toBe('Ready');
+    expect(desiredStatus(infra, [], 'main', null)).toBe('Ready');
+    expect(desiredStatus({ ...infra, status: 'Ready', blocked: true }, [], 'main', current)).toBe('Backlog');
+    expect(desiredStatus({ ...infra, status: 'Ready', milestone: 3 }, [], 'main', current)).toBe('Backlog');
   });
 
   it('makes nothing Ready when there is no open milestone', () => {
@@ -257,6 +266,7 @@ describe('withFieldUpdates', () => {
     tracker: false,
     labelled: true,
     hold: false,
+    infra: false,
     needsYou: false,
     autoAgent: false,
     size: undefined,
