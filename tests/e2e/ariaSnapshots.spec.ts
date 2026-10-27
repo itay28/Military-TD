@@ -3,7 +3,7 @@ import { openGame, selectKind } from './helpers';
 
 // The HUD and build bar are DOM, so they are checked as text, not pixels: these snapshots run everywhere, not only in
 // CI's container. To update them: `npx playwright test ariaSnapshots --update-snapshots`, then commit the .aria.yml
-// files (docs/agents/workflow.md → Screenshot baselines).
+// files (docs/agents/workflow.md → Aria snapshots).
 
 /**
  * Compares `locator`'s aria snapshot with the file `name`, as exact text. `toMatchAriaSnapshot` would write numbers as
@@ -13,7 +13,7 @@ async function expectAria(locator: Locator, name: string) {
   expect(`${await locator.ariaSnapshot()}\n`).toMatchSnapshot([name]);
 }
 
-test('the HUD at the start shows Money, Lives, Wave, DPS and an enabled Start Wave', async ({ page }) => {
+test('the HUD at the start shows Money, Lives, Wave, DPS and a Start Wave button that is not disabled', async ({ page }) => {
   await openGame(page);
   await expectAria(page.locator('#hud'), 'hud-initial.aria.yml');
 });
