@@ -45,6 +45,26 @@ describe('01-training-ground.tmj', () => {
     );
   });
 
+  it('draws road tiles on the Path and nowhere else', () => {
+    const map = createMap(load(TRAINING_GROUND));
+    const tileset = json.tilesets[0] as {
+      firstgid: number;
+      tiles: { id: number; properties: { name: string; value: string }[] }[];
+    };
+    const roadGids = tileset.tiles
+      .filter((tile) => tile.properties.some((p) => p.name === 'frame' && p.value.includes('road')))
+      .map((tile) => tile.id + tileset.firstgid);
+    expect(roadGids.length).toBeGreaterThan(0);
+    const ground = json.layers.find((layer: { name: string }) => layer.name === 'ground') as { data: number[] };
+    ground.data.forEach((gid, index) => {
+      const tile = { col: index % map.cols, row: Math.floor(index / map.cols) };
+      expect({ tile: tileKey(tile), road: roadGids.includes(gid) }).toEqual({
+        tile: tileKey(tile),
+        road: map.isPath(tile),
+      });
+    });
+  });
+
   it('names an atlas frame for every tile of its tileset', () => {
     const tiles = json.tilesets.flatMap((tileset: { tiles: unknown[] }) => tileset.tiles) as {
       properties: { name: string; value: string }[];
