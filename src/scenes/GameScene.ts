@@ -354,7 +354,7 @@ export class GameScene extends Phaser.Scene {
       this.pointerTile = pixelToTile(screenToWorld(this.view, gesture.point));
       return;
     }
-    if (gesture.type === 'place') return this.placeAt(screenToWorld(this.view, gesture.point));
+    if (gesture.type === 'place') return this.placeAtPoint(screenToWorld(this.view, gesture.point));
     this.fitted = false;
     const bounds = this.cameraBounds();
     const panned = panBy(this.view, gesture.dx, gesture.dy, bounds);
@@ -381,7 +381,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Places the selected kind on the tile at world pixel `at`, where an aiming drag lifted. */
-  private placeAt(at: Pixel): void {
+  private placeAtPoint(at: Pixel): void {
     const kind = this.buildBar.selected;
     if (!kind) return;
     const refusal = placeAt(this.sim, kind, pixelToTile(at));
