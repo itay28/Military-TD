@@ -91,6 +91,19 @@ describe('shell towers', () => {
     expect(ids).toContain(slow);
   });
 
+  it('a shell’s damage and kill count for its tower in the stats', () => {
+    const { game, landed } = newGame();
+    const id = game.spawnEnemy('infantry');
+    const mortar = placeMortar(game, { col: 2, row: 2 });
+    game.tick(TICK_MS);
+    (game.state.enemies as unknown as { speed: number; hp: number }[])[0]!.speed = 0;
+    (game.state.enemies as unknown as { hp: number }[])[0]!.hp = 5;
+    run(game, 1050);
+    expect(landed[0]!.hits).toEqual([{ enemyId: id, damage: 5 }]);
+    expect(game.state.stats.towers[mortar]!.total).toEqual({ damage: 5, kills: 1 });
+    expect(game.state.stats.total).toEqual({ damage: 5, kills: 1 });
+  });
+
   it('a shell kill pays its reward and sends enemyKilled', () => {
     const { game, kills } = newGame();
     const id = game.spawnEnemy('infantry');

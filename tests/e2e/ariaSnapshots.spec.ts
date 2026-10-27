@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test';
-import { openGame, selectKind } from './helpers';
+import { openGame, selectKind, stepToEnd } from './helpers';
 
 // The HUD and build bar are DOM, so they are checked as text, not pixels: these snapshots run everywhere, not only in
 // CI's container. To update them: `npx playwright test ariaSnapshots --update-snapshots`, then commit the .aria.yml
@@ -31,4 +31,12 @@ test('the build bar marks the selected tower', async ({ page }) => {
   await openGame(page);
   await selectKind(page, 'rifleNest');
   await expectAria(page.locator('#build-bar'), 'build-bar-selected.aria.yml');
+});
+
+test('the End screen after a won one-wave game shows the result and the damage report tables', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await stepToEnd(page);
+  await expectAria(page.locator('#end-screen'), 'end-screen-victory.aria.yml');
 });
