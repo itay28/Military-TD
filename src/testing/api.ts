@@ -17,13 +17,15 @@ export interface TestHooks {
 /** Named scenarios' setups, loaded on demand. */
 export type ScenarioLoaders = Readonly<Record<string, () => Promise<GameSetup>>>;
 
-/** The game state without the map (which has methods), so it survives `page.evaluate`. */
-export type TestState = Omit<GameState, 'map'>;
+/** The game state without the map (which has methods), so it survives `page.evaluate`, plus the map's id. */
+export type TestState = Omit<GameState, 'map'> & { readonly mapId: string };
 
 /** What the Game scene draws now, in canvas pixels, read from its display objects. */
 export interface TestView {
   /** The range ring of the tower under the pointer. `towerId` is null when no tower is hovered. */
   readonly rangeRing: { readonly visible: boolean; readonly towerId: number | null; readonly center: Pixel };
+  /** The id of every tower whose range ring is drawn (hovered, selected, or all with Always show tower ranges), sorted. */
+  readonly rangeRings: readonly number[];
   /** The tracers drawn on the next frame, each from a tower to where its shot hit. */
   readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
   /**
@@ -62,9 +64,8 @@ declare global {
 
 export function createTestApi(hooks: TestHooks, scenarios: ScenarioLoaders): TestApi {
   const state = (): TestState => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { map, ...rest } = hooks.game.state;
-    return structuredClone(rest);
+    return { ...structuredClone(rest), mapId: map.id };
   };
   return {
     state,

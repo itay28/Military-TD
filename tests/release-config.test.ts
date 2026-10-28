@@ -48,9 +48,27 @@ describe('pr title workflow', () => {
     expect(titleWorkflow).toMatch(/types: \[opened, edited, synchronize, reopened\]/);
   });
 
-  it('passes the title through env, never into the shell command', () => {
-    expect(titleWorkflow).toContain('PR_TITLE: ${{ github.event.pull_request.title }}');
-    const runs = [...titleWorkflow.matchAll(/^\s+run: (.+)$/gm)].map((m) => m[1]);
-    expect(runs).toEqual(['node scripts/pr-title.ts']);
+  it('has one job named pr-title', () => {
+    expect(titleWorkflow).toMatch(/^jobs:\n {2}pr-title:\n {4}name: pr-title\n/m);
+  });
+
+  // A push and a title edit at once (release-please) start two runs on the same commit; cancelling
+  // one shows a ✗ next to the green run (#257).
+  it('never cancels a run', () => {
+    expect(titleWorkflow).not.toMatch(/^concurrency:/m);
+    expect(titleWorkflow).not.toContain('cancel-in-progress');
+  });
+
+  // Overlapping runs must agree, so each one checks the title the PR has now, not its event's copy.
+  it("checks the PR's current title from the API", () => {
+    expect(titleWorkflow).toMatch(/^ {2}pull-requests: read$/m);
+    expect(titleWorkflow).toContain('GH_TOKEN: ${{ github.token }}');
+    expect(titleWorkflow).toContain('PR_NUMBER: ${{ github.event.pull_request.number }}');
+    expect(titleWorkflow).toContain('PR_TITLE="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .title)"');
+    expect(titleWorkflow).toContain('node scripts/pr-title.ts');
+  });
+
+  it('never puts the title into the shell command', () => {
+    expect(titleWorkflow).not.toContain('github.event.pull_request.title');
   });
 });

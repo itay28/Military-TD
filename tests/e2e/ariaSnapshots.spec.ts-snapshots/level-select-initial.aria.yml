@@ -1,0 +1,6 @@
+- main:
+  - heading "Select map" [level=1]
+  - list:
+    - listitem:
+      - button "Training Ground"
+  - button "Back"

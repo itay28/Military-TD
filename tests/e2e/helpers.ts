@@ -9,16 +9,35 @@ export interface OpenOptions {
   readonly manualStep?: boolean;
   readonly anim?: boolean;
   readonly speed?: number;
+  /** Saves settings to `localStorage` (`persist=1`); test mode keeps them in memory otherwise. */
+  readonly persist?: boolean;
 }
 
 /** Opens the game in test mode and waits until `window.__TD__` is ready. */
-export async function openGame(page: Page, { manualStep = true, anim = false, speed }: OpenOptions = {}) {
+export async function openGame(
+  page: Page,
+  { manualStep = true, anim = false, speed, persist = false }: OpenOptions = {},
+) {
   const params = new URLSearchParams({ test: '1' });
   if (manualStep) params.set('step', 'manual');
   if (!anim) params.set('anim', '0');
   if (speed !== undefined) params.set('speed', String(speed));
+  if (persist) params.set('persist', '1');
   await page.goto(`/?${params}`);
   await page.waitForFunction(() => window.__TD__ !== undefined);
+}
+
+/** Opens the Main menu in test mode (`menu=1`). `window.__TD__` appears only once Play starts a game. */
+export async function openMenu(page: Page) {
+  await page.goto('/?test=1&menu=1&step=manual&anim=0');
+  await page.getByRole('button', { name: 'Play' }).waitFor();
+}
+
+/** Opens the Level select in test mode: the Main menu, then Play. */
+export async function openLevelSelect(page: Page) {
+  await openMenu(page);
+  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('heading', { name: 'Select map' }).waitFor();
 }
 
 /** The page coordinates of `tile`'s center, through the camera's pan and zoom, so a test clicks the canvas like a player. */
