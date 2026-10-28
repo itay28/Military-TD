@@ -12,7 +12,7 @@ test('the Level select shows each map as a button with a preview, the first focu
   await openLevelSelect(page);
   await expect(page.getByRole('button', { name: first.name })).toBeFocused();
   await expect(page.getByRole('button', { name: first.name }).locator('canvas')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeVisible();
   await expect(page.locator('#hud')).toBeHidden();
 });
 
@@ -60,7 +60,7 @@ test('picking the second map starts a game on its Path, with its own waves', asy
 
 test('Back returns to the Main menu', async ({ page }) => {
   await openLevelSelect(page);
-  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Select map' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Play' })).toBeFocused();
