@@ -13,6 +13,8 @@ export interface HudSpeed {
 }
 
 export interface Hud {
+  /** The group holding the HUD's buttons; the pause menu adds its Pause button here. */
+  readonly controls: HTMLElement;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
   /** Removes the HUD's elements and unsubscribes from game events. */
@@ -22,39 +24,50 @@ export interface Hud {
 /** Builds the HUD inside `root` and shows `game` in it. It's DOM, not Phaser text, so tests can query it (ADR-0003). */
 export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud {
   const doc = root.ownerDocument;
-  const field = (testId: string) => {
-    const el = doc.createElement('span');
-    el.dataset.testid = testId;
+  // Three fixed groups, so a text that appears or grows never moves a button (#274): the stats, a message slot that
+  // takes the leftover space and clips, and the controls.
+  const group = (className: string) => {
+    const el = doc.createElement('div');
+    el.className = className;
     root.append(el);
     return el;
   };
-  const money = field('hud-money');
-  const lives = field('hud-lives');
-  const wave = field('hud-wave');
-  const dps = field('hud-dps');
+  const stats = group('hud-stats');
+  const message = group('hud-message');
+  const controls = group('hud-controls');
+  const field = (testId: string, parent: HTMLElement) => {
+    const el = doc.createElement('span');
+    el.dataset.testid = testId;
+    parent.append(el);
+    return el;
+  };
+  const money = field('hud-money', stats);
+  const lives = field('hud-lives', stats);
+  const wave = field('hud-wave', stats);
+  const dps = field('hud-dps', stats);
   const startWave = doc.createElement('button');
   startWave.type = 'button';
   startWave.dataset.testid = 'start-wave';
   startWave.textContent = 'Start Wave';
-  root.append(startWave);
+  controls.append(startWave);
   // A toggle button: aria-pressed says whether it's on. Not "Auto-start waves": that name would also match "Start Wave".
   const autoStart = doc.createElement('button');
   autoStart.type = 'button';
   autoStart.dataset.testid = 'auto-start';
   autoStart.className = 'hud-toggle';
   autoStart.textContent = 'Auto-start';
-  root.append(autoStart);
-  const nextWave = field('hud-next-wave');
+  controls.append(autoStart);
+  const nextWave = field('hud-next-wave', message);
   const speedButton = doc.createElement('button');
   speedButton.type = 'button';
   speedButton.dataset.testid = 'game-speed';
-  root.append(speedButton);
+  controls.append(speedButton);
   // A live region stays in place and only its text changes, so screen readers announce it.
   const banner = doc.createElement('div');
   banner.setAttribute('role', 'status');
   banner.className = 'hud-banner';
   banner.dataset.testid = 'wave-banner';
-  root.append(banner);
+  message.append(banner);
   let bannerText = '';
   /** Sim time when the banner goes away; it shows until then. */
   let bannerUntilMs = 0;
@@ -112,6 +125,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   });
   update();
   return {
+    controls,
     update,
     destroy() {
       offWaveCleared();

@@ -34,9 +34,9 @@ describe('createFixedStep', () => {
     expect(loop.advance(STEP)).toBe(1);
   });
 
-  it('with the cap scaled by the game speed, runs 4 steps for one 60 fps frame at ×4', () => {
+  it('with the cap scaled by the game speed, runs 3 steps for one 60 fps frame at ×3', () => {
     const { loop } = setup(5 * MAX_GAME_SPEED);
-    expect(loop.advance(STEP * MAX_GAME_SPEED)).toBe(4);
+    expect(loop.advance(STEP * MAX_GAME_SPEED)).toBe(3);
     expect(loop.advance(1000)).toBe(5 * MAX_GAME_SPEED);
   });
 
