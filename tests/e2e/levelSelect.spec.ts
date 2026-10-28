@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { FIRST_MAP, SECOND_MAP } from './firstMap';
+import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from './firstMap';
 import { START_LIVES, START_MONEY } from '../../src/data/start';
 import { SWITCHBACK_WAVES } from '../../src/data/waves';
 import { openLevelSelect, state } from './helpers';
@@ -36,7 +36,12 @@ test('picking a map starts a new game on it, in the Build phase', async ({ page 
 
 test('the Level select lists every map in registry order', async ({ page }) => {
   await openLevelSelect(page);
-  await expect(page.locator('#level-select li button')).toHaveText([first.name, SECOND_MAP.name]);
+  await expect(page.locator('#level-select li button')).toHaveText([
+    first.name,
+    SECOND_MAP.name,
+    THIRD_MAP.name,
+    FOURTH_MAP.name,
+  ]);
 });
 
 test('picking the second map starts a game on its Path, with its own waves', async ({ page }) => {

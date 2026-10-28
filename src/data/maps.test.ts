@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createMap, type Tile } from '../sim/map';
-import { FIRST_MAP, SECOND_MAP } from '../../tests/e2e/firstMap';
+import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from '../../tests/e2e/firstMap';
 import { MAPS, mapById, MVP_MAP } from './maps';
+import { ENEMY_STATS } from './enemies';
 import { WAVES } from './waves';
 
 function edgesOf({ col, row }: Tile, cols: number, rows: number): string[] {
@@ -38,6 +39,8 @@ describe('map registry', () => {
   it('starts with the map the e2e specs expect', () => {
     expect({ id: MAPS[0]?.id, name: MAPS[0]?.name }).toEqual(FIRST_MAP);
     expect({ id: MAPS[1]?.id, name: MAPS[1]?.name }).toEqual(SECOND_MAP);
+    expect({ id: MAPS[2]?.id, name: MAPS[2]?.name }).toEqual(THIRD_MAP);
+    expect({ id: MAPS[3]?.id, name: MAPS[3]?.name }).toEqual(FOURTH_MAP);
   });
 
   it('has unique ids', () => {
@@ -51,10 +54,12 @@ describe('map registry', () => {
     expect(() => createMap(data)).not.toThrow();
   });
 
-  it('lists Training Ground, then Switchback', () => {
+  it('lists Training Ground, Switchback, Serpentine, then Hairpin', () => {
     expect(MAPS.map(({ id, name }) => ({ id, name }))).toEqual([
       { id: 'mvp', name: 'Training Ground' },
       { id: 'switchback', name: 'Switchback' },
+      { id: 'serpentine', name: 'Serpentine' },
+      { id: 'hairpin', name: 'Hairpin' },
     ]);
   });
 
@@ -78,6 +83,21 @@ describe('map registry', () => {
     const firstMixed = (ws: typeof WAVES) => ws.findIndex((w) => new Set(w.groups.map((g) => g.kind)).size > 1);
     expect(firstMixed(waves)).toBeLessThan(firstMixed(WAVES));
   });
+
+  it.each(MAPS.slice(1).map((entry, i) => [MAPS[i]!.id, entry.id, MAPS[i]!.waves, entry.waves] as const))(
+    'difficulty rises: %s → %s has as many waves or more, more enemies and more total hp, and no new kind',
+    (_, __, before, after) => {
+      const enemies = (waves: typeof WAVES) => waves.flatMap((w) => w.groups);
+      const count = (waves: typeof WAVES) => enemies(waves).reduce((sum, g) => sum + g.count, 0);
+      const hp = (waves: typeof WAVES) =>
+        enemies(waves).reduce((sum, g) => sum + g.count * ENEMY_STATS[g.kind].maxHp, 0);
+      expect(after.length).toBeGreaterThanOrEqual(before.length);
+      expect(count(after)).toBeGreaterThan(count(before));
+      expect(hp(after)).toBeGreaterThan(hp(before));
+      const kinds = new Set(enemies(WAVES).map((g) => g.kind));
+      expect(enemies(after).every((g) => kinds.has(g.kind))).toBe(true);
+    },
+  );
 
   it('finds an entry by id', () => {
     expect(mapById('mvp').data).toBe(MVP_MAP);
