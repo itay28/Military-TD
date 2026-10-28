@@ -46,6 +46,11 @@ export interface TestView {
   readonly drawOrder: readonly string[];
   /** Whether the sprite atlas loaded. Without it, everything is drawn as shapes. */
   readonly sprites: boolean;
+  /**
+   * Each tower's turret angle in radians (0 east, −π/2 north), as turned so far toward its target. Tracked for every
+   * tower, drawn only for one with a turret sprite.
+   */
+  readonly turrets: readonly { readonly towerId: number; readonly angle: number }[];
 }
 
 /** `window.__TD__` with `?test=1` (ADR-0003). */
