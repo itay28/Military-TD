@@ -1,5 +1,15 @@
 import Phaser from 'phaser';
-import { CAMERA, DISMANTLE, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER, TURRET } from '../data/display';
+import {
+  CAMERA,
+  DISMANTLE,
+  EFFECT,
+  FLOATING_TEXT,
+  SHELL,
+  SPRITE_SCALE,
+  TILE_PX,
+  TRACER,
+  TURRET,
+} from '../data/display';
 import { ATLAS_KEY, TILE_TYPES, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { MAPS, mapById } from '../data/maps';
