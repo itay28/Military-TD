@@ -1,8 +1,7 @@
 import type { EnemyKind } from '../data/enemies';
-import { MAPS, MVP_MAP } from '../data/maps';
+import { MVP_MAP, wavesForMap } from '../data/maps';
 import { START_LIVES, START_MONEY } from '../data/start';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
-import { WAVES } from '../data/waves';
 import { createGame, TICK_MS, type CommandResult, type Game, type GameEvents, type GameState } from './game';
 import { tileKey, type MapData, type Tile } from './map';
 import type { WaveData } from './waves';
@@ -127,7 +126,7 @@ export function setUpGame(setup: GameSetup = {}): Game {
     lives: setup.lives ?? START_LIVES,
     // Pre-placed towers are placed like any other, with their cost added first, so they come free.
     money: (setup.money ?? START_MONEY) + towersCost,
-    waves: setup.waves ?? MAPS.find((entry) => entry.id === map.id)?.waves ?? WAVES,
+    waves: setup.waves ?? wavesForMap(map.id),
   });
   for (const { kind, tile } of towers) {
     const placed = game.placeTower(kind, tile);

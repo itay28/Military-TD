@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -197,7 +198,7 @@ describe('Tiled map files', () => {
   // Registry ids are short names, not file names, so a file matches the entry whose data it is, id aside.
   const entryFor = (file: string) => {
     const map = load(file);
-    return MAPS.find((entry) => JSON.stringify({ ...map, id: entry.id }) === JSON.stringify(entry.data));
+    return MAPS.find((entry) => isDeepStrictEqual({ ...map, id: entry.id }, entry.data));
   };
 
   it.each(mapFiles)('%s is a map in the registry', (file) => {
