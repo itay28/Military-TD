@@ -59,14 +59,14 @@ test('a changed default applies from the next game: Restart starts at it, the ru
 }) => {
   await openGame(page);
   await openSettingsFromPause(page);
-  await page.getByRole('radio', { name: '×4' }).check();
+  await page.getByRole('radio', { name: '×3' }).check();
   await page.getByRole('button', { name: 'Back' }).click();
   await page.getByRole('button', { name: 'Resume' }).click();
   await expect(speedButton(page)).toHaveAccessibleName('Game speed ×1');
 
   await page.getByRole('button', { name: 'Pause' }).click();
   await page.getByRole('button', { name: 'Restart' }).click();
-  await expect(speedButton(page)).toHaveAccessibleName('Game speed ×4');
+  await expect(speedButton(page)).toHaveAccessibleName('Game speed ×3');
 });
 
 test('Always show tower ranges draws every tower’s range ring, live', async ({ page }) => {
@@ -83,4 +83,28 @@ test('Always show tower ranges draws every tower’s range ring, live', async ({
 
   await page.getByRole('checkbox', { name: 'Always show tower ranges' }).uncheck();
   await expect.poll(async () => (await view(page)).rangeRings).toEqual([]);
+});
+
+// From #49: settings are saved to localStorage. Test mode keeps them in memory unless `persist=1`.
+
+test('a changed setting is still set after a reload (persist=1)', async ({ page }) => {
+  await openGame(page, { persist: true });
+  await openSettingsFromPause(page);
+  await page.getByRole('radio', { name: '×2' }).check();
+  await page.getByRole('checkbox', { name: 'Always show tower ranges' }).check();
+
+  await openGame(page, { persist: true });
+  await openSettingsFromPause(page);
+  await expect(page.getByRole('radio', { name: '×2' })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Always show tower ranges' })).toBeChecked();
+});
+
+test('test mode keeps settings in memory by default, so runs do not leak into each other', async ({ page }) => {
+  await openGame(page);
+  await openSettingsFromPause(page);
+  await page.getByRole('radio', { name: '×3' }).check();
+
+  await openGame(page);
+  await openSettingsFromPause(page);
+  await expect(page.getByRole('radio', { name: '×1' })).toBeChecked();
 });
