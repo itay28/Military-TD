@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CAMERA, DISMANTLE, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
+import { CAMERA, DISMANTLE, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
 import { ATLAS_KEY, SPRITE_HEADING, TILE_TYPES, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
@@ -24,6 +24,7 @@ import {
   drawRangeRing,
   drawShells,
   drawTower,
+  drawEffects,
   drawTracers,
 } from './drawEntities';
 import { drawGrid, drawMap, tileType } from './drawMap';
@@ -31,6 +32,7 @@ import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, type GameSpeed } from './gameSpeed';
 import { createGestures, type Gesture, type Gestures } from './gestures';
+import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { headingOf, spriteRotation } from './heading';
 import { interpolatePosition, snapshotPositions } from './interpolate';
@@ -62,6 +64,7 @@ const DEPTH = {
   air: 3,
   tracers: 4,
   shells: 4,
+  effects: 4,
   ghost: 5,
   rangeRing: 6,
   floatingText: 7,
@@ -138,6 +141,8 @@ export class GameScene extends Phaser.Scene {
   private pauseMenu!: PauseMenu;
   private enemyViews!: ViewSync<Enemy, EnemyView>;
   private towerViews!: ViewSync<Tower>;
+  private effects!: Effects;
+  private effectGraphics!: Phaser.GameObjects.Graphics;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
   private blasts!: Blasts;
@@ -232,6 +237,7 @@ export class GameScene extends Phaser.Scene {
         ...[this.selectedRingKey, this.hoveredRingKey].flatMap((key) => (key ? [ringKeyTowerId(key)] : [])),
       ].sort((a, b) => a - b),
       tracers: this.tracers.active(),
+      effects: this.effects.active(),
       ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
@@ -365,12 +371,22 @@ export class GameScene extends Phaser.Scene {
       },
     });
 
-    // ?anim=0: zero lifetimes, so tracers and floating texts never show.
+    // ?anim=0: zero lifetimes, so effects, tracers and floating texts never show.
+    this.effects = createEffects(this.flags.anim ? EFFECT.lifeMs : 0);
+    this.effectGraphics = onLayer(this.add.graphics(), 'effects');
+    this.sim.events.on('shellFired', ({ towerId }) => {
+      const tower = this.sim.state.towers.find((t) => t.id === towerId);
+      if (tower) this.effects.add('muzzleFlash', towerCenter(tower));
+    });
+    this.sim.events.on('shellLanded', ({ position }) => this.effects.add('explosion', toPixels(position)));
+    this.sim.events.on('enemyKilled', ({ enemy }) => this.effects.add('puff', toPixels(enemy.position)));
     this.tracers = createTracers(this.flags.anim ? TRACER.fadeMs : 0);
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
-      if (tower) this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
+      if (!tower) return;
+      this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
+      this.effects.add('muzzleFlash', towerCenter(tower));
     });
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
@@ -542,6 +558,7 @@ export class GameScene extends Phaser.Scene {
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
+    this.effects.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     if (this.flags.anim) this.animMs += deltaMs;
     this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
@@ -556,6 +573,8 @@ export class GameScene extends Phaser.Scene {
     this.enemyViews.sync(enemies);
     this.tracerGraphics.clear();
     drawTracers(this.tracerGraphics, this.tracers.active());
+    this.effectGraphics.clear();
+    drawEffects(this.effectGraphics, this.effects.active());
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);
     this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected);
