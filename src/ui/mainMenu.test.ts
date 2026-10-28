@@ -14,23 +14,37 @@ beforeEach(() => {
 });
 
 describe('Main menu', () => {
-  it('shows the title and a Play and a Settings button', () => {
-    mountMainMenu(root, { app, onPlay: () => {} });
+  it('shows the title and a Play, a Settings and a Credits button', () => {
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
     expect(root.hidden).toBe(false);
     expect(root.querySelector('h1')?.textContent).toBe('Military TD');
     expect(button('Play')?.type).toBe('button');
     expect(button('Settings')?.type).toBe('button');
+    expect(button('Credits')?.type).toBe('button');
+  });
+
+  it('calls onCredits when the player presses Credits, which is enabled', () => {
+    const onCredits = vi.fn();
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits });
+    expect(button('Credits')?.disabled).toBe(false);
+    button('Credits')?.click();
+    expect(onCredits).toHaveBeenCalledOnce();
+  });
+
+  it('focuses Credits when asked to, as when coming back from the Credits screen', () => {
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {}, initialFocus: 'credits' });
+    expect(document.activeElement).toBe(button('Credits'));
   });
 
   it('disables Settings when it is given no Settings screen to open', () => {
-    mountMainMenu(root, { app, onPlay: () => {} });
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
     expect(button('Play')?.disabled).toBe(false);
     expect(button('Settings')?.disabled).toBe(true);
   });
 
   it('opens the Settings screen from Settings, with the menu inert behind it', () => {
     const openSettings = vi.fn(() => ({ close: () => {}, back: () => {} }));
-    mountMainMenu(root, { app, onPlay: () => {}, openSettings });
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {}, openSettings });
     expect(button('Settings')?.disabled).toBe(false);
     button('Settings')!.click();
     expect(openSettings).toHaveBeenCalledOnce();
@@ -42,6 +56,7 @@ describe('Main menu', () => {
     mountMainMenu(root, {
       app,
       onPlay: () => {},
+      onCredits: () => {},
       openSettings: (back) => {
         onBack = back;
         return { close: () => {}, back: () => {} };
@@ -55,7 +70,12 @@ describe('Main menu', () => {
 
   it('closes an open Settings screen when destroyed', () => {
     const close = vi.fn();
-    const menu = mountMainMenu(root, { app, onPlay: () => {}, openSettings: () => ({ close, back: () => {} }) });
+    const menu = mountMainMenu(root, {
+      app,
+      onPlay: () => {},
+      onCredits: () => {},
+      openSettings: () => ({ close, back: () => {} }),
+    });
     button('Settings')!.click();
     menu.destroy();
     expect(close).toHaveBeenCalledOnce();
@@ -64,18 +84,18 @@ describe('Main menu', () => {
 
   it('calls onPlay when the player presses Play', () => {
     const onPlay = vi.fn();
-    mountMainMenu(root, { app, onPlay });
+    mountMainMenu(root, { app, onPlay, onCredits: () => {} });
     button('Play')?.click();
     expect(onPlay).toHaveBeenCalledOnce();
   });
 
   it('focuses Play when it opens', () => {
-    mountMainMenu(root, { app, onPlay: () => {} });
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
     expect(document.activeElement).toBe(button('Play'));
   });
 
   it('marks the app as on the menu, which hides the HUD, build bar and tower panel, until destroyed', () => {
-    const menu = mountMainMenu(root, { app, onPlay: () => {} });
+    const menu = mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
     expect(app.dataset.screen).toBe('menu');
     menu.destroy();
     expect(app.dataset.screen).toBeUndefined();
@@ -83,7 +103,7 @@ describe('Main menu', () => {
 
   it('after destroy, is hidden and empty, and an old Play button does nothing', () => {
     const onPlay = vi.fn();
-    const menu = mountMainMenu(root, { app, onPlay });
+    const menu = mountMainMenu(root, { app, onPlay, onCredits: () => {} });
     const play = button('Play')!;
     menu.destroy();
     play.click();
