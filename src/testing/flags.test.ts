@@ -10,6 +10,7 @@ describe('parseTestFlags', () => {
       speed: 1,
       menu: false,
       persist: false,
+      unlockAll: false,
     });
   });
 
@@ -21,6 +22,7 @@ describe('parseTestFlags', () => {
       speed: 4,
       menu: false,
       persist: false,
+      unlockAll: false,
     });
   });
 
@@ -32,7 +34,13 @@ describe('parseTestFlags', () => {
       speed: 1,
       menu: false,
       persist: false,
+      unlockAll: false,
     });
+  });
+
+  it('reads unlock=all, and no other value of it', () => {
+    expect(parseTestFlags('?test=1&unlock=all').unlockAll).toBe(true);
+    expect(parseTestFlags('?test=1&unlock=1').unlockAll).toBe(false);
   });
 
   it.each(['0', '-2', 'fast', 'Infinity', ''])('falls back to speed 1 for speed=%s', (speed) => {

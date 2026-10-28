@@ -1,13 +1,22 @@
 import { TOWER_NAMES } from '../data/display';
 import { isGameOver, type Game } from '../sim/game';
+import type { Stars } from '../sim/progression';
 import { damageReport, type DamageReport, type ReportFigures } from '../sim/report';
 
 /** The parts of the Game the End screen reads. */
 export type EndScreenGame = Pick<Game, 'state'>;
 
+/** What a win earned: its Stars, and the name of the map it unlocked, if it unlocked one. */
+export interface VictoryResult {
+  readonly stars: Stars;
+  readonly unlockedMap?: string;
+}
+
 export interface EndScreenOptions {
   /** Called when the player presses Restart. */
   readonly onRestart: () => void;
+  /** Read once when the overlay opens on a Victory; nothing is shown for it without one. */
+  readonly result?: () => VictoryResult | undefined;
 }
 
 export interface EndScreen {
@@ -89,8 +98,32 @@ function buildReport(doc: Document, { towers, kinds, waves, total }: DamageRepor
   return parts;
 }
 
+/** "★★☆ 2 of 3 stars": the glyphs are hidden from screen readers, which read the words. */
+function buildStars(doc: Document, stars: Stars): HTMLElement {
+  const line = doc.createElement('p');
+  line.dataset.testid = 'stars';
+  const glyphs = doc.createElement('span');
+  glyphs.className = 'star-glyphs';
+  glyphs.setAttribute('aria-hidden', 'true');
+  glyphs.textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  line.append(glyphs, ` ${stars} of 3 stars`);
+  return line;
+}
+
+function buildResult(doc: Document, { stars, unlockedMap }: VictoryResult): HTMLElement[] {
+  if (unlockedMap === undefined) return [buildStars(doc, stars)];
+  const unlocked = doc.createElement('p');
+  unlocked.dataset.testid = 'unlocked';
+  unlocked.textContent = `New map unlocked: ${unlockedMap}`;
+  return [buildStars(doc, stars), unlocked];
+}
+
 /** Builds the End screen inside `root`, an overlay over the canvas. It's DOM, so tests can query it (ADR-0003). */
-export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onRestart }: EndScreenOptions): EndScreen {
+export function mountEndScreen(
+  root: HTMLElement,
+  game: EndScreenGame,
+  { onRestart, result }: EndScreenOptions,
+): EndScreen {
   const doc = root.ownerDocument;
   const dialog = doc.createElement('div');
   dialog.setAttribute('role', 'dialog');
@@ -119,6 +152,8 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
     if (destroyed || !root.hidden || !isGameOver(phase)) return;
     heading.textContent = phase === 'victory' ? 'Victory' : 'Defeat';
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
+    const won = phase === 'victory' ? result?.() : undefined;
+    if (won) wavesSurvived.after(...buildResult(doc, won));
     report.replaceChildren(...buildReport(doc, damageReport(game.state.stats)));
     root.hidden = false;
     // Focusing the last child would scroll a tall report to the bottom, hiding the title.

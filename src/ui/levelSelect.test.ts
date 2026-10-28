@@ -47,6 +47,17 @@ describe('Level select', () => {
     expect(onPick).toHaveBeenCalledExactlyOnceWith('second');
   });
 
+  it('disables a locked map and says it is locked; a click on it picks nothing', () => {
+    const onPick = vi.fn();
+    mount({ maps: TWO_MAPS, onPick, isUnlocked: (index) => index === 0 });
+    const locked = button('Second Map (locked)');
+    expect(locked?.disabled).toBe(true);
+    locked?.click();
+    expect(onPick).not.toHaveBeenCalled();
+    button('Training Ground')?.click();
+    expect(onPick).toHaveBeenCalledExactlyOnceWith(MAPS[0]!.id);
+  });
+
   it('calls onBack when the player presses Back', () => {
     const onBack = vi.fn();
     mount({ onBack });

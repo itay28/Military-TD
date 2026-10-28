@@ -38,9 +38,8 @@ const flags = parseTestFlags(window.location.search);
 // unless ?persist=1, so e2e runs don't leak into each other.
 const storage = flags.test && !flags.persist ? createMemoryStorage() : browserStorage();
 const settings = createPersistedSettings(storage);
-// Saved progress (maps won, best stars) lives under its own key. Nothing reads it yet: unlocks and stars (#64) are the first user.
+// Saved progress (maps won, best stars) lives under its own key: the Game records wins, the Level select unlocks from it.
 const progress = createPersistedProgress(storage);
-void progress;
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
@@ -54,6 +53,7 @@ const gameScene = new GameScene({
   flags,
   settings,
   openSettings,
+  progress,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {
     if (flags.test) window.__TD__ ??= createTestApi(gameScene.testHooks(), SCENARIOS);
@@ -74,7 +74,7 @@ const game = new Phaser.Game({
   scene: [
     new BootScene(flags),
     new MenuScene({ app, menuRoot, openSettings }),
-    new LevelSelectScene({ app, root: levelSelectRoot }),
+    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
     gameScene,
   ],
 });
