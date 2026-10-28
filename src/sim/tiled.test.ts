@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MIN_BUILDABLE_TILES } from '../data/maps';
+import { MIN_BUILDABLE_TILES } from '../data/mapRules';
 import { InvalidMapError } from './map';
 import { importTiledMap } from './tiled';
 
