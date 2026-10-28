@@ -1,0 +1,773 @@
+{
+  "frames": {
+    "explosion1": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 60,
+        "h": 60
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 60,
+        "h": 60
+      },
+      "sourceSize": {
+        "w": 60,
+        "h": 60
+      }
+    },
+    "explosion2": {
+      "frame": {
+        "x": 66,
+        "y": 0,
+        "w": 57,
+        "h": 56
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 57,
+        "h": 56
+      },
+      "sourceSize": {
+        "w": 57,
+        "h": 56
+      }
+    },
+    "explosion3": {
+      "frame": {
+        "x": 132,
+        "y": 0,
+        "w": 64,
+        "h": 63
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 63
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 63
+      }
+    },
+    "explosionSmoke1": {
+      "frame": {
+        "x": 198,
+        "y": 0,
+        "w": 60,
+        "h": 60
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 60,
+        "h": 60
+      },
+      "sourceSize": {
+        "w": 60,
+        "h": 60
+      }
+    },
+    "explosionSmoke2": {
+      "frame": {
+        "x": 264,
+        "y": 0,
+        "w": 57,
+        "h": 56
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 57,
+        "h": 56
+      },
+      "sourceSize": {
+        "w": 57,
+        "h": 56
+      }
+    },
+    "explosionSmoke3": {
+      "frame": {
+        "x": 330,
+        "y": 0,
+        "w": 63,
+        "h": 63
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 63,
+        "h": 63
+      },
+      "sourceSize": {
+        "w": 63,
+        "h": 63
+      }
+    },
+    "sandbagBeige_open": {
+      "frame": {
+        "x": 396,
+        "y": 0,
+        "w": 42,
+        "h": 28
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 42,
+        "h": 28
+      },
+      "sourceSize": {
+        "w": 42,
+        "h": 28
+      }
+    },
+    "shotOrange": {
+      "frame": {
+        "x": 462,
+        "y": 0,
+        "w": 16,
+        "h": 28
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 28
+      },
+      "sourceSize": {
+        "w": 16,
+        "h": 28
+      }
+    },
+    "tankBody_sand": {
+      "frame": {
+        "x": 0,
+        "y": 66,
+        "w": 38,
+        "h": 36
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 38,
+        "h": 36
+      },
+      "sourceSize": {
+        "w": 38,
+        "h": 36
+      }
+    },
+    "tankSand_barrel1": {
+      "frame": {
+        "x": 66,
+        "y": 66,
+        "w": 12,
+        "h": 26
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 26
+      },
+      "sourceSize": {
+        "w": 12,
+        "h": 26
+      }
+    },
+    "tileGrass1": {
+      "frame": {
+        "x": 132,
+        "y": 66,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "tileGrass2": {
+      "frame": {
+        "x": 198,
+        "y": 66,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "tileGrass_roadCornerLL": {
+      "frame": {
+        "x": 264,
+        "y": 66,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "tileGrass_roadCornerLR": {
+      "frame": {
+        "x": 330,
+        "y": 66,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "tileGrass_roadCornerUL": {
+      "frame": {
+        "x": 396,
+        "y": 66,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "tileGrass_roadCornerUR": {
+      "frame": {
+        "x": 462,
+        "y": 66,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "tileGrass_roadEast": {
+      "frame": {
+        "x": 0,
+        "y": 132,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "tileGrass_roadNorth": {
+      "frame": {
+        "x": 66,
+        "y": 132,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile019": {
+      "frame": {
+        "x": 132,
+        "y": 132,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile020": {
+      "frame": {
+        "x": 198,
+        "y": 132,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile021": {
+      "frame": {
+        "x": 264,
+        "y": 132,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile130": {
+      "frame": {
+        "x": 330,
+        "y": 132,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile131": {
+      "frame": {
+        "x": 396,
+        "y": 132,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile135": {
+      "frame": {
+        "x": 462,
+        "y": 132,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile136": {
+      "frame": {
+        "x": 0,
+        "y": 198,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile137": {
+      "frame": {
+        "x": 66,
+        "y": 198,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile180": {
+      "frame": {
+        "x": 132,
+        "y": 198,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile181": {
+      "frame": {
+        "x": 198,
+        "y": 198,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile182": {
+      "frame": {
+        "x": 264,
+        "y": 198,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile203": {
+      "frame": {
+        "x": 330,
+        "y": 198,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile226": {
+      "frame": {
+        "x": 396,
+        "y": 198,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile245": {
+      "frame": {
+        "x": 462,
+        "y": 198,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile247": {
+      "frame": {
+        "x": 0,
+        "y": 264,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile249": {
+      "frame": {
+        "x": 66,
+        "y": 264,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile269": {
+      "frame": {
+        "x": 132,
+        "y": 264,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "towerDefense_tile295": {
+      "frame": {
+        "x": 198,
+        "y": 264,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "treeGreen_large": {
+      "frame": {
+        "x": 264,
+        "y": 264,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "treeGreen_small": {
+      "frame": {
+        "x": 330,
+        "y": 264,
+        "w": 36,
+        "h": 36
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 36,
+        "h": 36
+      },
+      "sourceSize": {
+        "w": 36,
+        "h": 36
+      }
+    }
+  },
+  "meta": {
+    "image": "sprites.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 526,
+      "h": 328
+    },
+    "scale": "1"
+  }
+}

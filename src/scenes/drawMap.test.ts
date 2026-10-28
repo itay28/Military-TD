@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAP_STYLE, TILE_PX } from '../data/display';
 import { MVP_MAP } from '../data/maps';
 import { createMap, type MapData } from '../sim/map';
-import { drawMap, type MapPainter } from './drawMap';
+import { drawGrid, drawMap, tileType, type MapPainter } from './drawMap';
 
 interface Fill {
   color: number;
@@ -77,5 +77,23 @@ describe('drawMap', () => {
     drawMap(painter, map);
     expect(fills).toHaveLength(16 * 10);
     expect(fills.filter((f) => f.color === MAP_STYLE.path)).toHaveLength(map.pathTiles.length);
+  });
+
+  it('ends with the grid drawGrid draws on its own, so sprite tiles get the same grid on top', () => {
+    const whole = recordingPainter();
+    drawMap(whole.painter, createMap(TINY));
+    const grid = recordingPainter();
+    drawGrid(grid.painter, createMap(TINY));
+    expect(grid.fills).toEqual([]);
+    expect(grid.lines).toEqual(whole.lines);
+    expect(grid.lineStyles).toEqual(whole.lineStyles);
+  });
+});
+
+describe('tileType', () => {
+  it('is path on the Path and buildable elsewhere', () => {
+    const map = createMap(TINY);
+    expect(tileType(map, { col: 1, row: 0 })).toBe('path');
+    expect(tileType(map, { col: 1, row: 1 })).toBe('buildable');
   });
 });

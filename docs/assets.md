@@ -67,18 +67,22 @@ The plan named *Top-down Tanks Redux*. Kenney now publishes that set as *Top-dow
 
 | Kind | Base | Turret / body |
 | --- | --- | --- |
-| Rifle Nest | `sandbagBeige_open` | `soldier1_machine` (soldier with a machine gun, behind the sandbags) |
+| Rifle Nest | `sandbagBeige_open` | `td245` (soldier) |
 | AA Gun | `td180` | `td203` (twin barrels) |
 | Cannon | `td181` | `td249` (single heavy barrel) |
 | Mortar | `td182` | `td226` (short turret) |
-| Infantry | | `soldier1_gun` (rifleman) |
-| Jeep | | `obj_jeep1` (army jeep) |
+| Infantry | | `td247` (soldier) |
+| Jeep | | `td269` (light vehicle) |
 | Tank | | `tankBody_sand` + `tankSand_barrel1` |
-| Helicopter | | green chopper + moving rotor from `chopper-44x99`, with a ground shadow |
-
-Sizes follow real ones, with 48 px = 1 tile in game: a soldier about 0.4 tile, the Jeep 0.75, the Tank about 1, the Helicopter 1.2. The Kenney tank pack draws small (38 px body), so it's scaled up, and the 52 px soldiers are scaled down.
+| Helicopter | | **none** yet: its sprite (`chopper-44x99`) is a sheet, so it keeps its shape until it joins the atlas |
 
 Map and effects: `tileGrass1`/`tileGrass2` ground, `tileGrass_road{East,North,CornerLL,LR,UL,UR}` for the Path, `td130`/`td131` bushes, `td135`–`td137` rocks, `treeGreen_small`/`treeGreen_large` (#43); `shotOrange` and `td295` muzzle flash, `explosion1`–`3`, `explosionSmoke1`–`3`, `td019`–`td021` smoke (#44).
+
+Interim: this table is what `src/data/sprites.ts` draws today, one atlas frame per kind. The Infantry, Rifle Nest soldier, Jeep and Helicopter art from the extra packs above (`soldier1_*`, `obj_jeep1`, `chopper-44x99`) is bigger than an atlas cell or is a sheet, so it joins the atlas with the later sprite issues (#41, #42).
+
+### Atlas (#40)
+
+The game loads one texture atlas, `assets/atlas/sprites.{png,json}` (Phaser JSON hash), not the PNGs above. `npm run atlas` (`scripts/atlas.ts`) packs every PNG of the Tower Defense and Tanks packs into it, one 64 px cell each, frame name = file name without `.png`; rerun it and commit the output after adding or changing a sprite (a test fails while the committed atlas differs from a fresh build). The atlas holds both packs' pixels, so both manifest entries list it. Which frame each kind is drawn with: `src/data/sprites.ts`; a kind without one (Helicopter), or any kind when the atlas fails to load, keeps its shape.
 
 ### Alternatives considered
 

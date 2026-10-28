@@ -10,6 +10,9 @@ export const TILE_PX = 48;
 export const CANVAS_WIDTH = GRID_COLS * TILE_PX;
 export const CANVAS_HEIGHT = GRID_ROWS * TILE_PX;
 
+/** Atlas sprites are drawn at this scale: a 64 px Kenney tile fills one map tile. */
+export const SPRITE_SCALE = TILE_PX / 64;
+
 /** How the map is drawn with shapes (before the v0.4 tileset). */
 export const MAP_STYLE = {
   path: 0xc2a46b, // sand
