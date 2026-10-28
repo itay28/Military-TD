@@ -72,13 +72,17 @@ describe('assets/manifest.json', () => {
     }
   });
 
-  it.each(['kenney-tower-defense', 'kenney-top-down-tanks', 'kenney-ui-pack'])(
-    '%s keeps the pack’s original License.txt',
-    (id) => {
-      expect(manifest.packs.map((pack) => pack.id)).toContain(id);
-      expect(existsSync(`assets/${id}/License.txt`)).toBe(true);
-    },
-  );
+  it.each([
+    'kenney-tower-defense',
+    'kenney-top-down-tanks',
+    'kenney-ui-pack',
+    'kenney-top-down-shooter',
+    'spriteattack-topdown-extras',
+    'morgan3d-chopper',
+  ])('%s has a License.txt', (id) => {
+    expect(manifest.packs.map((pack) => pack.id)).toContain(id);
+    expect(existsSync(`assets/${id}/License.txt`)).toBe(true);
+  });
 
   it('CREDITS.md is what renderCredits makes from it', () => {
     expect(readFileSync('CREDITS.md', 'utf8')).toBe(renderCredits(manifest));

@@ -8,8 +8,8 @@ describe('createSettings', () => {
   });
 
   it('starts at the values it is given', () => {
-    expect(createSettings({ defaultSpeed: 4, showAllRanges: true }).get()).toEqual({
-      defaultSpeed: 4,
+    expect(createSettings({ defaultSpeed: 3, showAllRanges: true }).get()).toEqual({
+      defaultSpeed: 3,
       showAllRanges: true,
     });
   });
@@ -21,9 +21,9 @@ describe('createSettings', () => {
     expect(settings.get()).toEqual({ defaultSpeed: 2, showAllRanges: true });
   });
 
-  it('rejects a default speed that is not ×1, ×2 or ×4', () => {
+  it('rejects a default speed that is not ×1, ×2 or ×3', () => {
     const settings = createSettings();
-    expect(() => settings.set({ defaultSpeed: 3 as never })).toThrow(RangeError);
+    expect(() => settings.set({ defaultSpeed: 4 as never })).toThrow(RangeError);
     expect(settings.get().defaultSpeed).toBe(1);
   });
 
