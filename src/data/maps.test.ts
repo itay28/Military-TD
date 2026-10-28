@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMap, type Tile } from '../sim/map';
 import { FIRST_MAP, SECOND_MAP } from '../../tests/e2e/firstMap';
-import { MAPS, mapById, MVP_MAP } from './maps';
+import { MAPS, mapById, MVP_MAP, wavesForMap } from './maps';
 import { WAVES } from './waves';
 
 function edgesOf({ col, row }: Tile, cols: number, rows: number): string[] {
@@ -76,7 +76,13 @@ describe('map registry', () => {
     expect([...kinds(waves)].every((kind) => kinds(WAVES).has(kind))).toBe(true);
     // Mixed groups come earlier: the first wave with two kinds is sooner than on Training Ground.
     const firstMixed = (ws: typeof WAVES) => ws.findIndex((w) => new Set(w.groups.map((g) => g.kind)).size > 1);
+    expect(firstMixed(waves)).toBeGreaterThanOrEqual(0);
     expect(firstMixed(waves)).toBeLessThan(firstMixed(WAVES));
+  });
+
+  it('serves a map its own waves, and WAVES for a map outside the registry', () => {
+    expect(wavesForMap('switchback')).toBe(mapById('switchback').waves);
+    expect(wavesForMap('not-a-map')).toBe(WAVES);
   });
 
   it('finds an entry by id', () => {

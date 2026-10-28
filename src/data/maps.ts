@@ -31,3 +31,8 @@ export function mapById(id: string): MapEntry {
   if (!entry) throw new Error(`No map "${id}". There are: ${MAPS.map((map) => map.id).join(', ')}`);
   return entry;
 }
+
+/** The waves played on this map: its registry entry's schedule, or `WAVES` for a map outside the registry (test maps). */
+export function wavesForMap(id: string): readonly WaveData[] {
+  return MAPS.find((map) => map.id === id)?.waves ?? WAVES;
+}
