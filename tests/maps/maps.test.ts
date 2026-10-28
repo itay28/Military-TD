@@ -1,7 +1,8 @@
+import { isDeepStrictEqual } from 'node:util';
 import { readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MVP_MAP } from '../../src/data/maps';
+import { MAPS, MVP_MAP } from '../../src/data/maps';
 import { runScenario } from '../../src/sim/scenario';
 import { createMap, tileKey } from '../../src/sim/map';
 import { importTiledMap } from '../../src/sim/tiled';
@@ -78,17 +79,63 @@ describe('01-training-ground.tmj', () => {
   });
 });
 
+describe('02-switchback.tmj', () => {
+  const file = 'maps/02-switchback.tmj';
+
+  it('enters on the top edge and winds down to the bottom edge, unlike the Training Ground', () => {
+    const map = createMap(load(file));
+    expect([map.cols, map.rows]).toEqual([16, 10]);
+    expect(map.waypoints[0]?.row).toBe(0);
+    expect(map.waypoints.at(-1)?.row).toBe(map.rows - 1);
+    expect(map.waypoints).not.toEqual(createMap(load(TRAINING_GROUND)).waypoints);
+  });
+
+  it('draws road tiles on the Path and nowhere else', () => {
+    const json = JSON.parse(readFileSync(file, 'utf8'));
+    const map = createMap(load(file));
+    const roadGids = json.tilesets[0].tiles
+      .filter((tile: { properties: { name: string; value: unknown }[] }) =>
+        tile.properties.some((p) => p.name === 'frame' && String(p.value).includes('road')),
+      )
+      .map((tile: { id: number }) => tile.id + json.tilesets[0].firstgid);
+    const ground = json.layers.find((layer: { name: string }) => layer.name === 'ground') as { data: number[] };
+    ground.data.forEach((gid, index) => {
+      const tile = { col: index % map.cols, row: Math.floor(index / map.cols) };
+      expect({ tile: tileKey(tile), road: roadGids.includes(gid) }).toEqual({
+        tile: tileKey(tile),
+        road: map.isPath(tile),
+      });
+    });
+  });
+
+  it('uses the same tileset as the Training Ground', () => {
+    const tilesets = (path: string) => JSON.parse(readFileSync(path, 'utf8')).tilesets;
+    expect(tilesets(file)).toEqual(tilesets(TRAINING_GROUND));
+  });
+});
+
 describe('Tiled map files', () => {
   it('the registry serves the Training Ground file as the MVP map', () => {
     expect(MVP_MAP).toEqual({ ...load(TRAINING_GROUND), id: 'mvp' });
   });
 
-  it.each(mapFiles)('%s imports and the reference bot wins it', (file) => {
+  // Registry ids are short names, not file names, so a file matches the entry whose data it is, id aside.
+  const entryFor = (file: string) => {
     const map = load(file);
+    return MAPS.find((entry) => isDeepStrictEqual({ ...map, id: entry.id }, entry.data));
+  };
+
+  it.each(mapFiles)('%s is a map in the registry', (file) => {
+    expect(entryFor(file)).toBeDefined();
+  });
+
+  it.each(mapFiles)('%s imports and the reference bot wins it with its own waves', (file) => {
+    const entry = entryFor(file)!;
     const result = runScenario({
-      map,
+      map: entry.data,
+      waves: entry.waves,
       autoStartWaves: true,
-      bot: buildOrder(fitOrder(map, BALANCED_ORDER)),
+      bot: buildOrder(fitOrder(entry.data, BALANCED_ORDER)),
       until: 'end',
     });
     expect(result.outcome).toBe('victory');

@@ -3,4 +3,6 @@
   - list:
     - listitem:
       - button "Training Ground"
+    - listitem:
+      - button "Switchback"
   - button "Back"
