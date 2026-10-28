@@ -159,10 +159,10 @@ describe('HUD', () => {
     it('follows a speed set elsewhere on the next update', () => {
       const speed = fakeSpeed();
       const hud = mountHud(root, newGame(), speed);
-      speed.set(4);
+      speed.set(3);
       hud.update();
-      expect(button()?.textContent).toBe('×4');
-      expect(button()?.getAttribute('aria-label')).toBe('Game speed ×4');
+      expect(button()?.textContent).toBe('×3');
+      expect(button()?.getAttribute('aria-label')).toBe('Game speed ×3');
     });
 
     it('works during a wave', () => {

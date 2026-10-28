@@ -5,6 +5,13 @@ name: Board sync
 # assigned → In progress. Every run reconciles the whole board, so the schedule fixes
 # anything an event missed. Logic and tests: scripts/board-sync.ts.
 #
+# API quota (#293): PROJECT_TOKEN's requests count against the maintainer's own hourly quota,
+# shared with PR steward and every other workflow that uses it. So an event run first waits 60 s
+# in the debounce job, where a newer event cancels it: a burst of events (a relabel, an agent's
+# pushes) ends in one sweep, and nothing is ever cancelled mid-write. The hourly schedule skips the
+# wait, so it still runs while events keep coming. Each run logs the requests it made and the quota
+# left; an exhausted quota logs its reset time and passes green (scripts/rate-limit.ts).
+#
 # GITHUB_TOKEN can't edit a user-owned project, so this uses the PROJECT_TOKEN
 # secret (classic PAT, project + repo scopes). Without it, the run fails.
 #
@@ -21,19 +28,33 @@ on:
     - cron: '23 * * * *'
   workflow_dispatch:
 
-# Runs queue instead of overlapping; each one reads the board fresh.
-concurrency:
-  group: board-sync
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
 jobs:
+  debounce:
+    name: debounce
+    # Fork PRs get no secrets; the next scheduled sweep covers them.
+    if: >-
+      github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
+    # A newer event cancels this wait, so only the last run of a burst goes on to sweep.
+    concurrency:
+      group: board-sync-debounce
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the burst to settle
+        run: sleep 60
+
   board-sync:
     name: board-sync
-    # Fork PRs get no secrets; the next scheduled sweep covers them.
-    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
+    needs: debounce
+    if: always() && (needs.debounce.result == 'success' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    # Runs queue instead of overlapping; each one reads the board fresh.
+    concurrency:
+      group: board-sync
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { mountMainMenu } from '../ui/mainMenu';
+import { mountCredits, type Credits } from '../ui/credits';
+import { mountMainMenu, type MainMenu } from '../ui/mainMenu';
 import type { OpenSettings } from '../ui/settingsScreen';
 
 export interface MenuSceneOptions {
@@ -11,7 +12,7 @@ export interface MenuSceneOptions {
   readonly openSettings: OpenSettings;
 }
 
-/** The Main menu: a title, Play (opens the Level select) and Settings. The menu itself is DOM (src/ui/mainMenu.ts). */
+/** The Main menu: a title, Play (opens the Level select), Settings and Credits (a second screen in the same root, with Back). Both are DOM (src/ui/). */
 export class MenuScene extends Phaser.Scene {
   private readonly app: HTMLElement;
   private readonly menuRoot: HTMLElement;
@@ -25,12 +26,23 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    const menu = mountMainMenu(this.menuRoot, {
-      app: this.app,
-      onPlay: () => this.scene.start('LevelSelect'),
-      openSettings: this.openSettings,
-    });
-    // Starting the Level select shuts this one down, which takes the menu away.
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => menu.destroy());
+    let screen: MainMenu | Credits | undefined;
+    const showMenu = (initialFocus: 'play' | 'credits') => {
+      screen?.destroy();
+      screen = mountMainMenu(this.menuRoot, {
+        app: this.app,
+        onPlay: () => this.scene.start('LevelSelect'),
+        onCredits: showCredits,
+        openSettings: this.openSettings,
+        initialFocus,
+      });
+    };
+    const showCredits = () => {
+      screen?.destroy();
+      screen = mountCredits(this.menuRoot, { app: this.app, onBack: () => showMenu('credits') });
+    };
+    showMenu('play');
+    // Starting the Level select shuts this one down, which takes the screen away.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => screen?.destroy());
   }
 }

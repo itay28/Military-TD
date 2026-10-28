@@ -10,7 +10,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = { defaultSpeed: 1, showAllRanges: false };
 
-/** The one place the settings live. Saving them between visits is #49. */
+/** The one place the settings live. `createPersistedSettings` (persist.ts) saves them between visits. */
 export interface SettingsStore {
   get(): Settings;
   /** Merges `patch` into the settings. Throws RangeError for a default speed that isn't a game speed. */

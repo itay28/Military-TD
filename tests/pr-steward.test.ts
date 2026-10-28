@@ -18,6 +18,7 @@ import {
   mainCiRed,
   mainRedFrom,
   milestoneDone,
+  PR_QUERY,
   settingsFromEnv,
   type Decision,
   type PrComment,
@@ -201,6 +202,13 @@ describe('milestoneDone', () => {
 
   it('is not done when the open issues were truncated', () => {
     expect(milestoneDone([issue('release')], true)).toBe(false);
+  });
+
+  // 100 issues per milestone with their labels were most of the query's GraphQL cost (#293).
+  it('reads only a few open issues per milestone, with their page info so a longer list counts as not done', () => {
+    expect(PR_QUERY).toMatch(
+      /milestones\(states: OPEN, first: \d+\) \{\s*nodes \{ number title dueOn issues\(states: OPEN, first: 5\) \{ pageInfo \{ hasNextPage \}/,
+    );
   });
 });
 
