@@ -11,6 +11,13 @@ name: PR steward
 # Switches (repo variables, off unless `on`): AUTO_STEWARD fires rounds and updates branches,
 # AUTO_MERGE merges. ROUTINE_STEWARD_URL / _TOKEN are the steward task's API trigger.
 # PROJECT_TOKEN (classic PAT) does the writes, so its pushes and merges start CI.
+#
+# API quota (#293): PROJECT_TOKEN's requests count against the maintainer's own hourly quota,
+# shared with Board sync and every other workflow that uses it. So an event run first waits 60 s
+# in the debounce job, where a newer event cancels it: a burst (CI and the review finishing, an
+# agent's comments) ends in one sweep, and nothing is ever cancelled mid-write. The hourly schedule
+# skips the wait. Each run logs the requests it made and the quota left; an exhausted quota logs
+# its reset time and passes green (scripts/rate-limit.ts).
 on:
   workflow_run:
     workflows: [CI, Claude Code Review]
@@ -25,24 +32,37 @@ on:
     - cron: '41 * * * *'
   workflow_dispatch:
 
-# Runs queue instead of overlapping; each one reads the PRs fresh.
-concurrency:
-  group: pr-steward
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
 jobs:
-  pr-steward:
-    name: pr-steward
+  debounce:
+    name: debounce
     # Comments on plain issues don't concern PRs; fork PRs get no secrets. In a public repo anyone
     # can comment, so only the maintainer's comments and reviews start a run (#221).
     if: >-
+      github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' &&
       (github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))) &&
       (github.event_name != 'pull_request_review' || (!github.event.pull_request.head.repo.fork &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)))
+    # A newer event cancels this wait, so only the last run of a burst goes on to sweep.
+    concurrency:
+      group: pr-steward-debounce
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the burst to settle
+        run: sleep 60
+
+  pr-steward:
+    name: pr-steward
+    needs: debounce
+    if: always() && (needs.debounce.result == 'success' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    # Runs queue instead of overlapping; each one reads the PRs fresh.
+    concurrency:
+      group: pr-steward
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
