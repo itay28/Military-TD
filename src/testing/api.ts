@@ -47,6 +47,8 @@ export interface TestView {
   readonly drawOrder: readonly string[];
   /** Whether the sprite atlas loaded. Without it, everything is drawn as shapes. */
   readonly sprites: boolean;
+  /** How the map was drawn: from the tileset, or as flat shapes when the atlas lacks a tileset frame. */
+  readonly mapTiles: 'sprites' | 'shapes';
   /**
    * Each enemy drawn: `facing` is the way it is heading, in radians on the canvas (0 east, π/2 south); `frame` its
    * movement animation frame (always 0 with `?anim=0`).

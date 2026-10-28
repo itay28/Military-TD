@@ -218,10 +218,13 @@
         background: #343a29;
       }
       #build-bar button:disabled {
-        color: #8a8670;
         cursor: default;
       }
-      #build-bar button:disabled .build-icon {
+      /* Unaffordable: a selected kind stays clickable (to clear it) but looks the same. */
+      #build-bar button[aria-disabled='true'] {
+        color: #8a8670;
+      }
+      #build-bar button[aria-disabled='true'] .build-icon {
         opacity: 0.4;
       }
       #build-bar button:focus-visible {

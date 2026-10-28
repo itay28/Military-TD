@@ -64,7 +64,9 @@ test('pressing 2 then clicking a tile places the second kind', async ({ page }) 
   expect((await state(page)).towers.map((t) => t.kind)).toEqual([KINDS[1]]);
 });
 
-test('a kind the player cannot afford is disabled but stays selected', async ({ page }) => {
+test('a kind the player cannot afford is disabled but stays selected, and a click on it clears it', async ({
+  page,
+}) => {
   await openGame(page);
   await selectKind(page, FIRST);
   const first = page.getByTestId(`build-${FIRST}`);
@@ -74,4 +76,6 @@ test('a kind the player cannot afford is disabled but stays selected', async ({ 
   for (let col = 1; (await state(page)).money >= cost; col++) await clickTile(page, { col, row: 3 });
   await expect(first).toBeDisabled();
   await expect(first).toHaveAttribute('aria-pressed', 'true');
+  await first.click({ force: true }); // force: Playwright won't click an aria-disabled button, a player can
+  await expect(first).toHaveAttribute('aria-pressed', 'false');
 });

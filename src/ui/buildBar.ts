@@ -126,8 +126,14 @@ export function mountBuildBar<K extends string>(
   // Runs every frame, so it touches the DOM only when a value changed.
   const update = () => {
     for (const { option, button } of entries) {
-      const disabled = !affordable(option);
+      const unaffordable = !affordable(option);
+      // The selected kind stays clickable when Money runs short, so a click on it can still clear it.
+      const disabled = unaffordable && option !== selected;
       if (button.disabled !== disabled) button.disabled = disabled;
+      if (button.hasAttribute('aria-disabled') !== unaffordable) {
+        if (unaffordable) button.setAttribute('aria-disabled', 'true');
+        else button.removeAttribute('aria-disabled');
+      }
       const pressed = String(option === selected);
       if (button.getAttribute('aria-pressed') !== pressed) button.setAttribute('aria-pressed', pressed);
     }
