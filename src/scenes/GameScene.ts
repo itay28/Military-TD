@@ -5,9 +5,9 @@ import { MAPS, mapById } from '../data/maps';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
-import { starsFor, unlocksNext, type Stars } from '../sim/progression';
+import { starsFor, unlocksNext } from '../sim/progression';
 import { setUpGame, type GameSetup } from '../sim/scenario';
-import type { ProgressStore } from '../progress/progress';
+import type { ProgressStore, WinStars } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
 import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
@@ -247,7 +247,11 @@ export class GameScene extends Phaser.Scene {
     this.result = undefined;
     // A Victory records its Stars against the map played (a loaded scenario's own map included); Defeat records nothing.
     const { lives: startLives, map } = this.sim.state;
-    this.sim.events.on('victory', ({ lives }) => (this.result = this.recordWin(map.id, starsFor(lives, startLives))));
+    this.sim.events.on('victory', ({ lives }) => {
+      // Victory always leaves Lives, so at least 1 star.
+      const stars = starsFor(lives, startLives);
+      if (stars !== 0) this.result = this.recordWin(map.id, stars);
+    });
     this.gameSpeed = this.settings.get().defaultSpeed;
     drawMap(onLayer(this.add.graphics(), 'map'), this.sim.state.map);
     this.loop = createFixedStep({
@@ -363,7 +367,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Saves a win of `mapId` and says what it earned, including the next map when this win unlocked it. */
-  private recordWin(mapId: string, stars: Stars): VictoryResult {
+  private recordWin(mapId: string, stars: WinStars): VictoryResult {
     const index = MAPS.findIndex((entry) => entry.id === mapId);
     const unlocks = unlocksNext(
       index,
