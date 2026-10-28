@@ -1,5 +1,6 @@
 import {
   AIR_SHADOW,
+  EFFECT,
   DISMANTLE,
   ENEMY_STYLE,
   GHOST,
@@ -18,6 +19,7 @@ import type { Enemy } from '../sim/enemies';
 import type { Tower, TowerStats } from '../sim/towers';
 import type { MapPainter } from './drawMap';
 import type { Pixel } from './coords';
+import type { EffectView } from './effects';
 import type { BlastCircle } from './shellView';
 import type { TracerLine } from './tracers';
 
@@ -139,5 +141,14 @@ export function drawBlasts(painter: EntityPainter, blasts: readonly BlastCircle[
   for (const { center, radius, alpha } of blasts) {
     painter.lineStyle(SHELL.blastWidth, SHELL.blastColor, alpha);
     painter.strokeCircle(center.x, center.y, radius);
+  }
+}
+
+/** Each combat effect as a disc that fades out and grows as it ages. */
+export function drawEffects(painter: EntityPainter, effects: readonly EffectView[]): void {
+  for (const { kind, at, progress } of effects) {
+    const { color, radius, growth } = EFFECT[kind];
+    painter.fillStyle(color, 1 - progress);
+    painter.fillCircle(at.x, at.y, radius * (1 + (growth - 1) * progress));
   }
 }

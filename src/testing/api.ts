@@ -1,4 +1,5 @@
 import type { Pixel } from '../scenes/coords';
+import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
 import type { Tile } from '../sim/map';
 import { applyCommand, type CommandOutcome, type GameSetup, type ScenarioCommand } from '../sim/scenario';
@@ -28,6 +29,12 @@ export interface TestView {
   readonly rangeRings: readonly number[];
   /** The tracers drawn on the next frame, each from a tower to where its shot hit. */
   readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
+  /** The combat effects (muzzle flash, explosion, death puff) drawn on the next frame. */
+  readonly effects: readonly {
+    readonly kind: EffectKind;
+    readonly at: Pixel;
+    readonly progress: number;
+  }[];
   /**
    * The Ghost under the pointer: shown only while a mouse hovers, or a finger drags over, a tile with a build kind
    * selected. `tile` is null when it is hidden.
