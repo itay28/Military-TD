@@ -1,0 +1,9 @@
+Attack Helicopter (chopper-44x99.png), by Morgan McGuire (morgan3d)
+https://opengameart.org/content/attack-helicopter-0
+From the quadplay console: https://github.com/morgan3d/quadplay
+
+Copyright 2020 Morgan McGuire @CasualEffects, CC-BY 4.0
+https://creativecommons.org/licenses/by/4.0/
+
+The file ships no license file. This notice copies the attribution notice
+shown on the source page above (checked 2026-10-27).

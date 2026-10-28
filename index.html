@@ -28,6 +28,8 @@
         height: 100dvh;
         padding: 6px;
       }
+      /* Three fixed groups (#274): the stats, a message slot and the controls. The slot takes the leftover space and
+         clips its text, so nothing the HUD says can move a button or make the HUD taller. */
       #hud {
         grid-area: hud;
         display: flex;
@@ -39,26 +41,53 @@
         font: 16px monospace;
         color: #e4e0c8;
       }
-      /* A phone: the HUD wraps and shrinks rather than pushing the page wider. */
-      @media (max-width: 640px), (max-height: 480px) {
-        #hud {
-          flex-wrap: wrap;
-          gap: 4px 12px;
-          min-height: 28px;
-          font-size: 13px;
-        }
-        #hud button {
-          padding: 3px 10px;
-          font-size: 13px;
-        }
+      #hud .hud-stats {
+        display: flex;
+        flex: none;
+        gap: 20px;
+      }
+      /* Fixed widths, so Money 100 → 75 or DPS – → DPS 12 doesn't shift its neighbours. */
+      #hud .hud-stats > span {
+        display: block;
+        white-space: nowrap;
+      }
+      #hud [data-testid='hud-money'] {
+        min-width: 11ch;
+      }
+      #hud [data-testid='hud-lives'] {
+        min-width: 8ch;
+      }
+      #hud [data-testid='hud-wave'] {
+        min-width: 12ch;
+      }
+      #hud [data-testid='hud-dps'] {
+        min-width: 9ch;
+      }
+      #hud .hud-message {
+        flex: 1;
+        min-width: 0;
+        height: 1.3em;
+        line-height: 1.3;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      #hud .hud-message > * {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       #hud .hud-banner {
         color: #f0c95a;
         font-weight: bold;
       }
+      #hud .hud-controls {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 8px;
+      }
       #hud button {
-        margin-left: auto;
-        order: 1;
         padding: 4px 14px;
         font: bold 15px monospace;
         color: #1b1e16;
@@ -66,10 +95,6 @@
         border: 0;
         border-radius: 3px;
         cursor: pointer;
-      }
-      /* The Pause button sits right of Start Wave, whose auto margin pushes both to the end. */
-      #hud [data-testid='pause'] {
-        margin-left: 8px;
       }
       #hud button:disabled {
         background: #5e6350;
@@ -80,9 +105,8 @@
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
       }
-      /* A toggle: outlined when off, filled when on. It sits right after Start Wave. */
+      /* A toggle: outlined when off, filled when on. */
       #hud .hud-toggle {
-        margin-left: 0;
         color: #c2a46b;
         background: transparent;
         box-shadow: inset 0 0 0 2px #c2a46b;
@@ -95,6 +119,39 @@
         color: #5e6350;
         background: transparent;
         box-shadow: inset 0 0 0 2px #5e6350;
+      }
+      /* A phone: smaller type. After the base rules, so it wins. */
+      @media (max-width: 640px), (max-height: 480px) {
+        #hud {
+          gap: 4px 12px;
+          min-height: 28px;
+          font-size: 13px;
+        }
+        #hud .hud-stats {
+          gap: 12px;
+        }
+        #hud button {
+          padding: 3px 10px;
+          font-size: 13px;
+        }
+      }
+      /* A narrow screen: three fixed rows, stats / controls / message. The message row is kept when empty. */
+      @media (max-width: 640px) {
+        #hud {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          align-items: start;
+        }
+        #hud .hud-stats {
+          flex-wrap: nowrap;
+          gap: 8px;
+        }
+        #hud .hud-controls {
+          order: 1;
+        }
+        #hud .hud-message {
+          order: 2;
+        }
       }
       /* The End screen covers the canvas, so the map takes no clicks while it's open. */
       #stage {
@@ -217,6 +274,18 @@
         background: #262a1f;
         border: 2px solid #c2a46b;
         border-radius: 4px;
+      }
+      /* Scroll cue: a glow on an edge with hidden content.
+         The `local` cover layers hide it where nothing is clipped. */
+      #end-screen [role='dialog'] {
+        background:
+          linear-gradient(#262a1f 30%, rgb(38 42 31 / 0)) top / 100% 24px local no-repeat,
+          linear-gradient(rgb(38 42 31 / 0), #262a1f 70%) bottom / 100% 24px local no-repeat,
+          radial-gradient(farthest-side at 50% 0, rgb(240 201 90 / 0.5), rgb(240 201 90 / 0)) top / 100% 10px scroll
+            no-repeat,
+          radial-gradient(farthest-side at 50% 100%, rgb(240 201 90 / 0.5), rgb(240 201 90 / 0)) bottom / 100% 10px
+            scroll no-repeat,
+          #262a1f;
       }
       #end-screen h2,
       #pause-menu h2 {

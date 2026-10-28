@@ -1,6 +1,6 @@
 {
   "name": "military-td",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A basic military-themed tower defense game.",
   "type": "module",
@@ -19,10 +19,11 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run check:assets && npm test",
     "prepare": "husky",
     "test:e2e": "playwright test",
     "credits": "node scripts/credits.ts",
+    "check:assets": "node scripts/check-assets.ts",
     "atlas": "node scripts/atlas.ts"
   },
   "lint-staged": {

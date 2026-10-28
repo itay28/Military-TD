@@ -379,7 +379,7 @@ export class GameScene extends Phaser.Scene {
     // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
     // build bar's and tower panel's Esc (cancel a selection) runs before its own (pause).
     this.pauseMenu = mountPauseMenu(this.pauseMenuRoot, this.sim, {
-      buttonRoot: this.hudRoot,
+      buttonRoot: this.hud.controls,
       blocked: [this.hudRoot, this.buildBarRoot, this.towerPanelRoot],
       onRestart: () => this.scene.restart(),
       openSettings: this.openSettings,
