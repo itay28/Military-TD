@@ -2,5 +2,5 @@
   - heading "Select map" [level=1]
   - list:
     - listitem:
-      - button "Training Ground"
+      - button "Training Ground, no stars yet": Training Ground
   - button "Back"

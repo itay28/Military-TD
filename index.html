@@ -570,6 +570,25 @@
       #level-select button.map:hover {
         border-color: #c2a46b;
       }
+      /* Best Stars, or the lock mark and "Locked", under the name. */
+      #level-select .stars {
+        font-size: 20px;
+        letter-spacing: 0.1em;
+        color: #f0c95a;
+      }
+      #level-select .locked {
+        font-size: 14px;
+        color: #a2a58f;
+      }
+      /* A locked map stays focusable (aria-disabled), but looks and acts disabled. */
+      #level-select button.map[aria-disabled='true'] {
+        color: #a2a58f;
+        border-color: #3e4234;
+        cursor: default;
+      }
+      #level-select button.map[aria-disabled='true'] canvas {
+        opacity: 0.45;
+      }
       #level-select canvas {
         display: block;
         max-width: 100%;

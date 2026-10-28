@@ -15,6 +15,32 @@ test('the Level select shows each map as a button with a preview, the first focu
   await expect(page.locator('#hud')).toBeHidden();
 });
 
+test('with fresh progress only the first map can be picked, with no stars yet; each later one is locked', async ({
+  page,
+}) => {
+  await openLevelSelect(page);
+  await expect(page.getByRole('button', { name: `${first.name}, no stars yet` })).not.toHaveAttribute('aria-disabled');
+  for (const [index, map] of MAPS.entries()) {
+    if (index === 0) continue;
+    await expect(page.getByRole('button', { name: `${map.name}, locked` })).toHaveAttribute('aria-disabled', 'true');
+  }
+});
+
+test('with ?unlock=all every map can be picked', async ({ page }) => {
+  await openLevelSelect(page, { unlockAll: true });
+  for (const map of MAPS) {
+    await expect(page.getByRole('button', { name: `${map.name}, no stars yet` })).not.toHaveAttribute('aria-disabled');
+  }
+  await expect(page.locator('#level-select [aria-disabled]')).toHaveCount(0);
+});
+
+test('a map’s best stars from saved progress show on its button', async ({ page }) => {
+  await openLevelSelect(page, { progress: { [first.id]: { completed: true, bestStars: 2 } } });
+  const map = page.getByRole('button', { name: `${first.name}, 2 of 3 stars` });
+  await expect(map).toBeFocused();
+  await expect(map.getByTestId('stars')).toHaveText('★★☆');
+});
+
 test('picking a map starts a new game on it, in the Build phase', async ({ page }) => {
   await openLevelSelect(page);
   await page.getByRole('button', { name: first.name }).click();

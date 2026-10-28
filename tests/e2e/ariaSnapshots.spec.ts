@@ -60,7 +60,7 @@ test('the Credits screen lists every pack with its author, license, link and att
   await expectAria(page.locator('#menu'), 'credits.aria.yml');
 });
 
-test('the Level select lists each map by name, then Back', async ({ page }) => {
+test('the Level select lists each map by name and best stars, then Back', async ({ page }) => {
   await openLevelSelect(page);
   await expectAria(page.locator('#level-select'), 'level-select-initial.aria.yml');
 });
