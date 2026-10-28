@@ -19,5 +19,5 @@ An importer in `src/sim` converts a map file into sim map data, so the rules nev
 ## Consequences
 
 - Humans edit maps visually; agents edit the same JSON as text. CI rejects a broken map.
-- The MVP map stays in code until v0.4.0, then gets rebuilt in Tiled with the art tileset.
+- The MVP map was rebuilt in Tiled with the art tileset in v0.4.0 (`maps/01-training-ground.tmj`, #59); no map is defined in code any more.
 - An in-game editor for players stays out of scope until after 1.0.

@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { MAPS } from '../../src/data/maps';
+import { FIRST_MAP } from './firstMap';
 import { START_LIVES, START_MONEY } from '../../src/data/start';
 import { openLevelSelect, state } from './helpers';
 
 // From #51: Main menu → Play → Level select → Game on the chosen map; Back returns to the Main menu.
 
-const first = MAPS[0]!;
+const first = FIRST_MAP;
 
 test('the Level select shows each map as a button with a preview, the first focused', async ({ page }) => {
   await openLevelSelect(page);
