@@ -13,6 +13,9 @@ export const CANVAS_HEIGHT = GRID_ROWS * TILE_PX;
 /** Atlas sprites are drawn at this scale: a 64 px Kenney tile fills one map tile. */
 export const SPRITE_SCALE = TILE_PX / 64;
 
+/** Turrets: how fast they turn toward their target (radians per second), and where they point when placed (north). */
+export const TURRET = { turnRate: 2 * Math.PI, startAngle: -Math.PI / 2 } as const;
+
 /** How the map is drawn with shapes, when the atlas is missing, and the tint for the tileset's blocked ground. */
 export const MAP_STYLE = {
   path: 0xc2a46b, // sand
@@ -36,6 +39,15 @@ export const ROTOR = { color: 0xe5e1cf, width: 2 } as const;
 
 /** The shadow under an air enemy, offset in pixels so it reads as flying. */
 export const AIR_SHADOW = { offsetX: 4, offsetY: 10, color: 0x000000, alpha: 0.3 } as const;
+
+/**
+ * The enemies' movement animation, on real time (off with `?anim=0`): a `frames`-step cycle, one step every `frameMs`.
+ * Each enemy starts `phaseMs` × its id into the cycle, so a group doesn't move in lockstep. A ground sprite's scale
+ * follows `bob` (a step), the Helicopter's rotor turns a quarter turn over the cycle (an X repeats every 90°).
+ */
+const ENEMY_BOB = [1, 1.06, 1.03] as const;
+/** `frames` is the length of `bob`, so the two cannot drift apart. */
+export const ENEMY_ANIM = { frameMs: 120, frames: ENEMY_BOB.length, phaseMs: 130, bob: ENEMY_BOB } as const;
 
 /** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
 export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
@@ -142,3 +154,14 @@ export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015
 
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
+
+/**
+ * Combat effects: all small and over within `lifeMs`, so they never hide enemies, health bars or range rings. Each is
+ * a disc that fades out while growing by `growth` times its `radius` (in pixels).
+ */
+export const EFFECT = {
+  lifeMs: 250,
+  muzzleFlash: { color: 0xfff1b0, radius: 5, growth: 1 },
+  explosion: { color: 0xff8a3d, radius: 8, growth: 1.6 },
+  puff: { color: 0xc9c9c9, radius: 6, growth: 1.5 },
+} as const;

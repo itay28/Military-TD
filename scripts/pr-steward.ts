@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { classifyFireError, fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
 import { currentMilestone, graphql, milestoneOrder } from './board-sync.ts';
+import { ApiMeter, softFail } from './rate-limit.ts';
 import { markerFor } from './failure-report.ts';
 import { isMilestoneDone, releaseVersion } from './milestone-report.ts';
 
@@ -592,17 +593,21 @@ export function settingsFromEnv(env: Readonly<Record<string, string | undefined>
   return { steward: { url: read('ROUTINE_STEWARD_URL'), token: read('ROUTINE_STEWARD_TOKEN') }, merge };
 }
 
-const PR_QUERY = `query($owner: String!, $name: String!) {
+// Read every open PR in one call. A milestone's open issues only show whether it is done (only its
+// release issue left), so a few are enough: more than that is never done. Reading 100 per
+// milestone was most of this query's cost, run on every CI result and comment (#293).
+export const PR_QUERY = `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     defaultBranchRef { name target { ... on Commit { statusCheckRollup { contexts(first: 100) { nodes { ...Context } } } } } }
     issues(states: OPEN, labels: ["bug"], first: 50) { nodes { number body } }
     milestones(states: OPEN, first: 50) {
-      nodes { number title dueOn issues(states: OPEN, first: 100) { pageInfo { hasNextPage } nodes { labels(first: 20) { nodes { name } } } } }
+      nodes { number title dueOn issues(states: OPEN, first: 5) { pageInfo { hasNextPage } nodes { labels(first: 20) { nodes { name } } } } }
     }
     pullRequests(states: OPEN, first: 50) {
       totalCount
       nodes {
         number title body isDraft isCrossRepository baseRefName baseRefOid headRefName headRefOid mergeable mergeStateStatus
+        baseRef { target { oid } }
         labels(first: 20) { nodes { name } }
         reviewThreads(first: 100) { nodes { isResolved } }
         closingIssuesReferences(first: 10) {
@@ -649,6 +654,8 @@ interface PrNode {
   isCrossRepository: boolean;
   baseRefName: string;
   baseRefOid: string;
+  /** The base branch now; null once it's deleted. */
+  baseRef: { target: { oid: string } | null } | null;
   headRefName: string;
   headRefOid: string;
   mergeable: StewardPr['mergeable'];
@@ -743,7 +750,9 @@ export function toStewardPr(node: PrNode): StewardPr {
     isDraft: node.isDraft,
     fork: node.isCrossRepository,
     base: node.baseRefName,
-    baseSha: node.baseRefOid,
+    // baseRefOid only moves when the head is pushed, so a later merge into the base would look
+    // like a conflict a round already failed to resolve (#296). Use the base branch's tip.
+    baseSha: node.baseRef?.target?.oid ?? node.baseRefOid,
     head: node.headRefName,
     headSha: node.headRefOid,
     labels: node.labels.nodes.map((l) => l.name),
@@ -823,14 +832,21 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
 }
 
 // CLI: `node scripts/pr-steward.ts [--dry-run]`, with PROJECT_TOKEN (classic PAT, project + repo
-// scopes), AUTO_STEWARD / AUTO_MERGE and the ROUTINE_STEWARD_* secrets. Errors fail the run.
+// scopes), AUTO_STEWARD / AUTO_MERGE and the ROUTINE_STEWARD_* secrets. Errors fail the run, except
+// an exhausted API quota (#293): that logs the reset time and passes, and the next run catches up.
+// Every run ends with the requests it made and the quota left.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const token = process.env['PROJECT_TOKEN']?.trim();
+  const meter = new ApiMeter();
+  globalThis.fetch = meter.wrap(globalThis.fetch) as typeof fetch;
   try {
     if (!token) throw new Error('PROJECT_TOKEN is not set, so no PR was checked.');
     await reconcileOpenPrs(token, settingsFromEnv(process.env), process.argv.includes('--dry-run'));
   } catch (error) {
-    console.log(`::error::${error instanceof Error ? error.message : String(error)}`);
-    process.exitCode = 1;
+    if (!softFail(meter)) {
+      console.log(`::error::${error instanceof Error ? error.message : String(error)}`);
+      process.exitCode = 1;
+    }
   }
+  console.log(meter.summary());
 }

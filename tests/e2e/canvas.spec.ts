@@ -125,3 +125,41 @@ test('draw order, back to front: map, towers, enemies, tracers, range ring', asy
   expect(drawOrder.filter((layer) => layers.includes(layer))).toEqual(layers);
   expect(ring.visible).toBe(true);
 });
+
+test('a shot shows a muzzle flash at the tower and its kill a puff, which then expire', async ({ page }) => {
+  await openGame(page, { anim: true });
+  await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+
+  const fired = await stepUntilTracer(page);
+  const [tower] = fired.state.towers;
+  expect(fired.view.effects).toContainEqual({ kind: 'muzzleFlash', at: centerOf(tower!.tile), progress: 0 });
+
+  const kinds = await page.evaluate(() => {
+    const td = window.__TD__!;
+    const seen = new Set<string>();
+    while (td.state().phase === 'wave') {
+      td.step(1);
+      for (const effect of td.view().effects) seen.add(effect.kind);
+    }
+    return [...seen];
+  });
+  expect(kinds).toContain('puff');
+  await expect.poll(async () => (await view(page)).effects).toEqual([]);
+});
+
+test('with anim=0 no combat effect is drawn', async ({ page }) => {
+  await openGame(page, { anim: false });
+  await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  const drawn = await page.evaluate(() => {
+    const td = window.__TD__!;
+    let count = 0;
+    while (td.state().phase === 'wave') {
+      td.step(1);
+      count += td.view().effects.length;
+    }
+    return count;
+  });
+  expect(drawn).toBe(0);
+});

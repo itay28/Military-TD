@@ -191,8 +191,39 @@ describe('Build bar', () => {
     game.state.money = 10;
     bar.update();
     expect(bar.selected).toBe('mortar');
-    expect(button('mortar').disabled).toBe(true);
     expect(pressed()).toEqual([button('mortar')]);
+  });
+
+  it('keeps a selected kind that becomes unaffordable clickable, marked unaffordable by aria-disabled', () => {
+    const game = wallet(500);
+    const bar = mountBuildBar(root, game, OPTIONS);
+    button('mortar').click();
+    game.state.money = 10;
+    bar.update();
+    expect(button('mortar').disabled).toBe(false);
+    expect(button('mortar').getAttribute('aria-disabled')).toBe('true');
+    expect(button('cannon').disabled).toBe(true);
+  });
+
+  it('a click on a selected kind that became unaffordable clears the selection, and disables it', () => {
+    const game = wallet(500);
+    const bar = mountBuildBar(root, game, OPTIONS);
+    button('cannon').click();
+    game.state.money = 10;
+    bar.update();
+    button('cannon').click();
+    expect(bar.selected).toBeUndefined();
+    expect(pressed()).toEqual([]);
+    expect(button('cannon').disabled).toBe(true);
+  });
+
+  it('marks only unaffordable kinds aria-disabled, and clears it when Money arrives', () => {
+    const game = wallet(100);
+    const bar = mountBuildBar(root, game, OPTIONS);
+    expect(buttons().map((b) => b.getAttribute('aria-disabled'))).toEqual([null, 'true', 'true']);
+    game.state.money = 120;
+    bar.update();
+    expect(buttons().map((b) => b.getAttribute('aria-disabled'))).toEqual([null, null, 'true']);
   });
 
   it('destroy() removes the bar and stops listening for hotkeys', () => {
