@@ -250,13 +250,18 @@ export class GameScene extends Phaser.Scene {
     const { map } = this.sim.state;
     if (!TILE_TYPES.every((type) => this.frameFor(type) !== null))
       return drawMap(onLayer(this.add.graphics(), 'map'), map);
+    // The tiles never change, so they are drawn once onto one texture: a game object per tile slows every frame.
+    const tiles = onLayer(this.add.renderTexture(0, 0, map.cols * TILE_PX, map.rows * TILE_PX).setOrigin(0, 0), 'map');
+    const stamps: Phaser.GameObjects.Image[] = [];
     for (let row = 0; row < map.rows; row++) {
       for (let col = 0; col < map.cols; col++) {
-        const tile = { col, row };
-        const { x, y } = toPixels(tileCenter(tile));
-        onLayer(this.add.image(x, y, ATLAS_KEY, this.frameFor(tileType(map, tile))!), 'map').setScale(SPRITE_SCALE);
+        const { x, y } = toPixels(tileCenter({ col, row }));
+        const frame = this.frameFor(tileType(map, { col, row }))!;
+        stamps.push(new Phaser.GameObjects.Image(this, x, y, ATLAS_KEY, frame).setScale(SPRITE_SCALE));
       }
     }
+    tiles.draw(stamps);
+    stamps.forEach((stamp) => stamp.destroy());
     drawGrid(onLayer(this.add.graphics(), 'map'), map);
   }
 
