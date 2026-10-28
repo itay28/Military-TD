@@ -379,8 +379,6 @@ const SET_FIELD = `mutation($project: ID!, $item: ID!, $field: ID!, $option: Str
   }
 }`;
 
-// What the retry check reads for one `auto-agent` issue (#201): its latest comments, and its PR's
-// latest commit and comment.
 /** A claimed issue the retry check reads (#201), with its draft PR when it has one. */
 export interface RetryTarget {
   readonly issue: number;
