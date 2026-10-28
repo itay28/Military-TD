@@ -503,6 +503,35 @@
         color: #a2a58f;
         cursor: default;
       }
+      /* The Credits screen: the list takes the height left between the title and Back and scrolls when it's longer. */
+      #menu {
+        box-sizing: border-box;
+        padding: 16px;
+      }
+      #menu .credits-list {
+        flex: 0 1 auto;
+        min-height: 0;
+        width: min(640px, 100%);
+        overflow-y: auto;
+        box-sizing: border-box;
+        padding-right: 8px;
+      }
+      #menu .credit,
+      #menu .game-credits {
+        margin-bottom: 14px;
+      }
+      #menu .credits-list h2 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        color: #f0c95a;
+      }
+      #menu .credits-list p {
+        margin: 2px 0;
+      }
+      #menu .credits-list a {
+        color: #9cc8e8;
+        overflow-wrap: anywhere;
+      }
       #menu button:focus-visible,
       #level-select button:focus-visible {
         outline: 2px solid #f0c95a;
