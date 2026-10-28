@@ -607,6 +607,7 @@ export const PR_QUERY = `query($owner: String!, $name: String!) {
       totalCount
       nodes {
         number title body isDraft isCrossRepository baseRefName baseRefOid headRefName headRefOid mergeable mergeStateStatus
+        baseRef { target { oid } }
         labels(first: 20) { nodes { name } }
         reviewThreads(first: 100) { nodes { isResolved } }
         closingIssuesReferences(first: 10) {
@@ -653,6 +654,8 @@ interface PrNode {
   isCrossRepository: boolean;
   baseRefName: string;
   baseRefOid: string;
+  /** The base branch now; null once it's deleted. */
+  baseRef: { target: { oid: string } | null } | null;
   headRefName: string;
   headRefOid: string;
   mergeable: StewardPr['mergeable'];
@@ -747,7 +750,9 @@ export function toStewardPr(node: PrNode): StewardPr {
     isDraft: node.isDraft,
     fork: node.isCrossRepository,
     base: node.baseRefName,
-    baseSha: node.baseRefOid,
+    // baseRefOid only moves when the head is pushed, so a later merge into the base would look
+    // like a conflict a round already failed to resolve (#296). Use the base branch's tip.
+    baseSha: node.baseRef?.target?.oid ?? node.baseRefOid,
     head: node.headRefName,
     headSha: node.headRefOid,
     labels: node.labels.nodes.map((l) => l.name),
