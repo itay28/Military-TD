@@ -12,8 +12,8 @@ export type TileType = (typeof TILE_TYPES)[number];
 export type SpriteKind = TowerKind | EnemyKind | TileType;
 
 /**
- * The atlas frame for each kind (docs/assets.md → Sprite per kind), or null to keep its shape. One frame per kind
- * for now: tower bases come with #41, road orientation with #43.
+ * The atlas frame for each kind (docs/assets.md → Sprite per kind), or null to keep its shape. A tower's is its
+ * turret, drawn over its base (`TOWER_BASES`); enemy facing is `SPRITE_HEADING`, road orientation with #43.
  */
 export const SPRITES = {
   rifleNest: 'towerDefense_tile245',
@@ -43,3 +43,19 @@ export const SPRITE_HEADING = {
   tank: -Math.PI / 2,
   helicopter: 0,
 } as const satisfies Record<EnemyKind, number>;
+
+/** The frame each tower kind's turret stands on. */
+export const TOWER_BASES = {
+  rifleNest: 'sandbagBeige_open',
+  aaGun: 'towerDefense_tile180',
+  cannon: 'towerDefense_tile181',
+  mortar: 'towerDefense_tile182',
+} as const satisfies Record<TowerKind, string>;
+
+/** Which way each turret frame points as drawn, in radians (0 east, −π/2 north): the soldier faces east, barrels north. */
+export const TURRET_FACING = {
+  rifleNest: 0,
+  aaGun: -Math.PI / 2,
+  cannon: -Math.PI / 2,
+  mortar: -Math.PI / 2,
+} as const satisfies Record<TowerKind, number>;

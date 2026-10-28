@@ -57,6 +57,11 @@ export interface TestView {
     readonly facing: number;
     readonly frame: number;
   }[];
+  /**
+   * Each tower's turret angle in radians (0 east, −π/2 north), as turned so far toward its target. Tracked for every
+   * tower, drawn only for one with a turret sprite.
+   */
+  readonly turrets: readonly { readonly towerId: number; readonly angle: number }[];
 }
 
 /** `window.__TD__` with `?test=1` (ADR-0003). */
