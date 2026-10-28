@@ -1,0 +1,13 @@
+- dialog "Settings":
+  - heading "Settings" [level=2]
+  - group "Default game speed":
+    - text: Default game speed
+    - radio "×1" [checked]
+    - text: ×1
+    - radio "×2"
+    - text: ×2
+    - radio "×3"
+    - text: ×3
+  - checkbox "Always show tower ranges"
+  - text: Always show tower ranges
+  - button "Back"

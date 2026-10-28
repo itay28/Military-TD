@@ -25,6 +25,8 @@ export type TestState = Omit<GameState, 'map'> & { readonly mapId: string };
 export interface TestView {
   /** The range ring of the tower under the pointer. `towerId` is null when no tower is hovered. */
   readonly rangeRing: { readonly visible: boolean; readonly towerId: number | null; readonly center: Pixel };
+  /** The id of every tower whose range ring is drawn (hovered, selected, or all with Always show tower ranges), sorted. */
+  readonly rangeRings: readonly number[];
   /** The tracers drawn on the next frame, each from a tower to where its shot hit. */
   readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
   /**

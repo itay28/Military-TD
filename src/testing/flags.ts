@@ -10,6 +10,8 @@ export interface TestFlags {
   readonly speed: number;
   /** `?menu=1`: test mode opens on the Main menu instead of going straight to the Game. */
   readonly menu: boolean;
+  /** `?persist=1`: test mode saves settings to `localStorage` too (it uses memory otherwise, so runs don't leak). */
+  readonly persist: boolean;
 }
 
 export function parseTestFlags(search: string): TestFlags {
@@ -21,6 +23,7 @@ export function parseTestFlags(search: string): TestFlags {
     anim: params.get('anim') !== '0',
     speed: Number.isFinite(speed) && speed > 0 ? speed : 1,
     menu: params.get('menu') === '1',
+    persist: params.get('persist') === '1',
   };
 }
 
