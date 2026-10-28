@@ -85,6 +85,8 @@ describe('map registry', () => {
     expect(firstMixed(waves)).toBeLessThan(firstMixed(WAVES));
   });
 
+  const trainingKinds = new Set(WAVES.flatMap((w) => w.groups.map((g) => g.kind)));
+
   it.each(MAPS.slice(1).map((entry, i) => [MAPS[i]!.id, entry.id, MAPS[i]!.waves, entry.waves] as const))(
     'difficulty rises: %s → %s has as many waves or more, more enemies and more total hp, and no new kind',
     (_, __, before, after) => {
@@ -95,8 +97,7 @@ describe('map registry', () => {
       expect(after.length).toBeGreaterThanOrEqual(before.length);
       expect(count(after)).toBeGreaterThan(count(before));
       expect(hp(after)).toBeGreaterThan(hp(before));
-      const kinds = new Set(enemies(WAVES).map((g) => g.kind));
-      expect(enemies(after).every((g) => kinds.has(g.kind))).toBe(true);
+      expect(enemies(after).every((g) => trainingKinds.has(g.kind))).toBe(true);
     },
   );
 

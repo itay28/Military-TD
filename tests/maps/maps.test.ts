@@ -167,11 +167,13 @@ describe('04-hairpin.tmj', () => {
   it('doubles back: two long stretches run opposite ways with two rows between, and a Rifle Nest there covers both', () => {
     const map = createMap(load(file));
     const legs = map.waypoints.slice(1).map((to, i) => ({ from: map.waypoints[i]!, to }));
-    const rows = legs.filter(({ from, to }) => from.row === to.row && Math.abs(to.col - from.col) >= 8);
+    const longStretch = 8; // tiles; the connecting legs are shorter
+    const rows = legs.filter(({ from, to }) => from.row === to.row && Math.abs(to.col - from.col) >= longStretch);
     expect(rows).toHaveLength(2);
     const [out, back] = rows as [(typeof rows)[0], (typeof rows)[0]];
     expect(Math.sign(out.to.col - out.from.col)).toBe(-Math.sign(back.to.col - back.from.col));
     expect(Math.abs(back.from.row - out.from.row)).toBe(3);
+    // Column 7 is mid-map, so the tile sits within Rifle Nest range of both stretches.
     const between = { col: 7, row: Math.min(out.from.row, back.from.row) + 1 };
     expect(map.isBuildable(between)).toBe(true);
     const near = (row: number) =>
