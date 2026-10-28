@@ -58,7 +58,11 @@ export class ApiMeter {
   limited: RateLimit | undefined;
   private readonly quotas = new Map<string, Quota>();
 
-  constructor(private readonly now: () => Date = () => new Date()) {}
+  private readonly now: () => Date;
+
+  constructor(now: () => Date = () => new Date()) {
+    this.now = now;
+  }
 
   wrap(fetchFn: Fetch): Fetch {
     return async (url, init) => {
