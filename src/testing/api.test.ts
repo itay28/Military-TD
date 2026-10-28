@@ -25,11 +25,13 @@ const EMPTY_VIEW: TestView = {
   rangeRing: { visible: false, towerId: null, center: { x: 0, y: 0 } },
   rangeRings: [],
   tracers: [],
+  effects: [],
   ghost: { visible: false, tile: null },
   camera: { scrollX: 0, scrollY: 0, zoom: 1 },
   drawOrder: ['map'],
   sprites: true,
   mapTiles: 'sprites',
+  turrets: [],
 };
 
 const api = (hooks: TestHooks, scenarios: ScenarioLoaders = {}) => createTestApi(hooks, scenarios);
@@ -133,18 +135,22 @@ describe('createTestApi', () => {
       rangeRing: { visible: true, towerId: 1, center: { x: 72, y: 168 } },
       rangeRings: [1],
       tracers: [{ from: { x: 72, y: 168 }, to: { x: 24, y: 120 }, alpha: 1 }],
+      effects: [{ kind: 'puff' as const, at: { x: 24, y: 120 }, progress: 0.5 }],
       ghost: { visible: true, tile: { col: 1, row: 2 } },
       camera: { scrollX: 10, scrollY: -20, zoom: 1.5 },
       drawOrder: ['map', 'towers', 'rangeRing'],
       sprites: true,
       mapTiles: 'sprites' as const,
+      turrets: [{ towerId: 1, angle: -Math.PI / 2 }],
     };
     const hooks = { ...fakeHooks(), view: () => scene };
     const view = api(hooks).view();
     expect(view).toEqual(scene);
     scene.rangeRing.visible = false;
     scene.tracers.length = 0;
+    scene.turrets[0]!.angle = 0;
     expect(view.rangeRing.visible).toBe(true);
     expect(view.tracers).toHaveLength(1);
+    expect(view.turrets[0]?.angle).toBe(-Math.PI / 2);
   });
 });

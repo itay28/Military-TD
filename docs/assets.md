@@ -86,7 +86,7 @@ Interim: this table is what `src/data/sprites.ts` draws today, one atlas frame p
 
 ### Atlas (#40)
 
-The game loads one texture atlas, `assets/atlas/sprites.{png,json}` (Phaser JSON hash), not the PNGs above. `npm run atlas` (`scripts/atlas.ts`) packs every PNG of the Tower Defense and Tanks packs into it, one 64 px cell each, frame name = file name without `.png`; rerun it and commit the output after adding or changing a sprite (a test fails while the committed atlas differs from a fresh build). The atlas holds both packs' pixels, so both manifest entries list it. Which frame each kind is drawn with: `src/data/sprites.ts`; a kind without one (Helicopter), or any kind when the atlas fails to load, keeps its shape.
+The game loads one texture atlas, `assets/atlas/sprites.{png,json}` (Phaser JSON hash), not the PNGs above. `npm run atlas` (`scripts/atlas.ts`) packs every PNG of the Tower Defense and Tanks packs into it, one 64 px cell each, frame name = file name without `.png`; rerun it and commit the output after adding or changing a sprite (a test fails while the committed atlas differs from a fresh build). The atlas holds both packs' pixels, so both manifest entries list it. Which frame each kind is drawn with: `src/data/sprites.ts` (a tower draws its base, then its turret, which turns toward its target: #41); a kind without one (Helicopter), or any kind when the atlas fails to load, keeps its shape.
 
 ### Alternatives considered
 
