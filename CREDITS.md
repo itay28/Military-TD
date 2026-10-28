@@ -9,7 +9,7 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - License: CC0-1.0
 - Attribution: Tower Defense (Top-Down) by Kenney (kenney.nl), CC0
 - Downloaded: 2026-10-27
-- Files: `assets/kenney-tower-defense/**`
+- Files: `assets/kenney-tower-defense/**`, `assets/atlas/**`
 
 ## Top-down Tanks Remastered
 
@@ -18,7 +18,7 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - License: CC0-1.0
 - Attribution: Top-down Tanks Remastered by Kenney (kenney.nl), CC0
 - Downloaded: 2026-10-27
-- Files: `assets/kenney-top-down-tanks/**`
+- Files: `assets/kenney-top-down-tanks/**`, `assets/atlas/**`
 
 ## UI Pack
 

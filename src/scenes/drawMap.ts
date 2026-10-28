@@ -1,5 +1,6 @@
 import { MAP_STYLE, TILE_PX } from '../data/display';
-import type { GameMap } from '../sim/map';
+import type { TileType } from '../data/sprites';
+import type { GameMap, Tile } from '../sim/map';
 import { tileTopLeft } from './coords';
 
 /** The part of Phaser's Graphics that drawMap uses, so tests can pass a recording fake. */
@@ -16,11 +17,20 @@ export function drawMap(painter: MapPainter, map: GameMap): void {
     for (let col = 0; col < map.cols; col++) {
       const tile = { col, row };
       const { x, y } = tileTopLeft(tile);
-      painter.fillStyle(map.isPath(tile) ? MAP_STYLE.path : MAP_STYLE.buildable);
+      painter.fillStyle(MAP_STYLE[tileType(map, tile)]);
       painter.fillRect(x, y, TILE_PX, TILE_PX);
     }
   }
+  drawGrid(painter, map);
+}
 
+/** What `tile` is drawn as: Path or buildable. */
+export function tileType(map: GameMap, tile: Tile): TileType {
+  return map.isPath(tile) ? 'path' : 'buildable';
+}
+
+/** Faint grid lines on every tile edge. Drawn over the tile sprites too. */
+export function drawGrid(painter: MapPainter, map: GameMap): void {
   // The bottom-right corner of the map is the top-left of the tile just past it.
   const { x: width, y: height } = tileTopLeft({ col: map.cols, row: map.rows });
   const { color, alpha, width: lineWidth } = MAP_STYLE.grid;

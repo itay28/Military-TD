@@ -20,6 +20,8 @@ import {
   drawBlasts,
   drawEnemy,
   drawGhost,
+  drawHpBar,
+  drawLevelPips,
   drawRangeRing,
   drawShells,
   drawTower,
@@ -193,6 +195,34 @@ describe('drawTower', () => {
       ['fillRect', -half + inset, top, pip, pip],
       ['fillRect', -half + inset + pip + gap, top, pip, pip],
     ]);
+  });
+});
+
+// With a sprite, the scene draws the sprite and only these overlays on top.
+describe('drawHpBar', () => {
+  it('draws the same HP bar drawEnemy ends with, and nothing else', () => {
+    const whole = recordingPainter();
+    drawEnemy(whole.painter, infantry(10));
+    const bar = recordingPainter();
+    drawHpBar(bar.painter, infantry(10));
+    expect(bar.calls).toEqual(whole.calls.slice(-4));
+  });
+});
+
+describe('drawLevelPips', () => {
+  it('draws the same pips drawTower ends with, and nothing else', () => {
+    const tower = { ...rifleNest(1, 0, 0), level: 3 };
+    const whole = recordingPainter();
+    drawTower(whole.painter, tower);
+    const pips = recordingPainter();
+    drawLevelPips(pips.painter, tower);
+    expect(pips.calls).toEqual(whole.calls.slice(4));
+  });
+
+  it('draws nothing at level 1', () => {
+    const { painter, calls } = recordingPainter();
+    drawLevelPips(painter, rifleNest(1, 0, 0));
+    expect(calls).toEqual([]);
   });
 });
 
