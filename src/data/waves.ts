@@ -71,3 +71,77 @@ export const SWITCHBACK_WAVES: readonly WaveData[] = [
     ],
   },
 ];
+
+/**
+ * Serpentine's schedule: a step harder than Switchback's. Its long Path gives towers more time, so the waves are
+ * bigger and denser, with more armour and air, but still only the four kinds, mixed (ADR-0007).
+ */
+export const SERPENTINE_WAVES: readonly WaveData[] = [
+  { groups: [group('infantry', 12, 700)] },
+  { groups: [group('infantry', 12, 600), group('jeep', 4, 1200, 3000)] },
+  { groups: [group('jeep', 8, 900), group('infantry', 12, 600, 3000)] },
+  { groups: [group('tank', 3, 3000), group('infantry', 14, 600, 2000)] },
+  { groups: [group('helicopter', 5, 2200), group('jeep', 8, 700, 4000)] },
+  { groups: [group('infantry', 18, 500), group('tank', 4, 2800, 3000)] },
+  { groups: [group('helicopter', 7, 1800), group('infantry', 14, 600, 2000)] },
+  { groups: [group('tank', 4, 2800), group('jeep', 12, 500, 3000), group('helicopter', 5, 2000, 6000)] },
+  { groups: [group('helicopter', 9, 1700), group('infantry', 18, 500, 2000), group('jeep', 10, 500, 8000)] },
+  { groups: [group('tank', 5, 2500), group('helicopter', 9, 1800, 3000), group('jeep', 14, 500, 6000)] },
+  {
+    groups: [
+      group('infantry', 26, 450),
+      group('tank', 5, 2800, 3000),
+      group('helicopter', 9, 1800, 6000),
+      group('jeep', 12, 500, 10000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 7, 2400),
+      group('helicopter', 13, 1700, 2000),
+      group('infantry', 26, 450, 4000),
+      group('jeep', 14, 500, 12000),
+    ],
+  },
+];
+
+/**
+ * Hairpin's schedule, the hardest: its towers cover the Path twice, so it brings one more wave, the most armour and
+ * air, and the tightest spacing, from the same four kinds (ADR-0007).
+ */
+export const HAIRPIN_WAVES: readonly WaveData[] = [
+  { groups: [group('infantry', 14, 600)] },
+  { groups: [group('infantry', 14, 550), group('jeep', 5, 1000, 3000)] },
+  { groups: [group('jeep', 10, 800), group('infantry', 14, 550, 3000)] },
+  { groups: [group('tank', 3, 2800), group('infantry', 16, 550, 2000)] },
+  { groups: [group('helicopter', 6, 2000), group('jeep', 10, 600, 4000)] },
+  { groups: [group('infantry', 20, 450), group('tank', 4, 2600, 3000)] },
+  { groups: [group('helicopter', 8, 1700), group('infantry', 16, 550, 2000)] },
+  { groups: [group('tank', 5, 2600), group('jeep', 14, 450, 3000), group('helicopter', 6, 1900, 6000)] },
+  { groups: [group('helicopter', 10, 1600), group('infantry', 20, 450, 2000), group('jeep', 12, 450, 8000)] },
+  { groups: [group('tank', 6, 2400), group('helicopter', 10, 1700, 3000), group('jeep', 16, 450, 6000)] },
+  {
+    groups: [
+      group('infantry', 28, 400),
+      group('tank', 6, 2600, 3000),
+      group('helicopter', 10, 1700, 6000),
+      group('jeep', 14, 450, 10000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 7, 2300),
+      group('helicopter', 14, 1600, 2000),
+      group('infantry', 28, 400, 4000),
+      group('jeep', 16, 450, 12000),
+    ],
+  },
+  {
+    groups: [
+      group('helicopter', 14, 1500),
+      group('tank', 8, 2200, 2000),
+      group('infantry', 30, 400, 5000),
+      group('jeep', 18, 400, 10000),
+    ],
+  },
+];

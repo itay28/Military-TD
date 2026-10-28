@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MAPS, MVP_MAP } from '../../src/data/maps';
+import { TOWER_STATS } from '../../src/data/towers';
 import { runScenario } from '../../src/sim/scenario';
 import { createMap, tileKey } from '../../src/sim/map';
 import { importTiledMap } from '../../src/sim/tiled';
@@ -114,6 +115,83 @@ describe('02-switchback.tmj', () => {
   });
 });
 
+/** Every tile of a Tiled map's ground layer: whether it shows a road frame, against whether it is on the Path. */
+function roadsAndPath(file: string) {
+  const json = JSON.parse(readFileSync(file, 'utf8'));
+  const map = createMap(load(file));
+  const roadGids = json.tilesets[0].tiles
+    .filter((tile: { properties: { name: string; value: unknown }[] }) =>
+      tile.properties.some((p) => p.name === 'frame' && String(p.value).includes('road')),
+    )
+    .map((tile: { id: number }) => tile.id + json.tilesets[0].firstgid);
+  const ground = json.layers.find((layer: { name: string }) => layer.name === 'ground') as { data: number[] };
+  return ground.data.map((gid, index) => {
+    const tile = { col: index % map.cols, row: Math.floor(index / map.cols) };
+    return { tile: tileKey(tile), road: roadGids.includes(gid), path: map.isPath(tile) };
+  });
+}
+
+const tilesets = (path: string) => JSON.parse(readFileSync(path, 'utf8')).tilesets;
+
+describe('03-serpentine.tmj', () => {
+  const file = 'maps/03-serpentine.tmj';
+
+  it('enters on the top edge and snakes to the bottom edge, on a longer Path than any earlier map', () => {
+    const map = createMap(load(file));
+    expect([map.cols, map.rows]).toEqual([16, 10]);
+    expect(map.waypoints[0]?.row).toBe(0);
+    expect(map.waypoints.at(-1)?.row).toBe(map.rows - 1);
+    const earlier = [TRAINING_GROUND, 'maps/02-switchback.tmj'].map((f) => createMap(load(f)).pathTiles.length);
+    expect(map.pathTiles.length).toBeGreaterThan(Math.max(...earlier));
+  });
+
+  it('draws road tiles on the Path and nowhere else', () => {
+    for (const { tile, road, path } of roadsAndPath(file)) expect({ tile, road }).toEqual({ tile, road: path });
+  });
+
+  it('uses the same tileset as the Training Ground', () => {
+    expect(tilesets(file)).toEqual(tilesets(TRAINING_GROUND));
+  });
+});
+
+describe('04-hairpin.tmj', () => {
+  const file = 'maps/04-hairpin.tmj';
+
+  it('enters on the left edge and leaves on the bottom edge', () => {
+    const map = createMap(load(file));
+    expect([map.cols, map.rows]).toEqual([16, 10]);
+    expect(map.waypoints[0]?.col).toBe(0);
+    expect(map.waypoints.at(-1)?.row).toBe(map.rows - 1);
+  });
+
+  it('doubles back: two long stretches run opposite ways with two rows between, and a Rifle Nest there covers both', () => {
+    const map = createMap(load(file));
+    const legs = map.waypoints.slice(1).map((to, i) => ({ from: map.waypoints[i]!, to }));
+    const longStretch = 8; // tiles; the connecting legs are shorter
+    const rows = legs.filter(({ from, to }) => from.row === to.row && Math.abs(to.col - from.col) >= longStretch);
+    expect(rows).toHaveLength(2);
+    const [out, back] = rows as [(typeof rows)[0], (typeof rows)[0]];
+    expect(Math.sign(out.to.col - out.from.col)).toBe(-Math.sign(back.to.col - back.from.col));
+    expect(Math.abs(back.from.row - out.from.row)).toBe(3);
+    // Column 7 is mid-map, so the tile sits within Rifle Nest range of both stretches.
+    const between = { col: 7, row: Math.min(out.from.row, back.from.row) + 1 };
+    expect(map.isBuildable(between)).toBe(true);
+    const near = (row: number) =>
+      map.pathTiles.some(
+        (t) => t.row === row && Math.hypot(t.col - between.col, t.row - between.row) <= TOWER_STATS.rifleNest.range,
+      );
+    expect([near(out.from.row), near(back.from.row)]).toEqual([true, true]);
+  });
+
+  it('draws road tiles on the Path and nowhere else', () => {
+    for (const { tile, road, path } of roadsAndPath(file)) expect({ tile, road }).toEqual({ tile, road: path });
+  });
+
+  it('uses the same tileset as the Training Ground', () => {
+    expect(tilesets(file)).toEqual(tilesets(TRAINING_GROUND));
+  });
+});
+
 describe('Tiled map files', () => {
   it('the registry serves the Training Ground file as the MVP map', () => {
     expect(MVP_MAP).toEqual({ ...load(TRAINING_GROUND), id: 'mvp' });
@@ -139,5 +217,10 @@ describe('Tiled map files', () => {
       until: 'end',
     });
     expect(result.outcome).toBe('victory');
+  });
+
+  it.each(MAPS)('$id: a bot that builds nothing loses to its own waves', ({ data, waves }) => {
+    const result = runScenario({ map: data, waves, autoStartWaves: true, until: 'end' });
+    expect(result.outcome).toBe('defeat');
   });
 });
