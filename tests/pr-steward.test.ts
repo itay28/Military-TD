@@ -20,6 +20,7 @@ import {
   milestoneDone,
   PR_QUERY,
   settingsFromEnv,
+  toStewardPr,
   type Decision,
   type PrComment,
   type StewardPr,
@@ -806,6 +807,45 @@ const settings: StewardSettings = {
 const fireOk = vi.fn<Fetch>(async (url: string) =>
   url.startsWith('https://fire.example') ? ok({ claude_code_session_url: 'https://claude.ai/code/session_1' }) : ok(),
 );
+
+// A PR's baseRefOid only moves when its head is pushed, so a later merge into the base looked
+// like the conflict a round had already resolved (#296).
+describe('toStewardPr: base SHA', () => {
+  const node = (over: Partial<Parameters<typeof toStewardPr>[0]> = {}): Parameters<typeof toStewardPr>[0] => ({
+    number: 1,
+    title: 't',
+    body: '',
+    isDraft: false,
+    isCrossRepository: false,
+    baseRefName: 'main',
+    baseRefOid: 'stale',
+    baseRef: { target: { oid: 'tip' } },
+    headRefName: 'feat/x',
+    headRefOid: 'head',
+    mergeable: 'CONFLICTING',
+    mergeStateStatus: 'DIRTY',
+    labels: { nodes: [] },
+    reviewThreads: { nodes: [] },
+    closingIssuesReferences: { nodes: [] },
+    comments: { nodes: [] },
+    files: null,
+    recentCommits: { nodes: [] },
+    commits: { nodes: [] },
+    ...over,
+  });
+
+  it("is the base branch's current tip, not the PR's recorded base", () => {
+    expect(toStewardPr(node()).baseSha).toBe('tip');
+  });
+
+  it('falls back to the recorded base when the base branch is gone', () => {
+    expect(toStewardPr(node({ baseRef: null })).baseSha).toBe('stale');
+  });
+
+  it("asks GitHub for the base branch's tip", () => {
+    expect(PR_QUERY).toMatch(/baseRef \{ target \{ oid \} \}/);
+  });
+});
 
 describe('act', () => {
   const steward: Decision = {
