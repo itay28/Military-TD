@@ -10,7 +10,16 @@ import {
   TRACER,
   TURRET,
 } from '../data/display';
-import { ATLAS_KEY, TILE_TYPES, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
+import {
+  ATLAS_KEY,
+  SPRITE_HEADING,
+  TILE_TYPES,
+  TOWER_BASES,
+  TURRET_FACING,
+  spriteFor,
+  type SpriteKind,
+} from '../data/sprites';
+import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { MAPS, mapById } from '../data/maps';
 import type { Enemy } from '../sim/enemies';
@@ -37,11 +46,13 @@ import {
   drawTracers,
 } from './drawEntities';
 import { drawGrid, drawMap, tileType } from './drawMap';
+import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, type GameSpeed } from './gameSpeed';
 import { createGestures, type Gesture, type Gestures } from './gestures';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
+import { headingOf, spriteRotation } from './heading';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
 import { resolveClick } from './selection';
@@ -93,8 +104,13 @@ interface EntityView {
 }
 
 interface EnemyView extends EntityView {
-  /** The HP last drawn, so the bar is redrawn only when it changes. */
+  readonly id: number;
+  readonly kind: EnemyKind;
+  /** The HP and movement frame last drawn, so the shape or HP bar is redrawn only when one changes. */
   hp: number;
+  frame: number;
+  /** The way it is heading (`headingOf`), kept while it stands still. */
+  heading: number;
 }
 
 /** A tower: its base sprite, its turret (the entity sprite) and the angle the turret has turned to. */
@@ -153,7 +169,7 @@ export class GameScene extends Phaser.Scene {
   private endScreen!: EndScreen;
   private towerPanel!: TowerPanel;
   private pauseMenu!: PauseMenu;
-  private enemyViews!: ViewSync<Enemy>;
+  private enemyViews!: ViewSync<Enemy, EnemyView>;
   private towerViews!: ViewSync<Tower>;
   /** Each tower's view by id, for `view()`'s turret angles. */
   private readonly towerViewById = new Map<number, TowerView>();
@@ -176,6 +192,8 @@ export class GameScene extends Phaser.Scene {
   private floatingTextViews!: ViewSync<FloatingTextView>;
   /** Enemy positions before the latest tick, to interpolate from. */
   private previousPositions!: ReadonlyMap<number, Position>;
+  /** Real time the enemies' movement animation has run, in ms: it stops while paused and never runs with ?anim=0. */
+  private animMs = 0;
   /** The tile under the pointer, or undefined when it is off the canvas. */
   private pointerTile: Tile | undefined;
   /** The tower under the pointer whose range ring is drawn, as its `ringKey`. */
@@ -258,6 +276,7 @@ export class GameScene extends Phaser.Scene {
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
       sprites: this.textures.exists(ATLAS_KEY),
+      enemies: this.enemyViews.views().map(({ id, kind, heading, frame }) => ({ id, kind, facing: heading, frame })),
       turrets: [...this.towerViewById].map(([towerId, { angle }]) => ({ towerId, angle })),
     };
   }
@@ -310,6 +329,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     // Restart reruns create() on this same object. Sim ids start again at 1, so last game's ids must not linger here.
     this.previousPositions = new Map();
+    this.animMs = 0;
     this.pointerTile = undefined;
     this.hoveredRingKey = undefined;
     this.selectedRingKey = undefined;
@@ -329,18 +349,31 @@ export class GameScene extends Phaser.Scene {
     this.enemyViews = createViewSync<Enemy, EnemyView>({
       create: (enemy) => ({
         ...this.addEntityView(enemy.kind, enemy.layer === 'air' ? 'air' : 'enemies', { x: 0, y: 0 }),
+        id: enemy.id,
+        kind: enemy.kind,
         hp: Number.NaN,
+        frame: 0,
+        heading: SPRITE_HEADING[enemy.kind],
       }),
       update: (view, enemy) => {
-        if (view.hp !== enemy.hp) {
+        // ?anim=0 never advances the clock, but the per-id phase would still spread frames, so pin them to 0.
+        const frame = this.flags.anim ? animFrame(this.animMs, enemy.id) : 0;
+        // Only the shape's rotor moves with the frame; a sprite's HP bar doesn't.
+        const redrawShape = !view.sprite && view.frame !== frame;
+        if (view.hp !== enemy.hp || redrawShape) {
           view.graphics.clear();
           if (view.sprite) drawHpBar(view.graphics, enemy);
-          else drawEnemy(view.graphics, enemy);
+          else drawEnemy(view.graphics, enemy, rotorAngle(frame));
           view.hp = enemy.hp;
         }
+        view.frame = frame;
+        view.heading = headingOf(this.previousPositions.get(enemy.id), enemy.position, view.heading);
         const { x, y } = toPixels(interpolatePosition(this.previousPositions, enemy, this.loop.alpha));
         view.graphics.setPosition(x, y);
-        view.sprite?.setPosition(x, y);
+        view.sprite
+          ?.setPosition(x, y)
+          .setRotation(spriteRotation(enemy.kind, view.heading))
+          .setScale(SPRITE_SCALE * bobScale(frame));
       },
       destroy: (view) => {
         view.graphics.destroy();
@@ -586,6 +619,7 @@ export class GameScene extends Phaser.Scene {
     this.blasts.advance(deltaMs);
     this.effects.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
+    if (this.flags.anim) this.animMs += deltaMs;
     this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
     this.hud.update();
     this.buildBar.update();

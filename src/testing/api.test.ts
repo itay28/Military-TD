@@ -30,6 +30,7 @@ const EMPTY_VIEW: TestView = {
   camera: { scrollX: 0, scrollY: 0, zoom: 1 },
   drawOrder: ['map'],
   sprites: true,
+  enemies: [],
   turrets: [],
 };
 
@@ -139,6 +140,7 @@ describe('createTestApi', () => {
       camera: { scrollX: 10, scrollY: -20, zoom: 1.5 },
       drawOrder: ['map', 'towers', 'rangeRing'],
       sprites: true,
+      enemies: [{ id: 3, kind: 'tank' as const, facing: Math.PI / 2, frame: 1 }],
       turrets: [{ towerId: 1, angle: -Math.PI / 2 }],
     };
     const hooks = { ...fakeHooks(), view: () => scene };
@@ -146,9 +148,11 @@ describe('createTestApi', () => {
     expect(view).toEqual(scene);
     scene.rangeRing.visible = false;
     scene.tracers.length = 0;
+    scene.enemies[0]!.facing = 0;
     scene.turrets[0]!.angle = 0;
     expect(view.rangeRing.visible).toBe(true);
     expect(view.tracers).toHaveLength(1);
+    expect(view.enemies[0]!.facing).toBe(Math.PI / 2);
     expect(view.turrets[0]?.angle).toBe(-Math.PI / 2);
   });
 });
