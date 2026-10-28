@@ -4,3 +4,6 @@
 *.ogg binary
 *.mp3 binary
 *.wav binary
+
+# Third-party license files stay byte-for-byte as the pack shipped them (docs/assets.md).
+assets/**/License.txt -text
