@@ -1,5 +1,5 @@
 import type { EnemyKind } from '../data/enemies';
-import { MVP_MAP } from '../data/maps';
+import { MAPS, MVP_MAP } from '../data/maps';
 import { START_LIVES, START_MONEY } from '../data/start';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { WAVES } from '../data/waves';
@@ -34,14 +34,17 @@ export interface ScriptStep {
  */
 export type StopCondition = 'end' | { readonly ticks: number } | { readonly event: keyof GameEvents };
 
-/** How a game starts. Left-out values take the default game's: the MVP map, start Lives and Money, and `WAVES`. */
+/**
+ * How a game starts. Left-out values take the default game's: the MVP map, start Lives and Money, and the map's own
+ * waves from the registry (`WAVES` for a map outside it).
+ */
 export interface GameSetup {
   readonly map?: MapData;
   readonly lives?: number;
   readonly money?: number;
   /** Placed before the first tick, free: they don't come out of `money`. */
   readonly towers?: readonly TowerPlacement[];
-  /** Overrides the game's waves. */
+  /** Overrides the map's waves. */
   readonly waves?: readonly WaveData[];
 }
 
@@ -116,14 +119,15 @@ const GAME_EVENT_TYPES = Object.keys({
  * Throws for a malformed map or wave (as `createGame`) or a pre-placed tower that can't be placed.
  */
 export function setUpGame(setup: GameSetup = {}): Game {
+  const map = setup.map ?? MVP_MAP;
   const towers = setup.towers ?? [];
   const towersCost = towers.reduce((sum, { kind }) => sum + TOWER_STATS[kind].cost, 0);
   const game = createGame({
-    map: setup.map ?? MVP_MAP,
+    map,
     lives: setup.lives ?? START_LIVES,
     // Pre-placed towers are placed like any other, with their cost added first, so they come free.
     money: (setup.money ?? START_MONEY) + towersCost,
-    waves: setup.waves ?? WAVES,
+    waves: setup.waves ?? MAPS.find((entry) => entry.id === map.id)?.waves ?? WAVES,
   });
   for (const { kind, tile } of towers) {
     const placed = game.placeTower(kind, tile);

@@ -10,7 +10,7 @@ const button = (name: string) => buttons().find((b) => b.textContent?.trim() ===
 
 const TWO_MAPS: readonly MapEntry[] = [
   MAPS[0]!,
-  { id: 'second', name: 'Second Map', data: { ...MAPS[0]!.data, id: 'second' } },
+  { ...MAPS[0]!, id: 'second', name: 'Second Map', data: { ...MAPS[0]!.data, id: 'second' } },
 ];
 
 function mount(options: Partial<LevelSelectOptions> = {}) {
