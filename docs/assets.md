@@ -1,6 +1,8 @@
 # Third-party assets
 
-Every art, audio and font file we didn't make ourselves must be traceable to its source and license. CI enforces this from v0.4.0 (#60).
+Every art, audio and font file we didn't make ourselves must be traceable to its source and license. CI enforces this (#60): `npm run check:assets`, part of `npm run check`, fails on a file under `assets/` that no manifest `files` glob covers, a license off the allowlist (CC-BY without attribution, OFL on non-fonts), a pack folder without a license file, or a `CREDITS.md` that differs from `npm run credits`.
+
+**Art direction:** the long-term look is satellite-style milsim art with factions per map ([ADR-0009](adr/0009-satellite-milsim-art-and-factions.md), proposed). The Kenney packs are placeholders until a faction's realistic set is complete.
 
 ## Allowed licenses
 
@@ -46,13 +48,16 @@ CREDITS.md                 generated from manifest.json
 
 ## Chosen packs (v0.4.0, #39)
 
-All three are Kenney, CC0-1.0, downloaded 2026-10-27. Only the files below are committed (Default size PNGs, 64 × 64 tiles), each pack with its `License.txt` unchanged (`.gitattributes` keeps its line endings).
+Downloaded 2026-10-27. Only the files below are committed (Kenney: Default size PNGs, 64 × 64 tiles), each pack with its `License.txt` unchanged (`.gitattributes` keeps its line endings). The two OpenGameArt items ship no license file, so their `License.txt` copies the license notice from the source page.
 
 | Pack (`assets/<id>/`) | Source | Used for |
 | --- | --- | --- |
-| Tower Defense (Top-Down) (`kenney-tower-defense`) | kenney.nl/assets/tower-defense-top-down | tower bases and turrets, Infantry, Jeep, rocks and bushes, smoke puffs, muzzle flame |
+| Tower Defense (Top-Down) (`kenney-tower-defense`) | kenney.nl/assets/tower-defense-top-down | tower bases and turrets, rocks and bushes, smoke puffs, muzzle flame |
 | Top-down Tanks Remastered (`kenney-top-down-tanks`) | kenney.nl/assets/top-down-tanks-remastered | Tank, Rifle Nest sandbags, grass and road tiles, trees, explosions, muzzle flash |
 | UI Pack (`kenney-ui-pack`) | kenney.nl/assets/ui-pack | green and grey buttons, play icon (`Green/`, `Grey/`, `Extra/` as in the pack) |
+| Topdown Shooter (`kenney-top-down-shooter`), CC0-1.0 | kenney.nl/assets/top-down-shooter | Infantry and the Rifle Nest soldier (`soldier1_gun`, `soldier1_machine`) |
+| FreeArt - Topdown extras (`spriteattack-topdown-extras`), CC0-1.0 | opengameart.org/content/freeart-topdown-extras | Jeep (`obj_jeep1`, an olive army jeep) |
+| Attack Helicopter (`morgan3d-chopper`), **CC-BY-4.0** | opengameart.org/content/attack-helicopter-0 | Helicopter: the green chopper (column 1, row 2 of the 44 × 99 frames) and the moving rotor (right column, row 2). Attribution is on the credits screen |
 
 The plan named *Top-down Tanks Redux*. Kenney now publishes that set as *Top-down Tanks Remastered* (same sprite names), so that's the one we use.
 
@@ -69,9 +74,11 @@ The plan named *Top-down Tanks Redux*. Kenney now publishes that set as *Top-dow
 | Infantry | | `td247` (soldier) |
 | Jeep | | `td269` (light vehicle) |
 | Tank | | `tankBody_sand` + `tankSand_barrel1` |
-| Helicopter | | **none**: no pack has a rotorcraft (only fixed-wing planes), so it keeps its shape (#40) |
+| Helicopter | | **none** yet: its sprite (`chopper-44x99`) is a sheet, so it keeps its shape until it joins the atlas |
 
 Map and effects: `tileGrass1`/`tileGrass2` ground, `tileGrass_road{East,North,CornerLL,LR,UL,UR}` for the Path, `td130`/`td131` bushes, `td135`–`td137` rocks, `treeGreen_small`/`treeGreen_large` (#43); `shotOrange` and `td295` muzzle flash, `explosion1`–`3`, `explosionSmoke1`–`3`, `td019`–`td021` smoke (#44).
+
+Interim: this table is what `src/data/sprites.ts` draws today, one atlas frame per kind. The Infantry, Rifle Nest soldier, Jeep and Helicopter art from the extra packs above (`soldier1_*`, `obj_jeep1`, `chopper-44x99`) is bigger than an atlas cell or is a sheet, so it joins the atlas with the later sprite issues (#41, #42).
 
 ### Atlas (#40)
 
@@ -81,11 +88,13 @@ The game loads one texture atlas, `assets/atlas/sprites.{png,json}` (Phaser JSON
 
 - **Kenney Top-Down Tanks** (older, CC0): fewer and smaller sprites; Remastered replaces it.
 - **Kenney Tanks** (CC0): side view, doesn't fit a top-down map.
-- **OpenGameArt.org** helicopter sprites: possible later fill for the Helicopter gap; each needs its own license check (many are CC-BY-SA, not allowed).
+- **OpenGameArt.org** helicopters: the CC0 ones are side views; `apache-style-helicopter` is CC-BY-SA (not allowed). `chopper-44x99` is the only top-down one under an allowed license.
+- **OpenGameArt.org** jeeps: *Army Jeep* / *German Jeep* (clayster2012) were rejected: one carries a swastika and the license isn't stated clearly.
+- **Kenney Tower Defense** `td245`/`td247`/`td269` (first picks): at 48 px they don't read as a soldier or a jeep, so they were replaced.
 - **itch.io free packs**: mostly "free for personal use", rejected.
 
 ## Candidate sources
 
-- **Kenney** (kenney.nl): CC0. Tower Defense (Top-Down), Top-down Tanks Redux, UI Pack, Impact/Interface sounds, Music Jingles.
+- **Kenney** (kenney.nl): CC0. Tower Defense (Top-Down), Top-down Tanks Remastered (formerly Redux), UI Pack, Impact/Interface sounds, Music Jingles.
 - **OpenGameArt.org**: mixed licenses. Check each item.
 - **itch.io free asset packs**: mixed licenses. Many are "free for personal use" only, which isn't allowed here.

@@ -10,7 +10,7 @@ async function simRate(page: Page, realMs = 1000): Promise<number> {
 }
 
 // From #50: the speed button scales how much sim time each real frame feeds the fixed step.
-test('at ×4 the game runs about four times as fast as at ×1', async ({ page }) => {
+test('at ×3 the game runs about three times as fast as at ×1', async ({ page }) => {
   await openGame(page, { manualStep: false });
   const speed = page.getByRole('button', { name: /^Game speed/ });
   await expect(speed).toHaveText('×1');
@@ -18,15 +18,15 @@ test('at ×4 the game runs about four times as fast as at ×1', async ({ page })
 
   await speed.click();
   await speed.click();
-  await expect(speed).toHaveAccessibleName('Game speed ×4');
-  const atX4 = await simRate(page);
+  await expect(speed).toHaveAccessibleName('Game speed ×3');
+  const atX3 = await simRate(page);
 
-  // Frame timing in a headless browser jitters, so the ratio only needs to be near 4.
-  expect(atX4 / atX1).toBeGreaterThan(3);
-  expect(atX4 / atX1).toBeLessThan(5);
+  // Frame timing in a headless browser jitters, so the ratio only needs to be near 3.
+  expect(atX3 / atX1).toBeGreaterThan(2.25);
+  expect(atX3 / atX1).toBeLessThan(3.75);
 });
 
-test('manual stepping feeds no time at ×4', async ({ page }) => {
+test('manual stepping feeds no time at ×3', async ({ page }) => {
   await openGame(page);
   const speed = page.getByRole('button', { name: /^Game speed/ });
   await speed.click();

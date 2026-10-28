@@ -89,6 +89,12 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 
 The current milestone is the open one with the earliest due date, else the lowest version.
 
+**API quota (#293):** `PROJECT_TOKEN` is the maintainer's own classic PAT, so Board sync, PR steward and every other workflow that uses it share one hourly GitHub quota (REST and GraphQL points). To keep a burst of events from spending it:
+- **Debounce:** an event run of Board sync or PR steward first waits 60 s in a `debounce` job, in a concurrency group where a newer event cancels the older wait. A burst (a relabel, an agent's pushes and comments, CI and the review finishing together) ends in one sweep, and a sweep is never cancelled mid-write. Scheduled and manual runs skip the wait, so the hourly sweep still runs while events keep coming.
+- **Fewer, cheaper queries:** the retry check reads every claimed issue in one GraphQL call, and PR steward reads 5 open issues per milestone (enough to tell whether only the release issue is left) rather than 100, which was most of its query cost.
+- **Measured:** each run ends with a log line: `GitHub API: <n> REST + <n> GraphQL requests. Quota left: core …, graphql … (fell by <n> during the run).` (`scripts/rate-limit.ts`). Check it in the run log before cutting more.
+- **Fail soft:** once GitHub answers with a rate limit, the run sends no more GitHub requests, logs a warning with the reset time and passes green (no red run, no failure report). The next scheduled run catches up.
+
 **Sizing backfill (#225):** every run also looks for open `ready-for-agent` issues that lack a Size, or are game work (not `area:infra`) with no milestone, leaving out trackers and `hold`/`needs-info`/`needs-you`. For up to 3 of them per run it dispatches *Size issue* and leaves a `<!-- size-issue:requested -->` comment, so each issue is asked about once. This catches issues labelled before the sizing agent existed, or whose label event was missed.
 
 "Closes" means GitHub's link **or** `Closes/Fixes/Resolves #n` in the PR body: GitHub only links PRs that target `main`, so stacked PRs rely on the body. *Done* cards and trackers (release issues, epics) are never touched. It uses the `PROJECT_TOKEN` secret; a missing token or an API error fails the run, so a board that isn't syncing shows up red. Check by hand: `PROJECT_TOKEN=… node scripts/board-sync.ts --dry-run`.

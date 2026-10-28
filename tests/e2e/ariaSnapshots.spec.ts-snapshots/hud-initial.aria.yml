@@ -1,6 +1,6 @@
 - text: Money 100 Lives 20 Wave 0 / 10 DPS –
+- status
 - button "Start Wave"
 - button "Auto-start"
 - button "Game speed ×1": ×1
-- status
 - button "Pause"
