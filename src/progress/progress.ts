@@ -2,6 +2,8 @@ import type { Stars } from '../sim/progression';
 
 export type { Stars };
 
+export type WinStars = 1 | 2 | 3;
+
 export interface MapProgress {
   readonly completed: boolean;
   /** The best result so far: 1★ any win, 2★ at least half the start Lives left, 3★ no Lives lost. 0 when only the score is unknown. */
@@ -18,7 +20,7 @@ export const EMPTY_PROGRESS: Progress = { maps: {} };
 export interface ProgressStore {
   get(): Progress;
   /** Records a win of `mapId` with `stars` (1 to 3). Only ever raises `bestStars`. Throws RangeError for other stars. */
-  recordResult(mapId: string, stars: Stars): void;
+  recordResult(mapId: string, stars: WinStars): void;
 }
 
 export function createProgress(initial: Progress = EMPTY_PROGRESS): ProgressStore {
