@@ -30,6 +30,7 @@ const EMPTY_VIEW: TestView = {
   camera: { scrollX: 0, scrollY: 0, zoom: 1 },
   drawOrder: ['map'],
   sprites: true,
+  mapTiles: 'sprites',
   enemies: [],
   turrets: [],
 };
@@ -140,6 +141,7 @@ describe('createTestApi', () => {
       camera: { scrollX: 10, scrollY: -20, zoom: 1.5 },
       drawOrder: ['map', 'towers', 'rangeRing'],
       sprites: true,
+      mapTiles: 'sprites' as const,
       enemies: [{ id: 3, kind: 'tank' as const, facing: Math.PI / 2, frame: 1 }],
       turrets: [{ towerId: 1, angle: -Math.PI / 2 }],
     };

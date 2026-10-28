@@ -10,15 +10,7 @@ import {
   TRACER,
   TURRET,
 } from '../data/display';
-import {
-  ATLAS_KEY,
-  SPRITE_HEADING,
-  TILE_TYPES,
-  TOWER_BASES,
-  TURRET_FACING,
-  spriteFor,
-  type SpriteKind,
-} from '../data/sprites';
+import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { MAPS, mapById } from '../data/maps';
@@ -45,7 +37,7 @@ import {
   drawEffects,
   drawTracers,
 } from './drawEntities';
-import { drawGrid, drawMap, tileType } from './drawMap';
+import { drawGrid, drawMap } from './drawMap';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, type GameSpeed } from './gameSpeed';
@@ -58,6 +50,7 @@ import { ghostAt, placeAt, type Ghost } from './placement';
 import { resolveClick } from './selection';
 import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
+import { TILESET_FRAMES, tileArt } from './tileset';
 import { aimAngle, turnToward } from './turret';
 import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
@@ -162,6 +155,8 @@ export class GameScene extends Phaser.Scene {
   private mapId: string = MAPS[0]!.id;
   private sim!: Game;
   private loop!: FixedStep;
+  /** How the map was drawn, for the test view. */
+  private mapTiles: TestView['mapTiles'] = 'shapes';
   /** The player's game speed. Each game starts at the default speed in the settings. */
   private gameSpeed: GameSpeed = 1;
   private hud!: Hud;
@@ -276,6 +271,7 @@ export class GameScene extends Phaser.Scene {
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
       sprites: this.textures.exists(ATLAS_KEY),
+      mapTiles: this.mapTiles,
       enemies: this.enemyViews.views().map(({ id, kind, heading, frame }) => ({ id, kind, facing: heading, frame })),
       turrets: [...this.towerViewById].map(([towerId, { angle }]) => ({ towerId, angle })),
     };
@@ -301,24 +297,35 @@ export class GameScene extends Phaser.Scene {
     return { sprite, graphics: onLayer(this.add.graphics(), layer).setPosition(x, y) };
   }
 
-  /** The map's tiles as sprites with the grid on top, or as shapes when the atlas lacks a tile frame. */
-  private drawMapView(): void {
+  /**
+   * The map from the tileset: ground and road tiles, the grid, then decorations over it. Flat shapes instead when the
+   * atlas lacks any tileset frame. Returns which it drew.
+   */
+  private drawMapView(): 'sprites' | 'shapes' {
     const { map } = this.sim.state;
-    if (!TILE_TYPES.every((type) => this.frameFor(type) !== null))
-      return drawMap(onLayer(this.add.graphics(), 'map'), map);
-    // The tiles never change, so they are drawn once onto one texture: a game object per tile slows every frame.
-    const tiles = onLayer(this.add.renderTexture(0, 0, map.cols * TILE_PX, map.rows * TILE_PX).setOrigin(0, 0), 'map');
-    const stamps: Phaser.GameObjects.Image[] = [];
-    for (let row = 0; row < map.rows; row++) {
-      for (let col = 0; col < map.cols; col++) {
-        const { x, y } = toPixels(tileCenter({ col, row }));
-        const frame = this.frameFor(tileType(map, { col, row }))!;
-        stamps.push(new Phaser.GameObjects.Image(this, x, y, ATLAS_KEY, frame).setScale(SPRITE_SCALE));
-      }
+    if (!TILESET_FRAMES.every((frame) => this.atlasFrame(frame) !== null)) {
+      drawMap(onLayer(this.add.graphics(), 'map'), map);
+      return 'shapes';
     }
-    tiles.draw(stamps);
-    stamps.forEach((stamp) => stamp.destroy());
+    const art = tileArt(map);
+    const stamp = (tile: Tile, frame: string) => {
+      const { x, y } = toPixels(tileCenter(tile));
+      return new Phaser.GameObjects.Image(this, x, y, ATLAS_KEY, frame).setScale(SPRITE_SCALE);
+    };
+    // The ground never changes, so it is drawn once onto one texture: a game object per tile slows every frame.
+    const ground = onLayer(this.add.renderTexture(0, 0, map.cols * TILE_PX, map.rows * TILE_PX).setOrigin(0, 0), 'map');
+    const stamps = art.map(({ tile, ground: frame, tint }) => {
+      const image = stamp(tile, frame);
+      if (tint !== undefined) image.setTint(tint);
+      return image;
+    });
+    ground.draw(stamps);
+    stamps.forEach((image) => image.destroy());
     drawGrid(onLayer(this.add.graphics(), 'map'), map);
+    for (const { tile, decoration } of art) {
+      if (decoration !== null) onLayer(this.add.existing(stamp(tile, decoration)), 'map');
+    }
+    return 'sprites';
   }
 
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
@@ -338,7 +345,7 @@ export class GameScene extends Phaser.Scene {
     this.ghost = undefined;
     this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
     this.gameSpeed = this.settings.get().defaultSpeed;
-    this.drawMapView();
+    this.mapTiles = this.drawMapView();
     this.loop = createFixedStep({
       stepMs: TICK_MS,
       // Scaled with ?speed and the fastest game speed, so the cap doesn't pull a faster loop back to real time.
