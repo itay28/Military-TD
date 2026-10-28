@@ -1,3 +1,4 @@
+import type { EnemyKind } from '../data/enemies';
 import type { Pixel } from '../scenes/coords';
 import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
@@ -48,6 +49,16 @@ export interface TestView {
   readonly sprites: boolean;
   /** How the map was drawn: from the tileset, or as flat shapes when the atlas lacks a tileset frame. */
   readonly mapTiles: 'sprites' | 'shapes';
+  /**
+   * Each enemy drawn: `facing` is the way it is heading, in radians on the canvas (0 east, π/2 south); `frame` its
+   * movement animation frame (always 0 with `?anim=0`).
+   */
+  readonly enemies: readonly {
+    readonly id: number;
+    readonly kind: EnemyKind;
+    readonly facing: number;
+    readonly frame: number;
+  }[];
   /**
    * Each tower's turret angle in radians (0 east, −π/2 north), as turned so far toward its target. Tracked for every
    * tower, drawn only for one with a turret sprite.
