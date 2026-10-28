@@ -6,7 +6,9 @@ import { MAPS, mapById } from '../data/maps';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
+import { starsFor, unlocksNext } from '../sim/progression';
 import { setUpGame, type GameSetup } from '../sim/scenario';
+import type { ProgressStore, WinStars } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
 import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
@@ -36,7 +38,7 @@ import { resolveClick } from './selection';
 import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
 import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
-import { mountEndScreen, type EndScreen } from '../ui/endScreen';
+import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import type { OpenSettings } from '../ui/settingsScreen';
@@ -100,6 +102,8 @@ export interface GameSceneOptions {
   readonly settings: SettingsStore;
   /** Opens the Settings screen, from the pause menu. */
   readonly openSettings: OpenSettings;
+  /** Saved progress: each Victory records its Stars here. */
+  readonly progress: ProgressStore;
   /** Called at the end of every create(), the first game's and each restart's. */
   readonly onCreate?: () => void;
 }
@@ -114,6 +118,7 @@ export class GameScene extends Phaser.Scene {
   private readonly flags: TestFlags;
   private readonly settings: SettingsStore;
   private readonly openSettings: OpenSettings;
+  private readonly progress: ProgressStore;
   private readonly onCreate: (() => void) | undefined;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
   private setup: GameSetup = {};
@@ -126,6 +131,8 @@ export class GameScene extends Phaser.Scene {
   private hud!: Hud;
   private buildBar!: BuildBar;
   private endScreen!: EndScreen;
+  /** What this game's Victory earned, once it is won. */
+  private result: VictoryResult | undefined;
   private towerPanel!: TowerPanel;
   private pauseMenu!: PauseMenu;
   private enemyViews!: ViewSync<Enemy>;
@@ -169,6 +176,7 @@ export class GameScene extends Phaser.Scene {
     flags,
     settings,
     openSettings,
+    progress,
     onCreate,
   }: GameSceneOptions) {
     super('Game');
@@ -180,6 +188,7 @@ export class GameScene extends Phaser.Scene {
     this.flags = flags;
     this.settings = settings;
     this.openSettings = openSettings;
+    this.progress = progress;
     this.onCreate = onCreate;
   }
 
@@ -280,6 +289,14 @@ export class GameScene extends Phaser.Scene {
     this.allRingsKey = '';
     this.ghost = undefined;
     this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
+    this.result = undefined;
+    // A Victory records its Stars against the map played (a loaded scenario's own map included); Defeat records nothing.
+    const { lives: startLives, map } = this.sim.state;
+    this.sim.events.on('victory', ({ lives }) => {
+      // Victory always leaves Lives, so at least 1 star.
+      const stars = starsFor(lives, startLives);
+      if (stars !== 0) this.result = this.recordWin(map.id, stars);
+    });
     this.gameSpeed = this.settings.get().defaultSpeed;
     this.drawMapView();
     this.loop = createFixedStep({
@@ -379,7 +396,10 @@ export class GameScene extends Phaser.Scene {
     });
     this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
-    this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
+    this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, {
+      onRestart: () => this.scene.restart(),
+      result: () => this.result,
+    });
     this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim);
     // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
     // build bar's and tower panel's Esc (cancel a selection) runs before its own (pause).
@@ -397,6 +417,18 @@ export class GameScene extends Phaser.Scene {
       this.pauseMenu.destroy();
     });
     this.onCreate?.();
+  }
+
+  /** Saves a win of `mapId` and says what it earned, including the next map when this win unlocked it. */
+  private recordWin(mapId: string, stars: WinStars): VictoryResult {
+    const index = MAPS.findIndex((entry) => entry.id === mapId);
+    const unlocks = unlocksNext(
+      index,
+      MAPS.map((entry) => entry.id),
+      this.progress.get(),
+    );
+    this.progress.recordResult(mapId, stars);
+    return unlocks ? { stars, unlockedMap: MAPS[index + 1]!.name } : { stars };
   }
 
   /** The camera's limits now: the canvas size and the map's size in world pixels. */
