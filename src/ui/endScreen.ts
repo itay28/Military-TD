@@ -121,7 +121,8 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
     report.replaceChildren(...buildReport(doc, damageReport(game.state.stats)));
     root.hidden = false;
-    restart.focus();
+    // Focusing the last child would scroll a tall report to the bottom, hiding the title.
+    restart.focus({ preventScroll: true });
   };
   update();
   return {

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { damageReport } from '../sim/report';
@@ -91,6 +91,16 @@ describe('End screen', () => {
     expect(labelId && document.getElementById(labelId)?.textContent).toBe('Defeat');
     expect(restart()?.textContent).toBe('Restart');
     expect(document.activeElement).toBe(restart());
+  });
+
+  it('focuses Restart without scrolling the dialog', () => {
+    const game = newGame(1);
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    playWave(game);
+    end.update();
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    focus.mockRestore();
   });
 
   it('clicking Restart calls onRestart once', () => {
