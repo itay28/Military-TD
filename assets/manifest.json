@@ -1,0 +1,64 @@
+{
+  "packs": [
+    {
+      "id": "kenney-tower-defense",
+      "name": "Tower Defense (Top-Down)",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/tower-defense-top-down",
+      "license": "CC0-1.0",
+      "attribution": "Tower Defense (Top-Down) by Kenney (kenney.nl), CC0",
+      "downloaded": "2026-10-27",
+      "files": ["assets/kenney-tower-defense/**"]
+    },
+    {
+      "id": "kenney-top-down-tanks",
+      "name": "Top-down Tanks Remastered",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/top-down-tanks-remastered",
+      "license": "CC0-1.0",
+      "attribution": "Top-down Tanks Remastered by Kenney (kenney.nl), CC0",
+      "downloaded": "2026-10-27",
+      "files": ["assets/kenney-top-down-tanks/**"]
+    },
+    {
+      "id": "kenney-ui-pack",
+      "name": "UI Pack",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/ui-pack",
+      "license": "CC0-1.0",
+      "attribution": "UI Pack by Kenney (kenney.nl), CC0",
+      "downloaded": "2026-10-27",
+      "files": ["assets/kenney-ui-pack/**"]
+    },
+    {
+      "id": "kenney-top-down-shooter",
+      "name": "Topdown Shooter",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/top-down-shooter",
+      "license": "CC0-1.0",
+      "attribution": "Topdown Shooter by Kenney (kenney.nl), CC0",
+      "downloaded": "2026-10-27",
+      "files": ["assets/kenney-top-down-shooter/**"]
+    },
+    {
+      "id": "spriteattack-topdown-extras",
+      "name": "FreeArt - Topdown extras",
+      "author": "SpriteAttack",
+      "source": "https://opengameart.org/content/freeart-topdown-extras",
+      "license": "CC0-1.0",
+      "attribution": "FreeArt - Topdown extras by SpriteAttack (OpenGameArt.org), CC0",
+      "downloaded": "2026-10-27",
+      "files": ["assets/spriteattack-topdown-extras/**"]
+    },
+    {
+      "id": "morgan3d-chopper",
+      "name": "Attack Helicopter",
+      "author": "Morgan McGuire (morgan3d)",
+      "source": "https://opengameart.org/content/attack-helicopter-0",
+      "license": "CC-BY-4.0",
+      "attribution": "Attack Helicopter, Copyright 2020 Morgan McGuire @CasualEffects, CC-BY 4.0",
+      "downloaded": "2026-10-27",
+      "files": ["assets/morgan3d-chopper/**"]
+    }
+  ]
+}
