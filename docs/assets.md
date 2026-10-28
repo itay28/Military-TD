@@ -89,6 +89,6 @@ Map and effects: `tileGrass1`/`tileGrass2` ground, `tileGrass_road{East,North,Co
 
 ## Candidate sources
 
-- **Kenney** (kenney.nl): CC0. Tower Defense (Top-Down), Top-down Tanks Redux, UI Pack, Impact/Interface sounds, Music Jingles.
+- **Kenney** (kenney.nl): CC0. Tower Defense (Top-Down), Top-down Tanks Remastered (formerly Redux), UI Pack, Impact/Interface sounds, Music Jingles.
 - **OpenGameArt.org**: mixed licenses. Check each item.
 - **itch.io free asset packs**: mixed licenses. Many are "free for personal use" only, which isn't allowed here.
