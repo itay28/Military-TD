@@ -52,7 +52,7 @@ test('the Settings screen shows the default game speed choices, the range settin
   await expectAria(page.locator('#settings'), 'settings-screen.aria.yml');
 });
 
-test('the Level select lists each map by name, then Back', async ({ page }) => {
+test('the Level select lists each map by name and best stars, then Back', async ({ page }) => {
   await openLevelSelect(page);
   await expectAria(page.locator('#level-select'), 'level-select-initial.aria.yml');
 });
