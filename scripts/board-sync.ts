@@ -14,6 +14,8 @@ import {
   READY_LABEL,
   requestSizing,
   retryIssue,
+  giveUpIssue,
+  SPLIT_PART_LABEL,
   startIssue,
   type RetryIssue,
   type Routines,
@@ -493,6 +495,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
           hold: labels.includes(HOLD_LABEL),
           needsYou: labels.includes(NEEDS_YOU_LABEL),
           needsInfo: labels.includes(NEEDS_INFO_LABEL),
+          splitPart: labels.includes(SPLIT_PART_LABEL),
         });
     }
     cursor = project.items.pageInfo.hasNextPage ? project.items.pageInfo.endCursor : null;
@@ -619,6 +622,18 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   // The issues an agent started on this run; the first one closes the idle issue (#226).
   const started: number[] = [];
   for (const retry of retries) {
+    if (retry.giveUp) {
+      const gaveUp = `#${retry.issue}: its retry died too; ${retry.giveUp === 'split' ? 'asking the split agent' : 'handing it to the maintainer'}`;
+      if (dryRun) console.log(`${gaveUp} (dry run)`);
+      else
+        try {
+          await giveUpIssue(retry, token);
+          console.log(gaveUp);
+        } catch (error) {
+          failures.push(`#${retry.issue}: giving up failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      continue;
+    }
     const what = `#${retry.issue}: retry ${retry.model} on ${retry.branch ?? retry.base} (no activity for 1 h)`;
     if (limited.has(retry.model)) {
       console.log(`${what}: skipped, the ${retry.model} routine refused a fire this run; retrying next run`);

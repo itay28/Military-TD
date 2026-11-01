@@ -10,7 +10,7 @@ What an unattended agent (the implement and PR steward routines) needs to work o
 
 ## Steps
 1. **Plan comment** on the issue: modules and interfaces, test seams, the test list, decisions. Within the acceptance criteria, it's the go-ahead; a scope change is a `needs-info` question instead.
-2. **Progress comments**, one or two lines each: red, green, PR opened, ready. An hour without one counts as a dead session.
+2. **Progress comments**, one or two lines each: red, green, PR opened, ready. End each with a `Next:` line and push work in progress with it, so a retry continues from there instead of starting over. An hour without one counts as a dead session; a session gets one retry, then the issue is split.
 3. **No session tracker.** It's for sessions a maintainer works in; here the issue comments are the log.
 4. **Verify**: `npm run check`; `npm run test:e2e` only when the UI changed.
 5. **UI changes**: screenshots of each touched state in the PR body (`workflow.md` → **4b**). Screenshot baselines failing on purpose: `workflow.md` → **Screenshot baselines** (in **2. Tests first**).
