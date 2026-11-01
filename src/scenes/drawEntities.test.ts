@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
 import {
   AIR_SHADOW,
+  EFFECT,
   ENEMY_STYLE,
   GHOST,
   HP_BAR,
@@ -18,6 +19,7 @@ import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
 import {
   drawBlasts,
+  drawEffects,
   drawEnemy,
   drawGhost,
   drawHpBar,
@@ -155,6 +157,19 @@ describe('drawEnemy (Helicopter)', () => {
       ['lineBetween', -s, -s, s, s],
       ['lineBetween', -s, s, s, -s],
     ]);
+  });
+
+  it('turns the rotor by rotorAngle: a quarter of its 90° symmetry sits it square', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, helicopter, Math.PI / 4);
+    const d = ENEMY_STYLE.helicopter.rotor * Math.SQRT2; // the blade tip's distance from the hub
+    const lines = calls.filter((c) => c[0] === 'lineBetween').map(([, ...xy]) => xy);
+    const expected = [
+      [0, -d, 0, d],
+      [-d, 0, d, 0],
+    ];
+    expect(lines).toHaveLength(2);
+    lines.forEach((line, i) => line.forEach((v, j) => expect(v).toBeCloseTo(expected[i]![j]!)));
   });
 
   it('gives a ground enemy no rotor', () => {
@@ -389,6 +404,33 @@ describe('drawBlasts', () => {
     expect(calls).toEqual([
       ['lineStyle', SHELL.blastWidth, SHELL.blastColor, 0.5],
       ['strokeCircle', 10, 20, 48],
+    ]);
+  });
+});
+
+describe('drawEffects', () => {
+  const at = { x: 10, y: 20 };
+
+  it('draws a muzzle flash as a small disc that fades out', () => {
+    const { painter, calls } = recordingPainter();
+    drawEffects(painter, [{ kind: 'muzzleFlash', at, progress: 0.5 }]);
+    expect(calls).toEqual([
+      ['fillStyle', EFFECT.muzzleFlash.color, 0.5],
+      ['fillCircle', 10, 20, EFFECT.muzzleFlash.radius],
+    ]);
+  });
+
+  it('grows an explosion and a puff as they age', () => {
+    const { painter, calls } = recordingPainter();
+    drawEffects(painter, [
+      { kind: 'explosion', at, progress: 0 },
+      { kind: 'puff', at, progress: 1 },
+    ]);
+    expect(calls).toEqual([
+      ['fillStyle', EFFECT.explosion.color, 1],
+      ['fillCircle', 10, 20, EFFECT.explosion.radius],
+      ['fillStyle', EFFECT.puff.color, 0],
+      ['fillCircle', 10, 20, EFFECT.puff.radius * EFFECT.puff.growth],
     ]);
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import {
+  CLEAN_REVIEW_MARKER,
   DONE_MARKER,
   REVIEW_HEADING,
   REVIEW_REQUEST_MARKER,
@@ -18,7 +19,9 @@ import {
   mainCiRed,
   mainRedFrom,
   milestoneDone,
+  PR_QUERY,
   settingsFromEnv,
+  toStewardPr,
   type Decision,
   type PrComment,
   type StewardPr,
@@ -202,6 +205,13 @@ describe('milestoneDone', () => {
   it('is not done when the open issues were truncated', () => {
     expect(milestoneDone([issue('release')], true)).toBe(false);
   });
+
+  // 100 issues per milestone with their labels were most of the query's GraphQL cost (#293).
+  it('reads only a few open issues per milestone, with their page info so a longer list counts as not done', () => {
+    expect(PR_QUERY).toMatch(
+      /milestones\(states: OPEN, first: \d+\) \{\s*nodes \{ number title dueOn issues\(states: OPEN, first: 5\) \{ pageInfo \{ hasNextPage \}/,
+    );
+  });
 });
 
 describe('decide: wait', () => {
@@ -281,6 +291,12 @@ describe('decide: steward rounds', () => {
     expect(reasons(pr({ comments: [agent(DONE_MARKER, 30), review(10)] }))).toEqual(['review']);
   });
 
+  it('fires no round for a clean CI review: nothing to answer (#303)', () => {
+    const clean = { ...review(10), body: `${REVIEW_HEADING}\n\nNo findings.\n\n${CLEAN_REVIEW_MARKER}` };
+    expect(kind(pr({ comments: [clean] }))).toBe('merge');
+    expect(reasons(pr({ comments: [clean], unresolvedThreads: 1 }))).toEqual(['threads']);
+  });
+
   it('fires for a maintainer comment after the last round, and for unresolved threads', () => {
     expect(reasons(pr({ comments: [review(60), agent(DONE_MARKER, 30), maintainer(5)] }))).toEqual(['comment']);
     expect(reasons(pr({ unresolvedThreads: 2 }))).toEqual(['threads']);
@@ -330,7 +346,7 @@ describe('decide: steward rounds', () => {
         ...after(round(400, ['ci'], 'base-a'), 395),
         ...after(round(300, ['conflict', 'ci'], 'base-b'), 295),
       ];
-      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'steward', round: 3 });
+      expect(decide(pr({ ...conflict, comments }), now)).toMatchObject({ kind: 'stuck' });
     });
 
     it('counts rounds whose marker has no meta line', () => {
@@ -398,14 +414,19 @@ describe('decide: steward rounds', () => {
       });
     });
 
-    it('never hands off a PR whose rounds all died', () => {
-      const dead = [500, 400, 300, 200].map((m) => action(ROUND_MARKER, m));
-      expect(decide(pr({ ...red, comments: dead }), now)).toMatchObject({ kind: 'steward', round: 1, retry: true });
+    it('retries only one dead round for free: the next one counts (#303)', () => {
+      const twoDead = [300, 200].map((m) => action(ROUND_MARKER, m));
+      expect(decide(pr({ ...red, comments: twoDead }), now)).toMatchObject({ kind: 'steward', round: 2, retry: true });
     });
 
-    it('counts only the rounds that finished', () => {
-      const comments = [...done(500), action(ROUND_MARKER, 400), ...done(300), action(ROUND_MARKER, 200)];
-      expect(decide(pr({ ...red, comments }), now)).toMatchObject({ kind: 'steward', round: 3, retry: true });
+    it('hands off a PR whose rounds keep dying (#303)', () => {
+      const dead = [400, 300, 200].map((m) => action(ROUND_MARKER, m));
+      expect(decide(pr({ ...red, comments: dead }), now)).toEqual({ kind: 'stuck', reasons: ['ci'] });
+    });
+
+    it('does not count the first dead round', () => {
+      const comments = [action(ROUND_MARKER, 400), ...done(300)];
+      expect(decide(pr({ ...red, comments }), now)).toMatchObject({ kind: 'steward', round: 2, retry: false });
     });
 
     it('is not a retry when the last round finished', () => {
@@ -415,15 +436,15 @@ describe('decide: steward rounds', () => {
       });
     });
 
-    it('still hands off once 3 rounds finished, dead ones in between', () => {
-      const comments = [...done(600), action(ROUND_MARKER, 500), ...done(400), ...done(300)];
+    it('still hands off once 2 rounds finished, a dead one in between', () => {
+      const comments = [...done(600), action(ROUND_MARKER, 500), ...done(400)];
       expect(decide(pr({ ...red, comments }), now)).toEqual({ kind: 'stuck', reasons: ['ci'] });
     });
   });
 
-  it('hands off as stuck once 3 rounds were used', () => {
-    const three = [400, 300, 200].flatMap((m) => [action(ROUND_MARKER, m + 5), agent(DONE_MARKER, m)]);
-    expect(decide(pr({ checks: [{ name: 'ci', state: 'failure' }], comments: three }), now)).toEqual({
+  it('hands off as stuck once 2 rounds were used (#303)', () => {
+    const two = [300, 200].flatMap((m) => [action(ROUND_MARKER, m + 5), agent(DONE_MARKER, m)]);
+    expect(decide(pr({ checks: [{ name: 'ci', state: 'failure' }], comments: two }), now)).toEqual({
       kind: 'stuck',
       reasons: ['ci'],
     });
@@ -799,6 +820,45 @@ const fireOk = vi.fn<Fetch>(async (url: string) =>
   url.startsWith('https://fire.example') ? ok({ claude_code_session_url: 'https://claude.ai/code/session_1' }) : ok(),
 );
 
+// A PR's baseRefOid only moves when its head is pushed, so a later merge into the base looked
+// like the conflict a round had already resolved (#296).
+describe('toStewardPr: base SHA', () => {
+  const node = (over: Partial<Parameters<typeof toStewardPr>[0]> = {}): Parameters<typeof toStewardPr>[0] => ({
+    number: 1,
+    title: 't',
+    body: '',
+    isDraft: false,
+    isCrossRepository: false,
+    baseRefName: 'main',
+    baseRefOid: 'stale',
+    baseRef: { target: { oid: 'tip' } },
+    headRefName: 'feat/x',
+    headRefOid: 'head',
+    mergeable: 'CONFLICTING',
+    mergeStateStatus: 'DIRTY',
+    labels: { nodes: [] },
+    reviewThreads: { nodes: [] },
+    closingIssuesReferences: { nodes: [] },
+    comments: { nodes: [] },
+    files: null,
+    recentCommits: { nodes: [] },
+    commits: { nodes: [] },
+    ...over,
+  });
+
+  it("is the base branch's current tip, not the PR's recorded base", () => {
+    expect(toStewardPr(node()).baseSha).toBe('tip');
+  });
+
+  it('falls back to the recorded base when the base branch is gone', () => {
+    expect(toStewardPr(node({ baseRef: null })).baseSha).toBe('stale');
+  });
+
+  it("asks GitHub for the base branch's tip", () => {
+    expect(PR_QUERY).toMatch(/baseRef \{ target \{ oid \} \}/);
+  });
+});
+
 describe('act', () => {
   const steward: Decision = {
     kind: 'steward',
@@ -815,7 +875,7 @@ describe('act', () => {
     const { text } = JSON.parse(fireOk.mock.calls[0]![1].body as string) as { text: string };
     expect(text).toContain('PR: #7');
     expect(text).toContain('Reasons: ci, review');
-    expect(text).toContain('Round: 2 of 3');
+    expect(text).toContain('Round: 2 of 2');
     const { body } = JSON.parse(fireOk.mock.calls[1]![1].body as string) as { body: string };
     expect(body).toContain(ROUND_MARKER);
     expect(body).toContain('https://claude.ai/code/session_1');

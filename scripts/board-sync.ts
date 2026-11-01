@@ -14,12 +14,16 @@ import {
   READY_LABEL,
   requestSizing,
   retryIssue,
+  MAX_AGENTS,
+  giveUpIssue,
+  SPLIT_PART_LABEL,
   startIssue,
   type RetryIssue,
   type Routines,
   type SizingCandidate,
   type StartIssue,
 } from './auto-start.ts';
+import { ApiMeter, softFail } from './rate-limit.ts';
 import { applyIdle, findIdleIssue, idleReasons, isStarved, planIdle, type IdleIssue } from './pipeline-idle.ts';
 
 // Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule
@@ -378,31 +382,59 @@ const SET_FIELD = `mutation($project: ID!, $item: ID!, $field: ID!, $option: Str
   }
 }`;
 
-// What the retry check reads for one `auto-agent` issue (#201): its latest comments, and its PR's
-// latest commit and comment.
-const RETRY_QUERY = `query($owner: String!, $name: String!, $issue: Int!, $pr: Int!, $hasPr: Boolean!) {
-  repository(owner: $owner, name: $name) {
-    issue(number: $issue) { comments(last: 100) { nodes { body createdAt } } }
-    pullRequest(number: $pr) @include(if: $hasPr) {
-      comments(last: 1) { nodes { createdAt } }
-      commits(last: 1) { nodes { commit { committedDate } } }
-    }
-  }
-}`;
+/** A claimed issue the retry check reads (#201), with its draft PR when it has one. */
+export interface RetryTarget {
+  readonly issue: number;
+  readonly pr?: number;
+}
 
-interface RetryData {
-  repository: {
-    issue: { comments: { nodes: { body: string; createdAt: string }[] } } | null;
-    pullRequest?: {
-      comments: { nodes: { createdAt: string }[] };
-      commits: { nodes: { commit: { committedDate: string } }[] };
-    } | null;
+/**
+ * One query for every claimed issue (#293): each issue's comments as `i<k>`, and its PR's last
+ * comment and commit as `p<k>`, where k is its place in the list. One call each cost a request
+ * per `auto-agent` issue on every run.
+ */
+export function retryQuery(targets: readonly RetryTarget[]): string {
+  const parts = targets.map(
+    (t, k) =>
+      `i${k}: issue(number: ${t.issue}) { comments(last: 100) { nodes { body createdAt } } }` +
+      (t.pr === undefined
+        ? ''
+        : `\n    p${k}: pullRequest(number: ${t.pr}) { comments(last: 1) { nodes { createdAt } } commits(last: 1) { nodes { commit { committedDate } } } }`),
+  );
+  return `query($owner: String!, $name: String!) {\n  repository(owner: $owner, name: $name) {\n    ${parts.join('\n    ')}\n  }\n}`;
+}
+
+interface RetryIssueNode {
+  comments: { nodes: { body: string; createdAt: string }[] };
+}
+interface RetryPrNode {
+  comments: { nodes: { createdAt: string }[] };
+  commits: { nodes: { commit: { committedDate: string } }[] };
+}
+/** A `retryQuery` answer: `i<k>` holds issue nodes, `p<k>` PR nodes. */
+type RetryData = Record<string, RetryIssueNode | RetryPrNode | null | undefined>;
+
+/** The `k`th target's issue comments and its PR's latest activity, from a `retryQuery` answer. */
+export function readRetry(
+  repository: RetryData,
+  k: number,
+): { comments: { body: string; createdAt: string }[]; activity: string[] } {
+  const issue = repository[`i${k}`] as RetryIssueNode | null | undefined;
+  const pr = repository[`p${k}`] as RetryPrNode | null | undefined;
+  return {
+    comments: issue?.comments.nodes ?? [],
+    activity: [
+      ...(pr?.comments.nodes.map((c) => c.createdAt) ?? []),
+      ...(pr?.commits.nodes.map((c) => c.commit.committedDate) ?? []),
+    ],
   };
 }
 
 /** What auto-start needs beyond a sync: off unless AUTO_SPAWN is `on`. */
 export interface AutoStart {
   readonly stack: boolean;
+  /** At most this many `auto-agent` issues In progress: AUTO_MAX_AGENTS, MAX_AGENTS when unset (#303). */
+  readonly cap: number;
   readonly routines: Routines;
 }
 
@@ -466,6 +498,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
           hold: labels.includes(HOLD_LABEL),
           needsYou: labels.includes(NEEDS_YOU_LABEL),
           needsInfo: labels.includes(NEEDS_INFO_LABEL),
+          splitPart: labels.includes(SPLIT_PART_LABEL),
         });
     }
     cursor = project.items.pageInfo.hasNextPage ? project.items.pageInfo.endCursor : null;
@@ -571,32 +604,39 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   const limited = new Set<string>();
 
   // Dead implement sessions first (#201): fired again on their branch, keeping the claim and slot.
-  const retryIssues: RetryIssue[] = [];
-  for (const i of claimed) {
-    if (i.hold || i.needsYou || i.needsInfo) continue;
-    const pr = openPrs.find((p) => p.issues.includes(i.number));
-    if (pr && !pr.isDraft) continue;
-    const { repository: r } = await graphql<RetryData>(token, RETRY_QUERY, {
-      owner: OWNER,
-      name: REPO,
-      issue: i.number,
-      pr: pr?.number ?? 0,
-      hasPr: !!pr,
-    });
-    const activity = [
-      ...(r.pullRequest?.comments.nodes.map((c) => c.createdAt) ?? []),
-      ...(r.pullRequest?.commits.nodes.map((c) => c.commit.committedDate) ?? []),
-    ];
-    retryIssues.push({
-      ...i,
-      comments: r.issue?.comments.nodes ?? [],
-      ...(pr ? { pr: { number: pr.number, head: pr.head, draft: pr.isDraft, activity } } : {}),
-    });
-  }
+  const candidates = claimed
+    .filter((i) => !i.hold && !i.needsYou && !i.needsInfo)
+    .map((i) => ({ ...i, pr: openPrs.find((p) => p.issues.includes(i.number)) }))
+    .filter((i) => !i.pr || i.pr.isDraft);
+  const retryData = candidates.length
+    ? (
+        await graphql<{ repository: RetryData }>(
+          token,
+          retryQuery(candidates.map((i) => ({ issue: i.number, ...(i.pr ? { pr: i.pr.number } : {}) }))),
+          { owner: OWNER, name: REPO },
+        )
+      ).repository
+    : {};
+  const retryIssues: RetryIssue[] = candidates.map(({ pr, ...i }, k) => {
+    const { comments, activity } = readRetry(retryData, k);
+    return { ...i, comments, ...(pr ? { pr: { number: pr.number, head: pr.head, draft: pr.isDraft, activity } } : {}) };
+  });
   const retries = planRetries(retryIssues, Date.now());
   // The issues an agent started on this run; the first one closes the idle issue (#226).
   const started: number[] = [];
   for (const retry of retries) {
+    if (retry.giveUp) {
+      const gaveUp = `#${retry.issue}: its retry died too; ${retry.giveUp === 'split' ? 'asking the split agent' : 'handing it to the maintainer'}`;
+      if (dryRun) console.log(`${gaveUp} (dry run)`);
+      else
+        try {
+          await giveUpIssue(retry, token);
+          console.log(gaveUp);
+        } catch (error) {
+          failures.push(`#${retry.issue}: giving up failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      continue;
+    }
     const what = `#${retry.issue}: retry ${retry.model} on ${retry.branch ?? retry.base} (no activity for 1 h)`;
     if (limited.has(retry.model)) {
       console.log(`${what}: skipped, the ${retry.model} routine refused a fire this run; retrying next run`);
@@ -623,7 +663,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     ...i,
     status: moved.get(i.number) ?? i.status,
   }));
-  const plan = planStarts(startable, openPrs, order, { defaultBranch, stack: autoStart.stack });
+  const plan = planStarts(startable, openPrs, order, { defaultBranch, stack: autoStart.stack, cap: autoStart.cap });
   if (!plan.starts.length) console.log('Auto-start: nothing to start.');
   for (const start of plan.starts) {
     const what = `#${start.issue}: start ${start.model} on ${start.base}`;
@@ -692,8 +732,15 @@ export function autoStartFromEnv(env: Readonly<Record<string, string | undefined
       );
     return value;
   };
+  const max = env['AUTO_MAX_AGENTS']?.trim();
+  const cap = max ? Number(max) : MAX_AGENTS;
+  if (!Number.isInteger(cap) || cap < 1)
+    throw new Error(
+      `AUTO_MAX_AGENTS must be a whole number of at least 1, not "${max}" (docs/agents/issue-tracker.md → Auto-start).`,
+    );
   return {
     stack: env['AUTO_STACK']?.trim() === 'on',
+    cap,
     routines: {
       sonnet: { url: read('ROUTINE_SONNET_URL'), token: read('ROUTINE_SONNET_TOKEN') },
       opus: { url: read('ROUTINE_OPUS_URL'), token: read('ROUTINE_OPUS_TOKEN') },
@@ -702,9 +749,10 @@ export function autoStartFromEnv(env: Readonly<Record<string, string | undefined
 }
 
 // CLI: `node scripts/board-sync.ts [--dry-run]`, with PROJECT_TOKEN (classic PAT, project + repo scopes).
-// Auto-start reads AUTO_SPAWN, AUTO_STACK and the ROUTINE_* secrets (autoStartFromEnv); --dry-run
+// Auto-start reads AUTO_SPAWN, AUTO_STACK, AUTO_MAX_AGENTS and the ROUTINE_* secrets (autoStartFromEnv); --dry-run
 // logs what it would start. A missing token or an API error fails the run, so a board that isn't
-// syncing shows up red.
+// syncing shows up red; an exhausted API quota doesn't (#293): the run logs the reset time and
+// passes, and the next one catches up. Every run ends with the requests it made and the quota left.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const token = process.env['PROJECT_TOKEN']?.trim();
   if (!token) {
@@ -722,12 +770,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     } catch (error) {
       setupError = error;
     }
+    const meter = new ApiMeter();
+    globalThis.fetch = meter.wrap(globalThis.fetch) as typeof fetch;
     try {
       await sync(token, process.argv.includes('--dry-run'), autoStart);
     } catch (error) {
       console.error(error instanceof Error ? error.message : error);
-      process.exitCode = 1;
+      if (!softFail(meter)) process.exitCode = 1;
     }
+    console.log(meter.summary());
     if (setupError) {
       console.log(
         `::error::${setupError instanceof Error ? setupError.message : String(setupError)} Auto-start was skipped.`,

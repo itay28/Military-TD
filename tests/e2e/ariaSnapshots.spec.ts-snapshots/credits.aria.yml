@@ -1,0 +1,36 @@
+- main:
+  - heading "Credits" [level=1]
+  - heading "Tower Defense (Top-Down)" [level=2]
+  - paragraph: Kenney, CC0-1.0
+  - link "https://kenney.nl/assets/tower-defense-top-down":
+    - /url: https://kenney.nl/assets/tower-defense-top-down
+  - paragraph: Tower Defense (Top-Down) by Kenney (kenney.nl), CC0
+  - heading "Top-down Tanks Remastered" [level=2]
+  - paragraph: Kenney, CC0-1.0
+  - link "https://kenney.nl/assets/top-down-tanks-remastered":
+    - /url: https://kenney.nl/assets/top-down-tanks-remastered
+  - paragraph: Top-down Tanks Remastered by Kenney (kenney.nl), CC0
+  - heading "UI Pack" [level=2]
+  - paragraph: Kenney, CC0-1.0
+  - link "https://kenney.nl/assets/ui-pack":
+    - /url: https://kenney.nl/assets/ui-pack
+  - paragraph: UI Pack by Kenney (kenney.nl), CC0
+  - heading "Topdown Shooter" [level=2]
+  - paragraph: Kenney, CC0-1.0
+  - link "https://kenney.nl/assets/top-down-shooter":
+    - /url: https://kenney.nl/assets/top-down-shooter
+  - paragraph: Topdown Shooter by Kenney (kenney.nl), CC0
+  - heading "FreeArt - Topdown extras" [level=2]
+  - paragraph: SpriteAttack, CC0-1.0
+  - link "https://opengameart.org/content/freeart-topdown-extras":
+    - /url: https://opengameart.org/content/freeart-topdown-extras
+  - paragraph: FreeArt - Topdown extras by SpriteAttack (OpenGameArt.org), CC0
+  - heading "Attack Helicopter" [level=2]
+  - paragraph: Morgan McGuire (morgan3d), CC-BY-4.0
+  - link "https://opengameart.org/content/attack-helicopter-0":
+    - /url: https://opengameart.org/content/attack-helicopter-0
+  - paragraph: Attack Helicopter, Copyright 2020 Morgan McGuire @CasualEffects, CC-BY 4.0
+  - heading "Military TD" [level=2]
+  - paragraph: "Engine: Phaser"
+  - paragraph: "Code license: UNLICENSED"
+  - button "Back"

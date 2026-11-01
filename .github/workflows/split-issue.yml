@@ -1,0 +1,59 @@
+name: Split issue
+
+# The split agent (#303): when an implement session dies twice on an issue (the first fire and
+# its one retry), auto-start gives up on it and labels it `needs-split` (with PROJECT_TOKEN, so
+# this runs). Claude (Opus) splits it into 2–4 smaller issues that each fit one session, closes
+# the original, and dispatches Board sync, which can start the first part. Prompt:
+# docs/agents/prompts/split.md. A part that dies twice too is handed to the maintainer, not split
+# again (`split-part`). The agent only gets GITHUB_TOKEN.
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue number to split
+        required: true
+        type: number
+
+concurrency:
+  group: split-issue-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: false
+
+jobs:
+  split-issue:
+    # Only auto-start (it labels as the maintainer) or the maintainer starts it: anyone can't spend the plan.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'needs-split' && github.actor == github.repository_owner)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      # Pointing the dead session's draft PR at the first part.
+      pull-requests: write
+      # Dispatching Board sync afterwards.
+      actions: write
+      id-token: write
+    env:
+      ISSUE: ${{ github.event.issue.number || inputs.issue }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Split it
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Read docs/agents/prompts/split.md and follow it for issue #${{ env.ISSUE }} in ${{ github.repository }}.
+            You are running in CI. Nobody can answer questions, so don't ask any.
+          claude_args: '--model opus --allowedTools "Read,Glob,Grep,Bash(git log:*),Bash(git diff:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh issue close ${{ env.ISSUE }} *),Bash(gh pr view:*),Bash(gh pr edit:*),Bash(gh api repos/${{ github.repository }}/issues/*),Bash(gh api repos/${{ github.repository }}/milestones*)"'
+
+      # Issues made and labels set with GITHUB_TOKEN start no workflow, but a dispatch does.
+      - name: Run Board sync
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run board-sync.yml --repo ${{ github.repository }}
