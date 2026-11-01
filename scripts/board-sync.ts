@@ -14,6 +14,7 @@ import {
   READY_LABEL,
   requestSizing,
   retryIssue,
+  MAX_AGENTS,
   giveUpIssue,
   SPLIT_PART_LABEL,
   startIssue,
@@ -432,6 +433,8 @@ export function readRetry(
 /** What auto-start needs beyond a sync: off unless AUTO_SPAWN is `on`. */
 export interface AutoStart {
   readonly stack: boolean;
+  /** At most this many `auto-agent` issues In progress: AUTO_MAX_AGENTS, MAX_AGENTS when unset (#303). */
+  readonly cap: number;
   readonly routines: Routines;
 }
 
@@ -660,7 +663,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     ...i,
     status: moved.get(i.number) ?? i.status,
   }));
-  const plan = planStarts(startable, openPrs, order, { defaultBranch, stack: autoStart.stack });
+  const plan = planStarts(startable, openPrs, order, { defaultBranch, stack: autoStart.stack, cap: autoStart.cap });
   if (!plan.starts.length) console.log('Auto-start: nothing to start.');
   for (const start of plan.starts) {
     const what = `#${start.issue}: start ${start.model} on ${start.base}`;
@@ -729,8 +732,15 @@ export function autoStartFromEnv(env: Readonly<Record<string, string | undefined
       );
     return value;
   };
+  const max = env['AUTO_MAX_AGENTS']?.trim();
+  const cap = max ? Number(max) : MAX_AGENTS;
+  if (!Number.isInteger(cap) || cap < 1)
+    throw new Error(
+      `AUTO_MAX_AGENTS must be a whole number of at least 1, not "${max}" (docs/agents/issue-tracker.md → Auto-start).`,
+    );
   return {
     stack: env['AUTO_STACK']?.trim() === 'on',
+    cap,
     routines: {
       sonnet: { url: read('ROUTINE_SONNET_URL'), token: read('ROUTINE_SONNET_TOKEN') },
       opus: { url: read('ROUTINE_OPUS_URL'), token: read('ROUTINE_OPUS_TOKEN') },
@@ -739,7 +749,7 @@ export function autoStartFromEnv(env: Readonly<Record<string, string | undefined
 }
 
 // CLI: `node scripts/board-sync.ts [--dry-run]`, with PROJECT_TOKEN (classic PAT, project + repo scopes).
-// Auto-start reads AUTO_SPAWN, AUTO_STACK and the ROUTINE_* secrets (autoStartFromEnv); --dry-run
+// Auto-start reads AUTO_SPAWN, AUTO_STACK, AUTO_MAX_AGENTS and the ROUTINE_* secrets (autoStartFromEnv); --dry-run
 // logs what it would start. A missing token or an API error fails the run, so a board that isn't
 // syncing shows up red; an exhausted API quota doesn't (#293): the run logs the reset time and
 // passes, and the next one catches up. Every run ends with the requests it made and the quota left.

@@ -11,6 +11,7 @@ import {
   firedComment,
   giveUpIssue,
   NO_SIZE_MARKER,
+  MAX_AGENTS,
   MAX_SIZE_REQUESTS,
   planRetries,
   planSizingRequests,
@@ -537,12 +538,24 @@ describe('autoStartFromEnv: the AUTO_SPAWN switch', () => {
   it('reads both routines, and stacking only with AUTO_STACK on', () => {
     expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on' })).toEqual({
       stack: false,
+      cap: MAX_AGENTS,
       routines: {
         sonnet: { url: 'https://fire.example/sonnet', token: 's' },
         opus: { url: 'https://fire.example/opus', token: 'o' },
       },
     });
     expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_STACK: 'on' })?.stack).toBe(true);
+  });
+
+  it('caps agents In progress at AUTO_MAX_AGENTS, 5 when unset', () => {
+    expect(MAX_AGENTS).toBe(5);
+    expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_MAX_AGENTS: '' })?.cap).toBe(MAX_AGENTS);
+    expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_MAX_AGENTS: ' 2 ' })?.cap).toBe(2);
+  });
+
+  it('fails loudly on an AUTO_MAX_AGENTS that is not a whole number of at least 1', () => {
+    for (const bad of ['0', '-1', '2.5', 'two'])
+      expect(() => autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_MAX_AGENTS: bad })).toThrow(/AUTO_MAX_AGENTS/);
   });
 
   it('fails loudly when on without a routine secret', () => {
