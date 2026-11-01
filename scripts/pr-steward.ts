@@ -14,6 +14,8 @@ import { isMilestoneDone, releaseVersion } from './milestone-report.ts';
 
 /** Starts the CI review's comment (.github/workflows/claude-code-review.yml). */
 export const REVIEW_HEADING = '## Code review (mattpocock-skills:code-review)';
+/** Ends a CI review with no findings on either axis: nothing to answer, so no steward round (#303). */
+export const CLEAN_REVIEW_MARKER = '<!-- code-review:clean -->';
 /**
  * Posted by the Action when it asks for a missing CI review (#209), with the head commit it asked
  * for: a PR marked ready while it conflicts never starts the review workflow, as GitHub runs no
@@ -40,7 +42,8 @@ const parseRoundMeta = (body: string) => {
 
 /**
  * Whether a round (its marker) finished: a done marker came after it, before the next round
- * marker. A round that didn't died, most likely out of tokens; it's retried and never counted (#200).
+ * marker. A round that didn't died, most likely out of tokens; it's retried (#200), and only the
+ * first dead round is free (#303).
  */
 function finishedRound(comments: readonly PrComment[]): (round: PrComment) => boolean {
   const times = (marker: string) => comments.filter((c) => c.body.includes(marker)).map((c) => Date.parse(c.createdAt));
@@ -54,15 +57,18 @@ function finishedRound(comments: readonly PrComment[]): (round: PrComment) => bo
 }
 
 /**
- * Rounds that count toward MAX_ROUNDS among `rounds` (round markers): only finished ones. A
+ * Rounds that count toward MAX_ROUNDS among `rounds` (round markers): finished ones, and every dead
+ * one after the first, so a PR whose rounds keep dying is handed off (#303). A
  * round fired only for a conflict is free too: conflicts come from the base moving, and one the
  * agent can't resolve hands off at once (see `unresolvedConflict`). A marker without a meta line counts.
  */
 function countedRounds(rounds: readonly PrComment[], finished: (round: PrComment) => boolean): number {
-  return rounds.filter((r) => {
+  const counted = rounds.filter((r) => {
     const meta = parseRoundMeta(r.body);
     return finished(r) && !(meta && meta.reasons.length === 1 && meta.reasons[0] === 'conflict');
   }).length;
+  const dead = rounds.filter((r) => !finished(r)).length;
+  return counted + Math.max(0, dead - 1);
 }
 
 /** Whether the latest round finished, was fired for a conflict on this same base, and the conflict is still there. */
@@ -125,7 +131,7 @@ const RELEASE_TITLE = /^chore\(main\): release (\d+\.\d+\.\d+)$/;
 const REPORT_BRANCH = /^chore\/release-(\d+\.\d+\.\d+)$/;
 const NEEDS_YOU_LABEL = 'needs-you';
 /** Rounds a PR gets before it's handed off; a maintainer comment gives it fresh ones (#165). */
-export const MAX_ROUNDS = 3;
+export const MAX_ROUNDS = 2;
 /** A round with no done marker after this long has died (e.g. its session hit a usage limit) and is retried, not counted (#200). Real rounds take minutes (#196). */
 const ROUND_TIMEOUT_MS = 60 * 60 * 1000;
 /** Checks that report on bookkeeping, not on the PR's code; the CI review is judged by its comment. */
@@ -315,6 +321,8 @@ function decideIgnoringMain(
   const lastDone = last((c) => c.body.includes(DONE_MARKER));
   const lastRound = last((c) => c.body.includes(ROUND_MARKER));
   const lastReview = last((c) => c.body.startsWith(REVIEW_HEADING));
+  // A review with no findings needs no answer, so it starts no round (#303).
+  const lastFindings = last((c) => c.body.startsWith(REVIEW_HEADING) && !c.body.includes(CLEAN_REVIEW_MARKER));
 
   const clearNeedsYou = pr.labels.includes(NEEDS_YOU_LABEL);
   if (clearNeedsYou) {
@@ -338,7 +346,7 @@ function decideIgnoringMain(
   const reasons: Reason[] = [];
   if (conflict) reasons.push('conflict');
   if (relevant.some((c) => c.state === 'failure')) reasons.push('ci');
-  if (lastReview > lastDone) reasons.push('review');
+  if (lastFindings > lastDone && lastFindings === lastReview) reasons.push('review');
   if (last((c) => isMaintainer(c) && !isApproval(c)) > lastDone) reasons.push('comment');
   if (pr.unresolvedThreads > 0) reasons.push('threads');
   if (reasons.length) {

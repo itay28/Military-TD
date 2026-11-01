@@ -28,6 +28,14 @@ export const FIRED_MARKER = '<!-- auto-start:fired -->';
 export const DONE_MARKER = '<!-- auto-start:done -->';
 /** A fired session this long without a done marker or any activity is dead, and fired again. */
 export const RETRY_IDLE_MS = 60 * 60 * 1000;
+/** Fires a piece of work gets (the first one plus one retry); when the last one dies too, auto-start gives up (#303). */
+export const MAX_FIRES = 2;
+/** Posted when auto-start gives up on an issue whose retry died too, so it does that once (#303). */
+export const GIVE_UP_MARKER = '<!-- auto-start:gave-up -->';
+/** Asks the split agent (.github/workflows/split-issue.yml) to split an issue into smaller ones (#303). */
+export const SPLIT_LABEL = 'needs-split';
+/** On the issues the split agent made: one whose retry dies too goes to the maintainer, not split again. */
+export const SPLIT_PART_LABEL = 'split-part';
 /** Left by Board sync when it dispatches *Size issue* for an issue, so it does that once (#225). */
 export const SIZE_REQUESTED_MARKER = '<!-- size-issue:requested -->';
 /** At most this many *Size issue* dispatches per Board sync run (#225). */
@@ -303,6 +311,8 @@ export interface RetryIssue {
   readonly hold: boolean;
   readonly needsYou: boolean;
   readonly needsInfo: boolean;
+  /** Made by the split agent (`split-part`): never split again (#303). */
+  readonly splitPart?: boolean;
   /** Its latest comments, oldest first. */
   readonly comments: readonly { readonly body: string; readonly createdAt: string }[];
   /** The open PR that closes it, with the times of its latest commit and comment. */
@@ -318,6 +328,8 @@ export interface RetryIssue {
 export interface Retry extends Start {
   readonly branch?: string;
   readonly pr?: number;
+  /** The retry died too (#303): instead of firing again, split the issue, or hand a split part to the maintainer. */
+  readonly giveUp?: 'split' | 'handoff';
 }
 
 const FIRE_META = /<!-- auto-start:fire-meta model=(\S+) base=(\S+) -->/;
@@ -331,20 +343,30 @@ export const firedComment = (start: Start, sessionUrl?: string) =>
  * The implement sessions that died (#201): an `auto-agent` issue whose latest fired marker has no
  * done marker after it, with no issue comment and no commit or comment on its PR for `idleMs`.
  * Never `hold`, `needs-you`, `needs-info` (an intentional stop) or a ready PR (the steward's).
+ * A session gets MAX_FIRES fires since the latest done marker; after that it gives up, once (#303).
  */
 export function planRetries(issues: readonly RetryIssue[], now: number, idleMs = RETRY_IDLE_MS): Retry[] {
   const retries: Retry[] = [];
   for (const i of issues) {
     if (!i.autoAgent || i.hold || i.needsYou || i.needsInfo || (i.pr && !i.pr.draft)) continue;
     const firedAt = i.comments.findLastIndex((c) => c.body.includes(FIRED_MARKER));
-    if (firedAt < 0 || i.comments.slice(firedAt).some((c) => c.body.includes(DONE_MARKER))) continue;
+    const sinceFire = i.comments.slice(firedAt);
+    if (firedAt < 0 || sinceFire.some((c) => c.body.includes(DONE_MARKER) || c.body.includes(GIVE_UP_MARKER))) continue;
     const meta = FIRE_META.exec(i.comments[firedAt]!.body);
     const model = meta?.[1];
     if (model !== 'sonnet' && model !== 'opus') continue;
     const times = [...i.comments.map((c) => c.createdAt), ...(i.pr?.activity ?? [])].map(Date.parse);
     const idle = now - Math.max(...times);
     if (Number.isNaN(idle) || idle < idleMs) continue;
-    retries.push({ issue: i.number, base: meta![2]!, model, ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}) });
+    const lastDone = i.comments.findLastIndex((c) => c.body.includes(DONE_MARKER));
+    const fires = i.comments.slice(lastDone + 1).filter((c) => c.body.includes(FIRED_MARKER)).length;
+    retries.push({
+      issue: i.number,
+      base: meta![2]!,
+      model,
+      ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}),
+      ...(fires >= MAX_FIRES ? { giveUp: i.splitPart ? ('handoff' as const) : ('split' as const) } : {}),
+    });
   }
   return retries;
 }
@@ -378,6 +400,26 @@ export async function retryIssue(
   }
   await postFiredMarker(retry, sessionUrl, token, fetchFn);
   return 'started';
+}
+
+/**
+ * Give up on an issue whose retry died too (#303), with the give-up marker so it happens once.
+ * `split`: label it `needs-split`, which starts the split agent (the label goes on with
+ * PROJECT_TOKEN, so the workflow runs). `handoff`: a split part, so `needs-you` (which pushes).
+ * The claim stays: the split agent closes the issue, or the maintainer decides.
+ */
+export async function giveUpIssue(retry: Retry, token: string, fetchFn: Fetch = fetch): Promise<void> {
+  const tries = `Its implement session died ${MAX_FIRES} times without finishing (most likely out of tokens)`;
+  const body =
+    retry.giveUp === 'handoff'
+      ? `${HANDOFF_MARKER}\n${tries}, and it is already a split part, so auto-start hands it to you. ` +
+        `Split it or do it yourself, then remove \`${NEEDS_YOU_LABEL}\`.`
+      : `${tries}: auto-start asked the split agent to split it into smaller issues (\`${SPLIT_LABEL}\`, ` +
+        'docs/agents/prompts/split.md).';
+  await github(fetchFn, token, 'POST', `issues/${retry.issue}/comments`, { body: `${body}\n\n${GIVE_UP_MARKER}` });
+  await github(fetchFn, token, 'POST', `issues/${retry.issue}/labels`, {
+    labels: [retry.giveUp === 'handoff' ? NEEDS_YOU_LABEL : SPLIT_LABEL],
+  });
 }
 
 /** The fire `text`: what the implement prompt (docs/agents/prompts/implement.md) reads. */

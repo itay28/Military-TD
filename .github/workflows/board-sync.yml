@@ -18,6 +18,7 @@ name: Board sync
 # Auto-start: with the repo variable AUTO_SPAWN set to `on`, each run then claims startable
 # issues and fires the implement scheduled task (scripts/auto-start.ts; AUTO_STACK=on also
 # starts stacked issues), and fires a dead implement session again after 1 h of silence (#201).
+# AUTO_MAX_AGENTS caps the auto-agent issues In progress at once (5 when unset, #303).
 # The ROUTINE_* secrets are the tasks' API trigger URLs and tokens.
 on:
   pull_request:
@@ -70,6 +71,7 @@ jobs:
           PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           AUTO_SPAWN: ${{ vars.AUTO_SPAWN }}
           AUTO_STACK: ${{ vars.AUTO_STACK }}
+          AUTO_MAX_AGENTS: ${{ vars.AUTO_MAX_AGENTS }}
           ROUTINE_SONNET_URL: ${{ secrets.ROUTINE_SONNET_URL }}
           ROUTINE_SONNET_TOKEN: ${{ secrets.ROUTINE_SONNET_TOKEN }}
           ROUTINE_OPUS_URL: ${{ secrets.ROUTINE_OPUS_URL }}
