@@ -265,3 +265,14 @@ describe('Tower panel Sell button', () => {
     expect(root.hidden).toBe(true);
   });
 });
+
+describe('Tower panel onSelect', () => {
+  it('calls onSelect when a tower is selected, not when the panel is deselected', () => {
+    let calls = 0;
+    const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]), { onSelect: () => calls++ });
+    panel.select(1);
+    expect(calls).toBe(1);
+    panel.select(undefined);
+    expect(calls).toBe(1);
+  });
+});

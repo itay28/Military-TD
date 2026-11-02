@@ -246,7 +246,7 @@ describe('Build bar sprite icons', () => {
   const iconOf = (kind: string) => button(kind).querySelector<HTMLElement>('.build-icon')!;
 
   it('draws a kind with a sprite as its base and turret layers from the atlas, with no shape fill', () => {
-    mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, sprite }, OPTIONS[1]!], atlas);
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, sprite }, OPTIONS[1]!], { atlas });
     const layers = iconOf('rifle').querySelectorAll<HTMLElement>('.build-icon-layer');
     expect(layers).toHaveLength(2);
     expect(layers[0]!.style.backgroundImage).toContain('atlas.png');
@@ -256,14 +256,14 @@ describe('Build bar sprite icons', () => {
   });
 
   it('keeps the shape for a kind whose sprite frame is missing', () => {
-    mountBuildBar(root, wallet(500), [{ ...OPTIONS[1]!, sprite: { ...sprite, turret: 'missing' } }], atlas);
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[1]!, sprite: { ...sprite, turret: 'missing' } }], { atlas });
     const icon = iconOf('cannon');
     expect(icon.querySelector('.build-icon-layer')).toBeNull();
     expect(icon.style.backgroundColor).not.toBe('');
   });
 
   it('keeps the shape for a kind without a sprite', () => {
-    mountBuildBar(root, wallet(500), [OPTIONS[2]!], atlas);
+    mountBuildBar(root, wallet(500), [OPTIONS[2]!], { atlas });
     expect(iconOf('mortar').querySelector('.build-icon-layer')).toBeNull();
     expect(iconOf('mortar').style.backgroundColor).not.toBe('');
   });
@@ -282,7 +282,7 @@ describe('Build bar sprite icons', () => {
         { ...OPTIONS[0]!, sprite },
         { ...OPTIONS[1]!, sprite },
       ],
-      atlas,
+      { atlas },
     );
     const scale = (kind: string) =>
       Number(
@@ -294,5 +294,33 @@ describe('Build bar sprite icons', () => {
 
   it('buildOptions gives each kind with a sprite its icon layers', () => {
     expect(buildOptions().find((o) => o.kind === 'cannon')!.sprite).toMatchObject({ turretRotation: 0 });
+  });
+});
+
+describe('mountBuildBar onSelect and clear', () => {
+  it('calls onSelect when a click or a hotkey selects a kind, not when one is cleared', () => {
+    let calls = 0;
+    const bar = mountBuildBar(root, wallet(500), OPTIONS, { onSelect: () => calls++ });
+    button('rifle').click();
+    pressKey('2');
+    expect(calls).toBe(2);
+    button('cannon').click(); // clears
+    expect(bar.selected).toBeUndefined();
+    expect(calls).toBe(2);
+  });
+
+  it('does not call onSelect for a kind the player cannot afford', () => {
+    let calls = 0;
+    mountBuildBar(root, wallet(10), OPTIONS, { onSelect: () => calls++ });
+    pressKey('1');
+    expect(calls).toBe(0);
+  });
+
+  it('clear() drops the selection and unpresses the button', () => {
+    const bar = mountBuildBar(root, wallet(500), OPTIONS);
+    button('rifle').click();
+    bar.clear();
+    expect(bar.selected).toBeUndefined();
+    expect(pressed()).toHaveLength(0);
   });
 });

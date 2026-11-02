@@ -20,7 +20,23 @@ export interface RenderedSprite {
   readonly pxPerTile: number;
   readonly canvasPx: number;
   readonly pivot: { readonly x: number; readonly y: number };
+  /**
+   * Barrel tips, in canvas pixels from the pivot with the turret facing north (so −y is forward): one per barrel,
+   * where its flash and tracer start. Measured from the turret image; purely cosmetic.
+   */
+  readonly muzzles: readonly { readonly x: number; readonly y: number }[];
 }
+
+/** Barrel tips per render id, from the topmost opaque pixels of each turret image. */
+const MUZZLES: Record<string, RenderedSprite['muzzles']> = {
+  // Twin barrels: tips at x 76 and 82 on a 160 px canvas pivoting at (80, 80), top row 21.
+  'china-aa-gun': [
+    { x: -4, y: -59 },
+    { x: 2, y: -59 },
+  ],
+  // One barrel: tip at x 95.5, top row 12, pivot (95.5, 116.5).
+  'russia-tank': [{ x: 0, y: -104.5 }],
+};
 
 function rendered(
   {
@@ -41,6 +57,7 @@ function rendered(
     pxPerTile,
     canvasPx,
     pivot,
+    muzzles: MUZZLES[id] ?? [],
   };
 }
 
