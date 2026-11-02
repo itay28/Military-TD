@@ -96,9 +96,14 @@
       "author": "MissingTray1151",
       "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
       "license": "CC-BY-4.0",
-      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations, kit tinted toward OCP",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR)",
       "downloaded": "2026-11-02",
-      "files": ["assets/render-us-rifle-nest/**", "assets/render-us-infantry/**"]
+      "files": [
+        "assets/render-us-rifle-nest/**",
+        "assets/render-us-infantry/**",
+        "assets/render-russia-rifle-nest/**",
+        "assets/render-russia-infantry/**"
+      ]
     },
     {
       "id": "render-us-aa-gun",
@@ -161,16 +166,6 @@
       "files": ["assets/render-us-helicopter/**"]
     },
     {
-      "id": "render-russia-rifle-nest",
-      "name": "Tactical Soldier (game ready) low poly (top-down render)",
-      "author": "MissingTray1151",
-      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
-      "license": "CC-BY-4.0",
-      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted olive (toward EMR), two copies set in a sandbagged pit of our own",
-      "downloaded": "2026-11-02",
-      "files": ["assets/render-russia-rifle-nest/**"]
-    },
-    {
       "id": "render-russia-aa-gun",
       "name": "ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)",
       "author": "LuckySkink9661",
@@ -199,16 +194,6 @@
       "attribution": "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate",
       "downloaded": "2026-11-02",
       "files": ["assets/render-russia-mortar/**"]
-    },
-    {
-      "id": "render-russia-infantry",
-      "name": "Tactical Soldier (game ready) low poly (top-down render)",
-      "author": "MissingTray1151",
-      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
-      "license": "CC-BY-4.0",
-      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted olive (toward EMR)",
-      "downloaded": "2026-11-02",
-      "files": ["assets/render-russia-infantry/**"]
     },
     {
       "id": "render-russia-jeep",
