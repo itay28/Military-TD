@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isFaction } from '../sim/factions';
 import { createMap, type Tile } from '../sim/map';
 import { FIRST_MAP } from '../../tests/e2e/firstMap';
-import { MAPS, mapById, MVP_MAP } from './maps';
+import { groundImagePath, groundTextureKey, MAPS, mapById, MVP_MAP } from './maps';
 
 function edgesOf({ col, row }: Tile, cols: number, rows: number): string[] {
   return [col === 0 && 'left', col === cols - 1 && 'right', row === 0 && 'top', row === rows - 1 && 'bottom'].filter(
@@ -65,5 +65,25 @@ describe('map registry', () => {
 
   it('throws for an unknown id, naming the ones there are', () => {
     expect(() => mapById('nope')).toThrow(/No map "nope".*mvp/);
+  });
+});
+
+describe('ground images (#312)', () => {
+  it('gives every map with a ground-image layer its image URL', () => {
+    for (const entry of MAPS) {
+      if (entry.data.groundImage === undefined) expect(entry.groundImageUrl).toBeUndefined();
+      else expect(entry.groundImageUrl).toMatch(/naip-maps\/.+\.jpg/);
+    }
+    expect(mapById('mvp').groundImageUrl).toBeDefined();
+  });
+
+  it('loads each ground image under a key named after its map', () => {
+    expect(groundTextureKey('mvp')).toBe('ground:mvp');
+  });
+
+  it("resolves a map's image path from the maps folder to this module's", () => {
+    expect(groundImagePath('../assets/naip-maps/a.jpg')).toBe('../../assets/naip-maps/a.jpg');
+    expect(groundImagePath('../assets/x/../naip-maps/b.jpg')).toBe('../../assets/naip-maps/b.jpg');
+    expect(groundImagePath('c.jpg')).toBe('../../maps/c.jpg');
   });
 });

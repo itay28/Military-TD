@@ -146,4 +146,8 @@ The **Russia** Faction's set (#315, the first map's Attacker) is complete too, s
 
 The **China** Faction's set (#316) is complete as well: the spike's GDF-006, now on the same sandbagged pad as the other towers (the game's AA Gun draws this render, so it gains the pad), plus seven new renders, previewed in `docs/art/faction-china.png` (`scripts/faction-sheet.py china`). Stand-ins, named in `depicts`: GDF-006 for the PG-99, the tripod ATGM for the HJ-8, Pindad MO-3 for the PP-87, a UH-60M for the Z-20 (built to the UH-60's layout), Type 99 for the Type 99A, and an open-top military 4×4 (machine gun removed, repainted olive) for the BJ2022. Rifle Nest, Infantry and the ATGM reuse models from the other sets, tinted green. Sketchfab uploads that say they were ripped from a game (several PLA vehicles, e.g. a War Thunder ZTZ-99A and a Mercenaries 2 BJ2022) were skipped: their uploader can't license them.
 
+## Map ground images (#312, ADR-0009)
+
+Each Tiled map can have one painted ground image in `naip-maps/` (`<map>.jpg`, PD-USGov, under the same NAIP manifest entry). `scripts/naip-map.py` makes it: a pinned NAIP field at 30 m per tile, 96 px per tile, with the map's Path painted on it as a dirt track and blocked tiles as treeline. A new map is a new entry in that script's `MAPS`; rerun it after moving the Path. The scene, the window centres and the seed are pinned, so a rerun writes the same file.
+
 Before rendering a Sketchfab model, read its page: skip it if the description or tags say "ripped" or "imported from", name a game, or the license is NonCommercial or NoDerivatives.

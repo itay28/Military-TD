@@ -81,16 +81,16 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - License: PD-USGov
 - Attribution: NAIP imagery courtesy of the USDA Farm Service Agency, public domain
 - Downloaded: 2026-11-02
-- Files: `assets/naip-field-road-treeline/**`
+- Files: `assets/naip-field-road-treeline/**`, `assets/naip-maps/**`
 
 ## Tactical Soldier (game ready) low poly (top-down render)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted toward OCP, two copies set in a sandbagged pit of our own
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR)
 - Downloaded: 2026-11-02
-- Files: `assets/render-us-rifle-nest/**`
+- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`
 
 ## Phalanx CIWS (top-down render)
 
@@ -119,15 +119,6 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-mortar/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
-
-- Author: MissingTray1151
-- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
-- License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted toward OCP
-- Downloaded: 2026-11-02
-- Files: `assets/render-us-infantry/**`
-
 ## Low Poly Humvee FREE (top-down render)
 
 - Author: madtrollstudio
@@ -155,15 +146,6 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-helicopter/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
-
-- Author: MissingTray1151
-- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
-- License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted olive (toward EMR), two copies set in a sandbagged pit of our own
-- Downloaded: 2026-11-02
-- Files: `assets/render-russia-rifle-nest/**`
-
 ## ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)
 
 - Author: LuckySkink9661
@@ -190,15 +172,6 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-mortar/**`
-
-## Tactical Soldier (game ready) low poly (top-down render)
-
-- Author: MissingTray1151
-- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
-- License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted olive (toward EMR)
-- Downloaded: 2026-11-02
-- Files: `assets/render-russia-infantry/**`
 
 ## uaz 469 (top-down render)
 
