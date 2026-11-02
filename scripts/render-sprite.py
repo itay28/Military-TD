@@ -12,8 +12,8 @@ Three PNGs per model in <out>/render-<id>/, all framed by the same camera so the
   <id>-turret.png  the turret (and barrels) alone, no shadow, for the game to rotate
 
 A model's optional `exclude` lists meshes to delete before rendering (e.g. add-on slat armour that hides the
-silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`), for a model
-painted in the wrong colour.
+silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`; `overrides` gives a
+material its own `color` and `specular`), for a model painted in the wrong colour.
 
 Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1
 Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets]
@@ -79,8 +79,13 @@ def tint_untextured(color: list[float]) -> None:
             bsdf.inputs["Base Color"].default_value = (*color, 1.0)
 
 
-def tint_paint(color: list[float], skip: list[str]) -> None:
-    """Multiply every textured base colour by `color` (a grey-painted model turned olive); `skip` keeps materials."""
+def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) -> None:
+    """Multiply every textured base colour by `color` (a grey-painted model turned olive).
+
+    `skip` keeps materials whose name starts with an entry. `overrides` gives a material (by name prefix) its own
+    `color` and, optionally, `specular` (Principled "Specular IOR Level"), for a part that renders lighter than
+    the rest: a pale texture, or flat tops mirroring the sky.
+    """
     for mat in bpy.data.materials:
         tree = mat.node_tree
         bsdf = tree.nodes.get("Principled BSDF") if tree else None
@@ -91,7 +96,10 @@ def tint_paint(color: list[float], skip: list[str]) -> None:
         mix.data_type = "RGBA"
         mix.blend_type = "MULTIPLY"
         mix.inputs["Factor"].default_value = 1.0
-        mix.inputs["B"].default_value = (*color, 1.0)
+        own = next((o for prefix, o in overrides.items() if mat.name.startswith(prefix)), {})
+        mix.inputs["B"].default_value = (*own.get("color", color), 1.0)
+        if "specular" in own:
+            bsdf.inputs["Specular IOR Level"].default_value = own["specular"]
         tree.links.new(link.from_socket, mix.inputs["A"])
         tree.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
 
@@ -196,7 +204,7 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     for name in spec.get("exclude", []):
         bpy.data.objects.remove(bpy.data.objects[name], do_unlink=True)
     if "tint" in spec:
-        tint_paint(spec["tint"]["color"], spec["tint"].get("skip", []))
+        tint_paint(spec["tint"]["color"], spec["tint"].get("skip", []), spec["tint"].get("overrides", {}))
     if "untexturedColor" in spec:
         tint_untextured(spec["untexturedColor"])
     place_model(spec)
