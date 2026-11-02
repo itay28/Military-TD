@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import type { GameSpeed } from '../scenes/gameSpeed';
 import type { Phase } from '../sim/game';
 import { mountPauseMenu, type PauseMenu, type PauseMenuOptions } from './pauseMenu';
 
@@ -222,5 +223,48 @@ describe('mountPauseMenu', () => {
     expect(buildBar.inert).toBe(false);
     pressKey('Escape');
     expect(menu.paused).toBe(false);
+  });
+
+  describe('game speed', () => {
+    const speedControl = (initial: GameSpeed = 1) => {
+      let speed = initial;
+      return { get: () => speed, set: (next: GameSpeed) => (speed = next) };
+    };
+    const speedButton = (n: number) => button(`pause-speed-${n}`)!;
+    const pressed = () => [1, 2, 3].filter((n) => speedButton(n).getAttribute('aria-pressed') === 'true');
+
+    it('shows the current speed, pressed, in a group named "Game speed"', () => {
+      mount({ speed: speedControl(2) });
+      pauseButton()!.click();
+      expect(root.querySelector('[role="group"]')?.getAttribute('aria-label')).toBe('Game speed');
+      expect([1, 2, 3].map((n) => speedButton(n).textContent)).toEqual(['×1', '×2', '×3']);
+      expect(pressed()).toEqual([2]);
+    });
+
+    it('shows a speed changed since it last opened', () => {
+      const speed = speedControl();
+      const menu = mount({ speed });
+      pauseButton()!.click();
+      menu.close();
+      speed.set(3);
+      pauseButton()!.click();
+      expect(pressed()).toEqual([3]);
+    });
+
+    it('clicking a speed sets it and stays paused', () => {
+      const speed = speedControl();
+      const menu = mount({ speed });
+      pauseButton()!.click();
+      speedButton(3).click();
+      expect(speed.get()).toBe(3);
+      expect(pressed()).toEqual([3]);
+      expect(menu.paused).toBe(true);
+    });
+
+    it('is not shown without a speed holder', () => {
+      mount();
+      pauseButton()!.click();
+      expect(root.querySelector('[role="group"]')).toBeNull();
+    });
   });
 });
