@@ -85,6 +85,16 @@ describe('createViewSync', () => {
     expect([created.get(1)?.hp, created.get(2)?.hp]).toEqual([5, 10]);
   });
 
+  it('lists the live views, without the destroyed ones', () => {
+    const { views, created } = setup();
+    views.sync([
+      { id: 1, hp: 30 },
+      { id: 2, hp: 20 },
+    ]);
+    views.sync([{ id: 2, hp: 10 }]);
+    expect(views.views()).toEqual([created.get(2)]);
+  });
+
   it('without an update callback, only creates and destroys', () => {
     const log: string[] = [];
     const views = createViewSync<Entity, number>({

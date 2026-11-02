@@ -42,21 +42,21 @@ describe('mountSettingsScreen', () => {
     expect(root.querySelector('h2')?.textContent).toBe('Settings');
   });
 
-  it('offers ×1, ×2 and ×4 as one labelled group, with the current default checked', () => {
+  it('offers ×1, ×2 and ×3 as one labelled group, with the current default checked', () => {
     settings.set({ defaultSpeed: 2 });
     mount();
     const group = root.querySelector('fieldset');
     expect(group?.querySelector('legend')?.textContent).toBe('Default game speed');
     const radios = [...group!.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
-    expect(radios.map(labelOf)).toEqual(['×1', '×2', '×4']);
+    expect(radios.map(labelOf)).toEqual(['×1', '×2', '×3']);
     expect(new Set(radios.map((radio) => radio.name)).size).toBe(1);
     expect(radios.map((radio) => radio.checked)).toEqual([false, true, false]);
   });
 
   it('sets the default speed as soon as one is picked', () => {
     mount();
-    speed('×4')!.click();
-    expect(settings.get().defaultSpeed).toBe(4);
+    speed('×3')!.click();
+    expect(settings.get().defaultSpeed).toBe(3);
   });
 
   it('has a labelled Always show tower ranges checkbox that switches the setting at once', () => {

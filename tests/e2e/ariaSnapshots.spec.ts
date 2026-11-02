@@ -41,7 +41,7 @@ test('the pause menu offers Resume, Restart, Settings, and Quit to menu disabled
   await expectAria(page.locator('#pause-menu'), 'pause-menu.aria.yml');
 });
 
-test('the Main menu shows the title, Play, and Settings', async ({ page }) => {
+test('the Main menu shows the title, Play, Settings, and Credits', async ({ page }) => {
   await openMenu(page);
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
 });
@@ -50,6 +50,14 @@ test('the Settings screen shows the default game speed choices, the range settin
   await openMenu(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await expectAria(page.locator('#settings'), 'settings-screen.aria.yml');
+});
+
+test('the Credits screen lists every pack with its author, license, link and attribution, then the game credits', async ({
+  page,
+}) => {
+  await openMenu(page);
+  await page.getByRole('button', { name: 'Credits' }).click();
+  await expectAria(page.locator('#menu'), 'credits.aria.yml');
 });
 
 test('the Level select lists each map by name, then Back', async ({ page }) => {

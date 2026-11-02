@@ -1,6 +1,10 @@
 - dialog "Paused":
   - heading "Paused" [level=2]
   - button "Resume"
+  - group "Game speed":
+    - button "×1" [pressed]
+    - button "×2"
+    - button "×3"
   - button "Restart"
   - button "Settings"
   - button "Quit to menu" [disabled]

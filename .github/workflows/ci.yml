@@ -43,6 +43,9 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      - name: Asset licenses
+        run: npm run check:assets
+
       - name: Test
         run: npm test
 

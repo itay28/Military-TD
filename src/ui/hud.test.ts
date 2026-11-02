@@ -135,34 +135,42 @@ describe('HUD', () => {
   });
 
   describe('Game speed', () => {
-    const button = () => root.querySelector<HTMLButtonElement>('button[data-testid="game-speed"]');
+    const group = () => root.querySelector<HTMLElement>('[role="group"][data-testid="game-speed"]');
+    const button = (n: number) => root.querySelector<HTMLButtonElement>(`button[data-testid="game-speed-${n}"]`)!;
+    const pressed = () => [1, 2, 3].filter((n) => button(n).getAttribute('aria-pressed') === 'true');
 
-    it('is a button showing ×1, with an accessible name', () => {
+    it('is a group named "Game speed" with ×1, ×2 and ×3, the current one pressed', () => {
       mountHud(root, newGame(), fakeSpeed());
-      expect(button()?.textContent).toBe('×1');
-      expect(button()?.getAttribute('aria-label')).toBe('Game speed ×1');
-      expect(button()?.disabled).toBe(false);
+      expect(group()?.getAttribute('aria-label')).toBe('Game speed');
+      expect([1, 2, 3].map((n) => button(n).textContent)).toEqual(['×1', '×2', '×3']);
+      expect(pressed()).toEqual([1]);
+      expect([1, 2, 3].some((n) => button(n).disabled)).toBe(false);
     });
 
-    it('clicking it sets the next speed and shows it', () => {
-      const speed = fakeSpeed();
-      mountHud(root, newGame(), speed);
-      button()!.click();
-      expect(speed.get()).toBe(2);
-      expect(button()?.textContent).toBe('×2');
-      button()!.click();
-      button()!.click();
-      expect(speed.get()).toBe(1);
-      expect(button()?.getAttribute('aria-label')).toBe('Game speed ×1');
+    it('clicking a speed sets it directly, never passing through another', () => {
+      const seen: GameSpeed[] = [];
+      let speed: GameSpeed = 3;
+      mountHud(root, newGame(), {
+        get: () => speed,
+        set: (next) => {
+          seen.push(next);
+          speed = next;
+        },
+      });
+      button(1).click();
+      expect(seen).toEqual([1]);
+      expect(pressed()).toEqual([1]);
+      button(3).click();
+      expect(seen).toEqual([1, 3]);
+      expect(pressed()).toEqual([3]);
     });
 
     it('follows a speed set elsewhere on the next update', () => {
       const speed = fakeSpeed();
       const hud = mountHud(root, newGame(), speed);
-      speed.set(4);
+      speed.set(3);
       hud.update();
-      expect(button()?.textContent).toBe('×4');
-      expect(button()?.getAttribute('aria-label')).toBe('Game speed ×4');
+      expect(pressed()).toEqual([3]);
     });
 
     it('works during a wave', () => {
@@ -171,7 +179,7 @@ describe('HUD', () => {
       const hud = mountHud(root, game, speed);
       game.startWave();
       hud.update();
-      button()!.click();
+      button(2).click();
       expect(speed.get()).toBe(2);
     });
 
@@ -181,14 +189,7 @@ describe('HUD', () => {
       playWave(game);
       hud.update();
       expect(game.state.phase).toBe('defeat');
-      expect(button()?.disabled).toBe(true);
-    });
-
-    it('does not rewrite an unchanged label on update', () => {
-      const hud = mountHud(root, newGame(), fakeSpeed(2));
-      const label = button()!.firstChild;
-      hud.update();
-      expect(button()!.firstChild).toBe(label);
+      expect([1, 2, 3].every((n) => button(n).disabled)).toBe(true);
     });
   });
 

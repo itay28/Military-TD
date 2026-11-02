@@ -22,7 +22,12 @@ const TITLE_ID = 'end-screen-title';
 /** A row's cells: the first is its header (`<th scope="row">`), the rest data. */
 type Cells = readonly [string, ...string[]];
 
-const figures = ({ damage, kills, dps }: ReportFigures): string[] => [String(damage), String(kills), dps.toFixed(1)];
+/** Damage is fractional (armor, HP cap), so it shows as a whole number; the sim keeps the exact figure. */
+const figures = ({ damage, kills, dps }: ReportFigures): string[] => [
+  String(Math.round(damage)),
+  String(kills),
+  dps.toFixed(1),
+];
 const seconds = (ms: number): string => `${(ms / 1000).toFixed(1)} s`;
 
 function buildTable(doc: Document, caption: string, headers: readonly string[], body: readonly Cells[], foot?: Cells) {
@@ -121,7 +126,8 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
     report.replaceChildren(...buildReport(doc, damageReport(game.state.stats)));
     root.hidden = false;
-    restart.focus();
+    // Focusing the last child would scroll a tall report to the bottom, hiding the title.
+    restart.focus({ preventScroll: true });
   };
   update();
   return {

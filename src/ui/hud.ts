@@ -1,18 +1,17 @@
 import { WAVE_BANNER_MS } from '../data/display';
-import { nextSpeed, type GameSpeed } from '../scenes/gameSpeed';
+import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 
 /** The parts of the Game the HUD reads and commands. */
 export type HudGame = Pick<Game, 'state' | 'events' | 'startWave' | 'setAutoStart'>;
 
-/** The player's game speed, which the scene owns: the HUD shows it and sets the next one on click. */
-export interface HudSpeed {
-  get(): GameSpeed;
-  set(speed: GameSpeed): void;
-}
+/** The player's game speed, which the scene owns: the HUD shows it and sets the one clicked. */
+export type HudSpeed = GameSpeedControl;
 
 export interface Hud {
+  /** The group holding the HUD's buttons; the pause menu adds its Pause button here. */
+  readonly controls: HTMLElement;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
   /** Removes the HUD's elements and unsubscribes from game events. */
@@ -22,39 +21,53 @@ export interface Hud {
 /** Builds the HUD inside `root` and shows `game` in it. It's DOM, not Phaser text, so tests can query it (ADR-0003). */
 export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud {
   const doc = root.ownerDocument;
-  const field = (testId: string) => {
-    const el = doc.createElement('span');
-    el.dataset.testid = testId;
+  // Three fixed groups, so a text that appears or grows never moves a button (#274): the stats, a message slot that
+  // takes the leftover space and clips, and the controls.
+  const group = (className: string) => {
+    const el = doc.createElement('div');
+    el.className = className;
     root.append(el);
     return el;
   };
-  const money = field('hud-money');
-  const lives = field('hud-lives');
-  const wave = field('hud-wave');
-  const dps = field('hud-dps');
+  const stats = group('hud-stats');
+  const message = group('hud-message');
+  const controls = group('hud-controls');
+  const field = (testId: string, parent: HTMLElement) => {
+    const el = doc.createElement('span');
+    el.dataset.testid = testId;
+    parent.append(el);
+    return el;
+  };
+  const money = field('hud-money', stats);
+  const lives = field('hud-lives', stats);
+  const wave = field('hud-wave', stats);
+  const dps = field('hud-dps', stats);
   const startWave = doc.createElement('button');
   startWave.type = 'button';
   startWave.dataset.testid = 'start-wave';
   startWave.textContent = 'Start Wave';
-  root.append(startWave);
+  controls.append(startWave);
   // A toggle button: aria-pressed says whether it's on. Not "Auto-start waves": that name would also match "Start Wave".
   const autoStart = doc.createElement('button');
   autoStart.type = 'button';
   autoStart.dataset.testid = 'auto-start';
   autoStart.className = 'hud-toggle';
   autoStart.textContent = 'Auto-start';
-  root.append(autoStart);
-  const nextWave = field('hud-next-wave');
-  const speedButton = doc.createElement('button');
-  speedButton.type = 'button';
-  speedButton.dataset.testid = 'game-speed';
-  root.append(speedButton);
+  controls.append(autoStart);
+  const nextWave = field('hud-next-wave', message);
+  const speedButtons = mountSpeedButtons(
+    controls,
+    speed,
+    (n) => `game-speed-${n}`,
+    'game-speed',
+    () => update(),
+  );
   // A live region stays in place and only its text changes, so screen readers announce it.
   const banner = doc.createElement('div');
   banner.setAttribute('role', 'status');
   banner.className = 'hud-banner';
   banner.dataset.testid = 'wave-banner';
-  root.append(banner);
+  message.append(banner);
   let bannerText = '';
   /** Sim time when the banner goes away; it shows until then. */
   let bannerUntilMs = 0;
@@ -79,12 +92,8 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     const pressed = String(state.autoStart);
     if (autoStart.getAttribute('aria-pressed') !== pressed) autoStart.setAttribute('aria-pressed', pressed);
     setDisabled(autoStart, isGameOver(state.phase));
-    const shown = speed.get();
-    setText(speedButton, `×${shown}`);
-    if (speedButton.getAttribute('aria-label') !== `Game speed ×${shown}`)
-      speedButton.setAttribute('aria-label', `Game speed ×${shown}`);
     // Ticks stop once the game is over, so a faster speed would change nothing.
-    setDisabled(speedButton, isGameOver(state.phase));
+    speedButtons.sync(isGameOver(state.phase));
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
     const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
     setText(banner, showBanner ? bannerText : '');
@@ -106,12 +115,9 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     game.setAutoStart(!game.state.autoStart);
     update();
   });
-  speedButton.addEventListener('click', () => {
-    speed.set(nextSpeed(speed.get()));
-    update();
-  });
   update();
   return {
+    controls,
     update,
     destroy() {
       offWaveCleared();

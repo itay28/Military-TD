@@ -28,17 +28,15 @@ describe('board sync workflow', () => {
   });
 
   it('never runs two syncs at once', () => {
-    expect(yaml).toMatch(/^concurrency:\n {2}group: board-sync\n {2}cancel-in-progress: false\n/m);
+    expect(yaml).toMatch(/^ {4}concurrency:\n {6}group: board-sync\n {6}cancel-in-progress: false\n/m);
   });
 
   it('skips fork PRs, which get no secrets', () => {
-    expect(yaml).toContain(
-      "    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork\n",
-    );
+    expect(yaml).toContain("(github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)");
   });
 
   it('runs the sync with the project token from secrets', () => {
-    expect(runsOf(yaml)).toEqual(['node scripts/board-sync.ts']);
+    expect(runsOf(yaml)).toEqual(['sleep 60', 'node scripts/board-sync.ts']);
     expect(yaml).toContain('PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}');
   });
 });
@@ -52,5 +50,26 @@ describe('board sync workflow: auto-start', () => {
   it('passes both routine triggers from secrets', () => {
     for (const name of ['ROUTINE_SONNET_URL', 'ROUTINE_SONNET_TOKEN', 'ROUTINE_OPUS_URL', 'ROUTINE_OPUS_TOKEN'])
       expect(yaml).toContain(`${name}: \${{ secrets.${name} }}`);
+  });
+});
+
+// A burst of events (a relabel, an agent's comments, CI finishing) ends in one sweep (#293).
+describe('board sync workflow: debounce', () => {
+  it('makes each event run wait in a group where a newer event cancels it', () => {
+    expect(yaml).toMatch(
+      /^ {2}debounce:\n(?: {4}.*\n)*? {4}concurrency:\n {6}group: board-sync-debounce\n {6}cancel-in-progress: true\n/m,
+    );
+    expect(yaml).toMatch(/^ {2}debounce:\n(?: {4,}.*\n)*? {8}run: sleep 60\n/m);
+  });
+
+  it('lets scheduled and manual runs skip the wait', () => {
+    expect(yaml).toContain("github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'");
+  });
+
+  it('sweeps only after the wait finished, or for a scheduled or manual run', () => {
+    expect(yaml).toMatch(/^ {4}needs: debounce\n/m);
+    expect(yaml).toContain(
+      "always() && (needs.debounce.result == 'success' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')",
+    );
   });
 });

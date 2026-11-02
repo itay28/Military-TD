@@ -3,6 +3,18 @@
  "version": "1.10",
  "tiledversion": "1.11.2",
  "orientation": "orthogonal",
+ "properties": [
+  {
+   "name": "attacker",
+   "type": "string",
+   "value": "russia"
+  },
+  {
+   "name": "defender",
+   "type": "string",
+   "value": "us"
+  }
+ ],
  "renderorder": "right-down",
  "infinite": false,
  "width": 16,

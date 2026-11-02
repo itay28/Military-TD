@@ -53,7 +53,8 @@ jobs:
             You are running in CI on PR #${{ github.event.pull_request.number }} in ${{ github.repository }}. Nobody can answer questions, so don't ask any:
             - The fixed point is `origin/${{ github.event.pull_request.base.ref }}`.
             - The spec is the issue named by `Closes #n` in the PR body (`gh pr view ${{ github.event.pull_request.number }} --json body,closingIssuesReferences`); read it with `gh issue view <n> --json title,body,comments`. If the PR closes no issue, skip the Spec axis and say "no spec: the PR closes no issue".
-            - Standards sources: CLAUDE.md, docs/agents/workflow.md, docs/adr/, docs/assets.md, GLOSSARY.md.
+            - Standards sources: CLAUDE.md, docs/agents/agent-brief.md (the code rules from docs/agents/workflow.md, in short), docs/adr/, docs/assets.md, GLOSSARY.md. Read only the ADRs the diff touches.
+            - Each sub-agent reads only the diff, the spec and these sources: no other repo files unless a hunk needs its surrounding code.
 
-            When the report is ready, post it as a single PR comment with `gh pr comment ${{ github.event.pull_request.number }} --body-file <file>`, starting with the heading "## Code review (mattpocock-skills:code-review)". Don't edit files or push.
+            When the report is ready, post it as a single PR comment with `gh pr comment ${{ github.event.pull_request.number }} --body-file <file>`, starting with the heading "## Code review (mattpocock-skills:code-review)". If both axes report no findings (Spec skipped for no spec counts as none), end the comment with `<!-- code-review:clean -->` on its own line: the PR steward then starts no round to answer it. Don't edit files or push.
           claude_args: '--model sonnet --allowedTools "Read,Glob,Grep,Task,Agent,Write,Bash(git diff:*),Bash(git log:*),Bash(git rev-parse:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*)"'

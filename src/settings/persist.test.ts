@@ -39,14 +39,14 @@ describe('createPersistedSettings', () => {
 
   it('loads the saved settings at boot', () => {
     const storage = createMemoryStorage();
-    createPersistedSettings(storage).set({ defaultSpeed: 4, showAllRanges: true });
-    expect(createPersistedSettings(storage).get()).toEqual({ defaultSpeed: 4, showAllRanges: true });
+    createPersistedSettings(storage).set({ defaultSpeed: 3, showAllRanges: true });
+    expect(createPersistedSettings(storage).get()).toEqual({ defaultSpeed: 3, showAllRanges: true });
   });
 
   it('does not save a change that set rejects', () => {
     const storage = createMemoryStorage();
     const settings = createPersistedSettings(storage);
-    expect(() => settings.set({ defaultSpeed: 3 as never })).toThrow(RangeError);
+    expect(() => settings.set({ defaultSpeed: 4 as never })).toThrow(RangeError);
     expect(storage.getItem(SETTINGS_KEY)).toBeNull();
   });
 
@@ -76,16 +76,16 @@ describe('loadSettings', () => {
     ['an array', '[]'],
     ['no settings object', JSON.stringify({ version: 1 })],
     ['settings that is not an object', JSON.stringify({ version: 1, settings: 'fast' })],
-    ['no version', JSON.stringify({ settings: { defaultSpeed: 4, showAllRanges: true } })],
+    ['no version', JSON.stringify({ settings: { defaultSpeed: 3, showAllRanges: true } })],
   ])('returns the defaults for %s', (_name, raw) => {
     expect(loadSettings(withRaw(raw))).toEqual(DEFAULT_SETTINGS);
   });
 
   it('falls back to the default field by field', () => {
-    const raw = JSON.stringify({ version: 1, settings: { defaultSpeed: 3, showAllRanges: true } });
+    const raw = JSON.stringify({ version: 1, settings: { defaultSpeed: 4, showAllRanges: true } });
     expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 1, showAllRanges: true });
-    const raw2 = JSON.stringify({ version: 1, settings: { defaultSpeed: 4, showAllRanges: 'yes' } });
-    expect(loadSettings(withRaw(raw2))).toEqual({ defaultSpeed: 4, showAllRanges: false });
+    const raw2 = JSON.stringify({ version: 1, settings: { defaultSpeed: 3, showAllRanges: 'yes' } });
+    expect(loadSettings(withRaw(raw2))).toEqual({ defaultSpeed: 3, showAllRanges: false });
   });
 
   it('drops unknown fields', () => {
@@ -94,13 +94,13 @@ describe('loadSettings', () => {
   });
 
   it('returns the defaults for a version newer than this build knows', () => {
-    const raw = JSON.stringify({ version: SETTINGS_VERSION + 1, settings: { defaultSpeed: 4, showAllRanges: true } });
+    const raw = JSON.stringify({ version: SETTINGS_VERSION + 1, settings: { defaultSpeed: 3, showAllRanges: true } });
     expect(loadSettings(withRaw(raw))).toEqual(DEFAULT_SETTINGS);
   });
 
   it('migrates an older version', () => {
-    const raw = JSON.stringify({ version: 0, settings: { defaultSpeed: 4, showAllRanges: true } });
-    expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 4, showAllRanges: true });
+    const raw = JSON.stringify({ version: 0, settings: { defaultSpeed: 3, showAllRanges: true } });
+    expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 3, showAllRanges: true });
   });
 
   it('returns the defaults when reading storage throws', () => {
