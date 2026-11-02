@@ -38,8 +38,9 @@ test('with ?unlock=all every map can be picked', async ({ page }) => {
 test('a map’s best stars from saved progress show on its button', async ({ page }) => {
   await openLevelSelect(page, { progress: { [first.id]: { completed: true, bestStars: 2 } } });
   const map = page.getByRole('button', { name: `${first.name}, 2 of 3 stars` });
-  await expect(map).toBeFocused();
   await expect(map.getByTestId('stars')).toHaveText('★★☆');
+  // Focus starts on the last unlocked map: winning the first map opens the second.
+  await expect(page.getByRole('button', { name: `${SECOND_MAP.name}, no stars yet` })).toBeFocused();
 });
 
 test('picking a map starts a new game on it, in the Build phase', async ({ page }) => {

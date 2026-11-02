@@ -4,9 +4,9 @@
     - listitem:
       - button "Training Ground, no stars yet": Training Ground
     - listitem:
-      - button "Switchback, locked. Complete Training Ground to unlock": Switchback
+      - button "Switchback, locked. Complete Training Ground to unlock" [disabled]: Switchback
     - listitem:
-      - button "Serpentine, locked. Complete Switchback to unlock": Serpentine
+      - button "Serpentine, locked. Complete Switchback to unlock" [disabled]: Serpentine
     - listitem:
-      - button "Hairpin, locked. Complete Serpentine to unlock": Hairpin
+      - button "Hairpin, locked. Complete Serpentine to unlock" [disabled]: Hairpin
   - button "Back"
