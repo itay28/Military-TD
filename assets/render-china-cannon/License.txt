@@ -1,0 +1,9 @@
+Rendered sprites of "Anti-Tank Guided Missile" by Alhimix
+https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated, ground disc removed, tinted green, set on a generated sandbag pad, split into hull and turret layers).
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-02.
