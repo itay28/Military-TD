@@ -30,13 +30,17 @@ export class LevelSelectScene extends Phaser.Scene {
     this.unlockAll = unlockAll;
   }
 
+  /** Runs each time the scene starts, so it reads the progress as it is now, after any game since. */
   create(): void {
     const mapIds = MAPS.map((map) => map.id);
     const progress = this.progress.get();
     const screen = mountLevelSelect(this.root, {
       app: this.app,
       maps: MAPS,
-      isUnlocked: (index) => this.unlockAll || isUnlocked(index, mapIds, progress),
+      statusOf: (index) => ({
+        unlocked: this.unlockAll || isUnlocked(index, mapIds, progress),
+        bestStars: progress.maps[mapIds[index]!]?.bestStars ?? 0,
+      }),
       onPick: (mapId) => this.scene.start('Game', { mapId }),
       onBack: () => this.scene.start('Menu'),
     });
