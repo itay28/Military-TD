@@ -5,7 +5,8 @@ import { openGame, openMenu, state, view } from './helpers';
 // From #48: the Settings screen, opened from the Main menu or the pause menu, and both settings taking effect.
 
 const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'Settings' });
-const speedButton = (page: Page) => page.getByRole('button', { name: /^Game speed/ });
+const expectSpeed = (page: Page, n: number) =>
+  expect(page.getByTestId(`game-speed-${n}`)).toHaveAttribute('aria-pressed', 'true');
 
 async function openSettingsFromPause(page: Page) {
   await page.getByRole('button', { name: 'Pause' }).click();
@@ -51,7 +52,7 @@ test('a new game from the Main menu starts at the default game speed', async ({ 
   await page.getByRole('button', { name: 'Play' }).click();
   await page.getByRole('button', { name: FIRST_MAP.name }).click();
 
-  await expect(speedButton(page)).toHaveAccessibleName('Game speed ×2');
+  await expectSpeed(page, 2);
 });
 
 test('a changed default applies from the next game: Restart starts at it, the running game keeps its speed', async ({
@@ -62,11 +63,11 @@ test('a changed default applies from the next game: Restart starts at it, the ru
   await page.getByRole('radio', { name: '×3' }).check();
   await page.getByRole('button', { name: 'Back' }).click();
   await page.getByRole('button', { name: 'Resume' }).click();
-  await expect(speedButton(page)).toHaveAccessibleName('Game speed ×1');
+  await expectSpeed(page, 1);
 
   await page.getByRole('button', { name: 'Pause' }).click();
   await page.getByRole('button', { name: 'Restart' }).click();
-  await expect(speedButton(page)).toHaveAccessibleName('Game speed ×3');
+  await expectSpeed(page, 3);
 });
 
 test('Always show tower ranges draws every tower’s range ring, live', async ({ page }) => {
