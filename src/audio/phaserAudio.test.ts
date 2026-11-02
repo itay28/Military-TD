@@ -7,7 +7,7 @@ function manager(over: Partial<SoundManagerLike> = {}): SoundManagerLike & { pla
 }
 
 describe('createPhaserAudio', () => {
-  it("plays a loaded sound by its cache key", () => {
+  it('plays a loaded sound by its cache key', () => {
     const sound = manager();
     createPhaserAudio(sound, () => true).play('cannonShot');
     expect(sound.plays).toEqual([soundKey('cannonShot')]);
