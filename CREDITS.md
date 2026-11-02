@@ -81,4 +81,4 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - License: PD-USGov
 - Attribution: NAIP imagery courtesy of the USDA Farm Service Agency, public domain
 - Downloaded: 2026-11-02
-- Files: `assets/naip-field-road-treeline/**`
+- Files: `assets/naip-field-road-treeline/**`, `assets/naip-maps/**`

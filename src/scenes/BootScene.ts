@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
 import atlasJsonUrl from '../../assets/atlas/sprites.json?url';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
+import { groundTextureKey, MAPS } from '../data/maps';
 import { ATLAS_KEY } from '../data/sprites';
 import { firstScene, type TestFlags } from '../testing/flags';
 
 /**
- * First scene. Preloads the sprite atlas, then goes to the Main menu, or the Game in test mode. A failed load doesn't
- * stop the game: the Game scene draws shapes for any sprite it can't find.
+ * First scene. Preloads the sprite atlas and each map's ground image, then goes to the Main menu, or the Game in test
+ * mode. A failed load doesn't stop the game: the Game scene draws the tileset for a missing ground image, and shapes
+ * for any sprite it can't find.
  */
 export class BootScene extends Phaser.Scene {
   private readonly flags: TestFlags;
@@ -18,6 +20,9 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     this.load.atlas(ATLAS_KEY, atlasPngUrl, atlasJsonUrl);
+    for (const { id, groundImageUrl } of MAPS) {
+      if (groundImageUrl !== undefined) this.load.image(groundTextureKey(id), groundImageUrl);
+    }
   }
 
   create(): void {

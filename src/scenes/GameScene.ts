@@ -13,7 +13,7 @@ import {
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
-import { MAPS, mapById } from '../data/maps';
+import { groundTextureKey, MAPS, mapById } from '../data/maps';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
@@ -298,11 +298,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * The map from the tileset: ground and road tiles, the grid, then decorations over it. Flat shapes instead when the
-   * atlas lacks any tileset frame. Returns which it drew.
+   * The map: its painted ground image and the grid over it (#312). Without the image, the tileset: ground and road
+   * tiles, the grid, then decorations over it. Flat shapes instead when the atlas lacks any tileset frame. Returns
+   * which it drew.
    */
-  private drawMapView(): 'sprites' | 'shapes' {
+  private drawMapView(): TestView['mapTiles'] {
     const { map } = this.sim.state;
+    const groundKey = groundTextureKey(this.mapId);
+    if (this.textures.exists(groundKey)) {
+      // The image has more pixels than the map (so zooming in stays sharp): fit it to the grid.
+      const image = this.add.image(0, 0, groundKey).setOrigin(0, 0);
+      onLayer(image.setDisplaySize(map.cols * TILE_PX, map.rows * TILE_PX), 'map');
+      drawGrid(onLayer(this.add.graphics(), 'map'), map);
+      return 'image';
+    }
     if (!TILESET_FRAMES.every((frame) => this.atlasFrame(frame) !== null)) {
       drawMap(onLayer(this.add.graphics(), 'map'), map);
       return 'shapes';
