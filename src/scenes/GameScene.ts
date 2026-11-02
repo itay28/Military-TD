@@ -23,7 +23,16 @@ import type { SettingsStore } from '../settings/settings';
 import { selectTarget, towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
-import { clampView, fitView, panBy, screenToWorld, zoomAt, type CameraBounds, type CameraView } from './camera';
+import {
+  canPlaceAt,
+  clampView,
+  fitView,
+  panBy,
+  screenToWorld,
+  zoomAt,
+  type CameraBounds,
+  type CameraView,
+} from './camera';
 import { pixelToTile, toPixels, type Pixel } from './coords';
 import {
   drawBlasts,
@@ -645,12 +654,17 @@ export class GameScene extends Phaser.Scene {
 
   private onGesture(gesture: Gesture | undefined): void {
     if (!gesture) return;
-    if (gesture.type === 'tap') return this.tapAt(screenToWorld(this.view, gesture.point));
+    if (gesture.type === 'tap')
+      return this.tapAt(screenToWorld(this.view, gesture.point), this.canPlaceAt(gesture.point));
     if (gesture.type === 'aim') {
       this.pointerTile = pixelToTile(screenToWorld(this.view, gesture.point));
       return;
     }
-    if (gesture.type === 'place') return this.placeAtPoint(screenToWorld(this.view, gesture.point));
+    if (gesture.type === 'place') {
+      // A lift off the visible map (over the HUD, at the screen edge) places nothing.
+      if (this.canPlaceAt(gesture.point)) this.placeAtPoint(screenToWorld(this.view, gesture.point));
+      return;
+    }
     this.fitted = false;
     const bounds = this.cameraBounds();
     const panned = panBy(this.view, gesture.dx, gesture.dy, bounds);
@@ -661,7 +675,7 @@ export class GameScene extends Phaser.Scene {
    * A tap on the map at world pixel `at`. A tap on a tower selects it. Otherwise the sim decides whether it places
    * one, so this works in the Build and Wave phases alike.
    */
-  private tapAt(at: Pixel): void {
+  private tapAt(at: Pixel, canPlace: boolean): void {
     const action = resolveClick(
       this.sim.state.towers,
       this.towerPanel.selectedId,
@@ -670,10 +684,14 @@ export class GameScene extends Phaser.Scene {
     );
     if (action.type === 'select') this.towerPanel.select(action.towerId);
     else if (action.type === 'deselect') this.towerPanel.select(undefined);
-    else if (action.type === 'place') {
+    else if (action.type === 'place' && canPlace) {
       const refusal = placeAt(this.sim, action.kind, action.tile);
       if (refusal) this.floatingTexts.add(refusal, at);
     }
+  }
+
+  private canPlaceAt(screenPoint: Pixel): boolean {
+    return canPlaceAt(this.view, this.cameraBounds(), screenPoint);
   }
 
   /** Places the selected kind on the tile at world pixel `at`, where an aiming drag lifted. */
