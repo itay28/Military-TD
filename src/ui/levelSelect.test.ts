@@ -10,7 +10,7 @@ const button = (name: string) => buttons().find((b) => b.textContent?.trim() ===
 
 const TWO_MAPS: readonly MapEntry[] = [
   MAPS[0]!,
-  { id: 'second', name: 'Second Map', data: { ...MAPS[0]!.data, id: 'second' } },
+  { ...MAPS[0]!, id: 'second', name: 'Second Map', data: { ...MAPS[0]!.data, id: 'second' } },
 ];
 
 function mount(options: Partial<LevelSelectOptions> = {}) {
@@ -45,6 +45,17 @@ describe('Level select', () => {
     mount({ maps: TWO_MAPS, onPick });
     button('Second Map')?.click();
     expect(onPick).toHaveBeenCalledExactlyOnceWith('second');
+  });
+
+  it('disables a locked map and says it is locked; a click on it picks nothing', () => {
+    const onPick = vi.fn();
+    mount({ maps: TWO_MAPS, onPick, isUnlocked: (index) => index === 0 });
+    const locked = button('Second Map (locked)');
+    expect(locked?.disabled).toBe(true);
+    locked?.click();
+    expect(onPick).not.toHaveBeenCalled();
+    button('Training Ground')?.click();
+    expect(onPick).toHaveBeenCalledExactlyOnceWith(MAPS[0]!.id);
   });
 
   it('calls onBack when the player presses Back', () => {

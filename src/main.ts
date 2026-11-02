@@ -3,6 +3,7 @@ import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
+import { createPersistedProgress } from './progress/persist';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
 import { browserStorage, createMemoryStorage, createPersistedSettings } from './settings/persist';
@@ -35,7 +36,10 @@ if (!settingsRoot) throw new Error('index.html has no #settings element');
 const flags = parseTestFlags(window.location.search);
 // One set of settings, shared by both menus and every game, saved between visits. Test mode keeps them in memory
 // unless ?persist=1, so e2e runs don't leak into each other.
-const settings = createPersistedSettings(flags.test && !flags.persist ? createMemoryStorage() : browserStorage());
+const storage = flags.test && !flags.persist ? createMemoryStorage() : browserStorage();
+const settings = createPersistedSettings(storage);
+// Saved progress (maps won, best stars) lives under its own key: the Game records wins, the Level select unlocks from it.
+const progress = createPersistedProgress(storage);
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
@@ -49,6 +53,7 @@ const gameScene = new GameScene({
   flags,
   settings,
   openSettings,
+  progress,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {
     if (flags.test) window.__TD__ ??= createTestApi(gameScene.testHooks(), SCENARIOS);
@@ -69,7 +74,7 @@ const game = new Phaser.Game({
   scene: [
     new BootScene(flags),
     new MenuScene({ app, menuRoot, openSettings }),
-    new LevelSelectScene({ app, root: levelSelectRoot }),
+    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
     gameScene,
   ],
 });
