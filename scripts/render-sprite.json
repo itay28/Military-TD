@@ -618,6 +618,218 @@
       "frontAxis": "-y",
       "lengthTiles": 1.3,
       "canvasTiles": 1.5
+    },
+    {
+      "id": "insurgents-rifle-nest",
+      "kind": "rifleNest",
+      "faction": "insurgents",
+      "depicts": "Two fighters crouched and aiming behind sandbags, kit re-coloured to civilian browns and denim (stand-in for AKM fighters in civilian clothes and chest rigs)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.45,
+      "pose": {
+        "action": "crouch_firing",
+        "frame": 10
+      },
+      "copies": [
+        {
+          "x": -0.15,
+          "y": 0.0
+        },
+        {
+          "x": 0.15,
+          "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Body", "Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.68, 0.95]
+          },
+          "material_6": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "material": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "Glove": {
+            "color": [0.75, 0.6, 0.45]
+          }
+        }
+      }
+    },
+    {
+      "id": "insurgents-cannon",
+      "kind": "cannon",
+      "faction": "insurgents",
+      "depicts": "SPG-9 73 mm recoilless rifle on its tripod",
+      "sketchfab": "6c31a440a65145e8814e9974eabf2227",
+      "author": "Jack512kb",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.8,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "untexturedColor": [0.24, 0.26, 0.16]
+    },
+    {
+      "id": "insurgents-aa-gun",
+      "kind": "aaGun",
+      "faction": "insurgents",
+      "depicts": "ZU-23-2 twin 23 mm anti-aircraft gun, repainted sand (stand-in for the ZPU-4: no free ZPU-4 model exists, and the ZU-23-2 is the other towed AA gun insurgents field most)",
+      "sketchfab": "fdae5a37901941fea3a02578506072a3",
+      "author": "LuckySkink9661",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 0.95,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "under": [
+          "Turret_148",
+          "Twin_barrel_visuals_244",
+          "Upper_sight_prop_435",
+          "Seats_and_rails_387",
+          "Side_boxes_328"
+        ]
+      },
+      "tint": {
+        "color": [1.5, 1.15, 0.7]
+      }
+    },
+    {
+      "id": "insurgents-mortar",
+      "kind": "mortar",
+      "faction": "insurgents",
+      "depicts": "Pindad MO-3 81 mm mortar (stand-in for the 82 mm M-37/2B14 the Insurgents field, same bipod and baseplate layout) in a sandbagged pit",
+      "sketchfab": "567d0dd2bd1944a8ac8a6b0a9dcb5ebb",
+      "author": "sakigakefuruzawa",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.65,
+      "exclude": [
+        "Pindad Mo-1 Kal. 60 mm CO_Pindad Mo-1 Kal. 60 mm_0",
+        "Pindad Mo-2 Kal. 60 mm LR_Base and Mortar_0",
+        "Pindad Mo-2 Kal. 60 mm LR_Small Parts_0"
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": ["Base"]
+      }
+    },
+    {
+      "id": "insurgents-infantry",
+      "kind": "infantry",
+      "faction": "insurgents",
+      "depicts": "Fighter advancing and firing, kit re-coloured to civilian browns and denim (stand-in for an AKM fighter in civilian clothes and a chest rig)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "walking_firing",
+        "frame": 10
+      },
+      "canvasTiles": 1.25,
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Body", "Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.68, 0.95]
+          },
+          "material_6": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "material": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "Glove": {
+            "color": [0.75, 0.6, 0.45]
+          }
+        }
+      }
+    },
+    {
+      "id": "insurgents-jeep",
+      "kind": "jeep",
+      "faction": "insurgents",
+      "depicts": "Toyota pickup technical with a heavy machine gun in the bed (the Hilux technical with a DShK)",
+      "sketchfab": "9dccb441c7064a11bf87446ab4f4e09b",
+      "author": "lm9241221",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.8,
+      "canvasTiles": 1.0,
+      "exclude": ["Object_2"],
+      "tint": {
+        "color": [2.2, 2.0, 1.8]
+      }
+    },
+    {
+      "id": "insurgents-tank",
+      "kind": "tank",
+      "faction": "insurgents",
+      "depicts": "T-54/55 main battle tank (the T-55)",
+      "sketchfab": "6bde9f748c3e472e878d333998b506f9",
+      "author": "SGAstudios3DandGameDevelopment",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.3,
+      "canvasTiles": 1.5,
+      "turret": {
+        "under": [
+          "Turret_32",
+          "Mantlet_33",
+          "Cannon_34",
+          "Muzzle Break_35",
+          "Top Hatch 1_36",
+          "Top Hatch 2_37",
+          "Right Stowage box 2.001_40",
+          "Right Stowage box 2.002_41",
+          "Visor.001_42",
+          "Top Hatch 1.001_43",
+          "Top Hatch 1.002_44"
+        ]
+      }
+    },
+    {
+      "id": "insurgents-helicopter",
+      "kind": "helicopter",
+      "faction": "insurgents",
+      "depicts": "Mi-8 in weathered bare metal (a captured Mi-8)",
+      "sketchfab": "ab981d28f7124a489cd1b1992b2e467b",
+      "author": "jeandiz",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.3,
+      "canvasTiles": 1.5
     }
   ]
 }

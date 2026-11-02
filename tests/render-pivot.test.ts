@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { SPRITES } from '../src/data/sprites';
-import { MVP_MAP } from '../src/data/maps';
+import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
 /** A transparent `w` × `h` image with the given rectangles (x, y, w, h) opaque. */
@@ -99,8 +99,8 @@ describe('the committed render data', () => {
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
   const kinds = Object.keys(SPRITES).sort();
-  // The first map's two Factions, then China (#316).
-  for (const faction of new Set([MVP_MAP.attacker, MVP_MAP.defender, 'china'])) {
+  // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
+  for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
       expect(models.map((m) => m.kind).sort()).toEqual(kinds);
