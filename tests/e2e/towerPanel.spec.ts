@@ -73,3 +73,21 @@ test('Restart closes the panel', async ({ page }) => {
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
   await expect(panel(page)).toBeHidden();
 });
+
+test('picking a build kind closes the tower panel', async ({ page }) => {
+  await selectPlacedTower(page);
+  await expect(panel(page)).toBeVisible();
+  await page.getByTestId('build-rifleNest').click();
+  await expect(panel(page)).toBeHidden();
+  await expect(page.getByTestId('build-rifleNest')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('selecting a placed tower clears the build bar selection', async ({ page }) => {
+  await openGame(page);
+  await selectKind(page);
+  await clickTile(page, BESIDE_PATH);
+  await expect(page.getByTestId('build-rifleNest')).toHaveAttribute('aria-pressed', 'true');
+  await clickTile(page, BESIDE_PATH);
+  await expect(panel(page)).toBeVisible();
+  await expect(page.getByTestId('build-rifleNest')).toHaveAttribute('aria-pressed', 'false');
+});

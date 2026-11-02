@@ -581,13 +581,16 @@ export class GameScene extends Phaser.Scene {
       set: (value) => (this.gameSpeed = value),
     };
     this.hud = mountHud(this.hudRoot, this.sim, speed);
-    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
+    // Placing a new tower and inspecting a placed one are exclusive: picking one closes the other.
+    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions(), {
+      onSelect: () => this.towerPanel.select(undefined),
+    });
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, {
       onRestart: () => this.scene.restart(),
       result: () => this.result,
     });
-    this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim);
+    this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim, { onSelect: () => this.buildBar.clear() });
     // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
     // build bar's and tower panel's Esc (cancel a selection) runs before its own (pause).
     this.pauseMenu = mountPauseMenu(this.pauseMenuRoot, this.sim, {
