@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TILE_PX } from '../data/display';
-import { renderPlacement } from './renderPlacement';
+import { RENDER_FACING } from '../data/renders';
+import { MUZZLE_FALLBACK_PX, muzzlePoints, renderPlacement } from './renderPlacement';
 
 const render = { pxPerTile: 128, canvasPx: 128, pivot: { x: 64.5, y: 80 } };
 
@@ -23,5 +24,48 @@ describe('renderPlacement', () => {
     expect(tank.scale).toBe(TILE_PX / 128);
     expect(tank.turretOffset).toEqual({ x: -0.5 * tank.scale, y: 20.5 * tank.scale });
     expect(tank.turretOrigin).toEqual({ x: 95.5 / 192, y: 116.5 / 192 });
+  });
+});
+
+describe('muzzlePoints', () => {
+  const at = { x: 100, y: 200 };
+  const gun = {
+    ...render,
+    canvasPx: 128,
+    pivot: { x: 64, y: 64 },
+    muzzles: [
+      { x: -4, y: -60 },
+      { x: 4, y: -60 },
+    ],
+  };
+
+  it('puts each barrel tip over the hull, north of the pivot when the turret faces north', () => {
+    const scale = TILE_PX / 128;
+    const [a, b] = muzzlePoints(gun, at, RENDER_FACING);
+    expect(a!.x).toBeCloseTo(100 - 4 * scale);
+    expect(a!.y).toBeCloseTo(200 - 60 * scale);
+    expect(b!.x).toBeCloseTo(100 + 4 * scale);
+  });
+
+  it('turns the tips with the turret: facing east puts them east, the pair split north–south', () => {
+    const scale = TILE_PX / 128;
+    const [a, b] = muzzlePoints(gun, at, 0);
+    expect(a!.x).toBeCloseTo(100 + 60 * scale);
+    expect(a!.y).toBeCloseTo(200 - 4 * scale);
+    expect(b!.y).toBeCloseTo(200 + 4 * scale);
+  });
+
+  it('measures from the pivot, which sits off the hull centre', () => {
+    const tank = { ...render, muzzles: [{ x: 0, y: -100 }] };
+    const scale = TILE_PX / 128;
+    const [m] = muzzlePoints(tank, at, RENDER_FACING);
+    expect(m!.y).toBeCloseTo(200 + 16 * scale - 100 * scale);
+  });
+
+  it('gives a Kenney kind one tip a fixed way along the aim', () => {
+    const [m, ...rest] = muzzlePoints(null, at, Math.PI / 2);
+    expect(rest).toEqual([]);
+    expect(m!.x).toBeCloseTo(100);
+    expect(m!.y).toBeCloseTo(200 + MUZZLE_FALLBACK_PX);
   });
 });
