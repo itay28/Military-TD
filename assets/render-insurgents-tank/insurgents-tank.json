@@ -1,0 +1,10 @@
+{
+  "id": "insurgents-tank",
+  "kind": "tank",
+  "pxPerTile": 128,
+  "canvasPx": 192,
+  "pivot": {
+    "x": 95.5,
+    "y": 109.5
+  }
+}

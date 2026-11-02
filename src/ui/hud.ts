@@ -1,16 +1,13 @@
 import { WAVE_BANNER_MS } from '../data/display';
-import { nextSpeed, type GameSpeed } from '../scenes/gameSpeed';
+import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 
 /** The parts of the Game the HUD reads and commands. */
 export type HudGame = Pick<Game, 'state' | 'events' | 'startWave' | 'setAutoStart'>;
 
-/** The player's game speed, which the scene owns: the HUD shows it and sets the next one on click. */
-export interface HudSpeed {
-  get(): GameSpeed;
-  set(speed: GameSpeed): void;
-}
+/** The player's game speed, which the scene owns: the HUD shows it and sets the one clicked. */
+export type HudSpeed = GameSpeedControl;
 
 export interface Hud {
   /** The group holding the HUD's buttons; the pause menu adds its Pause button here. */
@@ -58,10 +55,13 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   autoStart.textContent = 'Auto-start';
   controls.append(autoStart);
   const nextWave = field('hud-next-wave', message);
-  const speedButton = doc.createElement('button');
-  speedButton.type = 'button';
-  speedButton.dataset.testid = 'game-speed';
-  controls.append(speedButton);
+  const speedButtons = mountSpeedButtons(
+    controls,
+    speed,
+    (n) => `game-speed-${n}`,
+    'game-speed',
+    () => update(),
+  );
   // A live region stays in place and only its text changes, so screen readers announce it.
   const banner = doc.createElement('div');
   banner.setAttribute('role', 'status');
@@ -92,12 +92,8 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     const pressed = String(state.autoStart);
     if (autoStart.getAttribute('aria-pressed') !== pressed) autoStart.setAttribute('aria-pressed', pressed);
     setDisabled(autoStart, isGameOver(state.phase));
-    const shown = speed.get();
-    setText(speedButton, `×${shown}`);
-    if (speedButton.getAttribute('aria-label') !== `Game speed ×${shown}`)
-      speedButton.setAttribute('aria-label', `Game speed ×${shown}`);
     // Ticks stop once the game is over, so a faster speed would change nothing.
-    setDisabled(speedButton, isGameOver(state.phase));
+    speedButtons.sync(isGameOver(state.phase));
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
     const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
     setText(banner, showBanner ? bannerText : '');
@@ -117,10 +113,6 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   });
   autoStart.addEventListener('click', () => {
     game.setAutoStart(!game.state.autoStart);
-    update();
-  });
-  speedButton.addEventListener('click', () => {
-    speed.set(nextSpeed(speed.get()));
     update();
   });
   update();

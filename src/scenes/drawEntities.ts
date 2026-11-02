@@ -1,5 +1,6 @@
 import {
   AIR_SHADOW,
+  EFFECT,
   DISMANTLE,
   ENEMY_STYLE,
   GHOST,
@@ -18,6 +19,7 @@ import type { Enemy } from '../sim/enemies';
 import type { Tower, TowerStats } from '../sim/towers';
 import type { MapPainter } from './drawMap';
 import type { Pixel } from './coords';
+import type { EffectView } from './effects';
 import type { BlastCircle } from './shellView';
 import type { TracerLine } from './tracers';
 
@@ -30,8 +32,11 @@ export interface EntityPainter extends MapPainter {
 
 // Enemies, towers, ghosts and range rings are drawn around the local origin; the scene positions each one's Graphics.
 
-/** A circle or square in its kind's color (air kinds get an offset shadow, rotor kinds an X), with an HP bar above it filled in proportion to HP left. */
-export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
+/**
+ * A circle or square in its kind's color (air kinds get an offset shadow, rotor kinds an X turned `rotorAngle`
+ * radians), with its HP bar.
+ */
+export function drawEnemy(painter: EntityPainter, enemy: Enemy, rotorAngle = 0): void {
   const style = ENEMY_STYLE[enemy.kind];
   const { shape, radius, color } = style;
   if (enemy.layer === 'air') {
@@ -42,12 +47,22 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy): void {
   if (shape === 'circle') painter.fillCircle(0, 0, radius);
   else painter.fillRect(-radius, -radius, radius * 2, radius * 2);
   if ('rotor' in style) {
+    // The blade tips (s, s) and (s, -s), turned by rotorAngle; each blade runs from a tip to its opposite.
     const s = style.rotor;
+    const cos = Math.cos(rotorAngle);
+    const sin = Math.sin(rotorAngle);
+    const a = { x: s * (cos - sin), y: s * (sin + cos) };
+    const b = { x: s * (cos + sin), y: s * (sin - cos) };
     painter.lineStyle(ROTOR.width, ROTOR.color);
-    painter.lineBetween(-s, -s, s, s);
-    painter.lineBetween(-s, s, s, -s);
+    painter.lineBetween(-a.x, -a.y, a.x, a.y);
+    painter.lineBetween(-b.x, -b.y, b.x, b.y);
   }
+  drawHpBar(painter, enemy);
+}
 
+/** The HP bar centered above the enemy, filled in proportion to HP left. Drawn over its sprite too. */
+export function drawHpBar(painter: EntityPainter, enemy: Enemy): void {
+  const { radius } = ENEMY_STYLE[enemy.kind];
   const left = -HP_BAR.width / 2;
   const top = -radius - HP_BAR.gap - HP_BAR.height;
   painter.fillStyle(HP_BAR.back, HP_BAR.backAlpha);
@@ -66,14 +81,20 @@ function paintShape(painter: EntityPainter, { shape, size }: TowerStyle, stroke 
   else painter.fillRect(-half, -half, size, size);
 }
 
-/** A filled shape with an outline, in its kind's style, and a level pip per upgrade along its bottom edge. */
+/** A filled shape with an outline, in its kind's style, and its level pips. */
 export function drawTower(painter: EntityPainter, tower: Tower): void {
   const style = TOWER_STYLE[tower.kind];
   painter.fillStyle(style.fill);
   paintShape(painter, style);
   painter.lineStyle(style.outlineWidth, style.outline);
   paintShape(painter, style, true);
+  drawLevelPips(painter, tower);
+}
+
+/** A level pip per upgrade along the bottom edge of the tower's shape. Drawn over its sprite too. */
+export function drawLevelPips(painter: EntityPainter, tower: Tower): void {
   if (tower.level <= 1) return;
+  const style = TOWER_STYLE[tower.kind];
   const half = style.size / 2;
   const top = half - LEVEL_PIP.inset - LEVEL_PIP.size;
   painter.fillStyle(LEVEL_PIP.color);
@@ -103,10 +124,15 @@ export function drawRangeRing(painter: EntityPainter, tower: Tower): void {
 /** A see-through tower of `kind` and its range rings, green if it can be placed here, red if not. */
 export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: boolean): void {
   const color = placeable ? GHOST.placeable : GHOST.blocked;
+  const radii = rangeRingRadii(TOWER_STATS[kind]);
   painter.fillStyle(color, GHOST.fillAlpha);
   paintShape(painter, TOWER_STYLE[kind]);
+  // The dark outline goes under the coloured ring, so the ring keeps its colour with a dark edge either side.
+  painter.lineStyle(GHOST.outline.width, GHOST.outline.color, GHOST.outline.alpha);
+  paintShape(painter, TOWER_STYLE[kind], true);
+  for (const radius of radii) painter.strokeCircle(0, 0, radius);
   painter.lineStyle(GHOST.ringWidth, color, GHOST.ringAlpha);
-  for (const radius of rangeRingRadii(TOWER_STATS[kind])) painter.strokeCircle(0, 0, radius);
+  for (const radius of radii) painter.strokeCircle(0, 0, radius);
 }
 
 /** Each tracer as a line in canvas pixels, in its tower's style, at its current alpha. */
@@ -128,5 +154,14 @@ export function drawBlasts(painter: EntityPainter, blasts: readonly BlastCircle[
   for (const { center, radius, alpha } of blasts) {
     painter.lineStyle(SHELL.blastWidth, SHELL.blastColor, alpha);
     painter.strokeCircle(center.x, center.y, radius);
+  }
+}
+
+/** Each combat effect as a disc that fades out and grows as it ages. */
+export function drawEffects(painter: EntityPainter, effects: readonly EffectView[]): void {
+  for (const { kind, at, progress } of effects) {
+    const { color, radius, growth } = EFFECT[kind];
+    painter.fillStyle(color, 1 - progress);
+    painter.fillCircle(at.x, at.y, radius * (1 + (growth - 1) * progress));
   }
 }
