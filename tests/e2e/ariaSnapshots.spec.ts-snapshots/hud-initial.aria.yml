@@ -2,5 +2,8 @@
 - status
 - button "Start Wave"
 - button "Auto-start"
-- button "Game speed ×1": ×1
+- group "Game speed":
+  - button "×1" [pressed]
+  - button "×2"
+  - button "×3"
 - button "Pause"
