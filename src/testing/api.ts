@@ -1,4 +1,5 @@
 import type { EnemyKind } from '../data/enemies';
+import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
 import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
@@ -64,6 +65,8 @@ export interface TestView {
    * tower, drawn only for one with a turret sprite.
    */
   readonly turrets: readonly { readonly towerId: number; readonly angle: number }[];
+  /** The kinds on the map drawn from a render (ADR-0009) rather than Kenney's sprites, sorted. */
+  readonly rendered: readonly SpriteKind[];
 }
 
 /** `window.__TD__` with `?test=1` (ADR-0003). */

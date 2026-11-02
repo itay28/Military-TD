@@ -110,7 +110,7 @@ An enemy sprite turns to face the way it travels: `SPRITE_HEADING` in `src/data/
 
 ## Render spike (#286, ADR-0009)
 
-Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab models and one NAIP ground patch. The game doesn't load them yet; they exist so the maintainer can judge the look (`docs/art/render-spike-compare.png`). Source models are never committed: `scripts/render-sprite.py` downloads them into the ignored `.cache/models/` with `SKETCHFAB_API_TOKEN`.
+Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab models and one NAIP ground patch (`docs/art/render-spike-compare.png`). The game draws the AA Gun and Tank renders in place of their Kenney sprites (#310): the hull with its shadow, then the turret turning around its pivot. After `render-sprite.py`, run `npm run render:pivot`: it measures each turret's pivot (the centre of its body, without the barrel) from `<id>-turret.png` into `<id>.json`, which `src/data/renders.ts` reads. A test fails while that JSON is stale. A kind whose render doesn't load keeps its Kenney frame. Source models are never committed: `scripts/render-sprite.py` downloads them into the ignored `.cache/models/` with `SKETCHFAB_API_TOKEN`.
 
 | Folder | Source | Made by |
 | --- | --- | --- |
