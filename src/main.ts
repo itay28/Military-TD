@@ -3,6 +3,7 @@ import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
+import { createPersistedProgress } from './progress/persist';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
 import { browserStorage, createMemoryStorage, createPersistedSettings } from './settings/persist';
@@ -35,7 +36,11 @@ if (!settingsRoot) throw new Error('index.html has no #settings element');
 const flags = parseTestFlags(window.location.search);
 // One set of settings, shared by both menus and every game, saved between visits. Test mode keeps them in memory
 // unless ?persist=1, so e2e runs don't leak into each other.
-const settings = createPersistedSettings(flags.test && !flags.persist ? createMemoryStorage() : browserStorage());
+const storage = flags.test && !flags.persist ? createMemoryStorage() : browserStorage();
+const settings = createPersistedSettings(storage);
+// Saved progress (maps won, best stars) lives under its own key. Nothing reads it yet: unlocks and stars (#64) are the first user.
+const progress = createPersistedProgress(storage);
+void progress;
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
