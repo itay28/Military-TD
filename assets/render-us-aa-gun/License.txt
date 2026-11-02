@@ -1,0 +1,9 @@
+Rendered sprites of "Phalanx CIWS" by Lemper_Studio
+https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated, repainted, set on a generated sandbag pad, split into hull and turret layers).
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-02.

@@ -25,7 +25,8 @@
     "test:e2e": "playwright test",
     "credits": "node scripts/credits.ts",
     "check:assets": "node scripts/check-assets.ts",
-    "atlas": "node scripts/atlas.ts"
+    "atlas": "node scripts/atlas.ts",
+    "render:pivot": "node scripts/render-pivot.ts"
   },
   "lint-staged": {
     "*.{ts,js}": [
