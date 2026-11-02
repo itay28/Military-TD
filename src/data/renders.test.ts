@@ -18,11 +18,12 @@ describe('RENDERS', () => {
     }
   });
 
-  it('reads the pivot from the render data, off the canvas centre', () => {
-    expect(RENDERS.aaGun!.pivot).toEqual({ x: 64.5, y: 80 });
-    expect(RENDERS.aaGun!.canvasPx).toBe(128);
+  it('reads the pivot from the render data: a tank off the canvas centre, a tower on its pad the centre', () => {
     expect(RENDERS.tank!.canvasPx).toBe(192);
     expect(RENDERS.tank!.pivot.y).toBeGreaterThan(96);
+    // The AA Gun stands on its sandbagged pad (#316), so it turns about the pad centre.
+    expect(RENDERS.aaGun!.canvasPx).toBe(160);
+    expect(RENDERS.aaGun!.pivot).toEqual({ x: 80, y: 80 });
   });
 
   it('keeps Kenney for every kind without a render', () => {

@@ -2,9 +2,9 @@
   "id": "china-aa-gun",
   "kind": "aaGun",
   "pxPerTile": 128,
-  "canvasPx": 128,
+  "canvasPx": 160,
   "pivot": {
-    "x": 64.5,
+    "x": 80,
     "y": 80
   }
 }
