@@ -253,3 +253,75 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-helicopter/**`
+
+## Tactical Soldier (game ready) low poly (top-down render)
+
+- Author: MissingTray1151
+- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
+- License: CC-BY-4.0
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit re-coloured to civilian browns and denim, two copies set in a sandbagged pit of our own
+- Downloaded: 2026-11-02
+- Files: `assets/render-insurgents-rifle-nest/**`
+
+## SPG-9 (top-down render)
+
+- Author: Jack512kb
+- Source: <https://sketchfab.com/3d-models/6c31a440a65145e8814e9974eabf2227>
+- License: CC-BY-4.0
+- Attribution: "SPG-9" by Jack512kb (sketchfab.com), CC-BY 4.0, rendered top-down, painted olive, set on a sandbagged pad of our own
+- Downloaded: 2026-11-02
+- Files: `assets/render-insurgents-cannon/**`
+
+## ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)
+
+- Author: LuckySkink9661
+- Source: <https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3>
+- License: CC-BY-4.0
+- Attribution: "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, repainted sand, set on a sandbagged pad of our own, turret split from the carriage
+- Downloaded: 2026-11-02
+- Files: `assets/render-insurgents-aa-gun/**`
+
+## Pindad Mortars (top-down render)
+
+- Author: sakigakefuruzawa
+- Source: <https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb>
+- License: CC-BY-4.0
+- Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate
+- Downloaded: 2026-11-02
+- Files: `assets/render-insurgents-mortar/**`
+
+## Tactical Soldier (game ready) low poly (top-down render)
+
+- Author: MissingTray1151
+- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
+- License: CC-BY-4.0
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit re-coloured to civilian browns and denim
+- Downloaded: 2026-11-02
+- Files: `assets/render-insurgents-infantry/**`
+
+## TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render)
+
+- Author: lm9241221
+- Source: <https://sketchfab.com/3d-models/9dccb441c7064a11bf87446ab4f4e09b>
+- License: CC-BY-4.0
+- Attribution: "TOYOTA DO AFEGANISTÃO (LOW POLY)" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, brightened
+- Downloaded: 2026-11-02
+- Files: `assets/render-insurgents-jeep/**`
+
+## T 54/55 Tank (top-down render)
+
+- Author: SGAstudios3DandGameDevelopment
+- Source: <https://sketchfab.com/3d-models/6bde9f748c3e472e878d333998b506f9>
+- License: CC-BY-4.0
+- Attribution: "T 54/55 Tank" by SGAstudios3DandGameDevelopment (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull
+- Downloaded: 2026-11-02
+- Files: `assets/render-insurgents-tank/**`
+
+## Russian Transport Heli (top-down render)
+
+- Author: jeandiz
+- Source: <https://sketchfab.com/3d-models/ab981d28f7124a489cd1b1992b2e467b>
+- License: CC-BY-4.0
+- Attribution: "Russian Transport Heli" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-02
+- Files: `assets/render-insurgents-helicopter/**`
