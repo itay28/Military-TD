@@ -118,4 +118,8 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | `render-russia-tank/` | "T-72B3 Main Battle Tank" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `naip-field-road-treeline/` | USDA FSA NAIP, Iowa 2023, 0.3 m, PD-USGov | `scripts/naip-patch.py` |
 
+## Map ground images (#312, ADR-0009)
+
+Each Tiled map can have one painted ground image in `naip-maps/` (`<map>.jpg`, PD-USGov, under the same NAIP manifest entry). `scripts/naip-map.py` makes it: a pinned NAIP field at 30 m per tile, 96 px per tile, with the map's Path painted on it as a dirt track and blocked tiles as treeline. A new map is a new entry in that script's `MAPS`; rerun it after moving the Path. The scene, the window centres and the seed are pinned, so a rerun writes the same file.
+
 Before rendering a Sketchfab model, read its page: skip it if the description or tags say "ripped" or "imported from", name a game, or the license is NonCommercial or NoDerivatives.

@@ -37,9 +37,9 @@ test('a blocked ground image falls back to the tileset (#312)', async ({ page })
   expect((await stepToEnd(page)).phase).toBe('victory');
 });
 
-test('a blocked atlas falls back to shapes and never breaks the game', async ({ page }) => {
+test('a blocked atlas and ground image fall back to shapes and never break the game', async ({ page }) => {
   const blocked: string[] = [];
-  await page.route(/\/sprites[^/]*\.(png|json)$/, (route) => {
+  await page.route(/\/(sprites[^/]*\.(png|json)|training-ground[^/]*\.jpg)$/, (route) => {
     blocked.push(route.request().url());
     return route.abort();
   });
