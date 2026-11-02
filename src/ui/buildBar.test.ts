@@ -234,3 +234,31 @@ describe('Build bar', () => {
     expect(bar.selected).toBeUndefined();
   });
 });
+
+describe('mountBuildBar onSelect and clear', () => {
+  it('calls onSelect when a click or a hotkey selects a kind, not when one is cleared', () => {
+    let calls = 0;
+    const bar = mountBuildBar(root, wallet(500), OPTIONS, { onSelect: () => calls++ });
+    button('rifle').click();
+    pressKey('2');
+    expect(calls).toBe(2);
+    button('cannon').click(); // clears
+    expect(bar.selected).toBeUndefined();
+    expect(calls).toBe(2);
+  });
+
+  it('does not call onSelect for a kind the player cannot afford', () => {
+    let calls = 0;
+    mountBuildBar(root, wallet(10), OPTIONS, { onSelect: () => calls++ });
+    pressKey('1');
+    expect(calls).toBe(0);
+  });
+
+  it('clear() drops the selection and unpresses the button', () => {
+    const bar = mountBuildBar(root, wallet(500), OPTIONS);
+    button('rifle').click();
+    bar.clear();
+    expect(bar.selected).toBeUndefined();
+    expect(pressed()).toHaveLength(0);
+  });
+});

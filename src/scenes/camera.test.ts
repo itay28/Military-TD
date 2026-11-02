@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { clampView, fitView, fitZoom, panBy, screenToWorld, worldToScreen, zoomAt, zoomLimits } from './camera';
+import {
+  canPlaceAt,
+  clampView,
+  fitView,
+  fitZoom,
+  panBy,
+  screenToWorld,
+  worldToScreen,
+  zoomAt,
+  zoomLimits,
+} from './camera';
 
 const WORLD = { width: 768, height: 480 };
 /** A phone in portrait, with the build bar beside the map: much narrower than the map. */
@@ -91,5 +101,37 @@ describe('zoomAt', () => {
   it('stops at the zoom limits', () => {
     expect(zoomAt({ scrollX: 0, scrollY: 0, zoom: 2 }, 4, { x: 0, y: 0 }, PHONE).zoom).toBe(2.5);
     expect(zoomAt(fitView(PHONE), 0.5, { x: 0, y: 0 }, PHONE)).toEqual(fitView(PHONE));
+  });
+});
+
+describe('canPlaceAt', () => {
+  const zoomed = { scrollX: 200, scrollY: 100, zoom: 2 }; // shows world x 200..350, y 100..450 on the phone canvas
+
+  it('accepts a point inside the canvas and the map', () => {
+    expect(canPlaceAt(zoomed, PHONE, { x: 150, y: 300 })).toBe(true);
+    expect(canPlaceAt(zoomed, PHONE, { x: 0, y: 0 })).toBe(true);
+  });
+
+  it('refuses a point outside the canvas, over the build bar or HUD beside it', () => {
+    expect(canPlaceAt(zoomed, PHONE, { x: 300, y: 300 })).toBe(false);
+    expect(canPlaceAt(zoomed, PHONE, { x: 350, y: 300 })).toBe(false);
+    expect(canPlaceAt(zoomed, PHONE, { x: -1, y: 300 })).toBe(false);
+    expect(canPlaceAt(zoomed, PHONE, { x: 150, y: -5 })).toBe(false);
+    expect(canPlaceAt(zoomed, PHONE, { x: 150, y: 700 })).toBe(false);
+  });
+
+  it('refuses the same map tile off-screen after a zoom, and accepts it once panned into view', () => {
+    const tile = { x: 600, y: 200 }; // inside the map (768x480)
+    const offscreen = worldToScreen(zoomed, tile);
+    expect(canPlaceAt(zoomed, PHONE, offscreen)).toBe(false);
+    const panned = panBy(zoomed, -offscreen.x + 100, 0, PHONE);
+    expect(canPlaceAt(panned, PHONE, worldToScreen(panned, tile))).toBe(true);
+  });
+
+  it('refuses a point on the margin around a map smaller than the canvas', () => {
+    const view = fitView(DESKTOP);
+    const margin = worldToScreen(view, { x: -10, y: 100 });
+    expect(canPlaceAt(view, DESKTOP, margin)).toBe(false);
+    expect(canPlaceAt(view, DESKTOP, worldToScreen(view, { x: 10, y: 100 }))).toBe(true);
   });
 });
