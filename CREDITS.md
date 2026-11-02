@@ -88,9 +88,9 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted toward OCP, two copies set in a sandbagged pit of our own
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations, kit tinted toward OCP
 - Downloaded: 2026-11-02
-- Files: `assets/render-us-rifle-nest/**`
+- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`
 
 ## Phalanx CIWS (top-down render)
 
@@ -118,15 +118,6 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Mortar - M224" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-mortar/**`
-
-## Tactical Soldier (game ready) low poly (top-down render)
-
-- Author: MissingTray1151
-- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
-- License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted toward OCP
-- Downloaded: 2026-11-02
-- Files: `assets/render-us-infantry/**`
 
 ## Low Poly Humvee FREE (top-down render)
 
