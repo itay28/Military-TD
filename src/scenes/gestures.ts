@@ -122,3 +122,13 @@ export function createGestures({
     cancel: reset,
   };
 }
+
+/**
+ * What a pointer move does to the hover tile (the Ghost and range ring). A mouse hovers wherever it is (`follow`).
+ * A finger only hovers while it aims (`keep`: the aim gesture sets the tile); during a pan or pinch, or before the
+ * press has become anything, it hovers nothing (`clear`).
+ */
+export function hoverFrom(gesture: Gesture | undefined, touch: boolean): 'follow' | 'keep' | 'clear' {
+  if (!touch) return 'follow';
+  return gesture?.type === 'aim' ? 'keep' : 'clear';
+}

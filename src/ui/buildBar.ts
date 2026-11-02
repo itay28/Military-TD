@@ -25,6 +25,8 @@ export interface BuildBar<K extends string = TowerKind> {
   readonly selected: K | undefined;
   /** Whether the bar is folded down to its toggle, leaving the map more room. */
   readonly collapsed: boolean;
+  /** Drops the selected kind, if any. */
+  clear(): void;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
   /** Removes the bar's elements and stops listening for hotkeys. */
@@ -58,6 +60,8 @@ export function mountBuildBar<K extends string>(
   root: HTMLElement,
   game: BuildBarGame,
   options: readonly BuildOption<K>[],
+  /** `onSelect` runs when a kind becomes selected (not when it is cleared), so the scene can close the tower panel. */
+  { onSelect }: { readonly onSelect?: () => void } = {},
 ): BuildBar<K> {
   if (options.length === 0) throw new Error('The build bar needs at least one tower kind');
   const doc = root.ownerDocument;
@@ -117,6 +121,7 @@ export function mountBuildBar<K extends string>(
     if (!affordable(option)) return;
     selected = option;
     update();
+    onSelect?.();
   };
   const clear = () => {
     selected = undefined;
@@ -159,6 +164,7 @@ export function mountBuildBar<K extends string>(
     get collapsed() {
       return collapsed;
     },
+    clear,
     update,
     destroy() {
       doc.removeEventListener('keydown', onKey);
