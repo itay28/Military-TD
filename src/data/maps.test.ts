@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isFaction } from '../sim/factions';
 import { createMap, type Tile } from '../sim/map';
 import { FIRST_MAP } from '../../tests/e2e/firstMap';
 import { MAPS, mapById, MVP_MAP } from './maps';
@@ -47,6 +48,15 @@ describe('map registry', () => {
     expect(data.id).toBe(id);
     expect(name.trim()).not.toBe('');
     expect(() => createMap(data)).not.toThrow();
+  });
+
+  it.each(MAPS)('$id: names its Attacker and Defender Factions, as its map file says (ADR-0009)', (entry) => {
+    expect(isFaction(entry.attacker)).toBe(true);
+    expect(isFaction(entry.defender)).toBe(true);
+    expect({ attacker: entry.attacker, defender: entry.defender }).toEqual({
+      attacker: entry.data.attacker,
+      defender: entry.data.defender,
+    });
   });
 
   it('finds an entry by id', () => {

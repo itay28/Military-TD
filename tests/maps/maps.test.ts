@@ -3,6 +3,7 @@ import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MVP_MAP } from '../../src/data/maps';
 import { runScenario } from '../../src/sim/scenario';
+import { FACTIONS, isFaction } from '../../src/sim/factions';
 import { createMap, tileKey } from '../../src/sim/map';
 import { importTiledMap } from '../../src/sim/tiled';
 import { BALANCED_ORDER } from '../scenarios/bot-balanced.scenario';
@@ -83,6 +84,11 @@ describe('Tiled map files', () => {
     expect(MVP_MAP).toEqual({ ...load(TRAINING_GROUND), id: 'mvp' });
   });
 
+  it.each(mapFiles)('%s names a known Attacker and Defender Faction', (file) => {
+    const { attacker, defender } = load(file);
+    expect([isFaction(attacker), isFaction(defender)]).toEqual([true, true]);
+  });
+
   it.each(mapFiles)('%s imports and the reference bot wins it', (file) => {
     const map = load(file);
     const result = runScenario({
@@ -92,5 +98,34 @@ describe('Tiled map files', () => {
       until: 'end',
     });
     expect(result.outcome).toBe('victory');
+  });
+});
+
+// ADR-0009, point 3: Factions are skins. Every pairing plays out exactly like every other, tick for tick.
+describe('Factions are visual only', () => {
+  const json = JSON.parse(readFileSync(TRAINING_GROUND, 'utf8')) as { properties: { name: string; value: string }[] };
+  const withFactions = (attacker: string, defender: string) => ({
+    ...json,
+    properties: [
+      ...json.properties.filter(({ name }) => name !== 'attacker' && name !== 'defender'),
+      { name: 'attacker', type: 'string', value: attacker },
+      { name: 'defender', type: 'string', value: defender },
+    ],
+  });
+  const play = (attacker: string, defender: string) => {
+    const map = importTiledMap('mvp', withFactions(attacker, defender));
+    const { outcome, ticks, events, finalState } = runScenario({
+      map,
+      autoStartWaves: true,
+      bot: buildOrder(fitOrder(map, BALANCED_ORDER)),
+      until: 'end',
+    });
+    return { outcome, ticks, events, lives: finalState.lives, money: finalState.money };
+  };
+  const baseline = play('russia', 'us');
+  const pairings = FACTIONS.flatMap((attacker) => FACTIONS.map((defender) => [attacker, defender] as const));
+
+  it.each(pairings)('%s attacking %s plays the same game as any other pairing', (attacker, defender) => {
+    expect(play(attacker, defender)).toEqual(baseline);
   });
 });

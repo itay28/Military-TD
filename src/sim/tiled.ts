@@ -1,21 +1,29 @@
 import { MIN_BUILDABLE_TILES } from '../data/mapRules';
+import { FACTIONS, isFaction, type Faction } from './factions';
 import { createMap, InvalidMapError, tileKey, type MapData, type Tile } from './map';
 
 // Tiled map import (ADR-0006): a `.tmj` file → MapData. Pure, so tests and the game share it. Rules never see
 // Tiled's format: the `ground` tile layer gives the grid and the buildable tiles (tile property `buildable`), and the
-// one polyline on the `path` object layer gives the Path.
+// one polyline on the `path` object layer gives the Path. The map's custom properties `attacker` and `defender` name
+// its Factions (ADR-0009), which only the scenes read.
 
 /** Tiled keeps flip and rotation flags in a GID's top bits. */
 const GID_FLAGS = 0xf0000000;
 
 type Json = Record<string, unknown>;
 
+/** A map file's data: the sim's MapData plus the Factions on each side, which pick sprites and never touch rules. */
+export interface TiledMapData extends MapData {
+  readonly attacker: Faction;
+  readonly defender: Faction;
+}
+
 /**
  * Converts a parsed Tiled JSON map to MapData and validates it as a playable map: the Path as `createMap` checks it
  * (connected, orthogonal, edge to edge, no revisits) and at least `MIN_BUILDABLE_TILES` buildable tiles off it.
  * Throws InvalidMapError, naming the map and what to fix.
  */
-export function importTiledMap(id: string, json: unknown): MapData {
+export function importTiledMap(id: string, json: unknown): TiledMapData {
   const fail = (reason: string): never => {
     throw new InvalidMapError(`Map "${id}": ${reason}`);
   };
@@ -31,6 +39,8 @@ export function importTiledMap(id: string, json: unknown): MapData {
   if (typeof tileW !== 'number' || tileW <= 0 || tileW !== tileH)
     return fail(`tiles must be square, not ${String(tileW)}×${String(tileH)} px`);
 
+  const attacker = readFaction(json.properties, 'attacker', fail);
+  const defender = readFaction(json.properties, 'defender', fail);
   const buildableGids = readTilesets(json.tilesets, tileW, fail);
   const layers = json.layers.filter(isObject);
 
@@ -80,7 +90,16 @@ export function importTiledMap(id: string, json: unknown): MapData {
   const usable = buildable.filter((tile) => !map.isPath(tile)).length;
   if (usable < MIN_BUILDABLE_TILES)
     return fail(`has ${usable} buildable tiles off the Path; a map needs at least ${MIN_BUILDABLE_TILES}`);
-  return data;
+  return { ...data, attacker, defender };
+}
+
+/** The Faction a map property names; fails when it is missing or not one of FACTIONS. */
+function readFaction(properties: unknown, side: 'attacker' | 'defender', fail: (reason: string) => never): Faction {
+  const property = (Array.isArray(properties) ? properties.filter(isObject) : []).find(({ name }) => name === side);
+  const options = `one of ${FACTIONS.join(', ')}`;
+  if (!property) return fail(`needs ${side === 'attacker' ? 'an' : 'a'} "${side}" map property (${options})`);
+  if (!isFaction(property.value)) return fail(`${side} "${String(property.value)}" is not a Faction (${options})`);
+  return property.value;
 }
 
 /** Every GID the embedded tilesets hold, mapped to whether its tile has `buildable: true`. */
