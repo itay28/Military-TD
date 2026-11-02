@@ -89,6 +89,76 @@
       "attribution": "NAIP imagery courtesy of the USDA Farm Service Agency, public domain",
       "downloaded": "2026-11-02",
       "files": ["assets/naip-field-road-treeline/**", "assets/naip-maps/**"]
+    },
+    {
+      "id": "render-us-rifle-nest",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations, kit tinted toward OCP",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-rifle-nest/**", "assets/render-us-infantry/**"]
+    },
+    {
+      "id": "render-us-aa-gun",
+      "name": "Phalanx CIWS (top-down render)",
+      "author": "Lemper_Studio",
+      "source": "https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Phalanx CIWS\" by Lemper_Studio (sketchfab.com), CC-BY 4.0, rendered top-down, repainted grey-olive, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-aa-gun/**"]
+    },
+    {
+      "id": "render-us-cannon",
+      "name": "Anti-Tank Guided Missile (top-down render)",
+      "author": "Alhimix",
+      "source": "https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Anti-Tank Guided Missile\" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-cannon/**"]
+    },
+    {
+      "id": "render-us-mortar",
+      "name": "Mortar - M224 (top-down render)",
+      "author": "jcherry3d",
+      "source": "https://sketchfab.com/3d-models/c86a73e40d994431bcdb57dc741cf8be",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Mortar - M224\" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-mortar/**"]
+    },
+    {
+      "id": "render-us-jeep",
+      "name": "Low Poly Humvee FREE (top-down render)",
+      "author": "madtrollstudio",
+      "source": "https://sketchfab.com/3d-models/c0e2ddcc4ccf4d49a9303303a6307bcf",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Low Poly Humvee FREE\" by madtrollstudio (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-jeep/**"]
+    },
+    {
+      "id": "render-us-tank",
+      "name": "M1A2 Abrams Crows (top-down render)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/c9e2b389e5004b03bcc695e4350b989d",
+      "license": "CC-BY-4.0",
+      "attribution": "\"M1A2 Abrams Crows\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-tank/**"]
+    },
+    {
+      "id": "render-us-helicopter",
+      "name": "Sikorsky UH-60 Black Hawk (top-down render)",
+      "author": "helijah",
+      "source": "https://sketchfab.com/3d-models/ee81eb66006b4d8980d0cf9ff6304b69",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Sikorsky UH-60 Black Hawk\" by helijah (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-helicopter/**"]
     }
   ]
 }

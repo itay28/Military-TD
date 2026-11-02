@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openGame } from './helpers';
+import { openGame, view } from './helpers';
 
 // Fonts and GPU rendering differ between machines, so baselines are made and compared only in CI's Linux
 // container (ADR-0003). To make or update one, see docs/agents/workflow.md → Screenshot baselines.
@@ -9,4 +9,13 @@ test('map', async ({ page }) => {
   await openGame(page);
   // The canvas only: the HUD and build bar are DOM and covered by aria snapshots (ariaSnapshots.spec.ts).
   await expect(page.locator('#game')).toHaveScreenshot('map.png');
+});
+
+test('rendered sprites: an AA Gun and a Tank on the map (ADR-0009)', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => window.__TD__!.loadScenario('every-tower-kind'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'spawnEnemy', kind: 'tank' }));
+  await page.evaluate(() => window.__TD__!.step(240));
+  await expect.poll(async () => (await view(page)).rendered).toEqual(['aaGun', 'tank']);
+  await expect(page.locator('#game')).toHaveScreenshot('rendered.png');
 });
