@@ -41,7 +41,7 @@ import { drawGrid, drawMap } from './drawMap';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, type GameSpeed, type GameSpeedControl } from './gameSpeed';
-import { createGestures, type Gesture, type Gestures } from './gestures';
+import { createGestures, hoverFrom, type Gesture, type Gestures } from './gestures';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { headingOf, spriteRotation } from './heading';
@@ -554,8 +554,12 @@ export class GameScene extends Phaser.Scene {
       this.onGesture(this.gestures.down(pointer.id, screen(pointer), pointer.wasTouch));
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      this.onGesture(this.gestures.move(pointer.id, screen(pointer)));
-      this.pointerTile = pixelToTile(screenToWorld(this.view, screen(pointer)));
+      const gesture = this.gestures.move(pointer.id, screen(pointer));
+      this.onGesture(gesture);
+      // A finger hovers only while it aims; a pinch or pan moves the camera and shows no Ghost.
+      const hover = hoverFrom(gesture, pointer.wasTouch);
+      if (hover === 'follow') this.pointerTile = pixelToTile(screenToWorld(this.view, screen(pointer)));
+      else if (hover === 'clear') this.pointerTile = undefined;
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       this.onGesture(this.gestures.up(pointer.id, screen(pointer)));
