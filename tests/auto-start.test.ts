@@ -665,6 +665,52 @@ describe('planRetries: one retry, then give up (#303)', () => {
   });
 });
 
+describe('planRetries: resume an answered question (#319)', () => {
+  const question = (minutes: number) => ({ body: `Option A or B?\n\n${DONE_MARKER}`, createdAt: ago(minutes) });
+  const answer = (minutes: number) => ({ body: 'B', createdAt: ago(minutes) });
+  const bot = (minutes: number) => ({
+    body: `Asked the sizing agent.\n\n<!-- size-issue:requested -->`,
+    createdAt: ago(minutes),
+  });
+  const plan = (over: Partial<RetryIssue>) => planRetries([claimed(over)], NOW);
+
+  it('fires the same model on the same base at once when the maintainer answered', () => {
+    expect(plan({ comments: [fired(30, 'sonnet', 'feat/5-b'), question(29), answer(1)] })).toEqual([
+      { issue: 7, base: 'feat/5-b', model: 'sonnet', resume: true },
+    ]);
+  });
+
+  it('carries the draft PR branch and number', () => {
+    const pr = { number: 40, head: 'fix/7-a', draft: true, activity: [ago(20)] };
+    expect(plan({ comments: [fired(30), question(29), answer(1)], pr })).toEqual([
+      { issue: 7, base: 'main', model: 'opus', branch: 'fix/7-a', pr: 40, resume: true },
+    ]);
+  });
+
+  it('waits while the question has no answer, or only automation comments', () => {
+    expect(plan({ comments: [fired(300), question(290)] })).toEqual([]);
+    expect(plan({ comments: [fired(300), question(290), bot(100)] })).toEqual([]);
+  });
+
+  it('waits while needs-info is still on, and never takes a ready PR', () => {
+    expect(plan({ comments: [fired(30), question(29), answer(1)], needsInfo: true })).toEqual([]);
+    const pr = { number: 40, head: 'fix/7-a', draft: false, activity: [ago(20)] };
+    expect(plan({ comments: [fired(30), question(29), answer(1)], pr })).toEqual([]);
+  });
+
+  it('after the resume fire, the usual dead-session rules apply with a fresh count', () => {
+    expect(plan({ comments: [fired(300), question(290), answer(200), fired(199)] })).toEqual([
+      { issue: 7, base: 'main', model: 'opus' },
+    ]);
+    expect(plan({ comments: [fired(300), question(290), answer(200), fired(199), said(30)] })).toEqual([]);
+  });
+
+  it('says so in the fire text', () => {
+    expect(retryText({ issue: 7, base: 'main', model: 'opus', resume: true })).toContain('question was answered');
+    expect(retryText({ issue: 7, base: 'main', model: 'opus' })).not.toContain('Resume');
+  });
+});
+
 describe('giveUpIssue (#303)', () => {
   const api = 'https://api.github.com/repos/itay28/Military-TD/issues/7';
   const bodies = (fetchFn: Mock<Fetch>) => fetchFn.mock.calls.map(([, init]) => JSON.parse(init.body as string));
