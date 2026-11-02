@@ -10,6 +10,7 @@ import {
   TRACER,
   TURRET,
 } from '../data/display';
+import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
@@ -45,6 +46,7 @@ import { createGestures, type Gesture, type Gestures } from './gestures';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { headingOf, spriteRotation } from './heading';
+import { renderPlacement } from './renderPlacement';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
 import { resolveClick } from './selection';
@@ -90,10 +92,18 @@ function onLayer<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Co
   return object.setDepth(DEPTH[layer]).setName(layer);
 }
 
-/** An enemy or tower: its sprite, if it has one, and a Graphics over it with its shape or just its overlays. */
+/**
+ * An enemy or tower: its sprite, if it has one, and a Graphics over it with its shape or just its overlays. An enemy
+ * drawn from a render (ADR-0009) has a Container of hull and turret for its sprite; a tower's is its turret.
+ */
 interface EntityView {
-  readonly sprite: Phaser.GameObjects.Image | undefined;
+  readonly sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Container | undefined;
   readonly graphics: Phaser.GameObjects.Graphics;
+  /** Whether the sprite is a render rather than a Kenney frame. */
+  readonly rendered: boolean;
+  /** The sprite's scale before any bob, and the way it faces as drawn (radians, 0 east). */
+  readonly spriteScale: number;
+  readonly facing: number;
 }
 
 interface EnemyView extends EntityView {
@@ -106,9 +116,10 @@ interface EnemyView extends EntityView {
   heading: number;
 }
 
-/** A tower: its base sprite, its turret (the entity sprite) and the angle the turret has turned to. */
+/** A tower: its base sprite (a render's hull), its turret (the entity sprite) and the angle the turret has turned to. */
 interface TowerView extends EntityView {
   readonly towerId: number;
+  readonly kind: TowerKind;
   readonly base: Phaser.GameObjects.Image | undefined;
   /** The level last drawn, so the pips are redrawn only when an upgrade changes it. */
   level: number;
@@ -274,6 +285,11 @@ export class GameScene extends Phaser.Scene {
       mapTiles: this.mapTiles,
       enemies: this.enemyViews.views().map(({ id, kind, heading, frame }) => ({ id, kind, facing: heading, frame })),
       turrets: [...this.towerViewById].map(([towerId, { angle }]) => ({ towerId, angle })),
+      rendered: [
+        ...new Set(
+          [...this.enemyViews.views(), ...this.towerViewById.values()].flatMap((v) => (v.rendered ? [v.kind] : [])),
+        ),
+      ].sort(),
     };
   }
 
@@ -288,13 +304,57 @@ export class GameScene extends Phaser.Scene {
     return this.textures.get(ATLAS_KEY).has(frame) ? frame : null;
   }
 
+  /** The render `kind` is drawn with, or null for Kenney: it has none, or its textures didn't load. */
+  private renderOf(kind: SpriteKind): RenderedSprite | null {
+    const render = renderFor(kind);
+    if (render === null || !this.textures.exists(render.hullKey) || !this.textures.exists(render.turretKey))
+      return null;
+    return render;
+  }
+
   /** A sprite of `kind` and a Graphics over it on `layer`, both at `at`; no sprite when `kind` has no frame. */
-  private addEntityView(kind: SpriteKind, layer: keyof typeof DEPTH, { x, y }: Pixel): EntityView {
+  private addEntityView(kind: SpriteKind, layer: keyof typeof DEPTH, { x, y }: Pixel, facing: number): EntityView {
     const frame = this.frameFor(kind);
     // Made first, so the Graphics on the same layer draws over it.
     const sprite = frame === null ? undefined : onLayer(this.add.image(x, y, ATLAS_KEY, frame), layer);
     sprite?.setScale(SPRITE_SCALE);
-    return { sprite, graphics: onLayer(this.add.graphics(), layer).setPosition(x, y) };
+    const graphics = onLayer(this.add.graphics(), layer).setPosition(x, y);
+    return { sprite, graphics, rendered: false, spriteScale: SPRITE_SCALE, facing };
+  }
+
+  /** A tower in Kenney's sprites: its base frame, then its turret over it (none for a kind drawn as a shape). */
+  private addKenneyTowerView(kind: TowerKind, at: Pixel): EntityView & { base: Phaser.GameObjects.Image | undefined } {
+    const baseFrame = this.frameFor(kind) === null ? null : this.atlasFrame(TOWER_BASES[kind]);
+    // Made before the turret, so the turret draws over it.
+    const base =
+      baseFrame === null
+        ? undefined
+        : onLayer(this.add.image(at.x, at.y, ATLAS_KEY, baseFrame), 'towers').setScale(SPRITE_SCALE);
+    return { base, ...this.addEntityView(kind, 'towers', at, TURRET_FACING[kind]) };
+  }
+
+  /** An enemy drawn from `render`: hull, then the turret over its shadow, turned together; a Graphics over both. */
+  private addRenderedEnemyView(render: RenderedSprite, layer: keyof typeof DEPTH): EntityView {
+    const { scale, turretOrigin, turretOffset } = renderPlacement(render);
+    const hull = this.add.image(0, 0, render.hullKey).setScale(scale);
+    const turret = this.add
+      .image(turretOffset.x, turretOffset.y, render.turretKey)
+      .setOrigin(turretOrigin.x, turretOrigin.y)
+      .setScale(scale);
+    const sprite = onLayer(this.add.container(0, 0, [hull, turret]), layer);
+    const graphics = onLayer(this.add.graphics(), layer);
+    return { sprite, graphics, rendered: true, spriteScale: 1, facing: RENDER_FACING };
+  }
+
+  /** A tower drawn from `render`: its hull as the base, its turret turning around the pivot, a Graphics over both. */
+  private addRenderedTowerView(render: RenderedSprite, at: Pixel): EntityView & { base: Phaser.GameObjects.Image } {
+    const { scale, turretOrigin, turretOffset } = renderPlacement(render);
+    const base = onLayer(this.add.image(at.x, at.y, render.hullKey), 'towers').setScale(scale);
+    const sprite = onLayer(this.add.image(at.x + turretOffset.x, at.y + turretOffset.y, render.turretKey), 'towers')
+      .setOrigin(turretOrigin.x, turretOrigin.y)
+      .setScale(scale);
+    const graphics = onLayer(this.add.graphics(), 'towers').setPosition(at.x, at.y);
+    return { base, sprite, graphics, rendered: true, spriteScale: scale, facing: RENDER_FACING };
   }
 
   /**
@@ -354,14 +414,20 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.enemyViews = createViewSync<Enemy, EnemyView>({
-      create: (enemy) => ({
-        ...this.addEntityView(enemy.kind, enemy.layer === 'air' ? 'air' : 'enemies', { x: 0, y: 0 }),
-        id: enemy.id,
-        kind: enemy.kind,
-        hp: Number.NaN,
-        frame: 0,
-        heading: SPRITE_HEADING[enemy.kind],
-      }),
+      create: (enemy) => {
+        const layer = enemy.layer === 'air' ? 'air' : 'enemies';
+        const render = this.renderOf(enemy.kind);
+        return {
+          ...(render === null
+            ? this.addEntityView(enemy.kind, layer, { x: 0, y: 0 }, SPRITE_HEADING[enemy.kind])
+            : this.addRenderedEnemyView(render, layer)),
+          id: enemy.id,
+          kind: enemy.kind,
+          hp: Number.NaN,
+          frame: 0,
+          heading: SPRITE_HEADING[enemy.kind],
+        };
+      },
       update: (view, enemy) => {
         // ?anim=0 never advances the clock, but the per-id phase would still spread frames, so pin them to 0.
         const frame = this.flags.anim ? animFrame(this.animMs, enemy.id) : 0;
@@ -379,8 +445,8 @@ export class GameScene extends Phaser.Scene {
         view.graphics.setPosition(x, y);
         view.sprite
           ?.setPosition(x, y)
-          .setRotation(spriteRotation(enemy.kind, view.heading))
-          .setScale(SPRITE_SCALE * bobScale(frame));
+          .setRotation(spriteRotation(view.facing, view.heading))
+          .setScale(view.spriteScale * bobScale(frame));
       },
       destroy: (view) => {
         view.graphics.destroy();
@@ -392,16 +458,11 @@ export class GameScene extends Phaser.Scene {
     this.towerViews = createViewSync<Tower, TowerView>({
       create: (tower) => {
         const at = towerCenter(tower);
-        const baseFrame = this.frameFor(tower.kind) === null ? null : this.atlasFrame(TOWER_BASES[tower.kind]);
-        // Made before the turret, so the turret draws over it.
-        const base =
-          baseFrame === null
-            ? undefined
-            : onLayer(this.add.image(at.x, at.y, ATLAS_KEY, baseFrame), 'towers').setScale(SPRITE_SCALE);
+        const render = this.renderOf(tower.kind);
         const view: TowerView = {
           towerId: tower.id,
-          base,
-          ...this.addEntityView(tower.kind, 'towers', at),
+          kind: tower.kind,
+          ...(render === null ? this.addKenneyTowerView(tower.kind, at) : this.addRenderedTowerView(render, at)),
           level: 0,
           ring: onLayer(this.add.graphics(), 'towers').setPosition(at.x, at.y),
           angle: TURRET.startAngle,
@@ -416,7 +477,7 @@ export class GameScene extends Phaser.Scene {
         const center = tileCenter(tower.tile);
         const target = dismantling ? undefined : selectTarget(tower, this.sim.state.enemies);
         view.angle = turnToward(view.angle, aimAngle(center, target?.position, view.angle), this.turretStep);
-        view.sprite?.setRotation(view.angle - TURRET_FACING[tower.kind]);
+        view.sprite?.setRotation(spriteRotation(view.facing, view.angle));
         view.graphics.setAlpha(dismantling ? DISMANTLE.alpha : 1);
         view.sprite?.setAlpha(dismantling ? DISMANTLE.alpha : 1);
         view.base?.setAlpha(dismantling ? DISMANTLE.alpha : 1);

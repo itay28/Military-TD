@@ -1,0 +1,10 @@
+{
+  "id": "china-aa-gun",
+  "kind": "aaGun",
+  "pxPerTile": 128,
+  "canvasPx": 128,
+  "pivot": {
+    "x": 64.5,
+    "y": 80
+  }
+}

@@ -1,5 +1,3 @@
-import type { EnemyKind } from '../data/enemies';
-import { SPRITE_HEADING } from '../data/sprites';
 import type { Position } from '../sim/map';
 
 /**
@@ -13,7 +11,10 @@ export function headingOf(from: Position | undefined, to: Position, fallback: nu
   return Math.atan2(to.y - from.y, to.x - from.x);
 }
 
-/** The rotation that turns `kind`'s sprite from the way its frame faces to `heading`. */
-export function spriteRotation(kind: EnemyKind, heading: number): number {
-  return heading - SPRITE_HEADING[kind];
+/**
+ * The rotation that turns a sprite from the way it faces as drawn (`facing`: `SPRITE_HEADING` for a Kenney frame,
+ * `RENDER_FACING` for a render) to `heading`.
+ */
+export function spriteRotation(facing: number, heading: number): number {
+  return heading - facing;
 }
