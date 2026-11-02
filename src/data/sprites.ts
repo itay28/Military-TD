@@ -87,3 +87,18 @@ export const TURRET_FACING = {
   cannon: -Math.PI / 2,
   mortar: -Math.PI / 2,
 } as const satisfies Record<TowerKind, number>;
+
+/** What a tower kind's icon is made of: a base frame, and a turret frame over it turned to point north. */
+export interface TowerIcon {
+  readonly base: string;
+  readonly turret: string;
+  /** Radians to turn the turret frame clockwise so it points north, the way an icon reads. */
+  readonly turretRotation: number;
+}
+
+/** The icon layers of a tower kind (what the map draws it with), or null when it has no sprite: the icon keeps its shape. */
+export function towerIcon(kind: TowerKind): TowerIcon | null {
+  const turret = spriteFor(kind);
+  if (turret === null) return null;
+  return { base: TOWER_BASES[kind], turret, turretRotation: -Math.PI / 2 - TURRET_FACING[kind] };
+}

@@ -79,3 +79,24 @@ test('a kind the player cannot afford is disabled but stays selected, and a clic
   await first.click({ force: true }); // force: Playwright won't click an aria-disabled button, a player can
   await expect(first).toHaveAttribute('aria-pressed', 'false');
 });
+
+test("each build button shows the tower's sprite layers, not a coloured shape", async ({ page }) => {
+  await openGame(page);
+  for (const kind of KINDS) {
+    const icon = page.getByTestId(`build-${kind}`).locator('.build-icon');
+    await expect(icon.locator('.build-icon-layer')).toHaveCount(2);
+    // Not Phaser's blob URL, which is revoked once the texture has loaded.
+    await expect(icon.locator('.build-icon-layer').first()).not.toHaveCSS('background-image', /blob:/);
+    await expect(icon).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  }
+});
+
+test('a blocked atlas leaves the build bar with its coloured shapes', async ({ page }) => {
+  await page.route(/\/sprites[^/]*\.(png|json)$/, (route) => route.abort());
+  await openGame(page);
+  for (const kind of KINDS) {
+    const icon = page.getByTestId(`build-${kind}`).locator('.build-icon');
+    await expect(icon.locator('.build-icon-layer')).toHaveCount(0);
+    await expect(icon).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  }
+});
