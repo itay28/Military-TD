@@ -250,6 +250,184 @@
       "frontAxis": "-x",
       "lengthTiles": 1.3,
       "canvasTiles": 1.5
+    },
+    {
+      "id": "russia-rifle-nest",
+      "kind": "rifleNest",
+      "faction": "russia",
+      "depicts": "Two riflemen crouched and aiming in a sandbagged fighting position, uniforms re-coloured olive (stand-in kit for AK-12/PKP in EMR)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.45,
+      "pose": {
+        "action": "crouch_firing",
+        "frame": 10
+      },
+      "copies": [
+        {
+          "x": -0.15,
+          "y": 0.0
+        },
+        {
+          "x": 0.15,
+          "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Body", "Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material_6": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "Glove": {
+            "color": [0.6, 0.62, 0.5]
+          }
+        }
+      }
+    },
+    {
+      "id": "russia-aa-gun",
+      "kind": "aaGun",
+      "faction": "russia",
+      "depicts": "ZU-23-2 twin 23 mm anti-aircraft gun",
+      "sketchfab": "fdae5a37901941fea3a02578506072a3",
+      "author": "LuckySkink9661",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 0.95,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "under": [
+          "Turret_148",
+          "Twin_barrel_visuals_244",
+          "Upper_sight_prop_435",
+          "Seats_and_rails_387",
+          "Side_boxes_328"
+        ]
+      }
+    },
+    {
+      "id": "russia-cannon",
+      "kind": "cannon",
+      "faction": "russia",
+      "depicts": "ZiS-2 57 mm towed anti-tank gun (stand-in for the MT-12 Rapira 100 mm: the same split-trail towed gun with a shield)",
+      "sketchfab": "61e3cb4b62ad48b186596b0cd88fc156",
+      "author": "sergey.s.filin",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "turnDeg": -152,
+      "lengthTiles": 0.95,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      }
+    },
+    {
+      "id": "russia-mortar",
+      "kind": "mortar",
+      "faction": "russia",
+      "depicts": "Pindad MO-3 81 mm mortar (stand-in for the 2B14 Podnos 82 mm, same bipod and baseplate layout) in a sandbagged pit",
+      "sketchfab": "567d0dd2bd1944a8ac8a6b0a9dcb5ebb",
+      "author": "sakigakefuruzawa",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.65,
+      "exclude": [
+        "Pindad Mo-1 Kal. 60 mm CO_Pindad Mo-1 Kal. 60 mm_0",
+        "Pindad Mo-2 Kal. 60 mm LR_Base and Mortar_0",
+        "Pindad Mo-2 Kal. 60 mm LR_Small Parts_0"
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": ["Base"]
+      }
+    },
+    {
+      "id": "russia-infantry",
+      "kind": "infantry",
+      "faction": "russia",
+      "depicts": "Rifleman advancing and firing, plate carrier and helmet, uniform re-coloured olive (stand-in kit for AK-12, Ratnik, EMR)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "walking_firing",
+        "frame": 10
+      },
+      "canvasTiles": 1.25,
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Body", "Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material_6": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "Glove": {
+            "color": [0.6, 0.62, 0.5]
+          }
+        }
+      }
+    },
+    {
+      "id": "russia-jeep",
+      "kind": "jeep",
+      "faction": "russia",
+      "depicts": "UAZ-469 soft-top",
+      "sketchfab": "1f58a38deb854829bd1b1ba1c15555d0",
+      "author": "Okopchi",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.8,
+      "canvasTiles": 1.0
+    },
+    {
+      "id": "russia-helicopter",
+      "kind": "helicopter",
+      "faction": "russia",
+      "depicts": "Mi-8 (stand-in for the Mi-8AMTSh, the same airframe)",
+      "sketchfab": "5e5e57ef66994c6196a5f5d6b9f50403",
+      "author": "tiunov.se",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.3,
+      "canvasTiles": 1.5
     }
   ]
 }

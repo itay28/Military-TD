@@ -1,0 +1,6 @@
+{
+  "id": "russia-infantry",
+  "kind": "infantry",
+  "pxPerTile": 128,
+  "canvasPx": 160
+}

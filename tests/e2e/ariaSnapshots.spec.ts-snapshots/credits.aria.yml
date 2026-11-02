@@ -49,7 +49,7 @@
   - paragraph: MissingTray1151, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
     - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
-  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations, kit tinted toward OCP"
+  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR)"
   - heading "Phalanx CIWS (top-down render)" [level=2]
   - paragraph: Lemper_Studio, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d":
@@ -80,6 +80,31 @@
   - link "https://sketchfab.com/3d-models/ee81eb66006b4d8980d0cf9ff6304b69":
     - /url: https://sketchfab.com/3d-models/ee81eb66006b4d8980d0cf9ff6304b69
   - paragraph: "\"Sikorsky UH-60 Black Hawk\" by helijah (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - heading "ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)" [level=2]
+  - paragraph: LuckySkink9661, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3":
+    - /url: https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3
+  - paragraph: "\"ZU - 23, зенитная установка, ЗУ-23, зенитка\" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own, turret split from the carriage"
+  - heading "ZiS-2 57mm anti-tank gun (top-down render)" [level=2]
+  - paragraph: sergey.s.filin, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/61e3cb4b62ad48b186596b0cd88fc156":
+    - /url: https://sketchfab.com/3d-models/61e3cb4b62ad48b186596b0cd88fc156
+  - paragraph: "\"ZiS-2 57mm anti-tank gun\" by sergey.s.filin (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own"
+  - heading "Pindad Mortars (top-down render)" [level=2]
+  - paragraph: sakigakefuruzawa, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb":
+    - /url: https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb
+  - paragraph: "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate"
+  - heading "uaz 469 (top-down render)" [level=2]
+  - paragraph: Okopchi, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/1f58a38deb854829bd1b1ba1c15555d0":
+    - /url: https://sketchfab.com/3d-models/1f58a38deb854829bd1b1ba1c15555d0
+  - paragraph: "\"uaz 469\" by Okopchi (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - heading "Mi-8 (top-down render)" [level=2]
+  - paragraph: tiunov.se, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/5e5e57ef66994c6196a5f5d6b9f50403":
+    - /url: https://sketchfab.com/3d-models/5e5e57ef66994c6196a5f5d6b9f50403
+  - paragraph: "\"Mi-8\" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down"
   - heading "Military TD" [level=2]
   - paragraph: "Engine: Phaser"
   - paragraph: "Code license: UNLICENSED"
