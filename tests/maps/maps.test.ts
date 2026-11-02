@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MVP_MAP } from '../../src/data/maps';
 import { runScenario } from '../../src/sim/scenario';
@@ -20,6 +20,21 @@ const mapFiles = readdirSync(MAPS_DIR)
   .map((name) => join(MAPS_DIR, name));
 
 const TRAINING_GROUND = 'maps/01-training-ground.tmj';
+
+/** The ground images' scale (`scripts/naip-map.py`): twice the game's tile, so zooming in stays sharp. */
+const GROUND_IMAGE_PX_PER_TILE = 96;
+
+/** Width and height of a baseline or progressive JPEG, from its start-of-frame segment. */
+function jpegSize(bytes: Buffer): { width: number; height: number } {
+  let at = 2;
+  while (at < bytes.length) {
+    const marker = bytes[at + 1]!;
+    if (marker >= 0xc0 && marker <= 0xc2)
+      return { height: bytes.readUInt16BE(at + 5), width: bytes.readUInt16BE(at + 7) };
+    at += 2 + bytes.readUInt16BE(at + 2);
+  }
+  throw new Error('not a JPEG with a frame header');
+}
 const atlas = JSON.parse(readFileSync('assets/atlas/sprites.json', 'utf8')) as { frames: Record<string, unknown> };
 
 describe('01-training-ground.tmj', () => {
@@ -87,6 +102,16 @@ describe('Tiled map files', () => {
   it.each(mapFiles)('%s names a known Attacker and Defender Faction', (file) => {
     const { attacker, defender } = load(file);
     expect([isFaction(attacker), isFaction(defender)]).toEqual([true, true]);
+  });
+
+  it.each(mapFiles)('%s has a painted NAIP ground image of 96 px a tile (#312)', (file) => {
+    const { groundImage, cols, rows } = load(file);
+    expect(groundImage).toMatch(/^\.\.\/assets\/naip-maps\/[a-z0-9-]+\.jpg$/);
+    const image = readFileSync(join(dirname(file), groundImage!));
+    expect(jpegSize(image)).toEqual({
+      width: cols * GROUND_IMAGE_PX_PER_TILE,
+      height: rows * GROUND_IMAGE_PX_PER_TILE,
+    });
   });
 
   it.each(mapFiles)('%s imports and the reference bot wins it', (file) => {

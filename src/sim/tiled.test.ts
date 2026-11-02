@@ -128,6 +128,33 @@ describe('importTiledMap', () => {
     });
   });
 
+  describe('ground image (#312)', () => {
+    const withImageLayer = (image: unknown, name = 'ground-image') => {
+      const map = tiledMap();
+      (map.layers as Json[]).unshift({ type: 'imagelayer', name, image });
+      return map;
+    };
+
+    it("gives the `ground-image` layer's image, relative to the map file", () => {
+      expect(importTiledMap('small', withImageLayer('../assets/naip-maps/small.jpg')).groundImage).toBe(
+        '../assets/naip-maps/small.jpg',
+      );
+    });
+
+    it('has no ground image without that layer, or for an image layer with another name', () => {
+      expect(importTiledMap('small', tiledMap()).groundImage).toBeUndefined();
+      expect(importTiledMap('small', withImageLayer('x.jpg', 'clouds')).groundImage).toBeUndefined();
+    });
+
+    it.each([
+      ['no image', undefined],
+      ['an empty image', ''],
+      ['a non-string image', 3],
+    ])('rejects a ground-image layer with %s', (_, image) => {
+      expect(() => importTiledMap('small', withImageLayer(image))).toThrow(/Map "small": the "ground-image" layer/);
+    });
+  });
+
   it('converts a valid map to its grid, Path waypoints and buildable tiles', () => {
     const map = tiledMap();
     groundData(map)[0] = GROUND; // tile (0, 0) is not buildable
