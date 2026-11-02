@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import atlasPngUrl from '../../assets/atlas/sprites.png';
 import {
   CAMERA,
   DISMANTLE,
@@ -52,7 +53,7 @@ import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
 import { TILESET_FRAMES, tileArt } from './tileset';
 import { aimAngle, turnToward } from './turret';
-import { buildOptions, mountBuildBar, type BuildBar } from '../ui/buildBar';
+import { buildOptions, mountBuildBar, type BuildBar, type IconAtlas } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
@@ -282,6 +283,20 @@ export class GameScene extends Phaser.Scene {
     return this.atlasFrame(spriteFor(kind));
   }
 
+  /** The loaded atlas for the build bar's DOM icons, or undefined when it didn't load (the bar keeps its shapes). */
+  private iconAtlas(): IconAtlas | undefined {
+    if (!this.textures.exists(ATLAS_KEY)) return undefined;
+    const texture = this.textures.get(ATLAS_KEY);
+    return {
+      url: atlasPngUrl, // not the texture's own blob URL: Phaser revokes that once the image has loaded
+      frame: (name) => {
+        if (!texture.has(name)) return null;
+        const { cutX, cutY, cutWidth, cutHeight } = texture.get(name);
+        return { x: cutX, y: cutY, w: cutWidth, h: cutHeight };
+      },
+    };
+  }
+
   /** `frame`, or null when it is null or the atlas lacks it (or didn't load). */
   private atlasFrame(frame: string | null): string | null {
     if (frame === null || !this.textures.exists(ATLAS_KEY)) return null;
@@ -485,7 +500,7 @@ export class GameScene extends Phaser.Scene {
       set: (value) => (this.gameSpeed = value),
     };
     this.hud = mountHud(this.hudRoot, this.sim, speed);
-    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
+    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions(), this.iconAtlas());
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
     this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim);

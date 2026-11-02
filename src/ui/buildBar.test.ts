@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
+import { towerIcon } from '../data/sprites';
 import { TOWER_STATS } from '../data/towers';
 import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
 
@@ -38,6 +39,7 @@ describe('buildOptions', () => {
           shape: TOWER_STYLE[kind as keyof typeof TOWER_STATS].shape,
           size: TOWER_STYLE[kind as keyof typeof TOWER_STATS].size,
         },
+        sprite: towerIcon(kind as keyof typeof TOWER_STATS),
       })),
     );
     expect(buildOptions()[0]).toMatchObject({ kind: 'rifleNest', name: 'Rifle Nest', cost: 50 });
@@ -232,5 +234,48 @@ describe('Build bar', () => {
     expect(root.children).toHaveLength(0);
     pressKey('2');
     expect(bar.selected).toBeUndefined();
+  });
+});
+
+describe('Build bar sprite icons', () => {
+  const atlas = {
+    url: 'atlas.png',
+    frame: (name: string) => (name === 'missing' ? null : { x: 10, y: 20, w: 64, h: 64 }),
+  };
+  const sprite = { base: 'baseFrame', turret: 'turretFrame', turretRotation: -Math.PI / 2 };
+  const iconOf = (kind: string) => button(kind).querySelector<HTMLElement>('.build-icon')!;
+
+  it('draws a kind with a sprite as its base and turret layers from the atlas, with no shape fill', () => {
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, sprite }, OPTIONS[1]!], atlas);
+    const layers = iconOf('rifle').querySelectorAll<HTMLElement>('.build-icon-layer');
+    expect(layers).toHaveLength(2);
+    expect(layers[0]!.style.backgroundImage).toContain('atlas.png');
+    expect(layers[0]!.style.backgroundPosition).toBe('-10px -20px');
+    expect(layers[1]!.style.transform).toContain('rotate(-90deg)');
+    expect(iconOf('rifle').style.backgroundColor).toBe('');
+  });
+
+  it('keeps the shape for a kind without a sprite, or when the atlas is missing or lacks a frame', () => {
+    mountBuildBar(
+      root,
+      wallet(500),
+      [{ ...OPTIONS[0]!, sprite }, { ...OPTIONS[1]!, sprite: { ...sprite, turret: 'missing' } }, OPTIONS[2]!],
+      atlas,
+    );
+    for (const kind of ['rifle', 'cannon', 'mortar']) {
+      const icon = kind === 'rifle' ? null : iconOf(kind);
+      if (icon) {
+        expect(icon.querySelector('.build-icon-layer')).toBeNull();
+        expect(icon.style.backgroundColor).not.toBe('');
+      }
+    }
+    root.replaceChildren();
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, sprite }]);
+    expect(iconOf('rifle').querySelector('.build-icon-layer')).toBeNull();
+    expect(iconOf('rifle').style.backgroundColor).not.toBe('');
+  });
+
+  it('buildOptions gives each kind with a sprite its icon layers', () => {
+    expect(buildOptions().find((o) => o.kind === 'cannon')!.sprite).toMatchObject({ turretRotation: 0 });
   });
 });

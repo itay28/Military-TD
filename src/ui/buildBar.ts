@@ -1,4 +1,5 @@
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
+import { towerIcon, type TowerIcon } from '../data/sprites';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 
 /** One button on the build bar. */
@@ -13,6 +14,14 @@ export interface BuildOption<K extends string = TowerKind> {
     readonly shape: 'square' | 'circle';
     readonly size: number;
   };
+  /** The tower's sprite layers: shown instead of the shape when the atlas has the frames. */
+  readonly sprite?: TowerIcon;
+}
+
+/** The atlas as the page sees it: the image's URL and each frame's rectangle in it, or null for an absent frame. */
+export interface IconAtlas {
+  readonly url: string;
+  frame(name: string): { readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
 }
 
 /** The parts of the Game the build bar reads. */
@@ -35,11 +44,13 @@ export interface BuildBar<K extends string = TowerKind> {
 export function buildOptions(): BuildOption[] {
   return (Object.keys(TOWER_STATS) as TowerKind[]).map((kind) => {
     const { fill, outline, shape, size } = TOWER_STYLE[kind];
+    const sprite = towerIcon(kind);
     return {
       kind,
       name: TOWER_NAMES[kind],
       cost: TOWER_STATS[kind].cost,
       icon: { fill, outline, shape, size },
+      ...(sprite ? { sprite } : {}),
     };
   });
 }
@@ -48,6 +59,26 @@ export function buildOptions(): BuildOption[] {
 const ICON_BOX = 24;
 
 const cssColor = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
+
+/** The base and turret layers of a sprite icon, each scaled to fill the icon box; null when the atlas lacks a frame. */
+function spriteLayers(doc: Document, atlas: IconAtlas, sprite: TowerIcon): HTMLElement[] | null {
+  const frames = [
+    { name: sprite.base, rotation: 0 },
+    { name: sprite.turret, rotation: sprite.turretRotation },
+  ].map(({ name, rotation }) => ({ rect: atlas.frame(name), rotation }));
+  if (frames.some(({ rect }) => rect === null)) return null;
+  return frames.map(({ rect, rotation }) => {
+    const { x, y, w, h } = rect!;
+    const layer = doc.createElement('span');
+    layer.className = 'build-icon-layer';
+    layer.style.cssText =
+      `position:absolute;left:50%;top:50%;width:${w}px;height:${h}px;background-repeat:no-repeat;` +
+      `background-image:url("${atlas.url}");background-position:-${x}px -${y}px;image-rendering:pixelated;`;
+    // Fit the frame's longer side to the box, turned about its centre.
+    layer.style.transform = `translate(-50%,-50%) scale(${ICON_BOX / Math.max(w, h)}) rotate(${(rotation * 180) / Math.PI}deg)`;
+    return layer;
+  });
+}
 
 /**
  * Builds the build bar inside `root`: a collapse toggle, then one button per option, none selected. A click or the
@@ -58,6 +89,7 @@ export function mountBuildBar<K extends string>(
   root: HTMLElement,
   game: BuildBarGame,
   options: readonly BuildOption<K>[],
+  atlas?: IconAtlas,
 ): BuildBar<K> {
   if (options.length === 0) throw new Error('The build bar needs at least one tower kind');
   const doc = root.ownerDocument;
@@ -94,12 +126,18 @@ export function mountBuildBar<K extends string>(
     button.title = `${option.name} (${hotkey}): ${option.cost}`;
     const icon = doc.createElement('span');
     icon.className = 'build-icon';
-    icon.style.backgroundColor = cssColor(option.icon.fill);
-    icon.style.borderColor = cssColor(option.icon.outline);
     const side = `${(ICON_BOX * option.icon.size) / largest}px`;
     icon.style.width = side;
     icon.style.height = side;
-    if (option.icon.shape === 'circle') icon.style.borderRadius = '50%';
+    const layers = atlas && option.sprite ? spriteLayers(doc, atlas, option.sprite) : null;
+    if (layers) {
+      icon.style.border = 'none';
+      icon.append(...layers);
+    } else {
+      icon.style.backgroundColor = cssColor(option.icon.fill);
+      icon.style.borderColor = cssColor(option.icon.outline);
+      if (option.icon.shape === 'circle') icon.style.borderRadius = '50%';
+    }
     const cost = doc.createElement('span');
     cost.className = 'build-cost';
     cost.textContent = String(option.cost);
