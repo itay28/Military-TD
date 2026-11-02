@@ -26,6 +26,12 @@ describe('RENDERS', () => {
     expect(RENDERS.aaGun!.pivot).toEqual({ x: 80, y: 80 });
   });
 
+  it('has a barrel tip per barrel: two on the AA Gun, one on the tank, all ahead of the pivot', () => {
+    expect(RENDERS.aaGun!.muzzles).toHaveLength(2);
+    expect(RENDERS.tank!.muzzles).toHaveLength(1);
+    for (const render of Object.values(RENDERS)) for (const m of render.muzzles) expect(m.y).toBeLessThan(-40);
+  });
+
   it('keeps Kenney for every kind without a render', () => {
     for (const kind of Object.keys(SPRITES) as SpriteKind[]) {
       if (kind in RENDERS) continue;

@@ -46,7 +46,7 @@ import { createGestures, type Gesture, type Gestures } from './gestures';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { headingOf, spriteRotation } from './heading';
-import { renderPlacement } from './renderPlacement';
+import { muzzlePoints, renderPlacement } from './renderPlacement';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
 import { resolveClick } from './selection';
@@ -346,6 +346,12 @@ export class GameScene extends Phaser.Scene {
     return { sprite, graphics, rendered: true, spriteScale: 1, facing: RENDER_FACING };
   }
 
+  /** Where `tower`'s shots start now: its barrel tips, turned with the turret as drawn (cosmetic only). */
+  private muzzlesOf(tower: Tower): Pixel[] {
+    const angle = this.towerViewById.get(tower.id)?.angle ?? TURRET.startAngle;
+    return muzzlePoints(this.renderOf(tower.kind), towerCenter(tower), angle);
+  }
+
   /** A tower drawn from `render`: its hull as the base, its turret turning around the pivot, a Graphics over both. */
   private addRenderedTowerView(render: RenderedSprite, at: Pixel): EntityView & { base: Phaser.GameObjects.Image } {
     const { scale, turretOrigin, turretOffset } = renderPlacement(render);
@@ -512,7 +518,7 @@ export class GameScene extends Phaser.Scene {
     this.effectGraphics = onLayer(this.add.graphics(), 'effects');
     this.sim.events.on('shellFired', ({ towerId }) => {
       const tower = this.sim.state.towers.find((t) => t.id === towerId);
-      if (tower) this.effects.add('muzzleFlash', towerCenter(tower));
+      if (tower) for (const at of this.muzzlesOf(tower)) this.effects.add('muzzleFlash', at);
     });
     this.sim.events.on('shellLanded', ({ position }) => this.effects.add('explosion', toPixels(position)));
     this.sim.events.on('enemyKilled', ({ enemy }) => this.effects.add('puff', toPixels(enemy.position)));
@@ -521,8 +527,10 @@ export class GameScene extends Phaser.Scene {
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
       if (!tower) return;
-      this.tracers.add(towerCenter(tower), toPixels(shot.position), tower.kind);
-      this.effects.add('muzzleFlash', towerCenter(tower));
+      for (const at of this.muzzlesOf(tower)) {
+        this.tracers.add(at, toPixels(shot.position), tower.kind);
+        this.effects.add('muzzleFlash', at);
+      }
     });
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
