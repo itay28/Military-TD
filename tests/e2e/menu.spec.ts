@@ -35,14 +35,20 @@ test('Credits on the Main menu lists every pack from the manifest, and Back retu
   await page.getByRole('button', { name: 'Credits' }).click();
 
   await expect(page.getByRole('heading', { name: 'Credits' })).toBeVisible();
-  // One model can back several packs (the soldier serves each Faction's Rifle Nest and Infantry), so a name or
-  // source may repeat: each appears once per pack that has it.
-  const count = (key: 'name' | 'source', value: string) => manifest.packs.filter((p) => p[key] === value).length;
+  // One model can back several packs (the soldier serves each Faction's Rifle Nest and Infantry), so a name,
+  // source or attribution may repeat (two Factions' mortars share one render recipe): each appears once per pack
+  // that has it.
+  const count = (key: 'name' | 'source' | 'attribution', value: string) =>
+    manifest.packs.filter((p) => p[key] === value).length;
   for (const pack of manifest.packs) {
     const heading = page.getByRole('heading', { name: pack.name, exact: true });
     await expect(heading).toHaveCount(count('name', pack.name));
     await expect(heading.first()).toBeVisible();
-    if (pack.attribution) await expect(page.getByText(pack.attribution, { exact: true })).toBeVisible();
+    if (pack.attribution) {
+      const lines = page.getByText(pack.attribution, { exact: true });
+      await expect(lines).toHaveCount(count('attribution', pack.attribution));
+      await expect(lines.first()).toBeVisible();
+    }
     const links = page.getByRole('link', { name: pack.source, exact: true });
     await expect(links).toHaveCount(count('source', pack.source));
     await expect(links.first()).toHaveAttribute('href', pack.source);
