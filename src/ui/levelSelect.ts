@@ -9,6 +9,8 @@ export interface LevelSelectOptions {
   readonly maps: readonly MapEntry[];
   /** Called with a map's id when the player picks it. */
   readonly onPick: (id: string) => void;
+  /** Whether the map at this index can be picked; a locked one shows disabled. Every map is, by default. */
+  readonly isUnlocked?: (mapIndex: number) => boolean;
   /** Called when the player presses Back. */
   readonly onBack: () => void;
 }
@@ -18,25 +20,33 @@ export interface LevelSelect {
   destroy(): void;
 }
 
-/** Builds the Level select inside `root`: one button per map, with its preview and name, then Back. DOM (ADR-0003). */
-export function mountLevelSelect(root: HTMLElement, { app, maps, onPick, onBack }: LevelSelectOptions): LevelSelect {
+/**
+ * Builds the Level select inside `root`: one button per map, with its preview and name (disabled while locked), then
+ * Back. DOM (ADR-0003).
+ */
+export function mountLevelSelect(
+  root: HTMLElement,
+  { app, maps, onPick, onBack, isUnlocked = () => true }: LevelSelectOptions,
+): LevelSelect {
   const doc = root.ownerDocument;
   let live = true;
   const title = doc.createElement('h1');
   title.textContent = 'Select map';
   const list = doc.createElement('ul');
-  const mapButtons = maps.map(({ id, name, data }) => {
+  const mapButtons = maps.map(({ id, name, data }, index) => {
+    const unlocked = isUnlocked(index);
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'map';
+    button.disabled = !unlocked;
     const preview = doc.createElement('canvas');
     // The name alone is the button's accessible name; the picture is for sighted players.
     preview.setAttribute('aria-hidden', 'true');
     drawMapPreview(preview, createMap(data));
     const label = doc.createElement('span');
-    label.textContent = name;
+    label.textContent = unlocked ? name : `${name} (locked)`;
     button.append(preview, label);
-    button.addEventListener('click', () => live && onPick(id));
+    button.addEventListener('click', () => live && unlocked && onPick(id));
     const item = doc.createElement('li');
     item.append(button);
     list.append(item);
@@ -49,7 +59,7 @@ export function mountLevelSelect(root: HTMLElement, { app, maps, onPick, onBack 
   root.append(title, list, back);
   root.hidden = false;
   app.dataset.screen = 'level-select';
-  mapButtons[0]?.focus();
+  mapButtons.find((button) => !button.disabled)?.focus();
   return {
     destroy() {
       live = false;
