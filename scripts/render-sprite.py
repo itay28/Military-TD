@@ -22,6 +22,8 @@ A model's optional `exclude` lists meshes to delete before rendering (e.g. add-o
 silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`; `overrides` gives a
 material its own `color` and `specular`), for a model painted in the wrong colour.
 
+`turnDeg` turns a model clockwise after `frontAxis`, for one set down at an angle (not along an axis).
+
 `pose` freezes a rigged model at one frame of one of its animations (`action`, `frame`), e.g. a soldier crouched
 and aiming instead of in a T-pose. `copies` places the placed model several times (`x`, `y` in tiles, `turnDeg`
 clockwise), e.g. a rifle team. `base` (towers, issue #314) builds our own dug-in pad under the model: a dirt disc
@@ -130,12 +132,13 @@ def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) 
 
 
 def place_model(spec: dict) -> None:
-    """Turn the model's front north, stand it on z = 0 and scale it so its north-south length is `lengthTiles`.
+    """Turn the model's front north (`frontAxis`, then `turnDeg` clockwise), stand it on z = 0 and scale it so its
+    north-south length is `lengthTiles`.
 
     One Blender unit is one tile from here on.
     """
     meshes = [o for o in bpy.data.objects if o.type == "MESH"]
-    turn = Matrix.Rotation(FRONT[spec["frontAxis"]], 4, "Z")
+    turn = Matrix.Rotation(FRONT[spec["frontAxis"]] - math.radians(spec.get("turnDeg", 0)), 4, "Z")
     roots = [o for o in bpy.data.objects if o.parent is None]
     for o in roots:
         o.matrix_world = turn @ o.matrix_world
