@@ -5,7 +5,8 @@ import { createMap, InvalidMapError, tileKey, type MapData, type Tile } from './
 // Tiled map import (ADR-0006): a `.tmj` file → MapData. Pure, so tests and the game share it. Rules never see
 // Tiled's format: the `ground` tile layer gives the grid and the buildable tiles (tile property `buildable`), and the
 // one polyline on the `path` object layer gives the Path. The map's custom properties `attacker` and `defender` name
-// its Factions (ADR-0009), which only the scenes read.
+// its Factions (ADR-0009), which only the scenes read. An optional `ground-image` image layer names one painted
+// ground image for the whole map (#312); only the scenes draw it.
 
 /** Tiled keeps flip and rotation flags in a GID's top bits. */
 const GID_FLAGS = 0xf0000000;
@@ -16,6 +17,8 @@ type Json = Record<string, unknown>;
 export interface TiledMapData extends MapData {
   readonly attacker: Faction;
   readonly defender: Faction;
+  /** The `ground-image` layer's image, relative to the map file; undefined when the map has none. */
+  readonly groundImage?: string;
 }
 
 /**
@@ -85,12 +88,23 @@ export function importTiledMap(id: string, json: unknown): TiledMapData {
     row: Math.floor((originY + point.y) / tileW),
   }));
 
+  const groundImage = readGroundImage(layers, fail);
+
   const data: MapData = { id, cols, rows, waypoints, buildable };
   const map = createMap(data);
   const usable = buildable.filter((tile) => !map.isPath(tile)).length;
   if (usable < MIN_BUILDABLE_TILES)
     return fail(`has ${usable} buildable tiles off the Path; a map needs at least ${MIN_BUILDABLE_TILES}`);
-  return { ...data, attacker, defender };
+  return groundImage === undefined ? { ...data, attacker, defender } : { ...data, attacker, defender, groundImage };
+}
+
+/** The image of the `ground-image` image layer, if the map has one; fails when it names no image. */
+function readGroundImage(layers: Json[], fail: (reason: string) => never): string | undefined {
+  const layer = layers.find((candidate) => candidate.type === 'imagelayer' && candidate.name === 'ground-image');
+  if (!layer) return undefined;
+  if (typeof layer.image !== 'string' || layer.image === '')
+    return fail('the "ground-image" layer needs an image (Layer → Image in Tiled)');
+  return layer.image;
 }
 
 /** The Faction a map property names; fails when it is missing or not one of FACTIONS. */

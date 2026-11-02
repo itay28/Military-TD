@@ -137,4 +137,8 @@ The **US** Faction's set (#314, the first map's Defender) is complete: all eight
 
 The **Russia** Faction's set (#315, the first map's Attacker) is complete too, so the first map's pairing is: the spike's T-72B3 plus seven new renders, previewed in `docs/art/faction-russia.png` (`scripts/faction-sheet.py russia`). Where no free model of the exact variant exists, `depicts` in `render-sprite.json` names the stand-in (ZiS-2 for the MT-12, Pindad MO-3 for the 2B14, Mi-8 for the Mi-8AMTSh). Rifle Nest and Infantry reuse the US soldier model, its kit tinted olive. The ZiS-2 model sits at an angle, so its entry turns it north with `turnDeg`.
 
+## Map ground images (#312, ADR-0009)
+
+Each Tiled map can have one painted ground image in `naip-maps/` (`<map>.jpg`, PD-USGov, under the same NAIP manifest entry). `scripts/naip-map.py` makes it: a pinned NAIP field at 30 m per tile, 96 px per tile, with the map's Path painted on it as a dirt track and blocked tiles as treeline. A new map is a new entry in that script's `MAPS`; rerun it after moving the Path. The scene, the window centres and the seed are pinned, so a rerun writes the same file.
+
 Before rendering a Sketchfab model, read its page: skip it if the description or tags say "ripped" or "imported from", name a game, or the license is NonCommercial or NoDerivatives.
