@@ -1,4 +1,7 @@
+import type { EnemyKind } from '../data/enemies';
+import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
+import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
 import type { Tile } from '../sim/map';
 import { applyCommand, type CommandOutcome, type GameSetup, type ScenarioCommand } from '../sim/scenario';
@@ -28,6 +31,12 @@ export interface TestView {
   readonly rangeRings: readonly number[];
   /** The tracers drawn on the next frame, each from a tower to where its shot hit. */
   readonly tracers: readonly { readonly from: Pixel; readonly to: Pixel; readonly alpha: number }[];
+  /** The combat effects (muzzle flash, explosion, death puff) drawn on the next frame. */
+  readonly effects: readonly {
+    readonly kind: EffectKind;
+    readonly at: Pixel;
+    readonly progress: number;
+  }[];
   /**
    * The Ghost under the pointer: shown only while a mouse hovers, or a finger drags over, a tile with a build kind
    * selected. `tile` is null when it is hidden.
@@ -37,6 +46,30 @@ export interface TestView {
   readonly camera: { readonly scrollX: number; readonly scrollY: number; readonly zoom: number };
   /** Each display object's layer (`map`, `towers`, `enemies`, …), back to front as Phaser renders them; repeats collapsed. */
   readonly drawOrder: readonly string[];
+  /** Whether the sprite atlas loaded. Without it, everything is drawn as shapes. */
+  readonly sprites: boolean;
+  /**
+   * How the map was drawn: its painted ground image (#312), else the tileset, else flat shapes when the atlas lacks a
+   * tileset frame.
+   */
+  readonly mapTiles: 'image' | 'sprites' | 'shapes';
+  /**
+   * Each enemy drawn: `facing` is the way it is heading, in radians on the canvas (0 east, π/2 south); `frame` its
+   * movement animation frame (always 0 with `?anim=0`).
+   */
+  readonly enemies: readonly {
+    readonly id: number;
+    readonly kind: EnemyKind;
+    readonly facing: number;
+    readonly frame: number;
+  }[];
+  /**
+   * Each tower's turret angle in radians (0 east, −π/2 north), as turned so far toward its target. Tracked for every
+   * tower, drawn only for one with a turret sprite.
+   */
+  readonly turrets: readonly { readonly towerId: number; readonly angle: number }[];
+  /** The kinds on the map drawn from a render (ADR-0009) rather than Kenney's sprites, sorted. */
+  readonly rendered: readonly SpriteKind[];
 }
 
 /** `window.__TD__` with `?test=1` (ADR-0003). */

@@ -220,8 +220,8 @@ describe('damage report', () => {
     const [first, second] = damageReport(game.state.stats).towers;
     expect(first!.damage).toBeGreaterThan(0);
     expect(rows('By tower')).toEqual([
-      ['Rifle Nest', '2, 2', String(first!.damage), String(first!.kills), first!.dps.toFixed(1)],
-      ['Rifle Nest (sold)', '4, 2', String(second!.damage), String(second!.kills), second!.dps.toFixed(1)],
+      ['Rifle Nest', '2, 2', String(Math.round(first!.damage)), String(first!.kills), first!.dps.toFixed(1)],
+      ['Rifle Nest (sold)', '4, 2', String(Math.round(second!.damage)), String(second!.kills), second!.dps.toFixed(1)],
     ]);
   });
 
@@ -230,7 +230,7 @@ describe('damage report', () => {
     expect(headers('By tower type')).toEqual(['Type', 'Towers', 'Damage', 'Kills', 'DPS']);
     const [kind] = damageReport(game.state.stats).kinds;
     expect(rows('By tower type')).toEqual([
-      ['Rifle Nest', '2', String(kind!.damage), String(kind!.kills), kind!.dps.toFixed(1)],
+      ['Rifle Nest', '2', String(Math.round(kind!.damage)), String(kind!.kills), kind!.dps.toFixed(1)],
     ]);
   });
 
@@ -242,7 +242,7 @@ describe('damage report', () => {
       report.waves.map((w) => [
         String(w.waveNumber),
         `${(w.elapsedMs / 1000).toFixed(1)} s`,
-        String(w.damage),
+        String(Math.round(w.damage)),
         String(w.kills),
         w.dps.toFixed(1),
       ]),
@@ -253,11 +253,37 @@ describe('damage report', () => {
       [
         'Total',
         `${(total.elapsedMs / 1000).toFixed(1)} s`,
-        String(total.damage),
+        String(Math.round(total.damage)),
         String(total.kills),
         total.dps.toFixed(1),
       ],
     ]);
+  });
+
+  it('shows Damage as a whole number in every table, DPS keeping one decimal', () => {
+    const game = played();
+    const fractional = 1234.56;
+    const stats = game.state.stats;
+    const towerId = Number(Object.keys(stats.placed)[0]);
+    const fake = {
+      ...stats,
+      total: { damage: fractional, kills: 1 },
+      towers: { [towerId]: { total: { damage: fractional, kills: 1 }, wave: { damage: 0, kills: 0 } } },
+      waves: stats.waves.map((w) => ({ ...w, damage: fractional })),
+    };
+    document.body.innerHTML = '<div id="end-screen"></div>';
+    root = document.getElementById('end-screen')!;
+    const end = mountEndScreen(root, { ...game, state: { ...game.state, stats: fake } } as unknown as Game, {
+      onRestart: () => {},
+    });
+    end.update();
+    const damageCells = (caption: string, section = 'tbody') =>
+      [...table(caption)!.querySelectorAll(`${section} tr`)].map((tr) => tr.querySelectorAll('td, th')[2]!.textContent);
+    expect(damageCells('By tower')[0]).toBe('1235');
+    expect(damageCells('By tower type')).toEqual(['1235']);
+    expect(damageCells('By wave')).toEqual(['1235', '1235', '1235']);
+    expect(damageCells('By wave', 'tfoot')).toEqual(['1235']);
+    expect(rows('By tower')[0]![4]).toMatch(/^\d+\.\d$/);
   });
 
   it('says so when no tower was placed', () => {

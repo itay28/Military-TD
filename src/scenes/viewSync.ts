@@ -7,9 +7,11 @@ export interface ViewSyncOptions<E, V> {
   destroy(view: V): void;
 }
 
-export interface ViewSync<E> {
+export interface ViewSync<E, V = unknown> {
   /** Creates, updates and destroys views so there is exactly one per entity in `entities`. */
   sync(entities: readonly E[]): void;
+  /** The views of the entities in the last sync. */
+  views(): V[];
 }
 
 /** Keeps one display object per sim entity, keyed by entity id. No Phaser in it, so it can be unit tested. */
@@ -17,7 +19,7 @@ export function createViewSync<E extends { readonly id: number }, V>({
   create,
   update,
   destroy,
-}: ViewSyncOptions<E, V>): ViewSync<E> {
+}: ViewSyncOptions<E, V>): ViewSync<E, V> {
   const views = new Map<number, V>();
   return {
     sync(entities) {
@@ -37,5 +39,6 @@ export function createViewSync<E extends { readonly id: number }, V>({
         views.delete(id);
       }
     },
+    views: () => [...views.values()],
   };
 }

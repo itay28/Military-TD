@@ -40,8 +40,8 @@ How every change gets made, by agents and humans alike. The rules are short; fol
 - `needs-triage` issues get planned first (step 1, via `/triage` or `/grill-with-docs`), then relabelled `ready-for-agent`. Don't implement them directly.
 
 ### 0b. Open a session tracker
-Every working session gets a **session tracker**: a live page that follows the work.
-- **Where:** an Artifact page published with Claude's Artifact tool. Start from the template, `docs/agents/session-tracker.html`: copy it to the session's scratch folder, fill in the placeholders, and publish it. It already meets the Artifact page rules, so skip the Artifact quickstart and design pass. Sessions without the Artifact tool (e.g. `@claude` in GitHub Actions) keep the same content as a pinned comment on the issue instead.
+Every session a maintainer works in gets a **session tracker**: a live page that follows the work. Unattended sessions (the implement and PR steward routines, CI) skip it: nobody watches the page, and the issue comments already log the work. They follow `docs/agents/agent-brief.md`, a short version of this doc.
+- **Where:** an Artifact page published with Claude's Artifact tool. Start from the template, `docs/agents/session-tracker.html`: copy it to the session's scratch folder, fill in the placeholders, and publish it. It already meets the Artifact page rules, so skip the Artifact quickstart and design pass. A maintainer's session without the Artifact tool keeps the same content as a pinned comment on the issue instead.
 - **Contents:**
   - links to the issue(s) and, once it exists, the PR;
   - **what** is being built and **why** (the goal, in two or three sentences);
@@ -98,7 +98,7 @@ A PR that changes what the player sees (HUD, menus, overlays, anything a Scene d
   ```
   If the push is rejected because another PR pushed first, run `git -C <that worktree> pull --rebase origin pr-assets` and push again.
 - **PR body:** a **Screenshots** section embeds them as `![<what to look at>](https://github.com/itay28/Military-TD/blob/pr-assets/<pr-number>/<name>.png?raw=true)`, a table when there are several. The alt text says what the image shows ("Mid-wave: Start Wave disabled").
-- **Session tracker:** embed the same images as `data:` URIs (an Artifact page can't load images from the private repo), with a one-line caption each.
+- **Session tracker** (when there is one): embed the same images as `data:` URIs (an Artifact page can't load images from the private repo), with a one-line caption each.
 - **A state you can't capture** (for example one only a test-mode scenario reaches): say so under the screenshots, and name the test that covers it.
 
 ### 5. PR
@@ -112,7 +112,7 @@ A PR that changes what the player sees (HUD, menus, overlays, anything a Scene d
 
 ## Cloud sessions
 
-Agents also run in cloud sessions: claude.ai/code, and the auto-start and PR steward routines (`docs/agents/prompts/`). The steps above are the same. These things differ (environment table: `docs/agents/tooling.md` → **Environments**):
+Agents also run in cloud sessions: claude.ai/code, and the auto-start and PR steward routines (`docs/agents/prompts/`). The steps above are the same, except that routines skip the session tracker and read `docs/agents/agent-brief.md` instead of this whole doc. These things differ (environment table: `docs/agents/tooling.md` → **Environments**):
 - **Doctor first.** The `SessionStart` hook runs `npm run doctor`. In the cloud it checks that `gh api` reaches `itay28/Military-TD`. If it reports *no GitHub access* (an HTTP 403/404), the repository isn't attached to the routine or session. Stop and report it (a push notification from a routine): nothing else will work, and only the maintainer can attach it in the browser. *GitHub REST check failed* is a network problem instead: retry before deciding.
 - **GitHub: REST only.** Use the built-in GitHub tools, or `gh api repos/itay28/Military-TD/...`. GraphQL is blocked, so `gh pr`, `gh issue` and `gh project` don't work. For review threads, auto-merge and draft/ready, the proxy's REST routes are `/repos/{owner}/{repo}/pulls/{n}/ccr/review_threads`, `.../ccr/comments/{id}/resolve`, `.../ccr/auto_merge` and `.../ccr/ready_for_review`.
 - **Board:** never move cards. *Board sync* does it from PR and issue events.
@@ -132,8 +132,8 @@ Each tool call re-sends the whole conversation, so a long session costs more wit
 ## Definition of done
 - [ ] Acceptance criteria met
 - [ ] Issue has progress comments; description updated if the idea changed
-- [ ] Session tracker shows the final status and the PR link
-- [ ] UI changes: screenshots in the PR body and the session tracker (step 4b)
+- [ ] Session tracker (maintainer sessions only) shows the final status and the PR link
+- [ ] UI changes: screenshots in the PR body (and the session tracker, if any; step 4b)
 - [ ] Tests written first, now passing; new behaviour covered at the right layer
 - [ ] `npm run check` green locally and in CI (plus e2e if UI changed)
 - [ ] The CI review's findings are addressed, or the PR says why not

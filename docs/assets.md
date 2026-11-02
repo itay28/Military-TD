@@ -2,6 +2,8 @@
 
 Every art, audio and font file we didn't make ourselves must be traceable to its source and license. CI enforces this (#60): `npm run check:assets`, part of `npm run check`, fails on a file under `assets/` that no manifest `files` glob covers, a license off the allowlist (CC-BY without attribution, OFL on non-fonts), a pack folder without a license file, or a `CREDITS.md` that differs from `npm run credits`.
 
+**Art direction:** the long-term look is satellite-style milsim art with factions per map ([ADR-0009](adr/0009-satellite-milsim-art-and-factions.md), proposed). The Kenney packs are placeholders until a faction's realistic set is complete.
+
 ## Allowed licenses
 
 | License | OK? | Notes |
@@ -9,6 +11,7 @@ Every art, audio and font file we didn't make ourselves must be traceable to its
 | CC0-1.0 | ✅ | Preferred. Credit anyway (it's polite and costs nothing) |
 | CC-BY-3.0 / CC-BY-4.0 | ✅ | Attribution text **must** be recorded and shown on the credits screen |
 | OFL-1.1 | ✅ | Fonts only |
+| PD-USGov (US Government public domain) | ✅ | Works of the US federal government, e.g. USGS / USDA NAIP aerial imagery (ADR-0009). Credit the agency |
 | CC-BY-SA, CC-BY-NC, "free for personal use", "royalty free" with no license text, unknown | ❌ | Don't commit |
 
 ## Layout
@@ -65,18 +68,30 @@ The plan named *Top-down Tanks Redux*. Kenney now publishes that set as *Top-dow
 
 | Kind | Base | Turret / body |
 | --- | --- | --- |
-| Rifle Nest | `sandbagBeige_open` | `soldier1_machine` (soldier with a machine gun, behind the sandbags) |
+| Rifle Nest | `sandbagBeige_open` | `td245` (soldier) |
 | AA Gun | `td180` | `td203` (twin barrels) |
 | Cannon | `td181` | `td249` (single heavy barrel) |
 | Mortar | `td182` | `td226` (short turret) |
-| Infantry | | `soldier1_gun` (rifleman) |
-| Jeep | | `obj_jeep1` (army jeep) |
+| Infantry | | `td247` (soldier) |
+| Jeep | | `td269` (light vehicle) |
 | Tank | | `tankBody_sand` + `tankSand_barrel1` |
-| Helicopter | | green chopper + moving rotor from `chopper-44x99`, with a ground shadow |
-
-Sizes follow real ones, with 48 px = 1 tile in game: a soldier about 0.4 tile, the Jeep 0.75, the Tank about 1, the Helicopter 1.2. The Kenney tank pack draws small (38 px body), so it's scaled up, and the 52 px soldiers are scaled down.
+| Helicopter | | **none** yet: its sprite (`chopper-44x99`) is a sheet, so it keeps its shape until it joins the atlas |
 
 Map and effects: `tileGrass1`/`tileGrass2` ground, `tileGrass_road{East,North,CornerLL,LR,UL,UR}` for the Path, `td130`/`td131` bushes, `td135`–`td137` rocks, `treeGreen_small`/`treeGreen_large` (#43); `shotOrange` and `td295` muzzle flash, `explosion1`–`3`, `explosionSmoke1`–`3`, `td019`–`td021` smoke (#44).
+
+### Tileset (#43)
+
+The map is drawn from these frames (`src/scenes/tileset.ts`, frame tables in `src/data/sprites.ts`): `tileGrass1` on buildable tiles; on the Path, the road straight or bend that joins the tiles before and after it in walking order (the ends join the grid edge; Kenney names a bend by the corner it wraps around, so `CornerUR` joins north and east); on a non-buildable tile off the Path, `tileGrass2` tinted darker with one tree, bush or rock, picked from a seed made of the map id and the tile. Faint grid lines go over the ground, under the decorations. If the atlas lacks any of these frames, the whole map is drawn as flat colours.
+
+Interim: this table is what `src/data/sprites.ts` draws today, one atlas frame per kind. The Infantry, Rifle Nest soldier, Jeep and Helicopter art from the extra packs above (`soldier1_*`, `obj_jeep1`, `chopper-44x99`) is bigger than an atlas cell or is a sheet, so it joins the atlas with the later sprite issues (#41, #42).
+
+### Atlas (#40)
+
+The game loads one texture atlas, `assets/atlas/sprites.{png,json}` (Phaser JSON hash), not the PNGs above. `npm run atlas` (`scripts/atlas.ts`) packs every PNG of the Tower Defense and Tanks packs into it, one 64 px cell each, frame name = file name without `.png`; rerun it and commit the output after adding or changing a sprite (a test fails while the committed atlas differs from a fresh build). The atlas holds both packs' pixels, so both manifest entries list it. Which frame each kind is drawn with: `src/data/sprites.ts` (a tower draws its base, then its turret, which turns toward its target: #41); a kind without one (Helicopter), or any kind when the atlas fails to load, keeps its shape.
+
+### Facing and movement (#42)
+
+An enemy sprite turns to face the way it travels: `SPRITE_HEADING` in `src/data/sprites.ts` records which way each frame faces as drawn (the Tower Defense units face east, the Tanks body north), and the scene rotates it by its heading minus that. A new enemy frame needs its entry there. The movement animation (`ENEMY_ANIM` in `src/data/display.ts`) is a scale bob on the sprite, or the spin of the Helicopter's rotor; it runs on real time and is off with `?anim=0`.
 
 ### Alternatives considered
 
@@ -92,3 +107,57 @@ Map and effects: `tileGrass1`/`tileGrass2` ground, `tileGrass_road{East,North,Co
 - **Kenney** (kenney.nl): CC0. Tower Defense (Top-Down), Top-down Tanks Remastered (formerly Redux), UI Pack, Impact/Interface sounds, Music Jingles.
 - **OpenGameArt.org**: mixed licenses. Check each item.
 - **itch.io free asset packs**: mixed licenses. Many are "free for personal use" only, which isn't allowed here.
+
+## Render spike (#286, ADR-0009)
+
+Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab models and one NAIP ground patch (`docs/art/render-spike-compare.png`). The game draws the AA Gun and Tank renders in place of their Kenney sprites (#310): the hull with its shadow, then the turret turning around its pivot. After `render-sprite.py`, run `npm run render:pivot`: it measures each turret's pivot (the centre of its body, without the barrel) from `<id>-turret.png` into `<id>.json`, which `src/data/renders.ts` reads. A test fails while that JSON is stale. A kind whose render doesn't load keeps its Kenney frame. Source models are never committed: `scripts/render-sprite.py` downloads them into the ignored `.cache/models/` with `SKETCHFAB_API_TOKEN`.
+
+| Folder | Source | Made by |
+| --- | --- | --- |
+| `render-china-aa-gun/` | "Oerlikon Gdf-006 35mm" by lm9241221, CC-BY-4.0 | `scripts/render-sprite.py` (`render-sprite.json`) |
+| `render-russia-tank/` | "T-72B3 Main Battle Tank" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-aa-gun/` | "Phalanx CIWS" by Lemper_Studio, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-mortar/` | "Mortar - M224" by jcherry3d, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-jeep/` | "Low Poly Humvee FREE" by madtrollstudio, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-tank/` | "M1A2 Abrams Crows" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-helicopter/` | "Sikorsky UH-60 Black Hawk" by helijah, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-cannon/` | "ZiS-2 57mm anti-tank gun" by sergey.s.filin, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-jeep/` | "uaz 469" by Okopchi, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-helicopter/` | "Mi-8" by tiunov.se, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-jeep/` | "Military Jeep Low Poly – Game Ready 3D Vehicle" by KidBi-Gaming, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-tank/` | "Type 99 MBT" by philano, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-helicopter/` | "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-cannon/` | "SPG-9" by Jack512kb, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-jeep/` | "TOYOTA DO AFEGANISTÃO (LOW POLY)" by lm9241221, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-tank/` | "T 54/55 Tank" by SGAstudios3DandGameDevelopment, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-helicopter/` | "Russian Transport Heli" by jeandiz, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `naip-field-road-treeline/` | USDA FSA NAIP, Iowa 2023, 0.3 m, PD-USGov | `scripts/naip-patch.py` |
+
+The **US** Faction's set (#314, the first map's Defender) is complete: all eight kinds, previewed on NAIP grass at 48 and 128 px in `docs/art/faction-us.png` (`scripts/faction-sheet.py us`). The game doesn't draw it yet: per ADR-0009 point 5 a Faction leaves Kenney in one step, which is the sprite loader's job. Towers stand on a sandbagged pad that `render-sprite.py` builds itself (`base`), so they read on grass; `render:pivot` turns such a tower about the pad centre (the canvas centre) instead of measuring a barrel. Infantry, Jeep and Helicopter have no turret layer (no `turret` in `render-sprite.json`), so their render data has no pivot.
+
+The **Russia** Faction's set (#315, the first map's Attacker) is complete too, so the first map's pairing is: the spike's T-72B3 plus seven new renders, previewed in `docs/art/faction-russia.png` (`scripts/faction-sheet.py russia`). Where no free model of the exact variant exists, `depicts` in `render-sprite.json` names the stand-in (ZiS-2 for the MT-12, Pindad MO-3 for the 2B14, Mi-8 for the Mi-8AMTSh). Rifle Nest and Infantry reuse the US soldier model, its kit tinted olive. The ZiS-2 model sits at an angle, so its entry turns it north with `turnDeg`.
+
+The **China** Faction's set (#316) is complete as well: the spike's GDF-006, now on the same sandbagged pad as the other towers (the game's AA Gun draws this render, so it gains the pad), plus seven new renders, previewed in `docs/art/faction-china.png` (`scripts/faction-sheet.py china`). Stand-ins, named in `depicts`: GDF-006 for the PG-99, the tripod ATGM for the HJ-8, Pindad MO-3 for the PP-87, a UH-60M for the Z-20 (built to the UH-60's layout), Type 99 for the Type 99A, and an open-top military 4×4 (machine gun removed, repainted olive) for the BJ2022. Rifle Nest, Infantry and the ATGM reuse models from the other sets, tinted green. Sketchfab uploads that say they were ripped from a game (several PLA vehicles, e.g. a War Thunder ZTZ-99A and a Mercenaries 2 BJ2022) were skipped: their uploader can't license them.
+
+The **Insurgents** Faction's set (#317) completes all four, so every Faction has its 8 kinds (`tests/render-pivot.test.ts` checks each Faction in `FACTIONS`). It is previewed in `docs/art/faction-insurgents.png` (`scripts/faction-sheet.py insurgents`). The T-55 (the "T 54/55 Tank" model, desert sand), a weathered bare-metal Mi-8, a Toyota pickup technical with a heavy machine gun in the bed (its ground disc removed, brightened) and the SPG-9 (untextured, painted olive) are new models. The others are reused: the ZU-23-2 repainted sand stands in for the ZPU-4 (no free ZPU-4 exists, and insurgents field the ZU-23-2 as widely), the Pindad MO-3 is the mortar, and Rifle Nest and Infantry use the soldier model with its kit re-coloured to civilian browns and denim (the free Taliban figures are T-posed with no animations). Skipped: 42manako's T-55AM ("ripped from WARNO"), an "Insurgent" figure tagged Escape from Tarkov, and Sleepykingzzz's twin DShK emplacements, whose gun texture is named `textures\wpn\wpn_dshk` (S.T.A.L.K.E.R.'s naming), a sign it came from a game. Look at a model's material and texture names too, not just its page.
+
+## Map ground images (#312, ADR-0009)
+
+Each Tiled map can have one painted ground image in `naip-maps/` (`<map>.jpg`, PD-USGov, under the same NAIP manifest entry). `scripts/naip-map.py` makes it: a pinned NAIP field at 30 m per tile, 96 px per tile, with the map's Path painted on it as a dirt track and blocked tiles as treeline. A new map is a new entry in that script's `MAPS`; rerun it after moving the Path. The scene, the window centres and the seed are pinned, so a rerun writes the same file.
+
+Before rendering a Sketchfab model, read its page: skip it if the description or tags say "ripped" or "imported from", name a game, or the license is NonCommercial or NoDerivatives.

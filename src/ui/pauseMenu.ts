@@ -1,3 +1,4 @@
+import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type GameState } from '../sim/game';
 import type { OpenSettings, SettingsScreen } from './settingsScreen';
 
@@ -17,6 +18,8 @@ export interface PauseMenuOptions {
   readonly onQuit?: () => void;
   /** Opens the Settings screen in place of the Paused dialog. Without it, Settings is disabled. */
   readonly openSettings?: OpenSettings;
+  /** The game speed. With it, the Paused dialog can change the speed, so the player resumes at the one they pick. */
+  readonly speed?: GameSpeedControl;
 }
 
 export interface PauseMenu {
@@ -42,7 +45,7 @@ const TITLE_ID = 'pause-menu-title';
 export function mountPauseMenu(
   root: HTMLElement,
   game: PauseMenuGame,
-  { buttonRoot, blocked, onRestart, onQuit, openSettings }: PauseMenuOptions,
+  { buttonRoot, blocked, onRestart, onQuit, openSettings, speed }: PauseMenuOptions,
 ): PauseMenu {
   const doc = root.ownerDocument;
   const makeButton = (testId: string, text: string, onClick?: () => void) => {
@@ -63,7 +66,10 @@ export function mountPauseMenu(
     if (!paused) closeSettings();
     root.hidden = !paused;
     for (const area of blocked) area.inert = paused;
-    if (paused) resume.focus();
+    if (paused) {
+      speedButtons?.sync();
+      resume.focus();
+    }
   };
   const open = () => {
     if (!destroyed && !isGameOver(game.state.phase)) setPaused(true);
@@ -109,6 +115,9 @@ export function mountPauseMenu(
     makeButton('quit', 'Quit to menu', onQuit && (() => onQuit())),
   );
   root.append(dialog);
+  const speedButtons = speed && mountSpeedButtons(dialog, speed, (n) => `pause-speed-${n}`);
+  // Between Resume and Restart.
+  if (speedButtons) resume.after(speedButtons.group);
   root.hidden = true;
 
   // While paused, keys stop at the window, before the build bar's and tower panel's shortcuts see them: Esc resumes.

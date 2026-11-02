@@ -15,7 +15,7 @@ const shown = (b: HTMLElement | undefined, testid: string) => b?.querySelector(`
 
 const TWO_MAPS: readonly MapEntry[] = [
   MAPS[0]!,
-  { id: 'second', name: 'Second Map', data: { ...MAPS[0]!.data, id: 'second' } },
+  { ...MAPS[0]!, id: 'second', name: 'Second Map', data: { ...MAPS[0]!.data, id: 'second' } },
 ];
 
 function mount(options: Partial<LevelSelectOptions> = {}) {
@@ -100,13 +100,16 @@ describe('Level select', () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
-  it('focuses the first map when it opens', () => {
-    mount();
+  it('focuses the first map when it opens, when it is the only one unlocked', () => {
+    mount({ statusOf: (index) => ({ unlocked: index === 0, bestStars: 0 }) });
     expect(document.activeElement).toBe(mapButton(MAPS[0]!.name));
   });
 
   it('focuses the last unlocked map when it opens', () => {
-    const THREE_MAPS = [...TWO_MAPS, { id: 'third', name: 'Third Map', data: { ...MAPS[0]!.data, id: 'third' } }];
+    const THREE_MAPS = [
+      ...TWO_MAPS,
+      { ...MAPS[0]!, id: 'third', name: 'Third Map', data: { ...MAPS[0]!.data, id: 'third' } },
+    ];
     mount({ maps: THREE_MAPS, statusOf: (index) => ({ unlocked: index <= 1, bestStars: 0 }) });
     expect(document.activeElement).toBe(mapButton('Second Map'));
   });

@@ -3,4 +3,6 @@
   - list:
     - listitem:
       - button "Training Ground, no stars yet": Training Ground
+    - listitem:
+      - button "Switchback, locked. Complete Training Ground to unlock": Switchback
   - button "Back"

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
 import {
   AIR_SHADOW,
+  EFFECT,
   ENEMY_STYLE,
   GHOST,
   HP_BAR,
@@ -18,8 +19,11 @@ import type { Enemy } from '../sim/enemies';
 import type { Tower } from '../sim/towers';
 import {
   drawBlasts,
+  drawEffects,
   drawEnemy,
   drawGhost,
+  drawHpBar,
+  drawLevelPips,
   drawRangeRing,
   drawShells,
   drawTower,
@@ -155,6 +159,19 @@ describe('drawEnemy (Helicopter)', () => {
     ]);
   });
 
+  it('turns the rotor by rotorAngle: a quarter of its 90° symmetry sits it square', () => {
+    const { painter, calls } = recordingPainter();
+    drawEnemy(painter, helicopter, Math.PI / 4);
+    const d = ENEMY_STYLE.helicopter.rotor * Math.SQRT2; // the blade tip's distance from the hub
+    const lines = calls.filter((c) => c[0] === 'lineBetween').map(([, ...xy]) => xy);
+    const expected = [
+      [0, -d, 0, d],
+      [-d, 0, d, 0],
+    ];
+    expect(lines).toHaveLength(2);
+    lines.forEach((line, i) => line.forEach((v, j) => expect(v).toBeCloseTo(expected[i]![j]!)));
+  });
+
   it('gives a ground enemy no rotor', () => {
     const { painter, calls } = recordingPainter();
     drawEnemy(painter, infantry(30));
@@ -196,6 +213,34 @@ describe('drawTower', () => {
   });
 });
 
+// With a sprite, the scene draws the sprite and only these overlays on top.
+describe('drawHpBar', () => {
+  it('draws the same HP bar drawEnemy ends with, and nothing else', () => {
+    const whole = recordingPainter();
+    drawEnemy(whole.painter, infantry(10));
+    const bar = recordingPainter();
+    drawHpBar(bar.painter, infantry(10));
+    expect(bar.calls).toEqual(whole.calls.slice(-4));
+  });
+});
+
+describe('drawLevelPips', () => {
+  it('draws the same pips drawTower ends with, and nothing else', () => {
+    const tower = { ...rifleNest(1, 0, 0), level: 3 };
+    const whole = recordingPainter();
+    drawTower(whole.painter, tower);
+    const pips = recordingPainter();
+    drawLevelPips(pips.painter, tower);
+    expect(pips.calls).toEqual(whole.calls.slice(4));
+  });
+
+  it('draws nothing at level 1', () => {
+    const { painter, calls } = recordingPainter();
+    drawLevelPips(painter, rifleNest(1, 0, 0));
+    expect(calls).toEqual([]);
+  });
+});
+
 describe('drawTower for the AA Gun', () => {
   it('draws a circle, not a square, in its own colour', () => {
     const { painter, calls } = recordingPainter();
@@ -224,6 +269,9 @@ describe('drawTower for the AA Gun', () => {
     expect(calls).toEqual([
       ['fillStyle', GHOST.placeable, GHOST.fillAlpha],
       ['fillCircle', 0, 0, TOWER_STYLE.aaGun.size / 2],
+      ['lineStyle', GHOST.outline.width, GHOST.outline.color, GHOST.outline.alpha],
+      ['strokeCircle', 0, 0, TOWER_STYLE.aaGun.size / 2],
+      ['strokeCircle', 0, 0, 3 * TILE_PX],
       ['lineStyle', GHOST.ringWidth, GHOST.placeable, GHOST.ringAlpha],
       ['strokeCircle', 0, 0, 3 * TILE_PX],
     ]);
@@ -302,11 +350,14 @@ describe('drawGhost', () => {
   const ghostCalls = (color: number) => [
     ['fillStyle', color, GHOST.fillAlpha],
     ['fillRect', -half, -half, size, size],
+    ['lineStyle', GHOST.outline.width, GHOST.outline.color, GHOST.outline.alpha],
+    ['strokeRect', -half, -half, size, size],
+    ['strokeCircle', 0, 0, 2.5 * TILE_PX],
     ['lineStyle', GHOST.ringWidth, color, GHOST.ringAlpha],
     ['strokeCircle', 0, 0, 2.5 * TILE_PX],
   ];
 
-  it('draws a see-through tower square and its range ring in green where placement would succeed', () => {
+  it('draws a see-through tower square and its range ring in green where placement would succeed, both edged in a dark outline so they read on grass and road', () => {
     const { painter, calls } = recordingPainter();
     drawGhost(painter, 'rifleNest', true);
     expect(calls).toEqual(ghostCalls(GHOST.placeable));
@@ -324,6 +375,10 @@ describe('drawGhost', () => {
     expect(calls).toEqual([
       ['fillStyle', GHOST.placeable, GHOST.fillAlpha],
       ['fillCircle', 0, 0, TOWER_STYLE.mortar.size / 2],
+      ['lineStyle', GHOST.outline.width, GHOST.outline.color, GHOST.outline.alpha],
+      ['strokeCircle', 0, 0, TOWER_STYLE.mortar.size / 2],
+      ['strokeCircle', 0, 0, 5 * TILE_PX],
+      ['strokeCircle', 0, 0, 1.5 * TILE_PX],
       ['lineStyle', GHOST.ringWidth, GHOST.placeable, GHOST.ringAlpha],
       ['strokeCircle', 0, 0, 5 * TILE_PX],
       ['strokeCircle', 0, 0, 1.5 * TILE_PX],
@@ -349,6 +404,33 @@ describe('drawBlasts', () => {
     expect(calls).toEqual([
       ['lineStyle', SHELL.blastWidth, SHELL.blastColor, 0.5],
       ['strokeCircle', 10, 20, 48],
+    ]);
+  });
+});
+
+describe('drawEffects', () => {
+  const at = { x: 10, y: 20 };
+
+  it('draws a muzzle flash as a small disc that fades out', () => {
+    const { painter, calls } = recordingPainter();
+    drawEffects(painter, [{ kind: 'muzzleFlash', at, progress: 0.5 }]);
+    expect(calls).toEqual([
+      ['fillStyle', EFFECT.muzzleFlash.color, 0.5],
+      ['fillCircle', 10, 20, EFFECT.muzzleFlash.radius],
+    ]);
+  });
+
+  it('grows an explosion and a puff as they age', () => {
+    const { painter, calls } = recordingPainter();
+    drawEffects(painter, [
+      { kind: 'explosion', at, progress: 0 },
+      { kind: 'puff', at, progress: 1 },
+    ]);
+    expect(calls).toEqual([
+      ['fillStyle', EFFECT.explosion.color, 1],
+      ['fillCircle', 10, 20, EFFECT.explosion.radius],
+      ['fillStyle', EFFECT.puff.color, 0],
+      ['fillCircle', 10, 20, EFFECT.puff.radius * EFFECT.puff.growth],
     ]);
   });
 });

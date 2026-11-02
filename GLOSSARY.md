@@ -48,7 +48,12 @@
 | **Lives** | How many leaks the player can survive. Defeat at 0. | health, HP (HP is for enemies) |
 | **Wave DPS** | Damage per second during the current wave only: damage dealt this wave ÷ time since the wave started. Per tower or in total. Resets when a wave starts. | |
 | **Map file** | A map drawn in Tiled and saved as `maps/*.tmj`: a `ground` tile layer, tiles with the `buildable` property, and the Path as a polyline on a `path` layer. `importTiledMap` turns it into sim map data and rejects a broken one (ADR-0006). | level file |
+| **Ground image** | A Map file's one painted aerial picture of its ground (a `ground-image` image layer): a NAIP field with the Path painted on as a dirt track, made by `scripts/naip-map.py` (#312). Only drawn; the `ground` layer still says what's buildable. | backdrop, map texture |
 | **Reference bot** | The bot every Map file must beat: `bot-balanced`'s build order fitted to the map (`fitOrder`), each tower on the free buildable tile that covers the most Path. | |
+| **Faction** | A visual side: **US**, **Russia**, **China** or **Insurgents** (ADR-0009). It changes sprites only: a kind has the same stats in every Faction. | army, team, side |
+| **Render** | A kind's sprite rendered top-down from a 3D model (ADR-0009, `scripts/render-sprite.py`): a hull layer with its shadow and a turret layer that turns around its **pivot**, the centre of the turret body. Kinds without one keep the Kenney sprite. | model, 3D sprite |
+| **Attacker** | The Faction whose enemies walk a map's Path. Each map names one. | |
+| **Defender** | The Faction whose towers the player builds on a map. Each map names one. | |
 | **Wave time** | The time a wave ran, from its start until it was cleared or lost. A tower's wave time is the part of it the tower stood on the map (while dismantling too). | |
 | **Damage report** | The End screen's breakdown of damage, kills and DPS: by tower (sold towers kept, marked sold), by tower type, and by wave with a total. A tower's DPS is its damage ÷ its own wave time; a wave's is its damage ÷ its wave time; a tower type's and the total's are their damage ÷ the whole game's wave time (every wave's added up). Each time is floored at 1 s, like Wave DPS; a tower that never stood in a wave shows 0. | stats screen |
 | **Scenario** | A declarative game setup plus a script of timed commands, run headlessly by `runScenario()` to test a situation. | fixture, level (for tests) |

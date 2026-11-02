@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { renderCredits, type Manifest } from './credits.ts';
 
 /** Licenses we may ship (docs/assets.md). CC-BY needs an attribution; OFL is for fonts only. */
-const LICENSES = ['CC0-1.0', 'CC-BY-3.0', 'CC-BY-4.0', 'OFL-1.1'];
+const LICENSES = ['CC0-1.0', 'CC-BY-3.0', 'CC-BY-4.0', 'OFL-1.1', 'PD-USGov'];
 const FONT_EXT = /\.(ttf|otf|woff2?)$/i;
 const LICENSE_FILE = /^(licen[cs]e|copying|ofl)(\..+)?$/i;
 

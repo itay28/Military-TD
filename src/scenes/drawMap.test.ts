@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MAP_STYLE, TILE_PX } from '../data/display';
 import { MVP_MAP } from '../data/maps';
-import { createMap, type MapData } from '../sim/map';
-import { drawMap, type MapPainter } from './drawMap';
+import { createMap, tileKey, type MapData } from '../sim/map';
+import { drawGrid, drawMap, tileType, type MapPainter } from './drawMap';
 
 interface Fill {
   color: number;
@@ -77,5 +77,37 @@ describe('drawMap', () => {
     drawMap(painter, map);
     expect(fills).toHaveLength(16 * 10);
     expect(fills.filter((f) => f.color === MAP_STYLE.path)).toHaveLength(map.pathTiles.length);
+  });
+
+  it('ends with the grid drawGrid draws on its own, so sprite tiles get the same grid on top', () => {
+    const whole = recordingPainter();
+    drawMap(whole.painter, createMap(TINY));
+    const grid = recordingPainter();
+    drawGrid(grid.painter, createMap(TINY));
+    expect(grid.fills).toEqual([]);
+    expect(grid.lines).toEqual(whole.lines);
+    expect(grid.lineStyles).toEqual(whole.lineStyles);
+  });
+});
+
+describe('tileType', () => {
+  it('is path on the Path and buildable elsewhere', () => {
+    const map = createMap(TINY);
+    expect(tileType(map, { col: 1, row: 0 })).toBe('path');
+    expect(tileType(map, { col: 1, row: 1 })).toBe('buildable');
+  });
+
+  it('is blocked on a non-buildable tile off the Path', () => {
+    const map = createMap(TINY);
+    const blocked = { ...map, isBuildable: (tile: { col: number; row: number }) => tileKey(tile) !== '2,1' };
+    expect(tileType(blocked, { col: 2, row: 1 })).toBe('blocked');
+    expect(tileType(blocked, { col: 1, row: 1 })).toBe('buildable');
+    expect(tileType(blocked, { col: 2, row: 0 })).toBe('path');
+  });
+});
+
+describe('MAP_STYLE', () => {
+  it('gives the Path, buildable and blocked tiles three different flat colours', () => {
+    expect(new Set([MAP_STYLE.path, MAP_STYLE.buildable, MAP_STYLE.blocked]).size).toBe(3);
   });
 });

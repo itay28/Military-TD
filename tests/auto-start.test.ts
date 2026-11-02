@@ -3,11 +3,15 @@ import {
   AUTO_AGENT_LABEL,
   DONE_MARKER,
   FIRED_MARKER,
+  GIVE_UP_MARKER,
   HANDOFF_MARKER,
+  SPLIT_LABEL,
   classifyFireError,
   commentNoSize,
   firedComment,
+  giveUpIssue,
   NO_SIZE_MARKER,
+  MAX_AGENTS,
   MAX_SIZE_REQUESTS,
   planRetries,
   planSizingRequests,
@@ -534,12 +538,24 @@ describe('autoStartFromEnv: the AUTO_SPAWN switch', () => {
   it('reads both routines, and stacking only with AUTO_STACK on', () => {
     expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on' })).toEqual({
       stack: false,
+      cap: MAX_AGENTS,
       routines: {
         sonnet: { url: 'https://fire.example/sonnet', token: 's' },
         opus: { url: 'https://fire.example/opus', token: 'o' },
       },
     });
     expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_STACK: 'on' })?.stack).toBe(true);
+  });
+
+  it('caps agents In progress at AUTO_MAX_AGENTS, 5 when unset', () => {
+    expect(MAX_AGENTS).toBe(5);
+    expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_MAX_AGENTS: '' })?.cap).toBe(MAX_AGENTS);
+    expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_MAX_AGENTS: ' 2 ' })?.cap).toBe(2);
+  });
+
+  it('fails loudly on an AUTO_MAX_AGENTS that is not a whole number of at least 1', () => {
+    for (const bad of ['0', '-1', '2.5', 'two'])
+      expect(() => autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_MAX_AGENTS: bad })).toThrow(/AUTO_MAX_AGENTS/);
   });
 
   it('fails loudly when on without a routine secret', () => {
@@ -619,6 +635,102 @@ describe('planRetries: which claimed issues are dead (#201)', () => {
 
   it('takes the idle time as an option', () => {
     expect(planRetries([claimed({ comments: [fired(30)] })], NOW, HOUR / 4).map((r) => r.issue)).toEqual([7]);
+  });
+});
+
+describe('planRetries: one retry, then give up (#303)', () => {
+  const plan = (over: Partial<RetryIssue>) => planRetries([claimed(over)], NOW);
+
+  it('retries a first dead session without giving up', () => {
+    expect(plan({ comments: [fired(61)] })[0]).not.toHaveProperty('giveUp');
+  });
+
+  it('splits an issue whose retry died too', () => {
+    expect(plan({ comments: [fired(300), fired(120)] })).toEqual([
+      { issue: 7, base: 'main', model: 'opus', giveUp: 'split' },
+    ]);
+  });
+
+  it('hands a split part whose retry died to the maintainer instead of splitting it again', () => {
+    expect(plan({ comments: [fired(300), fired(120)], splitPart: true })[0]?.giveUp).toBe('handoff');
+  });
+
+  it('counts only the fires since the latest done marker', () => {
+    expect(plan({ comments: [fired(500), fired(400), done(300), fired(120)] })[0]).not.toHaveProperty('giveUp');
+  });
+
+  it('does nothing more once it gave up', () => {
+    const gaveUp = { body: `Split it.\n\n${GIVE_UP_MARKER}`, createdAt: ago(100) };
+    expect(plan({ comments: [fired(300), fired(200), gaveUp] })).toEqual([]);
+  });
+});
+
+describe('planRetries: resume an answered question (#319)', () => {
+  const question = (minutes: number) => ({ body: `Option A or B?\n\n${DONE_MARKER}`, createdAt: ago(minutes) });
+  const answer = (minutes: number) => ({ body: 'B', createdAt: ago(minutes) });
+  const bot = (minutes: number) => ({
+    body: `Asked the sizing agent.\n\n<!-- size-issue:requested -->`,
+    createdAt: ago(minutes),
+  });
+  const plan = (over: Partial<RetryIssue>) => planRetries([claimed(over)], NOW);
+
+  it('fires the same model on the same base at once when the maintainer answered', () => {
+    expect(plan({ comments: [fired(30, 'sonnet', 'feat/5-b'), question(29), answer(1)] })).toEqual([
+      { issue: 7, base: 'feat/5-b', model: 'sonnet', resume: true },
+    ]);
+  });
+
+  it('carries the draft PR branch and number', () => {
+    const pr = { number: 40, head: 'fix/7-a', draft: true, activity: [ago(20)] };
+    expect(plan({ comments: [fired(30), question(29), answer(1)], pr })).toEqual([
+      { issue: 7, base: 'main', model: 'opus', branch: 'fix/7-a', pr: 40, resume: true },
+    ]);
+  });
+
+  it('waits while the question has no answer, or only automation comments', () => {
+    expect(plan({ comments: [fired(300), question(290)] })).toEqual([]);
+    expect(plan({ comments: [fired(300), question(290), bot(100)] })).toEqual([]);
+  });
+
+  it('waits while needs-info is still on, and never takes a ready PR', () => {
+    expect(plan({ comments: [fired(30), question(29), answer(1)], needsInfo: true })).toEqual([]);
+    const pr = { number: 40, head: 'fix/7-a', draft: false, activity: [ago(20)] };
+    expect(plan({ comments: [fired(30), question(29), answer(1)], pr })).toEqual([]);
+  });
+
+  it('after the resume fire, the usual dead-session rules apply with a fresh count', () => {
+    expect(plan({ comments: [fired(300), question(290), answer(200), fired(199)] })).toEqual([
+      { issue: 7, base: 'main', model: 'opus' },
+    ]);
+    expect(plan({ comments: [fired(300), question(290), answer(200), fired(199), said(30)] })).toEqual([]);
+  });
+
+  it('says so in the fire text', () => {
+    expect(retryText({ issue: 7, base: 'main', model: 'opus', resume: true })).toContain('question was answered');
+    expect(retryText({ issue: 7, base: 'main', model: 'opus' })).not.toContain('Resume');
+  });
+});
+
+describe('giveUpIssue (#303)', () => {
+  const api = 'https://api.github.com/repos/itay28/Military-TD/issues/7';
+  const bodies = (fetchFn: Mock<Fetch>) => fetchFn.mock.calls.map(([, init]) => JSON.parse(init.body as string));
+
+  it('asks the split agent: a comment with the give-up marker, then the needs-split label', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await giveUpIssue({ issue: 7, base: 'main', model: 'opus', giveUp: 'split' }, 'gh-token', fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/comments`, `POST ${api}/labels`]);
+    const [comment, labels] = bodies(fetchFn);
+    expect(comment.body).toContain(GIVE_UP_MARKER);
+    expect(labels).toEqual({ labels: [SPLIT_LABEL] });
+  });
+
+  it('hands off to the maintainer: the hand-off marker, then needs-you', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await giveUpIssue({ issue: 7, base: 'main', model: 'opus', giveUp: 'handoff' }, 'gh-token', fetchFn);
+    const [comment, labels] = bodies(fetchFn);
+    expect(comment.body).toContain(HANDOFF_MARKER);
+    expect(comment.body).toContain(GIVE_UP_MARKER);
+    expect(labels).toEqual({ labels: ['needs-you'] });
   });
 });
 
