@@ -29,7 +29,16 @@ import type { SettingsStore } from '../settings/settings';
 import { selectTarget, towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
-import { clampView, fitView, panBy, screenToWorld, zoomAt, type CameraBounds, type CameraView } from './camera';
+import {
+  canPlaceAt,
+  clampView,
+  fitView,
+  panBy,
+  screenToWorld,
+  zoomAt,
+  type CameraBounds,
+  type CameraView,
+} from './camera';
 import { pixelToTile, toPixels, type Pixel } from './coords';
 import {
   drawBlasts,
@@ -48,7 +57,7 @@ import { drawGrid, drawMap } from './drawMap';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, type GameSpeed, type GameSpeedControl } from './gameSpeed';
-import { createGestures, type Gesture, type Gestures } from './gestures';
+import { createGestures, hoverFrom, type Gesture, type Gestures } from './gestures';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { headingOf, spriteRotation } from './heading';
@@ -604,13 +613,16 @@ export class GameScene extends Phaser.Scene {
       set: (value) => (this.gameSpeed = value),
     };
     this.hud = mountHud(this.hudRoot, this.sim, speed);
-    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
+    // Placing a new tower and inspecting a placed one are exclusive: picking one closes the other.
+    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions(), {
+      onSelect: () => this.towerPanel.select(undefined),
+    });
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, {
       onRestart: () => this.scene.restart(),
       result: () => this.result,
     });
-    this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim);
+    this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim, { onSelect: () => this.buildBar.clear() });
     // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
     // build bar's and tower panel's Esc (cancel a selection) runs before its own (pause).
     this.pauseMenu = mountPauseMenu(this.pauseMenuRoot, this.sim, {
@@ -688,8 +700,12 @@ export class GameScene extends Phaser.Scene {
       this.onGesture(this.gestures.down(pointer.id, screen(pointer), pointer.wasTouch));
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      this.onGesture(this.gestures.move(pointer.id, screen(pointer)));
-      this.pointerTile = pixelToTile(screenToWorld(this.view, screen(pointer)));
+      const gesture = this.gestures.move(pointer.id, screen(pointer));
+      this.onGesture(gesture);
+      // A finger hovers only while it aims; a pinch or pan moves the camera and shows no Ghost.
+      const hover = hoverFrom(gesture, pointer.wasTouch);
+      if (hover === 'follow') this.pointerTile = pixelToTile(screenToWorld(this.view, screen(pointer)));
+      else if (hover === 'clear') this.pointerTile = undefined;
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       this.onGesture(this.gestures.up(pointer.id, screen(pointer)));
@@ -709,12 +725,17 @@ export class GameScene extends Phaser.Scene {
 
   private onGesture(gesture: Gesture | undefined): void {
     if (!gesture) return;
-    if (gesture.type === 'tap') return this.tapAt(screenToWorld(this.view, gesture.point));
+    if (gesture.type === 'tap')
+      return this.tapAt(screenToWorld(this.view, gesture.point), this.pointOnMap(gesture.point));
     if (gesture.type === 'aim') {
       this.pointerTile = pixelToTile(screenToWorld(this.view, gesture.point));
       return;
     }
-    if (gesture.type === 'place') return this.placeAtPoint(screenToWorld(this.view, gesture.point));
+    if (gesture.type === 'place') {
+      // A lift off the visible map (over the HUD, at the screen edge) places nothing.
+      if (this.pointOnMap(gesture.point)) this.placeAtPoint(screenToWorld(this.view, gesture.point));
+      return;
+    }
     this.fitted = false;
     const bounds = this.cameraBounds();
     const panned = panBy(this.view, gesture.dx, gesture.dy, bounds);
@@ -725,7 +746,7 @@ export class GameScene extends Phaser.Scene {
    * A tap on the map at world pixel `at`. A tap on a tower selects it. Otherwise the sim decides whether it places
    * one, so this works in the Build and Wave phases alike.
    */
-  private tapAt(at: Pixel): void {
+  private tapAt(at: Pixel, canPlace: boolean): void {
     const action = resolveClick(
       this.sim.state.towers,
       this.towerPanel.selectedId,
@@ -734,10 +755,15 @@ export class GameScene extends Phaser.Scene {
     );
     if (action.type === 'select') this.towerPanel.select(action.towerId);
     else if (action.type === 'deselect') this.towerPanel.select(undefined);
-    else if (action.type === 'place') {
+    else if (action.type === 'place' && canPlace) {
       const refusal = placeAt(this.sim, action.kind, action.tile);
       if (refusal) this.floatingTexts.add(refusal, at);
     }
+  }
+
+  /** True when the screen point is on the visible map, so a placement may land there. */
+  private pointOnMap(screenPoint: Pixel): boolean {
+    return canPlaceAt(this.view, this.cameraBounds(), screenPoint);
   }
 
   /** Places the selected kind on the tile at world pixel `at`, where an aiming drag lifted. */
