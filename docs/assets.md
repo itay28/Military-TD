@@ -116,6 +116,16 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | --- | --- | --- |
 | `render-china-aa-gun/` | "Oerlikon Gdf-006 35mm" by lm9241221, CC-BY-4.0 | `scripts/render-sprite.py` (`render-sprite.json`) |
 | `render-russia-tank/` | "T-72B3 Main Battle Tank" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-aa-gun/` | "Phalanx CIWS" by Lemper_Studio, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-mortar/` | "Mortar - M224" by jcherry3d, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-jeep/` | "Low Poly Humvee FREE" by madtrollstudio, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-tank/` | "M1A2 Abrams Crows" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-helicopter/` | "Sikorsky UH-60 Black Hawk" by helijah, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `naip-field-road-treeline/` | USDA FSA NAIP, Iowa 2023, 0.3 m, PD-USGov | `scripts/naip-patch.py` |
+
+The **US** Faction's set (#314, the first map's Defender) is complete: all eight kinds, previewed on NAIP grass at 48 and 128 px in `docs/art/faction-us.png` (`scripts/faction-sheet.py us`). The game doesn't draw it yet: per ADR-0009 point 5 a Faction leaves Kenney in one step, which is the sprite loader's job. Towers stand on a sandbagged pad that `render-sprite.py` builds itself (`base`), so they read on grass; `render:pivot` turns such a tower about the pad centre (the canvas centre) instead of measuring a barrel. Infantry, Jeep and Helicopter have no turret layer (no `turret` in `render-sprite.json`), so their render data has no pivot.
 
 Before rendering a Sketchfab model, read its page: skip it if the description or tags say "ripped" or "imported from", name a game, or the license is NonCommercial or NoDerivatives.

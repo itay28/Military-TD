@@ -10,10 +10,23 @@ Three PNGs per model in <out>/render-<id>/, all framed by the same camera so the
   <id>.png         the whole model with its shadow (previews, the side-by-side)
   <id>-hull.png    everything but the turret, with the hull's shadow
   <id>-turret.png  the turret (and barrels) alone, no shadow, for the game to rotate
+A model without a `turret` (a kind with no turning part: Infantry, Jeep, Helicopter) gets just <id>.png.
+
+`turret` picks meshes by `names`, by the empties they sit `under`, by `allBut` (every mesh except those under
+the listed empties), by `minZ` (meshes whose lowest point is at least that many tiles up, after placing) or by
+`box` (a list of boxes, each `x`, `y` ranges and `minZ`, in tiles after placing): every mesh is first split into
+its loose parts, and a part whose centre lies in a box goes to the turret. `box` is for a model whose meshes are merged by material,
+so turret and hull share them.
 
 A model's optional `exclude` lists meshes to delete before rendering (e.g. add-on slat armour that hides the
 silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`; `overrides` gives a
 material its own `color` and `specular`), for a model painted in the wrong colour.
+
+`pose` freezes a rigged model at one frame of one of its animations (`action`, `frame`), e.g. a soldier crouched
+and aiming instead of in a T-pose. `copies` places the placed model several times (`x`, `y` in tiles, `turnDeg`
+clockwise), e.g. a rifle team. `base` (towers, issue #314) builds our own dug-in pad under the model: a dirt disc
+of `radiusTiles` ringed by sandbags, open at the front when `gapDeg` is set, so a dark tower reads on grass at
+48 px. The base is part of the hull layer and casts its own shadow.
 
 Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1
 Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets]
@@ -54,16 +67,28 @@ def download(uid: str, cache: Path) -> Path:
     return path
 
 
+def is_under(obj, names: set) -> bool:
+    while obj is not None:
+        if obj.name in names:
+            return True
+        obj = obj.parent
+    return False
+
+
 def is_turret(obj, rule: dict) -> bool:
     if obj.name in rule.get("names", []):
         return True
-    under = set(rule.get("under", []))
-    parent = obj.parent
-    while parent is not None:
-        if parent.name in under:
-            return True
-        parent = parent.parent
-    return False
+    if "allBut" in rule:
+        return not is_under(obj, set(rule["allBut"]))
+    if "box" in rule:
+        lo, hi = world_bounds([obj])
+        c = (lo + hi) / 2
+        return any(
+            b["x"][0] <= c.x <= b["x"][1] and b["y"][0] <= c.y <= b["y"][1] and c.z >= b["minZ"] for b in rule["box"]
+        )
+    if "minZ" in rule:
+        return world_bounds([obj])[0].z >= rule["minZ"]
+    return is_under(obj.parent, set(rule.get("under", [])))
 
 
 def world_bounds(meshes) -> tuple[Vector, Vector]:
@@ -122,6 +147,107 @@ def place_model(spec: dict) -> None:
     for o in roots:
         o.matrix_world = fit @ o.matrix_world
     bpy.context.view_layer.update()
+
+
+def split_loose_parts() -> None:
+    """Split every mesh into its loose parts, so a turret merged into the hull's meshes can be picked by place."""
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.separate(type="LOOSE")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.context.view_layer.update()
+
+
+def apply_pose(pose: dict) -> None:
+    """Freeze every armature at `frame` of the animation `action`, then bake the meshes in that pose."""
+    action = bpy.data.actions[pose["action"]]
+    for arm in [o for o in bpy.data.objects if o.type == "ARMATURE"]:
+        arm.animation_data_create().action = action
+        if hasattr(arm.animation_data, "action_slot") and action.slots:
+            arm.animation_data.action_slot = action.slots[0]
+    bpy.context.scene.frame_set(pose["frame"])
+    bpy.context.view_layer.update()
+    for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+        if not any(m.type == "ARMATURE" for m in o.modifiers):
+            continue
+        bpy.context.view_layer.objects.active = o
+        for m in [m for m in o.modifiers if m.type == "ARMATURE"]:
+            bpy.ops.object.modifier_apply(modifier=m.name)
+
+
+def make_copies(copies: list[dict]) -> None:
+    """Replace the placed model by one copy per entry, moved `x`, `y` tiles and turned `turnDeg` clockwise."""
+    roots = [o for o in bpy.data.objects if o.parent is None]
+    originals = [o for o in bpy.data.objects]
+    for i, c in enumerate(copies):
+        move = Matrix.Translation((c.get("x", 0), c.get("y", 0), 0)) @ Matrix.Rotation(
+            -math.radians(c.get("turnDeg", 0)), 4, "Z"
+        )
+        if i == len(copies) - 1:
+            for o in roots:
+                o.matrix_world = move @ o.matrix_world
+            break
+        dupes = {}
+        for o in originals:
+            d = o.copy()
+            if o.data is not None:
+                d.data = o.data.copy()
+            for col in o.users_collection:
+                col.objects.link(d)
+            dupes[o] = d
+        for o, d in dupes.items():
+            if o.parent in dupes:
+                d.parent = dupes[o.parent]
+        for o in roots:
+            dupes[o].matrix_world = move @ o.matrix_world
+    bpy.context.view_layer.update()
+
+
+def flat_material(name: str, color: list[float], roughness: float = 0.95) -> object:
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = (*color, 1.0)
+    bsdf.inputs["Roughness"].default_value = roughness
+    bsdf.inputs["Specular IOR Level"].default_value = 0.1
+    return mat
+
+
+def build_base(base: dict) -> list:
+    """A dug-in pad of packed earth ringed by sandbags (our own geometry). Returns its objects."""
+    radius = base["radiusTiles"]
+    gap = math.radians(base.get("gapDeg", 0))
+    dirt = flat_material("BaseDirt", base.get("dirtColor", [0.33, 0.27, 0.19]))
+    bag = flat_material("BaseSandbag", base.get("bagColor", [0.55, 0.49, 0.35]))
+    objs = []
+    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=radius, depth=0.02, location=(0, 0, 0.002))
+    pad = bpy.context.active_object
+    pad.name = "BasePad"
+    pad.data.materials.append(dirt)
+    objs.append(pad)
+    bag_len = base.get("bagTiles", 0.11)
+    ring = radius + bag_len * 0.25
+    for row, (z, offset) in enumerate(((0.025, 0.0), (0.06, 0.5))):
+        count = max(6, round(2 * math.pi * ring / bag_len))
+        for i in range(count):
+            a = (i + offset) / count * 2 * math.pi  # 0 = north (the front), clockwise
+            if gap and min(a, 2 * math.pi - a) < gap / 2:
+                continue
+            x, y = ring * math.sin(a), ring * math.cos(a)
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=6, radius=0.5, location=(x, y, z))
+            sb = bpy.context.active_object
+            sb.name = f"BaseSandbag{row}_{i}"
+            sb.scale = (bag_len * 0.5, bag_len * 0.3, bag_len * 0.22)  # long side along the ring
+            sb.rotation_euler = (0, 0, -a)
+            sb.data.materials.append(bag)
+            bpy.ops.object.shade_smooth()
+            objs.append(sb)
+    bpy.context.view_layer.update()
+    return objs
 
 
 def build_stage(cfg: dict, spec: dict) -> object:
@@ -207,13 +333,21 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
         tint_paint(spec["tint"]["color"], spec["tint"].get("skip", []), spec["tint"].get("overrides", {}))
     if "untexturedColor" in spec:
         tint_untextured(spec["untexturedColor"])
+    if "pose" in spec:
+        apply_pose(spec["pose"])
     place_model(spec)
-    ground = build_stage(cfg, spec)
-    meshes = [o for o in bpy.data.objects if o.type == "MESH" and o is not ground]
-    turret = [o for o in meshes if is_turret(o, spec["turret"])]
-    hull = [o for o in meshes if o not in turret]
-    if not turret:
+    if "copies" in spec:
+        make_copies(spec["copies"])
+    if "box" in spec.get("turret", {}):
+        split_loose_parts()
+    model = [o for o in bpy.data.objects if o.type == "MESH"]
+    turret = [o for o in model if "turret" in spec and is_turret(o, spec["turret"])]
+    if "turret" in spec and not turret:
         sys.exit(f"{spec['id']}: the turret rule matched no mesh")
+    base = build_base(spec["base"]) if "base" in spec else []
+    ground = build_stage(cfg, spec)
+    meshes = model + base
+    hull = [o for o in meshes if o not in turret]
     out = out / f"render-{spec['id']}"
     out.mkdir(parents=True, exist_ok=True)
 
@@ -224,6 +358,8 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
 
     show(meshes, True)
     render(out / f"{spec['id']}.png", cfg)
+    if not turret:
+        return
     show(hull, True)
     render(out / f"{spec['id']}-hull.png", cfg)
     show(turret, False)
