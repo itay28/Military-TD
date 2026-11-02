@@ -2,6 +2,7 @@
   - heading "Victory" [level=2]
   - paragraph: Waves survived 1 / 1
   - paragraph: 3 of 3 stars
+  - paragraph: "New map unlocked: Switchback"
   - table "By tower":
     - caption: By tower
     - rowgroup:
