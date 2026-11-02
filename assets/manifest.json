@@ -96,9 +96,9 @@
       "author": "MissingTray1151",
       "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
       "license": "CC-BY-4.0",
-      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted toward OCP, two copies set in a sandbagged pit of our own",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations, kit tinted toward OCP",
       "downloaded": "2026-11-02",
-      "files": ["assets/render-us-rifle-nest/**"]
+      "files": ["assets/render-us-rifle-nest/**", "assets/render-us-infantry/**"]
     },
     {
       "id": "render-us-aa-gun",
@@ -129,16 +129,6 @@
       "attribution": "\"Mortar - M224\" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own",
       "downloaded": "2026-11-02",
       "files": ["assets/render-us-mortar/**"]
-    },
-    {
-      "id": "render-us-infantry",
-      "name": "Tactical Soldier (game ready) low poly (top-down render)",
-      "author": "MissingTray1151",
-      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
-      "license": "CC-BY-4.0",
-      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted toward OCP",
-      "downloaded": "2026-11-02",
-      "files": ["assets/render-us-infantry/**"]
     },
     {
       "id": "render-us-jeep",
