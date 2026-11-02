@@ -124,8 +124,17 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | `render-us-jeep/` | "Low Poly Humvee FREE" by madtrollstudio, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-tank/` | "M1A2 Abrams Crows" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-helicopter/` | "Sikorsky UH-60 Black Hawk" by helijah, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-cannon/` | "ZiS-2 57mm anti-tank gun" by sergey.s.filin, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-jeep/` | "uaz 469" by Okopchi, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-helicopter/` | "Mi-8" by tiunov.se, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `naip-field-road-treeline/` | USDA FSA NAIP, Iowa 2023, 0.3 m, PD-USGov | `scripts/naip-patch.py` |
 
 The **US** Faction's set (#314, the first map's Defender) is complete: all eight kinds, previewed on NAIP grass at 48 and 128 px in `docs/art/faction-us.png` (`scripts/faction-sheet.py us`). The game doesn't draw it yet: per ADR-0009 point 5 a Faction leaves Kenney in one step, which is the sprite loader's job. Towers stand on a sandbagged pad that `render-sprite.py` builds itself (`base`), so they read on grass; `render:pivot` turns such a tower about the pad centre (the canvas centre) instead of measuring a barrel. Infantry, Jeep and Helicopter have no turret layer (no `turret` in `render-sprite.json`), so their render data has no pivot.
+
+The **Russia** Faction's set (#315, the first map's Attacker) is complete too, so the first map's pairing is: the spike's T-72B3 plus seven new renders, previewed in `docs/art/faction-russia.png` (`scripts/faction-sheet.py russia`). Where no free model of the exact variant exists, `depicts` in `render-sprite.json` names the stand-in (ZiS-2 for the MT-12, Pindad MO-3 for the 2B14, Mi-8 for the Mi-8AMTSh). Rifle Nest and Infantry reuse the US soldier model, its kit tinted olive. The ZiS-2 model sits at an angle, so its entry turns it north with `turnDeg`.
 
 Before rendering a Sketchfab model, read its page: skip it if the description or tags say "ripped" or "imported from", name a game, or the license is NonCommercial or NoDerivatives.

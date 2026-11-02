@@ -6,6 +6,8 @@ import { PNG } from 'pngjs';
 export interface RenderModel {
   readonly id: string;
   readonly kind: string;
+  /** The Faction whose set this render belongs to (ADR-0009). */
+  readonly faction: string;
   readonly canvasTiles: number;
   /** Which meshes turn (`render-sprite.py`); a kind with no turning part (Infantry, Jeep, Helicopter) has none. */
   readonly turret?: unknown;
@@ -76,7 +78,11 @@ export const renderMetaPath = (id: string): string => `assets/render-${id}/${id}
  * on a `base` turns about the pit's centre, which is the canvas centre: its weapon (a rifle team, a mortar, a
  * tripod launcher) has no long barrel to measure the body from.
  */
-export function renderMeta(model: RenderModel, pxPerTile: number, readTurret: (id: string) => PNG): RenderMeta {
+export function renderMeta(
+  model: Omit<RenderModel, 'faction'>,
+  pxPerTile: number,
+  readTurret: (id: string) => PNG,
+): RenderMeta {
   const { id, kind, canvasTiles } = model;
   const canvasPx = Math.round(canvasTiles * pxPerTile);
   if (model.turret === undefined) return { id, kind, pxPerTile, canvasPx };
