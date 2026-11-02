@@ -59,6 +59,36 @@
       "attribution": "Attack Helicopter, Copyright 2020 Morgan McGuire @CasualEffects, CC-BY 4.0",
       "downloaded": "2026-10-27",
       "files": ["assets/morgan3d-chopper/**"]
+    },
+    {
+      "id": "render-china-aa-gun",
+      "name": "Oerlikon Gdf-006 35mm (top-down render)",
+      "author": "lm9241221",
+      "source": "https://sketchfab.com/3d-models/26f4e5fde15747db9f88d2d60b86f9cf",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Oerlikon Gdf-006 35mm\" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-aa-gun/**"]
+    },
+    {
+      "id": "render-russia-tank",
+      "name": "T-72B3 Main Battle Tank (top-down render)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/dfe130dfce724c30958cec51f2bd86b7",
+      "license": "CC-BY-4.0",
+      "attribution": "\"T-72B3 Main Battle Tank\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, slat armour removed, repainted olive",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-russia-tank/**"]
+    },
+    {
+      "id": "naip-field-road-treeline",
+      "name": "NAIP aerial imagery (Iowa 2023)",
+      "author": "USDA Farm Service Agency",
+      "source": "https://planetarycomputer.microsoft.com/dataset/naip",
+      "license": "PD-USGov",
+      "attribution": "NAIP imagery courtesy of the USDA Farm Service Agency, public domain",
+      "downloaded": "2026-11-02",
+      "files": ["assets/naip-field-road-treeline/**"]
     }
   ]
 }
