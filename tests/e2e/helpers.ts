@@ -28,14 +28,14 @@ export async function openGame(
 }
 
 /** Opens the Main menu in test mode (`menu=1`). `window.__TD__` appears only once Play starts a game. */
-export async function openMenu(page: Page) {
-  await page.goto('/?test=1&menu=1&step=manual&anim=0');
+export async function openMenu(page: Page, { unlockAll = false }: { unlockAll?: boolean } = {}) {
+  await page.goto(`/?test=1&menu=1&step=manual&anim=0${unlockAll ? '&unlock=all' : ''}`);
   await page.getByRole('button', { name: 'Play' }).waitFor();
 }
 
-/** Opens the Level select in test mode: the Main menu, then Play. */
-export async function openLevelSelect(page: Page) {
-  await openMenu(page);
+/** Opens the Level select in test mode: the Main menu, then Play. Every map is unlocked (`unlock=all`) unless `unlockAll` is false. */
+export async function openLevelSelect(page: Page, { unlockAll = true }: { unlockAll?: boolean } = {}) {
+  await openMenu(page, { unlockAll });
   await page.getByRole('button', { name: 'Play' }).click();
   await page.getByRole('heading', { name: 'Select map' }).waitFor();
 }
