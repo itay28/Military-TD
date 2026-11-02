@@ -23,9 +23,14 @@ function tiledMap({
     [4, 1],
     [4, 5],
   ] as [number, number][],
+  properties = [
+    { name: 'attacker', type: 'string', value: 'russia' },
+    { name: 'defender', type: 'string', value: 'us' },
+  ] as Json[],
 } = {}): Json {
   return {
     type: 'map',
+    properties,
     orientation: 'orthogonal',
     infinite: false,
     width: cols,
@@ -72,6 +77,84 @@ const layer = (map: Json, name: string) => (map.layers as Json[]).find((l) => l.
 const groundData = (map: Json) => layer(map, 'ground').data as number[];
 
 describe('importTiledMap', () => {
+  describe('factions (ADR-0009)', () => {
+    const withProperties = (...properties: Json[]) => tiledMap({ properties });
+    const attacker = (value: unknown) => ({ name: 'attacker', type: 'string', value });
+    const defender = (value: unknown) => ({ name: 'defender', type: 'string', value });
+    const withoutProperties = () => {
+      const map = tiledMap();
+      delete map.properties;
+      return map;
+    };
+
+    it("reads the Attacker and Defender from the map's custom properties", () => {
+      expect(importTiledMap('small', withProperties(attacker('insurgents'), defender('china')))).toMatchObject({
+        attacker: 'insurgents',
+        defender: 'china',
+      });
+    });
+
+    it('allows both sides to be the same Faction', () => {
+      expect(importTiledMap('small', withProperties(attacker('us'), defender('us')))).toMatchObject({
+        attacker: 'us',
+        defender: 'us',
+      });
+    });
+
+    it.each([
+      ['no properties at all', withoutProperties(), /needs an "attacker" map property/],
+      ['no attacker', withProperties(defender('us')), /needs an "attacker" map property/],
+      ['no defender', withProperties(attacker('russia')), /needs a "defender" map property/],
+    ])('rejects a map with %s, listing the Factions', (_, map, message) => {
+      expect(() => importTiledMap('small', map)).toThrow(InvalidMapError);
+      expect(() => importTiledMap('small', map)).toThrow(message);
+      expect(() => importTiledMap('small', map)).toThrow(/us, russia, china, insurgents/);
+    });
+
+    it.each([
+      ['an unknown name', attacker('nato'), /attacker "nato" is not a Faction/],
+      ['the wrong case', attacker('Russia'), /attacker "Russia" is not a Faction/],
+      ['a non-string', attacker(3), /attacker "3" is not a Faction/],
+    ])('rejects %s, listing the Factions', (_, property, message) => {
+      const map = withProperties(property, defender('us'));
+      expect(() => importTiledMap('small', map)).toThrow(message);
+      expect(() => importTiledMap('small', map)).toThrow(/Map "small".*us, russia, china, insurgents/);
+    });
+
+    it('rejects an unknown defender too', () => {
+      expect(() => importTiledMap('small', withProperties(attacker('us'), defender('gla')))).toThrow(
+        /defender "gla" is not a Faction/,
+      );
+    });
+  });
+
+  describe('ground image (#312)', () => {
+    const withImageLayer = (image: unknown, name = 'ground-image') => {
+      const map = tiledMap();
+      (map.layers as Json[]).unshift({ type: 'imagelayer', name, image });
+      return map;
+    };
+
+    it("gives the `ground-image` layer's image, relative to the map file", () => {
+      expect(importTiledMap('small', withImageLayer('../assets/naip-maps/small.jpg')).groundImage).toBe(
+        '../assets/naip-maps/small.jpg',
+      );
+    });
+
+    it('has no ground image without that layer, or for an image layer with another name', () => {
+      expect(importTiledMap('small', tiledMap()).groundImage).toBeUndefined();
+      expect(importTiledMap('small', withImageLayer('x.jpg', 'clouds')).groundImage).toBeUndefined();
+    });
+
+    it.each([
+      ['no image', undefined],
+      ['an empty image', ''],
+      ['a non-string image', 3],
+    ])('rejects a ground-image layer with %s', (_, image) => {
+      expect(() => importTiledMap('small', withImageLayer(image))).toThrow(/Map "small": the "ground-image" layer/);
+    });
+  });
+
   it('converts a valid map to its grid, Path waypoints and buildable tiles', () => {
     const map = tiledMap();
     groundData(map)[0] = GROUND; // tile (0, 0) is not buildable

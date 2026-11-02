@@ -330,6 +330,8 @@ export interface Retry extends Start {
   readonly pr?: number;
   /** The retry died too (#303): instead of firing again, split the issue, or hand a split part to the maintainer. */
   readonly giveUp?: 'split' | 'handoff';
+  /** Not dead: the agent stopped on a question, and the maintainer answered it (#319). */
+  readonly resume?: boolean;
 }
 
 const FIRE_META = /<!-- auto-start:fire-meta model=(\S+) base=(\S+) -->/;
@@ -344,27 +346,41 @@ export const firedComment = (start: Start, sessionUrl?: string) =>
  * done marker after it, with no issue comment and no commit or comment on its PR for `idleMs`.
  * Never `hold`, `needs-you`, `needs-info` (an intentional stop) or a ready PR (the steward's).
  * A session gets MAX_FIRES fires since the latest done marker; after that it gives up, once (#303).
+ * Also the answered questions (#319): a done marker after the latest fire, no ready PR, `needs-info`
+ * off and a maintainer comment after it is resumed at once (`resume`), with a fresh fire count.
  */
 export function planRetries(issues: readonly RetryIssue[], now: number, idleMs = RETRY_IDLE_MS): Retry[] {
   const retries: Retry[] = [];
   for (const i of issues) {
     if (!i.autoAgent || i.hold || i.needsYou || i.needsInfo || (i.pr && !i.pr.draft)) continue;
     const firedAt = i.comments.findLastIndex((c) => c.body.includes(FIRED_MARKER));
+    if (firedAt < 0) continue;
     const sinceFire = i.comments.slice(firedAt);
-    if (firedAt < 0 || sinceFire.some((c) => c.body.includes(DONE_MARKER) || c.body.includes(GIVE_UP_MARKER))) continue;
+    if (sinceFire.some((c) => c.body.includes(GIVE_UP_MARKER))) continue;
     const meta = FIRE_META.exec(i.comments[firedAt]!.body);
     const model = meta?.[1];
     if (model !== 'sonnet' && model !== 'opus') continue;
+    const target: Retry = {
+      issue: i.number,
+      base: meta![2]!,
+      model,
+      ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}),
+    };
+    if (sinceFire.some((c) => c.body.includes(DONE_MARKER))) {
+      // The session ended on purpose. With no ready PR (skipped above), that was a `needs-info`
+      // question (#319): once it's off and the maintainer commented after the done marker, fire again
+      // at once. Comments with a hidden marker are automation's, not an answer.
+      const doneAt = i.comments.findLastIndex((c) => c.body.includes(DONE_MARKER));
+      if (i.comments.slice(doneAt + 1).some((c) => !c.body.includes('<!--'))) retries.push({ ...target, resume: true });
+      continue;
+    }
     const times = [...i.comments.map((c) => c.createdAt), ...(i.pr?.activity ?? [])].map(Date.parse);
     const idle = now - Math.max(...times);
     if (Number.isNaN(idle) || idle < idleMs) continue;
     const lastDone = i.comments.findLastIndex((c) => c.body.includes(DONE_MARKER));
     const fires = i.comments.slice(lastDone + 1).filter((c) => c.body.includes(FIRED_MARKER)).length;
     retries.push({
-      issue: i.number,
-      base: meta![2]!,
-      model,
-      ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}),
+      ...target,
       ...(fires >= MAX_FIRES ? { giveUp: i.splitPart ? ('handoff' as const) : ('split' as const) } : {}),
     });
   }
@@ -374,6 +390,7 @@ export function planRetries(issues: readonly RetryIssue[], now: number, idleMs =
 /** The fire `text` for a retry: `fireText` plus the branch and PR to continue, when they exist. */
 export const retryText = (retry: Retry) =>
   fireText(retry) +
+  (retry.resume ? '\nResume: your question was answered on the issue' : '') +
   (retry.branch ? `\nBranch: ${retry.branch}` : '') +
   (retry.pr === undefined ? '' : `\nPR: #${retry.pr}`);
 

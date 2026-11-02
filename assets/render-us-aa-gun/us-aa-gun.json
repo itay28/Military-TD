@@ -1,0 +1,10 @@
+{
+  "id": "us-aa-gun",
+  "kind": "aaGun",
+  "pxPerTile": 128,
+  "canvasPx": 160,
+  "pivot": {
+    "x": 80,
+    "y": 80
+  }
+}

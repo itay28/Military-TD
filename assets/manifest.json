@@ -59,6 +59,311 @@
       "attribution": "Attack Helicopter, Copyright 2020 Morgan McGuire @CasualEffects, CC-BY 4.0",
       "downloaded": "2026-10-27",
       "files": ["assets/morgan3d-chopper/**"]
+    },
+    {
+      "id": "render-china-aa-gun",
+      "name": "Oerlikon Gdf-006 35mm (top-down render)",
+      "author": "lm9241221",
+      "source": "https://sketchfab.com/3d-models/26f4e5fde15747db9f88d2d60b86f9cf",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Oerlikon Gdf-006 35mm\" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-aa-gun/**"]
+    },
+    {
+      "id": "render-russia-tank",
+      "name": "T-72B3 Main Battle Tank (top-down render)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/dfe130dfce724c30958cec51f2bd86b7",
+      "license": "CC-BY-4.0",
+      "attribution": "\"T-72B3 Main Battle Tank\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, slat armour removed, repainted olive",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-russia-tank/**"]
+    },
+    {
+      "id": "naip-field-road-treeline",
+      "name": "NAIP aerial imagery (Iowa 2023)",
+      "author": "USDA Farm Service Agency",
+      "source": "https://planetarycomputer.microsoft.com/dataset/naip",
+      "license": "PD-USGov",
+      "attribution": "NAIP imagery courtesy of the USDA Farm Service Agency, public domain",
+      "downloaded": "2026-11-02",
+      "files": ["assets/naip-field-road-treeline/**", "assets/naip-maps/**"]
+    },
+    {
+      "id": "render-us-rifle-nest",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR)",
+      "downloaded": "2026-11-02",
+      "files": [
+        "assets/render-us-rifle-nest/**",
+        "assets/render-us-infantry/**",
+        "assets/render-russia-rifle-nest/**",
+        "assets/render-russia-infantry/**"
+      ]
+    },
+    {
+      "id": "render-us-aa-gun",
+      "name": "Phalanx CIWS (top-down render)",
+      "author": "Lemper_Studio",
+      "source": "https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Phalanx CIWS\" by Lemper_Studio (sketchfab.com), CC-BY 4.0, rendered top-down, repainted grey-olive, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-aa-gun/**"]
+    },
+    {
+      "id": "render-us-cannon",
+      "name": "Anti-Tank Guided Missile (top-down render)",
+      "author": "Alhimix",
+      "source": "https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Anti-Tank Guided Missile\" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-cannon/**"]
+    },
+    {
+      "id": "render-us-mortar",
+      "name": "Mortar - M224 (top-down render)",
+      "author": "jcherry3d",
+      "source": "https://sketchfab.com/3d-models/c86a73e40d994431bcdb57dc741cf8be",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Mortar - M224\" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-mortar/**"]
+    },
+    {
+      "id": "render-us-jeep",
+      "name": "Low Poly Humvee FREE (top-down render)",
+      "author": "madtrollstudio",
+      "source": "https://sketchfab.com/3d-models/c0e2ddcc4ccf4d49a9303303a6307bcf",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Low Poly Humvee FREE\" by madtrollstudio (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-jeep/**"]
+    },
+    {
+      "id": "render-us-tank",
+      "name": "M1A2 Abrams Crows (top-down render)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/c9e2b389e5004b03bcc695e4350b989d",
+      "license": "CC-BY-4.0",
+      "attribution": "\"M1A2 Abrams Crows\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-tank/**"]
+    },
+    {
+      "id": "render-us-helicopter",
+      "name": "Sikorsky UH-60 Black Hawk (top-down render)",
+      "author": "helijah",
+      "source": "https://sketchfab.com/3d-models/ee81eb66006b4d8980d0cf9ff6304b69",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Sikorsky UH-60 Black Hawk\" by helijah (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-us-helicopter/**"]
+    },
+    {
+      "id": "render-russia-aa-gun",
+      "name": "ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)",
+      "author": "LuckySkink9661",
+      "source": "https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3",
+      "license": "CC-BY-4.0",
+      "attribution": "\"ZU - 23, зенитная установка, ЗУ-23, зенитка\" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own, turret split from the carriage",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-russia-aa-gun/**"]
+    },
+    {
+      "id": "render-russia-cannon",
+      "name": "ZiS-2 57mm anti-tank gun (top-down render)",
+      "author": "sergey.s.filin",
+      "source": "https://sketchfab.com/3d-models/61e3cb4b62ad48b186596b0cd88fc156",
+      "license": "CC-BY-4.0",
+      "attribution": "\"ZiS-2 57mm anti-tank gun\" by sergey.s.filin (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-russia-cannon/**"]
+    },
+    {
+      "id": "render-russia-mortar",
+      "name": "Pindad Mortars (top-down render)",
+      "author": "sakigakefuruzawa",
+      "source": "https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-russia-mortar/**"]
+    },
+    {
+      "id": "render-russia-jeep",
+      "name": "uaz 469 (top-down render)",
+      "author": "Okopchi",
+      "source": "https://sketchfab.com/3d-models/1f58a38deb854829bd1b1ba1c15555d0",
+      "license": "CC-BY-4.0",
+      "attribution": "\"uaz 469\" by Okopchi (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-russia-jeep/**"]
+    },
+    {
+      "id": "render-russia-helicopter",
+      "name": "Mi-8 (top-down render)",
+      "author": "tiunov.se",
+      "source": "https://sketchfab.com/3d-models/5e5e57ef66994c6196a5f5d6b9f50403",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Mi-8\" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-russia-helicopter/**"]
+    },
+    {
+      "id": "render-china-rifle-nest",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-rifle-nest/**"]
+    },
+    {
+      "id": "render-china-cannon",
+      "name": "Anti-Tank Guided Missile (top-down render)",
+      "author": "Alhimix",
+      "source": "https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Anti-Tank Guided Missile\" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, tinted green, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-cannon/**"]
+    },
+    {
+      "id": "render-china-mortar",
+      "name": "Pindad Mortars (top-down render)",
+      "author": "sakigakefuruzawa",
+      "source": "https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-mortar/**"]
+    },
+    {
+      "id": "render-china-infantry",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted green (toward Type 07)",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-infantry/**"]
+    },
+    {
+      "id": "render-china-jeep",
+      "name": "Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render)",
+      "author": "KidBi-Gaming",
+      "source": "https://sketchfab.com/3d-models/935856d763bf49aca45a48fae3a6846c",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Military Jeep Low Poly – Game Ready 3D Vehicle\" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-jeep/**"]
+    },
+    {
+      "id": "render-china-tank",
+      "name": "Type 99 MBT (top-down render)",
+      "author": "philano",
+      "source": "https://sketchfab.com/3d-models/7075c92c5ef1408497f1530703ff2942",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Type 99 MBT\" by philano (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-tank/**"]
+    },
+    {
+      "id": "render-china-helicopter",
+      "name": "Sikorsky UH-60M Blackhawk (top-down render)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/12b4e525676a49678ac3006b360c8750",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Sikorsky UH-60M Blackhawk\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-helicopter/**"]
+    },
+    {
+      "id": "render-insurgents-rifle-nest",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit re-coloured to civilian browns and denim, two copies set in a sandbagged pit of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-insurgents-rifle-nest/**"]
+    },
+    {
+      "id": "render-insurgents-cannon",
+      "name": "SPG-9 (top-down render)",
+      "author": "Jack512kb",
+      "source": "https://sketchfab.com/3d-models/6c31a440a65145e8814e9974eabf2227",
+      "license": "CC-BY-4.0",
+      "attribution": "\"SPG-9\" by Jack512kb (sketchfab.com), CC-BY 4.0, rendered top-down, painted olive, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-insurgents-cannon/**"]
+    },
+    {
+      "id": "render-insurgents-aa-gun",
+      "name": "ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)",
+      "author": "LuckySkink9661",
+      "source": "https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3",
+      "license": "CC-BY-4.0",
+      "attribution": "\"ZU - 23, зенитная установка, ЗУ-23, зенитка\" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, repainted sand, set on a sandbagged pad of our own, turret split from the carriage",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-insurgents-aa-gun/**"]
+    },
+    {
+      "id": "render-insurgents-mortar",
+      "name": "Pindad Mortars (top-down render)",
+      "author": "sakigakefuruzawa",
+      "source": "https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-insurgents-mortar/**"]
+    },
+    {
+      "id": "render-insurgents-infantry",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit re-coloured to civilian browns and denim",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-insurgents-infantry/**"]
+    },
+    {
+      "id": "render-insurgents-jeep",
+      "name": "TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render)",
+      "author": "lm9241221",
+      "source": "https://sketchfab.com/3d-models/9dccb441c7064a11bf87446ab4f4e09b",
+      "license": "CC-BY-4.0",
+      "attribution": "\"TOYOTA DO AFEGANISTÃO (LOW POLY)\" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, brightened",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-insurgents-jeep/**"]
+    },
+    {
+      "id": "render-insurgents-tank",
+      "name": "T 54/55 Tank (top-down render)",
+      "author": "SGAstudios3DandGameDevelopment",
+      "source": "https://sketchfab.com/3d-models/6bde9f748c3e472e878d333998b506f9",
+      "license": "CC-BY-4.0",
+      "attribution": "\"T 54/55 Tank\" by SGAstudios3DandGameDevelopment (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-insurgents-tank/**"]
+    },
+    {
+      "id": "render-insurgents-helicopter",
+      "name": "Russian Transport Heli (top-down render)",
+      "author": "jeandiz",
+      "source": "https://sketchfab.com/3d-models/ab981d28f7124a489cd1b1992b2e467b",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Russian Transport Heli\" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-insurgents-helicopter/**"]
     }
   ]
 }

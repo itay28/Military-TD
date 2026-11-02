@@ -1,32 +1,10 @@
 import { GAME_SPEEDS } from '../scenes/gameSpeed';
+import { browserStorage, createMemoryStorage, isRecord, type KeyValueStorage } from '../storage';
 import { createSettings, DEFAULT_SETTINGS, type Settings, type SettingsStore } from './settings';
-
-/** The part of `localStorage` the settings use, so tests inject a fake. */
-export interface KeyValueStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-}
 
 export const SETTINGS_KEY = 'military-td.settings';
 /** Bump when the saved shape changes, and teach `migrate` the step from the old version. */
 export const SETTINGS_VERSION = 1;
-
-export function createMemoryStorage(): KeyValueStorage {
-  const items = new Map<string, string>();
-  return {
-    getItem: (key) => items.get(key) ?? null,
-    setItem: (key, value) => void items.set(key, value),
-  };
-}
-
-/** `localStorage`, or memory when the browser blocks it (reading the property throws in some private modes). */
-export function browserStorage(scope: { readonly localStorage?: KeyValueStorage } = globalThis): KeyValueStorage {
-  try {
-    return scope.localStorage ?? createMemoryStorage();
-  } catch {
-    return createMemoryStorage();
-  }
-}
 
 /** Brings settings saved at `version` up to the current shape. `null` for a version this build can't read. */
 export function migrate(version: number, data: unknown): unknown {
@@ -34,9 +12,6 @@ export function migrate(version: number, data: unknown): unknown {
   // v1 is the first shape: nothing to change yet. Later versions add a step per version here.
   return data;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /** Keeps each known field that holds a valid value; every other field takes its default. Unknown fields are dropped. */
 function sanitize(data: unknown): Settings {
@@ -77,3 +52,5 @@ export function createPersistedSettings(storage: KeyValueStorage): SettingsStore
     },
   };
 }
+
+export { browserStorage, createMemoryStorage, type KeyValueStorage };

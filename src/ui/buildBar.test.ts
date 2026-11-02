@@ -255,24 +255,41 @@ describe('Build bar sprite icons', () => {
     expect(iconOf('rifle').style.backgroundColor).toBe('');
   });
 
-  it('keeps the shape for a kind without a sprite, or when the atlas is missing or lacks a frame', () => {
-    mountBuildBar(
-      root,
-      wallet(500),
-      [{ ...OPTIONS[0]!, sprite }, { ...OPTIONS[1]!, sprite: { ...sprite, turret: 'missing' } }, OPTIONS[2]!],
-      atlas,
-    );
-    for (const kind of ['rifle', 'cannon', 'mortar']) {
-      const icon = kind === 'rifle' ? null : iconOf(kind);
-      if (icon) {
-        expect(icon.querySelector('.build-icon-layer')).toBeNull();
-        expect(icon.style.backgroundColor).not.toBe('');
-      }
-    }
-    root.replaceChildren();
+  it('keeps the shape for a kind whose sprite frame is missing', () => {
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[1]!, sprite: { ...sprite, turret: 'missing' } }], atlas);
+    const icon = iconOf('cannon');
+    expect(icon.querySelector('.build-icon-layer')).toBeNull();
+    expect(icon.style.backgroundColor).not.toBe('');
+  });
+
+  it('keeps the shape for a kind without a sprite', () => {
+    mountBuildBar(root, wallet(500), [OPTIONS[2]!], atlas);
+    expect(iconOf('mortar').querySelector('.build-icon-layer')).toBeNull();
+    expect(iconOf('mortar').style.backgroundColor).not.toBe('');
+  });
+
+  it('keeps the shape when there is no atlas', () => {
     mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, sprite }]);
     expect(iconOf('rifle').querySelector('.build-icon-layer')).toBeNull();
     expect(iconOf('rifle').style.backgroundColor).not.toBe('');
+  });
+
+  it('scales a smaller tower’s sprite layers to its smaller icon', () => {
+    mountBuildBar(
+      root,
+      wallet(500),
+      [
+        { ...OPTIONS[0]!, sprite },
+        { ...OPTIONS[1]!, sprite },
+      ],
+      atlas,
+    );
+    const scale = (kind: string) =>
+      Number(
+        /scale\(([\d.]+)\)/.exec(iconOf(kind).querySelector<HTMLElement>('.build-icon-layer')!.style.transform)![1],
+      );
+    const ratio = parseFloat(iconOf('rifle').style.width) / parseFloat(iconOf('cannon').style.width);
+    expect(scale('rifle') / scale('cannon')).toBeCloseTo(ratio);
   });
 
   it('buildOptions gives each kind with a sprite its icon layers', () => {

@@ -60,8 +60,8 @@ const ICON_BOX = 24;
 
 const cssColor = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
-/** The base and turret layers of a sprite icon, each scaled to fill the icon box; null when the atlas lacks a frame. */
-function spriteLayers(doc: Document, atlas: IconAtlas, sprite: TowerIcon): HTMLElement[] | null {
+/** The base and turret layers of a sprite icon, each scaled to fill the icon's `box` (so smaller towers keep their size ratio); null when the atlas lacks a frame. */
+function spriteLayers(doc: Document, atlas: IconAtlas, sprite: TowerIcon, box: number): HTMLElement[] | null {
   const frames = [
     { name: sprite.base, rotation: 0 },
     { name: sprite.turret, rotation: sprite.turretRotation },
@@ -75,7 +75,7 @@ function spriteLayers(doc: Document, atlas: IconAtlas, sprite: TowerIcon): HTMLE
       `position:absolute;left:50%;top:50%;width:${w}px;height:${h}px;background-repeat:no-repeat;` +
       `background-image:url("${atlas.url}");background-position:-${x}px -${y}px;image-rendering:pixelated;`;
     // Fit the frame's longer side to the box, turned about its centre.
-    layer.style.transform = `translate(-50%,-50%) scale(${ICON_BOX / Math.max(w, h)}) rotate(${(rotation * 180) / Math.PI}deg)`;
+    layer.style.transform = `translate(-50%,-50%) scale(${box / Math.max(w, h)}) rotate(${(rotation * 180) / Math.PI}deg)`;
     return layer;
   });
 }
@@ -126,10 +126,10 @@ export function mountBuildBar<K extends string>(
     button.title = `${option.name} (${hotkey}): ${option.cost}`;
     const icon = doc.createElement('span');
     icon.className = 'build-icon';
-    const side = `${(ICON_BOX * option.icon.size) / largest}px`;
-    icon.style.width = side;
-    icon.style.height = side;
-    const layers = atlas && option.sprite ? spriteLayers(doc, atlas, option.sprite) : null;
+    const box = (ICON_BOX * option.icon.size) / largest;
+    icon.style.width = `${box}px`;
+    icon.style.height = `${box}px`;
+    const layers = atlas && option.sprite ? spriteLayers(doc, atlas, option.sprite, box) : null;
     if (layers) {
       icon.style.border = 'none';
       icon.append(...layers);

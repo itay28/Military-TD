@@ -1,8 +1,11 @@
+import { isDeepStrictEqual } from 'node:util';
 import { readdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MVP_MAP } from '../../src/data/maps';
+import { MAPS, MVP_MAP } from '../../src/data/maps';
+import { TOWER_STATS } from '../../src/data/towers';
 import { runScenario } from '../../src/sim/scenario';
+import { FACTIONS, isFaction } from '../../src/sim/factions';
 import { createMap, tileKey } from '../../src/sim/map';
 import { importTiledMap } from '../../src/sim/tiled';
 import { BALANCED_ORDER } from '../scenarios/bot-balanced.scenario';
@@ -19,6 +22,21 @@ const mapFiles = readdirSync(MAPS_DIR)
   .map((name) => join(MAPS_DIR, name));
 
 const TRAINING_GROUND = 'maps/01-training-ground.tmj';
+
+/** The ground images' scale (`scripts/naip-map.py`): twice the game's tile, so zooming in stays sharp. */
+const GROUND_IMAGE_PX_PER_TILE = 96;
+
+/** Width and height of a baseline or progressive JPEG, from its start-of-frame segment. */
+function jpegSize(bytes: Buffer): { width: number; height: number } {
+  let at = 2;
+  while (at < bytes.length) {
+    const marker = bytes[at + 1]!;
+    if (marker >= 0xc0 && marker <= 0xc2)
+      return { height: bytes.readUInt16BE(at + 5), width: bytes.readUInt16BE(at + 7) };
+    at += 2 + bytes.readUInt16BE(at + 2);
+  }
+  throw new Error('not a JPEG with a frame header');
+}
 const atlas = JSON.parse(readFileSync('assets/atlas/sprites.json', 'utf8')) as { frames: Record<string, unknown> };
 
 describe('01-training-ground.tmj', () => {
@@ -78,19 +96,193 @@ describe('01-training-ground.tmj', () => {
   });
 });
 
+describe('02-switchback.tmj', () => {
+  const file = 'maps/02-switchback.tmj';
+
+  it('enters on the top edge and winds down to the bottom edge, unlike the Training Ground', () => {
+    const map = createMap(load(file));
+    expect([map.cols, map.rows]).toEqual([16, 10]);
+    expect(map.waypoints[0]?.row).toBe(0);
+    expect(map.waypoints.at(-1)?.row).toBe(map.rows - 1);
+    expect(map.waypoints).not.toEqual(createMap(load(TRAINING_GROUND)).waypoints);
+  });
+
+  it('draws road tiles on the Path and nowhere else', () => {
+    const json = JSON.parse(readFileSync(file, 'utf8'));
+    const map = createMap(load(file));
+    const roadGids = json.tilesets[0].tiles
+      .filter((tile: { properties: { name: string; value: unknown }[] }) =>
+        tile.properties.some((p) => p.name === 'frame' && String(p.value).includes('road')),
+      )
+      .map((tile: { id: number }) => tile.id + json.tilesets[0].firstgid);
+    const ground = json.layers.find((layer: { name: string }) => layer.name === 'ground') as { data: number[] };
+    ground.data.forEach((gid, index) => {
+      const tile = { col: index % map.cols, row: Math.floor(index / map.cols) };
+      expect({ tile: tileKey(tile), road: roadGids.includes(gid) }).toEqual({
+        tile: tileKey(tile),
+        road: map.isPath(tile),
+      });
+    });
+  });
+
+  it('uses the same tileset as the Training Ground', () => {
+    const tilesets = (path: string) => JSON.parse(readFileSync(path, 'utf8')).tilesets;
+    expect(tilesets(file)).toEqual(tilesets(TRAINING_GROUND));
+  });
+});
+
+/** Every tile of a Tiled map's ground layer: whether it shows a road frame, against whether it is on the Path. */
+function roadsAndPath(file: string) {
+  const json = JSON.parse(readFileSync(file, 'utf8'));
+  const map = createMap(load(file));
+  const roadGids = json.tilesets[0].tiles
+    .filter((tile: { properties: { name: string; value: unknown }[] }) =>
+      tile.properties.some((p) => p.name === 'frame' && String(p.value).includes('road')),
+    )
+    .map((tile: { id: number }) => tile.id + json.tilesets[0].firstgid);
+  const ground = json.layers.find((layer: { name: string }) => layer.name === 'ground') as { data: number[] };
+  return ground.data.map((gid, index) => {
+    const tile = { col: index % map.cols, row: Math.floor(index / map.cols) };
+    return { tile: tileKey(tile), road: roadGids.includes(gid), path: map.isPath(tile) };
+  });
+}
+
+const tilesets = (path: string) => JSON.parse(readFileSync(path, 'utf8')).tilesets;
+
+describe('03-serpentine.tmj', () => {
+  const file = 'maps/03-serpentine.tmj';
+
+  it('enters on the top edge and snakes to the bottom edge, on a longer Path than any earlier map', () => {
+    const map = createMap(load(file));
+    expect([map.cols, map.rows]).toEqual([16, 10]);
+    expect(map.waypoints[0]?.row).toBe(0);
+    expect(map.waypoints.at(-1)?.row).toBe(map.rows - 1);
+    const earlier = [TRAINING_GROUND, 'maps/02-switchback.tmj'].map((f) => createMap(load(f)).pathTiles.length);
+    expect(map.pathTiles.length).toBeGreaterThan(Math.max(...earlier));
+  });
+
+  it('draws road tiles on the Path and nowhere else', () => {
+    for (const { tile, road, path } of roadsAndPath(file)) expect({ tile, road }).toEqual({ tile, road: path });
+  });
+
+  it('uses the same tileset as the Training Ground', () => {
+    expect(tilesets(file)).toEqual(tilesets(TRAINING_GROUND));
+  });
+});
+
+describe('04-hairpin.tmj', () => {
+  const file = 'maps/04-hairpin.tmj';
+
+  it('enters on the left edge and leaves on the bottom edge', () => {
+    const map = createMap(load(file));
+    expect([map.cols, map.rows]).toEqual([16, 10]);
+    expect(map.waypoints[0]?.col).toBe(0);
+    expect(map.waypoints.at(-1)?.row).toBe(map.rows - 1);
+  });
+
+  it('doubles back: two long stretches run opposite ways with two rows between, and a Rifle Nest there covers both', () => {
+    const map = createMap(load(file));
+    const legs = map.waypoints.slice(1).map((to, i) => ({ from: map.waypoints[i]!, to }));
+    const longStretch = 8; // tiles; the connecting legs are shorter
+    const rows = legs.filter(({ from, to }) => from.row === to.row && Math.abs(to.col - from.col) >= longStretch);
+    expect(rows).toHaveLength(2);
+    const [out, back] = rows as [(typeof rows)[0], (typeof rows)[0]];
+    expect(Math.sign(out.to.col - out.from.col)).toBe(-Math.sign(back.to.col - back.from.col));
+    expect(Math.abs(back.from.row - out.from.row)).toBe(3);
+    // Column 7 is mid-map, so the tile sits within Rifle Nest range of both stretches.
+    const between = { col: 7, row: Math.min(out.from.row, back.from.row) + 1 };
+    expect(map.isBuildable(between)).toBe(true);
+    const near = (row: number) =>
+      map.pathTiles.some(
+        (t) => t.row === row && Math.hypot(t.col - between.col, t.row - between.row) <= TOWER_STATS.rifleNest.range,
+      );
+    expect([near(out.from.row), near(back.from.row)]).toEqual([true, true]);
+  });
+
+  it('draws road tiles on the Path and nowhere else', () => {
+    for (const { tile, road, path } of roadsAndPath(file)) expect({ tile, road }).toEqual({ tile, road: path });
+  });
+
+  it('uses the same tileset as the Training Ground', () => {
+    expect(tilesets(file)).toEqual(tilesets(TRAINING_GROUND));
+  });
+});
+
 describe('Tiled map files', () => {
   it('the registry serves the Training Ground file as the MVP map', () => {
     expect(MVP_MAP).toEqual({ ...load(TRAINING_GROUND), id: 'mvp' });
   });
 
-  it.each(mapFiles)('%s imports and the reference bot wins it', (file) => {
+  it.each(mapFiles)('%s names a known Attacker and Defender Faction', (file) => {
+    const { attacker, defender } = load(file);
+    expect([isFaction(attacker), isFaction(defender)]).toEqual([true, true]);
+  });
+
+  // A map without a ground image is drawn from the tileset (Switchback, until its NAIP window is painted).
+  it.each(mapFiles)('%s, if it has a ground image, has a painted NAIP one of 96 px a tile (#312)', (file) => {
+    const { groundImage, cols, rows } = load(file);
+    if (groundImage === undefined) return;
+    expect(groundImage).toMatch(/^\.\.\/assets\/naip-maps\/[a-z0-9-]+\.jpg$/);
+    const image = readFileSync(join(dirname(file), groundImage!));
+    expect(jpegSize(image)).toEqual({
+      width: cols * GROUND_IMAGE_PX_PER_TILE,
+      height: rows * GROUND_IMAGE_PX_PER_TILE,
+    });
+  });
+
+  // Registry ids are short names, not file names, so a file matches the entry whose data it is, id aside.
+  const entryFor = (file: string) => {
     const map = load(file);
+    return MAPS.find((entry) => isDeepStrictEqual({ ...map, id: entry.id }, entry.data));
+  };
+
+  it.each(mapFiles)('%s is a map in the registry', (file) => {
+    expect(entryFor(file)).toBeDefined();
+  });
+
+  it.each(mapFiles)('%s imports and the reference bot wins it with its own waves', (file) => {
+    const entry = entryFor(file)!;
     const result = runScenario({
+      map: entry.data,
+      waves: entry.waves,
+      autoStartWaves: true,
+      bot: buildOrder(fitOrder(entry.data, BALANCED_ORDER)),
+      until: 'end',
+    });
+    expect(result.outcome).toBe('victory');
+  });
+
+  it.each(MAPS)('$id: a bot that builds nothing loses to its own waves', ({ data, waves }) => {
+    const result = runScenario({ map: data, waves, autoStartWaves: true, until: 'end' });
+    expect(result.outcome).toBe('defeat');
+  });
+});
+
+// ADR-0009, point 3: Factions are skins. Every pairing plays out exactly like every other, tick for tick.
+describe('Factions are visual only', () => {
+  const json = JSON.parse(readFileSync(TRAINING_GROUND, 'utf8')) as { properties: { name: string; value: string }[] };
+  const withFactions = (attacker: string, defender: string) => ({
+    ...json,
+    properties: [
+      ...json.properties.filter(({ name }) => name !== 'attacker' && name !== 'defender'),
+      { name: 'attacker', type: 'string', value: attacker },
+      { name: 'defender', type: 'string', value: defender },
+    ],
+  });
+  const play = (attacker: string, defender: string) => {
+    const map = importTiledMap('mvp', withFactions(attacker, defender));
+    const { outcome, ticks, events, finalState } = runScenario({
       map,
       autoStartWaves: true,
       bot: buildOrder(fitOrder(map, BALANCED_ORDER)),
       until: 'end',
     });
-    expect(result.outcome).toBe('victory');
+    return { outcome, ticks, events, lives: finalState.lives, money: finalState.money };
+  };
+  const baseline = play('russia', 'us');
+  const pairings = FACTIONS.flatMap((attacker) => FACTIONS.map((defender) => [attacker, defender] as const));
+
+  it.each(pairings)('%s attacking %s plays the same game as any other pairing', (attacker, defender) => {
+    expect(play(attacker, defender)).toEqual(baseline);
   });
 });

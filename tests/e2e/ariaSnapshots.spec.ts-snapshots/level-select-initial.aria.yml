@@ -3,4 +3,10 @@
   - list:
     - listitem:
       - button "Training Ground"
+    - listitem:
+      - button "Switchback"
+    - listitem:
+      - button "Serpentine"
+    - listitem:
+      - button "Hairpin"
   - button "Back"
