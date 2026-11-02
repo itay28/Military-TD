@@ -11,6 +11,10 @@ Three PNGs per model in <out>/render-<id>/, all framed by the same camera so the
   <id>-hull.png    everything but the turret, with the hull's shadow
   <id>-turret.png  the turret (and barrels) alone, no shadow, for the game to rotate
 
+A model's optional `exclude` lists meshes to delete before rendering (e.g. add-on slat armour that hides the
+silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`), for a model
+painted in the wrong colour.
+
 Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1
 Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets]
 """
@@ -73,6 +77,23 @@ def tint_untextured(color: list[float]) -> None:
         bsdf = mat.node_tree.nodes.get("Principled BSDF") if mat.node_tree else None
         if bsdf and not bsdf.inputs["Base Color"].links:
             bsdf.inputs["Base Color"].default_value = (*color, 1.0)
+
+
+def tint_paint(color: list[float], skip: list[str]) -> None:
+    """Multiply every textured base colour by `color` (a grey-painted model turned olive); `skip` keeps materials."""
+    for mat in bpy.data.materials:
+        tree = mat.node_tree
+        bsdf = tree.nodes.get("Principled BSDF") if tree else None
+        if not bsdf or not bsdf.inputs["Base Color"].links or any(mat.name.startswith(s) for s in skip):
+            continue
+        link = bsdf.inputs["Base Color"].links[0]
+        mix = tree.nodes.new("ShaderNodeMix")
+        mix.data_type = "RGBA"
+        mix.blend_type = "MULTIPLY"
+        mix.inputs["Factor"].default_value = 1.0
+        mix.inputs["B"].default_value = (*color, 1.0)
+        tree.links.new(link.from_socket, mix.inputs["A"])
+        tree.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
 
 
 def place_model(spec: dict) -> None:
@@ -172,6 +193,10 @@ def render(path: Path, cfg: dict) -> None:
 def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=str(download(spec["sketchfab"], cache)))
+    for name in spec.get("exclude", []):
+        bpy.data.objects.remove(bpy.data.objects[name], do_unlink=True)
+    if "tint" in spec:
+        tint_paint(spec["tint"]["color"], spec["tint"].get("skip", []))
     if "untexturedColor" in spec:
         tint_untextured(spec["untexturedColor"])
     place_model(spec)

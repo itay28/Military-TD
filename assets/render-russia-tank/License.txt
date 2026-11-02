@@ -5,6 +5,6 @@ https://creativecommons.org/licenses/by/4.0/
 
 The PNGs in this folder are top-down renders of that model made by
 scripts/render-sprite.py (changed: rendered from above, lit, desaturated,
-split into hull and turret layers, untextured parts tinted). The model
-itself isn't committed.
+split into hull and turret layers, untextured parts tinted, slat-armour
+cage removed, grey paint tinted olive). The model itself isn't committed.
 License checked on the model's Sketchfab page, 2026-11-02.

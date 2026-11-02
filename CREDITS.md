@@ -70,7 +70,7 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Author: MirzaArrafiERV_45
 - Source: <https://sketchfab.com/3d-models/dfe130dfce724c30958cec51f2bd86b7>
 - License: CC-BY-4.0
-- Attribution: "T-72B3 Main Battle Tank" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "T-72B3 Main Battle Tank" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, slat armour removed, repainted olive
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-tank/**`
 
