@@ -97,9 +97,10 @@ describe('the committed render data', () => {
   });
 });
 
-describe("the first map's Faction sets (ADR-0009, point 5)", () => {
+describe('the complete Faction sets (ADR-0009, point 5)', () => {
   const kinds = Object.keys(SPRITES).sort();
-  for (const faction of [MVP_MAP.attacker, MVP_MAP.defender]) {
+  // The first map's two Factions, then China (#316).
+  for (const faction of new Set([MVP_MAP.attacker, MVP_MAP.defender, 'china'])) {
     it(`has one render per kind for ${faction}`, () => {
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
       expect(models.map((m) => m.kind).sort()).toEqual(kinds);

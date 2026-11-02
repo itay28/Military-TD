@@ -18,7 +18,11 @@
       "license": "CC-BY-4.0",
       "frontAxis": "-y",
       "lengthTiles": 0.95,
-      "canvasTiles": 1.0,
+      "canvasTiles": 1.25,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
       "turret": {
         "under": ["A_turret", "A_main_barrel", "A_ebarrel1", "A_ebarrel2", "LM3D1", "Group2"]
       }
@@ -424,6 +428,192 @@
       "depicts": "Mi-8 (stand-in for the Mi-8AMTSh, the same airframe)",
       "sketchfab": "5e5e57ef66994c6196a5f5d6b9f50403",
       "author": "tiunov.se",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.3,
+      "canvasTiles": 1.5
+    },
+    {
+      "id": "china-rifle-nest",
+      "kind": "rifleNest",
+      "faction": "china",
+      "depicts": "Two riflemen crouched and aiming in a sandbagged fighting position, uniforms re-coloured green (stand-in kit for QBZ-191/QJY-88 in Type 07)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.45,
+      "pose": {
+        "action": "crouch_firing",
+        "frame": 10
+      },
+      "copies": [
+        {
+          "x": -0.15,
+          "y": 0.0
+        },
+        {
+          "x": 0.15,
+          "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Body", "Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material_6": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "Glove": {
+            "color": [0.5, 0.55, 0.45]
+          }
+        }
+      }
+    },
+    {
+      "id": "china-cannon",
+      "kind": "cannon",
+      "faction": "china",
+      "depicts": "Tripod-mounted anti-tank guided missile launcher (stand-in for the HJ-8 on its tripod)",
+      "sketchfab": "a247197e02cf4f76b1e15fd6176328c6",
+      "author": "Alhimix",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 0.6,
+      "exclude": ["defaultMaterial.044"],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "minZ": 0.2
+      },
+      "tint": {
+        "color": [0.72, 0.85, 0.55]
+      }
+    },
+    {
+      "id": "china-mortar",
+      "kind": "mortar",
+      "faction": "china",
+      "depicts": "Pindad MO-3 81 mm mortar (stand-in for the PP-87 82 mm, same bipod and baseplate layout) in a sandbagged pit",
+      "sketchfab": "567d0dd2bd1944a8ac8a6b0a9dcb5ebb",
+      "author": "sakigakefuruzawa",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.65,
+      "exclude": [
+        "Pindad Mo-1 Kal. 60 mm CO_Pindad Mo-1 Kal. 60 mm_0",
+        "Pindad Mo-2 Kal. 60 mm LR_Base and Mortar_0",
+        "Pindad Mo-2 Kal. 60 mm LR_Small Parts_0"
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": ["Base"]
+      }
+    },
+    {
+      "id": "china-infantry",
+      "kind": "infantry",
+      "faction": "china",
+      "depicts": "Rifleman advancing and firing, plate carrier and helmet, uniform re-coloured green (stand-in kit for QBZ-191, Type 07)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "walking_firing",
+        "frame": 10
+      },
+      "canvasTiles": 1.25,
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Body", "Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material_6": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "Glove": {
+            "color": [0.5, 0.55, 0.45]
+          }
+        }
+      }
+    },
+    {
+      "id": "china-jeep",
+      "kind": "jeep",
+      "faction": "china",
+      "depicts": "Open-top military 4x4, its pintle machine gun removed (stand-in for the BJ2022 Brave Warrior)",
+      "sketchfab": "935856d763bf49aca45a48fae3a6846c",
+      "author": "KidBi-Gaming",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.8,
+      "exclude": ["mitrailleuse_Material_0"],
+      "tint": {
+        "color": [0.7, 0.45, 0.8]
+      },
+      "canvasTiles": 1.0
+    },
+    {
+      "id": "china-tank",
+      "kind": "tank",
+      "faction": "china",
+      "depicts": "Type 99 main battle tank (stand-in for the Type 99A)",
+      "sketchfab": "7075c92c5ef1408497f1530703ff2942",
+      "author": "philano",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.3,
+      "canvasTiles": 1.5,
+      "turret": {
+        "box": [
+          {
+            "x": [-0.26, 0.26],
+            "y": [-0.35, 0.12],
+            "minZ": 0.17
+          },
+          {
+            "x": [-0.05, 0.05],
+            "y": [0.1, 0.75],
+            "minZ": 0.15
+          }
+        ]
+      }
+    },
+    {
+      "id": "china-helicopter",
+      "kind": "helicopter",
+      "faction": "china",
+      "depicts": "UH-60M Black Hawk (stand-in for the Z-20, built to the UH-60's layout)",
+      "sketchfab": "12b4e525676a49678ac3006b360c8750",
+      "author": "MirzaArrafiERV_45",
       "license": "CC-BY-4.0",
       "frontAxis": "-y",
       "lengthTiles": 1.3,

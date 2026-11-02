@@ -66,7 +66,7 @@
       "author": "lm9241221",
       "source": "https://sketchfab.com/3d-models/26f4e5fde15747db9f88d2d60b86f9cf",
       "license": "CC-BY-4.0",
-      "attribution": "\"Oerlikon Gdf-006 35mm\" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "attribution": "\"Oerlikon Gdf-006 35mm\" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own",
       "downloaded": "2026-11-02",
       "files": ["assets/render-china-aa-gun/**"]
     },
@@ -214,6 +214,76 @@
       "attribution": "\"Mi-8\" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down",
       "downloaded": "2026-11-02",
       "files": ["assets/render-russia-helicopter/**"]
+    },
+    {
+      "id": "render-china-rifle-nest",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-rifle-nest/**"]
+    },
+    {
+      "id": "render-china-cannon",
+      "name": "Anti-Tank Guided Missile (top-down render)",
+      "author": "Alhimix",
+      "source": "https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Anti-Tank Guided Missile\" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, tinted green, set on a sandbagged pad of our own",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-cannon/**"]
+    },
+    {
+      "id": "render-china-mortar",
+      "name": "Pindad Mortars (top-down render)",
+      "author": "sakigakefuruzawa",
+      "source": "https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-mortar/**"]
+    },
+    {
+      "id": "render-china-infantry",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted green (toward Type 07)",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-infantry/**"]
+    },
+    {
+      "id": "render-china-jeep",
+      "name": "Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render)",
+      "author": "KidBi-Gaming",
+      "source": "https://sketchfab.com/3d-models/935856d763bf49aca45a48fae3a6846c",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Military Jeep Low Poly – Game Ready 3D Vehicle\" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-jeep/**"]
+    },
+    {
+      "id": "render-china-tank",
+      "name": "Type 99 MBT (top-down render)",
+      "author": "philano",
+      "source": "https://sketchfab.com/3d-models/7075c92c5ef1408497f1530703ff2942",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Type 99 MBT\" by philano (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-tank/**"]
+    },
+    {
+      "id": "render-china-helicopter",
+      "name": "Sikorsky UH-60M Blackhawk (top-down render)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/12b4e525676a49678ac3006b360c8750",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Sikorsky UH-60M Blackhawk\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-02",
+      "files": ["assets/render-china-helicopter/**"]
     }
   ]
 }
