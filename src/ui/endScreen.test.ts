@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { damageReport } from '../sim/report';
-import { mountEndScreen } from './endScreen';
+import { mountEndScreen, type EndScreenOptions } from './endScreen';
 
 // Path 6 tiles long: an Infantry (1.5 tiles/s) leaks after 4000 ms.
 const SMALL: MapData = {
@@ -79,6 +79,42 @@ describe('End screen', () => {
     expect(root.hidden).toBe(false);
     expect(dialog()?.querySelector('h2')?.textContent).toBe('Defeat');
     expect(byTestId('waves-survived')?.textContent).toBe('Waves survived 1 / 3');
+  });
+
+  /** Plays all three waves to Victory with the End screen given `result`, and opens it. */
+  const winWith = (result: NonNullable<EndScreenOptions['result']>) => {
+    const game = newGame();
+    const end = mountEndScreen(root, game, { onRestart: () => {}, result });
+    playWave(game);
+    playWave(game);
+    playWave(game);
+    end.update();
+    expect(game.state.phase).toBe('victory');
+  };
+
+  it('after Victory shows the stars earned as text, with the star glyphs hidden from screen readers', () => {
+    winWith(() => ({ stars: 2 }));
+    const stars = byTestId('stars');
+    expect(stars?.textContent).toBe('★★☆ 2 of 3 stars');
+    expect(stars?.querySelector('[aria-hidden="true"]')?.textContent).toBe('★★☆');
+    expect(byTestId('unlocked')).toBeNull();
+  });
+
+  it('after a Victory that unlocked the next map, says which one', () => {
+    winWith(() => ({ stars: 3, unlockedMap: 'Desert Pass' }));
+    expect(byTestId('stars')?.textContent).toBe('★★★ 3 of 3 stars');
+    expect(byTestId('unlocked')?.textContent).toBe('New map unlocked: Desert Pass');
+  });
+
+  it('after Defeat shows no stars and no unlock', () => {
+    const game = newGame(1);
+    const result = vi.fn(() => ({ stars: 1 as const, unlockedMap: 'Desert Pass' }));
+    const end = mountEndScreen(root, game, { onRestart: () => {}, result });
+    playWave(game);
+    end.update();
+    expect(game.state.phase).toBe('defeat');
+    expect(byTestId('stars')).toBeNull();
+    expect(byTestId('unlocked')).toBeNull();
   });
 
   it('is a modal dialog labelled by its heading, and focuses Restart when it opens', () => {

@@ -1,4 +1,6 @@
-export type Stars = 0 | 1 | 2 | 3;
+import type { Stars } from '../sim/progression';
+
+export type { Stars };
 
 export type WinStars = 1 | 2 | 3;
 
