@@ -1,6 +1,6 @@
 # 9. Satellite-style milsim art and factions per map
 
-Date: 2026-10-27 · Status: Proposed (accepted once the maintainer approves the look from the spike, #286)
+Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286)
 
 ## Context
 
