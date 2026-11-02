@@ -11,6 +11,7 @@ Every art, audio and font file we didn't make ourselves must be traceable to its
 | CC0-1.0 | ✅ | Preferred. Credit anyway (it's polite and costs nothing) |
 | CC-BY-3.0 / CC-BY-4.0 | ✅ | Attribution text **must** be recorded and shown on the credits screen |
 | OFL-1.1 | ✅ | Fonts only |
+| PD-USGov (US Government public domain) | ✅ | Works of the US federal government, e.g. USGS / USDA NAIP aerial imagery (ADR-0009). Credit the agency |
 | CC-BY-SA, CC-BY-NC, "free for personal use", "royalty free" with no license text, unknown | ❌ | Don't commit |
 
 ## Layout
@@ -106,3 +107,15 @@ An enemy sprite turns to face the way it travels: `SPRITE_HEADING` in `src/data/
 - **Kenney** (kenney.nl): CC0. Tower Defense (Top-Down), Top-down Tanks Remastered (formerly Redux), UI Pack, Impact/Interface sounds, Music Jingles.
 - **OpenGameArt.org**: mixed licenses. Check each item.
 - **itch.io free asset packs**: mixed licenses. Many are "free for personal use" only, which isn't allowed here.
+
+## Render spike (#286, ADR-0009)
+
+Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab models and one NAIP ground patch. The game doesn't load them yet; they exist so the maintainer can judge the look (`docs/art/render-spike-compare.png`). Source models are never committed: `scripts/render-sprite.py` downloads them into the ignored `.cache/models/` with `SKETCHFAB_API_TOKEN`.
+
+| Folder | Source | Made by |
+| --- | --- | --- |
+| `render-china-aa-gun/` | "Oerlikon Gdf-006 35mm" by lm9241221, CC-BY-4.0 | `scripts/render-sprite.py` (`render-sprite.json`) |
+| `render-russia-tank/` | "T-72B3 Main Battle Tank" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `naip-field-road-treeline/` | USDA FSA NAIP, Iowa 2023, 0.3 m, PD-USGov | `scripts/naip-patch.py` |
+
+Before rendering a Sketchfab model, read its page: skip it if the description or tags say "ripped" or "imported from", name a game, or the license is NonCommercial or NoDerivatives.

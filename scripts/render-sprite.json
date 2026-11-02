@@ -1,0 +1,34 @@
+{
+  "pxPerTile": 128,
+  "sun": { "azimuthDeg": 315, "elevationDeg": 50, "softnessDeg": 8, "strength": 4.0 },
+  "desaturate": 0.15,
+  "models": [
+    {
+      "id": "china-aa-gun",
+      "kind": "aaGun",
+      "faction": "china",
+      "depicts": "Oerlikon GDF-006 twin 35 mm (stand-in for the PG-99 / Type 90)",
+      "sketchfab": "26f4e5fde15747db9f88d2d60b86f9cf",
+      "author": "lm9241221",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.95,
+      "canvasTiles": 1.0,
+      "turret": { "under": ["A_turret", "A_main_barrel", "A_ebarrel1", "A_ebarrel2", "LM3D1", "Group2"] }
+    },
+    {
+      "id": "russia-tank",
+      "kind": "tank",
+      "faction": "russia",
+      "depicts": "T-72B3 main battle tank",
+      "sketchfab": "dfe130dfce724c30958cec51f2bd86b7",
+      "author": "MirzaArrafiERV_45",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.3,
+      "untexturedColor": [0.18, 0.19, 0.16],
+      "canvasTiles": 1.5,
+      "turret": { "names": ["Object_5", "Object_6", "Object_7", "Object_8", "Object_10", "Object_11", "Object_15"] }
+    }
+  ]
+}
