@@ -17,14 +17,29 @@ test('the atlas loads: sprites on, same draw order, the game plays to Victory', 
   await startWave(page);
   const { sprites, mapTiles, drawOrder } = await view(page);
   expect(sprites).toBe(true);
-  expect(mapTiles).toBe('sprites');
+  expect(mapTiles).toBe('image');
   expect(drawOrder.filter((layer) => LAYERS.includes(layer))).toEqual(LAYERS);
   expect((await stepToEnd(page)).phase).toBe('victory');
 });
 
-test('a blocked atlas falls back to shapes and never breaks the game', async ({ page }) => {
+test('a blocked ground image falls back to the tileset (#312)', async ({ page }) => {
   const blocked: string[] = [];
-  await page.route(/\/sprites[^/]*\.(png|json)$/, (route) => {
+  await page.route(/\/training-ground[^/]*\.jpg$/, (route) => {
+    blocked.push(route.request().url());
+    return route.abort();
+  });
+  await openGame(page);
+  expect(blocked.length).toBeGreaterThan(0);
+  await startWave(page);
+  const { sprites, mapTiles } = await view(page);
+  expect(sprites).toBe(true);
+  expect(mapTiles).toBe('sprites');
+  expect((await stepToEnd(page)).phase).toBe('victory');
+});
+
+test('a blocked atlas and ground image fall back to shapes and never break the game', async ({ page }) => {
+  const blocked: string[] = [];
+  await page.route(/\/(sprites[^/]*\.(png|json)|training-ground[^/]*\.jpg)$/, (route) => {
     blocked.push(route.request().url());
     return route.abort();
   });
