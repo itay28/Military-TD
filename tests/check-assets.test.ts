@@ -43,6 +43,10 @@ describe('checkAssets', () => {
     expect(run([{ ...pack, license: 'CC-BY-3.0' }])).toEqual([]);
   });
 
+  it('allows US Government public domain (PD-USGov, e.g. NAIP imagery)', () => {
+    expect(run([{ ...pack, license: 'PD-USGov' }])).toEqual([]);
+  });
+
   it('allows OFL-1.1 for font files only', () => {
     const ofl = { ...pack, license: 'OFL-1.1', attribution: '' };
     expect(run([ofl]).join('\n')).toContain('OFL-1.1');
