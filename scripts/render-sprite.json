@@ -1,6 +1,11 @@
 {
   "pxPerTile": 128,
-  "sun": { "azimuthDeg": 315, "elevationDeg": 50, "softnessDeg": 8, "strength": 4.0 },
+  "sun": {
+    "azimuthDeg": 315,
+    "elevationDeg": 50,
+    "softnessDeg": 8,
+    "strength": 4.0
+  },
   "desaturate": 0.15,
   "models": [
     {
@@ -14,7 +19,9 @@
       "frontAxis": "-y",
       "lengthTiles": 0.95,
       "canvasTiles": 1.0,
-      "turret": { "under": ["A_turret", "A_main_barrel", "A_ebarrel1", "A_ebarrel2", "LM3D1", "Group2"] }
+      "turret": {
+        "under": ["A_turret", "A_main_barrel", "A_ebarrel1", "A_ebarrel2", "LM3D1", "Group2"]
+      }
     },
     {
       "id": "russia-tank",
@@ -31,10 +38,218 @@
       "tint": {
         "color": [0.78, 0.95, 0.52],
         "skip": ["wheel"],
-        "overrides": { "misc_a.5": { "color": [0.3, 0.36, 0.22], "specular": 0 } }
+        "overrides": {
+          "misc_a.5": {
+            "color": [0.3, 0.36, 0.22],
+            "specular": 0
+          }
+        }
       },
       "canvasTiles": 1.5,
-      "turret": { "names": ["Object_5", "Object_6", "Object_7", "Object_8", "Object_10", "Object_11"] }
+      "turret": {
+        "names": ["Object_5", "Object_6", "Object_7", "Object_8", "Object_10", "Object_11"]
+      }
+    },
+    {
+      "id": "us-rifle-nest",
+      "kind": "rifleNest",
+      "faction": "us",
+      "depicts": "Two riflemen crouched and aiming in a sandbagged fighting position (stand-in kit for M4A1/M249 in OCP)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.45,
+      "pose": {
+        "action": "crouch_firing",
+        "frame": 10
+      },
+      "copies": [
+        {
+          "x": -0.15,
+          "y": 0.0
+        },
+        {
+          "x": 0.15,
+          "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Body", "Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [1.25, 1.15, 0.85]
+          },
+          "material_6": {
+            "color": [1.25, 1.15, 0.85]
+          },
+          "material": {
+            "color": [1.4, 1.15, 0.9]
+          },
+          "Glove": {
+            "color": [1.3, 1.1, 0.85]
+          }
+        }
+      }
+    },
+    {
+      "id": "us-aa-gun",
+      "kind": "aaGun",
+      "faction": "us",
+      "depicts": "Phalanx 20 mm Vulcan mount (stand-in for the M167 VADS: the same M61 gun, which the Army also fields on land as C-RAM)",
+      "sketchfab": "b811949a2ba543aab5fde70ecdf0bf6d",
+      "author": "Lemper_Studio",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.7,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "under": ["Rotate_Z"]
+      },
+      "tint": {
+        "color": [0.4, 0.44, 0.36],
+        "overrides": {
+          "Mat_Ammo": {
+            "color": [0.35, 0.38, 0.3]
+          }
+        }
+      }
+    },
+    {
+      "id": "us-cannon",
+      "kind": "cannon",
+      "faction": "us",
+      "depicts": "Tripod-mounted anti-tank guided missile launcher (stand-in for the M220 TOW)",
+      "sketchfab": "a247197e02cf4f76b1e15fd6176328c6",
+      "author": "Alhimix",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 0.6,
+      "exclude": ["defaultMaterial.044"],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "minZ": 0.2
+      }
+    },
+    {
+      "id": "us-mortar",
+      "kind": "mortar",
+      "faction": "us",
+      "depicts": "M224 60 mm mortar (stand-in for the M252 81 mm, same layout) in a sandbagged pit",
+      "sketchfab": "c86a73e40d994431bcdb57dc741cf8be",
+      "author": "jcherry3d",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.65,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": ["base_low"]
+      }
+    },
+    {
+      "id": "us-infantry",
+      "kind": "infantry",
+      "faction": "us",
+      "depicts": "Rifleman advancing and firing, plate carrier and helmet",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "walking_firing",
+        "frame": 10
+      },
+      "canvasTiles": 1.25,
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Body", "Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [1.25, 1.15, 0.85]
+          },
+          "material_6": {
+            "color": [1.25, 1.15, 0.85]
+          },
+          "material": {
+            "color": [1.4, 1.15, 0.9]
+          },
+          "Glove": {
+            "color": [1.3, 1.1, 0.85]
+          }
+        }
+      }
+    },
+    {
+      "id": "us-jeep",
+      "kind": "jeep",
+      "faction": "us",
+      "depicts": "M998-family Humvee, unarmored (stand-in for the M1097 soft-top)",
+      "sketchfab": "c0e2ddcc4ccf4d49a9303303a6307bcf",
+      "author": "madtrollstudio",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-x",
+      "lengthTiles": 0.8,
+      "canvasTiles": 1.0
+    },
+    {
+      "id": "us-tank",
+      "kind": "tank",
+      "faction": "us",
+      "depicts": "M1A2 SEP Abrams with CROWS (stand-in for the M1A2 SEPv3)",
+      "sketchfab": "c9e2b389e5004b03bcc695e4350b989d",
+      "author": "MirzaArrafiERV_45",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.3,
+      "canvasTiles": 1.5,
+      "turret": {
+        "box": [
+          {
+            "x": [-0.24, 0.24],
+            "y": [-0.47, 0.1],
+            "minZ": 0.24
+          },
+          {
+            "x": [-0.04, 0.06],
+            "y": [0.08, 0.7],
+            "minZ": 0.18
+          }
+        ]
+      }
+    },
+    {
+      "id": "us-helicopter",
+      "kind": "helicopter",
+      "faction": "us",
+      "depicts": "UH-60 Black Hawk",
+      "sketchfab": "ee81eb66006b4d8980d0cf9ff6304b69",
+      "author": "helijah",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-x",
+      "lengthTiles": 1.3,
+      "canvasTiles": 1.5
     }
   ]
 }

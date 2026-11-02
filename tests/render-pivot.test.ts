@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
-import { RENDER_CONFIG, buildRenderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
+import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
 /** A transparent `w` × `h` image with the given rectangles (x, y, w, h) opaque. */
 function image(w: number, h: number, rects: [number, number, number, number][]): PNG {
@@ -37,6 +37,32 @@ describe('turretPivot', () => {
   });
 });
 
+describe('renderMeta', () => {
+  it('measures the pivot of a model with a turret', () => {
+    const read = () => image(32, 32, [[8, 8, 16, 16]]);
+    const meta = renderMeta({ id: 'x', kind: 'tank', canvasTiles: 0.25, turret: { names: ['t'] } }, 128, read);
+    expect(meta).toEqual({ id: 'x', kind: 'tank', pxPerTile: 128, canvasPx: 32, pivot: { x: 16, y: 16 } });
+  });
+
+  it('gives a model without a turret (Infantry, Jeep, Helicopter) no pivot, and reads no turret PNG', () => {
+    const read = () => {
+      throw new Error('read a turret PNG');
+    };
+    const meta = renderMeta({ id: 'y', kind: 'jeep', canvasTiles: 1 }, 128, read);
+    expect(meta).toEqual({ id: 'y', kind: 'jeep', pxPerTile: 128, canvasPx: 128 });
+  });
+
+  it('turns a tower on a base (its sandbagged pit) about the pit centre, the canvas centre', () => {
+    const read = () => image(160, 160, [[10, 10, 20, 20]]); // a turret far off-centre: not measured
+    const meta = renderMeta(
+      { id: 'z', kind: 'mortar', canvasTiles: 1.25, turret: { allBut: [] }, base: { radiusTiles: 0.4 } },
+      128,
+      read,
+    );
+    expect(meta.pivot).toEqual({ x: 80, y: 80 });
+  });
+});
+
 describe('the committed render data', () => {
   it('has one entry per model in render-sprite.json', () => {
     expect(buildRenderMeta().map((m) => m.json.id)).toEqual(RENDER_CONFIG.models.map((m) => m.id));
@@ -48,9 +74,12 @@ describe('the committed render data', () => {
     });
   }
 
-  it('puts each pivot off the canvas centre, on the turret body (the reason it is data)', () => {
-    for (const { json } of buildRenderMeta()) {
-      const { pivot, canvasPx } = json;
+  it('puts each measured pivot off the canvas centre, on the turret body (the reason it is data)', () => {
+    const measured = RENDER_CONFIG.models.filter((m) => m.turret !== undefined && m.base === undefined);
+    expect(measured.length).toBeGreaterThan(0);
+    for (const { json } of buildRenderMeta().filter((m) => measured.some((x) => x.id === m.json.id))) {
+      const { canvasPx } = json;
+      const pivot = json.pivot!;
       expect(pivot.y, json.id).toBeGreaterThan(canvasPx / 2 + 8); // behind the centre: the barrel reaches forward
       expect(Math.abs(pivot.x - canvasPx / 2), json.id).toBeLessThan(2); // on the centre line
     }
