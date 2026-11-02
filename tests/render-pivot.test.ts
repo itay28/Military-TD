@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
+import { SPRITES } from '../src/data/sprites';
+import { MVP_MAP } from '../src/data/maps';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
 /** A transparent `w` × `h` image with the given rectangles (x, y, w, h) opaque. */
@@ -93,4 +95,14 @@ describe('the committed render data', () => {
       expect(renderMetaPath(model.id)).toBe(`assets/render-${model.id}/${model.id}.json`);
     }
   });
+});
+
+describe("the first map's Faction sets (ADR-0009, point 5)", () => {
+  const kinds = Object.keys(SPRITES).sort();
+  for (const faction of [MVP_MAP.attacker, MVP_MAP.defender]) {
+    it(`has one render per kind for ${faction}`, () => {
+      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
+      expect(models.map((m) => m.kind).sort()).toEqual(kinds);
+    });
+  }
 });
