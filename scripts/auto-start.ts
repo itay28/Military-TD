@@ -360,7 +360,12 @@ export function planRetries(issues: readonly RetryIssue[], now: number, idleMs =
     const meta = FIRE_META.exec(i.comments[firedAt]!.body);
     const model = meta?.[1];
     if (model !== 'sonnet' && model !== 'opus') continue;
-    const target = { issue: i.number, base: meta![2]!, model, ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}) };
+    const target: Retry = {
+      issue: i.number,
+      base: meta![2]!,
+      model,
+      ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}),
+    };
     if (sinceFire.some((c) => c.body.includes(DONE_MARKER))) {
       // The session ended on purpose. With no ready PR (skipped above), that was a `needs-info`
       // question (#319): once it's off and the maintainer commented after the done marker, fire again
