@@ -32,6 +32,10 @@ describe('RENDERS', () => {
     for (const render of Object.values(RENDERS)) for (const m of render.muzzles) expect(m.y).toBeLessThan(-40);
   });
 
+  it('gives every render at least one barrel tip, so no rendered tower fires from nowhere', () => {
+    for (const render of Object.values(RENDERS)) expect(render.muzzles.length).toBeGreaterThan(0);
+  });
+
   it('keeps Kenney for every kind without a render', () => {
     for (const kind of Object.keys(SPRITES) as SpriteKind[]) {
       if (kind in RENDERS) continue;
