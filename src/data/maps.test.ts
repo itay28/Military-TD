@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isFaction } from '../sim/factions';
 import { createMap, type Tile } from '../sim/map';
 import { FIRST_MAP, SECOND_MAP } from '../../tests/e2e/firstMap';
 import { MAPS, mapById, MVP_MAP, wavesForMap } from './maps';
@@ -83,6 +84,15 @@ describe('map registry', () => {
   it('serves a map its own waves, and WAVES for a map outside the registry', () => {
     expect(wavesForMap('switchback')).toBe(mapById('switchback').waves);
     expect(wavesForMap('not-a-map')).toBe(WAVES);
+  });
+
+  it.each(MAPS)('$id: names its Attacker and Defender Factions, as its map file says (ADR-0009)', (entry) => {
+    expect(isFaction(entry.attacker)).toBe(true);
+    expect(isFaction(entry.defender)).toBe(true);
+    expect({ attacker: entry.attacker, defender: entry.defender }).toEqual({
+      attacker: entry.data.attacker,
+      defender: entry.data.defender,
+    });
   });
 
   it('finds an entry by id', () => {
