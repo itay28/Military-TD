@@ -1,0 +1,9 @@
+Rendered sprites of "SPG-9" by Jack512kb
+https://sketchfab.com/3d-models/6c31a440a65145e8814e9974eabf2227
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated, painted olive, set on a generated sandbag pad, split into gun and pad layers).
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-02.
