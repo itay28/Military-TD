@@ -1,0 +1,12 @@
+War on Water tracks, by yd
+https://opengameart.org/content/war-on-water-tracks
+
+License: Creative Commons Zero (CC0 1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The pack ships no license file. This notice copies the license shown on the
+source page above (checked 2026-11-02).
+
+Files here: menu.{ogg,mp3} is wowmenu.ogg and game.{ogg,mp3} is wowchapter1.ogg,
+with the trailing silence trimmed and a 10 ms fade at each end so they loop
+without a gap or click, re-encoded as OGG Vorbis and MP3.
