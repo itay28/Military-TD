@@ -47,7 +47,7 @@ for (const viewport of [
     await clickTile(page, SECOND_BESIDE_PATH);
     await check('two towers bought (Money 100 → 50 → 0)');
     for (let i = 0; i < 3; i++) {
-      await page.getByTestId('game-speed').click();
+      await page.getByTestId(`game-speed-${i + 1}`).click();
       await check(`game speed ${i + 1}`);
     }
     await page.getByTestId('auto-start').click();

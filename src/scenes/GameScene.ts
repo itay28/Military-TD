@@ -40,7 +40,7 @@ import {
 import { drawGrid, drawMap } from './drawMap';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
-import { MAX_GAME_SPEED, type GameSpeed } from './gameSpeed';
+import { MAX_GAME_SPEED, type GameSpeed, type GameSpeedControl } from './gameSpeed';
 import { createGestures, type Gesture, type Gestures } from './gestures';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
@@ -480,10 +480,11 @@ export class GameScene extends Phaser.Scene {
       this.floatingTexts.add(`+${refund}`, toPixels(tileCenter(tile))),
     );
 
-    this.hud = mountHud(this.hudRoot, this.sim, {
+    const speed: GameSpeedControl = {
       get: () => this.gameSpeed,
-      set: (speed) => (this.gameSpeed = speed),
-    });
+      set: (value) => (this.gameSpeed = value),
+    };
+    this.hud = mountHud(this.hudRoot, this.sim, speed);
     this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions());
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, { onRestart: () => this.scene.restart() });
@@ -495,6 +496,7 @@ export class GameScene extends Phaser.Scene {
       blocked: [this.hudRoot, this.buildBarRoot, this.towerPanelRoot],
       onRestart: () => this.scene.restart(),
       openSettings: this.openSettings,
+      speed,
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.hud.destroy();
