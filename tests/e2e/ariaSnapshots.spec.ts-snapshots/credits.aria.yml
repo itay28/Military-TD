@@ -45,6 +45,41 @@
   - link "https://planetarycomputer.microsoft.com/dataset/naip":
     - /url: https://planetarycomputer.microsoft.com/dataset/naip
   - paragraph: NAIP imagery courtesy of the USDA Farm Service Agency, public domain
+  - heading "Tactical Soldier (game ready) low poly (top-down render)" [level=2]
+  - paragraph: MissingTray1151, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
+    - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
+  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations, kit tinted toward OCP"
+  - heading "Phalanx CIWS (top-down render)" [level=2]
+  - paragraph: Lemper_Studio, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d":
+    - /url: https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d
+  - paragraph: "\"Phalanx CIWS\" by Lemper_Studio (sketchfab.com), CC-BY 4.0, rendered top-down, repainted grey-olive, set on a sandbagged pad of our own"
+  - heading "Anti-Tank Guided Missile (top-down render)" [level=2]
+  - paragraph: Alhimix, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6":
+    - /url: https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6
+  - paragraph: "\"Anti-Tank Guided Missile\" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, set on a sandbagged pad of our own"
+  - heading "Mortar - M224 (top-down render)" [level=2]
+  - paragraph: jcherry3d, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/c86a73e40d994431bcdb57dc741cf8be":
+    - /url: https://sketchfab.com/3d-models/c86a73e40d994431bcdb57dc741cf8be
+  - paragraph: "\"Mortar - M224\" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own"
+  - heading "Low Poly Humvee FREE (top-down render)" [level=2]
+  - paragraph: madtrollstudio, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/c0e2ddcc4ccf4d49a9303303a6307bcf":
+    - /url: https://sketchfab.com/3d-models/c0e2ddcc4ccf4d49a9303303a6307bcf
+  - paragraph: "\"Low Poly Humvee FREE\" by madtrollstudio (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - heading "M1A2 Abrams Crows (top-down render)" [level=2]
+  - paragraph: MirzaArrafiERV_45, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/c9e2b389e5004b03bcc695e4350b989d":
+    - /url: https://sketchfab.com/3d-models/c9e2b389e5004b03bcc695e4350b989d
+  - paragraph: "\"M1A2 Abrams Crows\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull"
+  - heading "Sikorsky UH-60 Black Hawk (top-down render)" [level=2]
+  - paragraph: helijah, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/ee81eb66006b4d8980d0cf9ff6304b69":
+    - /url: https://sketchfab.com/3d-models/ee81eb66006b4d8980d0cf9ff6304b69
+  - paragraph: "\"Sikorsky UH-60 Black Hawk\" by helijah (sketchfab.com), CC-BY 4.0, rendered top-down"
   - heading "Military TD" [level=2]
   - paragraph: "Engine: Phaser"
   - paragraph: "Code license: UNLICENSED"
