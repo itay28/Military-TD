@@ -1,9 +1,11 @@
 import type { Faction } from '../sim/factions';
 import { importTiledMap, type TiledMapData } from '../sim/tiled';
 import type { WaveData } from '../sim/waves';
-import { SWITCHBACK_WAVES, WAVES } from './waves';
+import { HAIRPIN_WAVES, SERPENTINE_WAVES, SWITCHBACK_WAVES, WAVES } from './waves';
 import trainingGround from '../../maps/01-training-ground.tmj?raw';
 import switchback from '../../maps/02-switchback.tmj?raw';
+import serpentine from '../../maps/03-serpentine.tmj?raw';
+import hairpin from '../../maps/04-hairpin.tmj?raw';
 
 /** Every painted ground image (`scripts/naip-map.py`, #312) as a URL Vite serves, keyed by path from this module. */
 const GROUND_IMAGES = import.meta.glob<string>('../../assets/naip-maps/*.jpg', {
@@ -39,6 +41,12 @@ export const MVP_MAP: TiledMapData = importTiledMap('mvp', JSON.parse(trainingGr
 /** Enters on the top edge and winds down an S-curve to the bottom edge. */
 export const SWITCHBACK_MAP: TiledMapData = importTiledMap('switchback', JSON.parse(switchback));
 
+/** The long one: enters on the top edge and snakes down and up through five columns to the bottom edge. */
+export const SERPENTINE_MAP: TiledMapData = importTiledMap('serpentine', JSON.parse(serpentine));
+
+/** Enters on the left, runs deep into the map and doubles back two rows lower, so towers between cover both. */
+export const HAIRPIN_MAP: TiledMapData = importTiledMap('hairpin', JSON.parse(hairpin));
+
 /** A map the player can pick on the Level select: its id, the name shown, its data, its Factions (ADR-0009), and the waves played on it. */
 export interface MapEntry {
   readonly id: string;
@@ -67,6 +75,8 @@ const entry = (name: string, data: TiledMapData, waves: readonly WaveData[]): Ma
 export const MAPS: readonly MapEntry[] = [
   entry('Training Ground', MVP_MAP, WAVES),
   entry('Switchback', SWITCHBACK_MAP, SWITCHBACK_WAVES),
+  entry('Serpentine', SERPENTINE_MAP, SERPENTINE_WAVES),
+  entry('Hairpin', HAIRPIN_MAP, HAIRPIN_WAVES),
 ];
 
 /** The map with this id; throws for an unknown one. */
