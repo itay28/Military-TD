@@ -687,14 +687,14 @@ export class GameScene extends Phaser.Scene {
   private onGesture(gesture: Gesture | undefined): void {
     if (!gesture) return;
     if (gesture.type === 'tap')
-      return this.tapAt(screenToWorld(this.view, gesture.point), this.canPlaceAt(gesture.point));
+      return this.tapAt(screenToWorld(this.view, gesture.point), this.pointOnMap(gesture.point));
     if (gesture.type === 'aim') {
       this.pointerTile = pixelToTile(screenToWorld(this.view, gesture.point));
       return;
     }
     if (gesture.type === 'place') {
       // A lift off the visible map (over the HUD, at the screen edge) places nothing.
-      if (this.canPlaceAt(gesture.point)) this.placeAtPoint(screenToWorld(this.view, gesture.point));
+      if (this.pointOnMap(gesture.point)) this.placeAtPoint(screenToWorld(this.view, gesture.point));
       return;
     }
     this.fitted = false;
@@ -722,7 +722,8 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private canPlaceAt(screenPoint: Pixel): boolean {
+  /** True when the screen point is on the visible map, so a placement may land there. */
+  private pointOnMap(screenPoint: Pixel): boolean {
     return canPlaceAt(this.view, this.cameraBounds(), screenPoint);
   }
 
