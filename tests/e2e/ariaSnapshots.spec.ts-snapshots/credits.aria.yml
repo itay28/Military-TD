@@ -180,11 +180,31 @@
   - link "https://sketchfab.com/3d-models/ab981d28f7124a489cd1b1992b2e467b":
     - /url: https://sketchfab.com/3d-models/ab981d28f7124a489cd1b1992b2e467b
   - paragraph: "\"Russian Transport Heli\" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down"
-  - heading "25 CC0 bang / firework SFX" [level=2]
-  - paragraph: rubberduck, CC0-1.0
-  - link "https://opengameart.org/content/25-cc0-bang-firework-sfx":
-    - /url: https://opengameart.org/content/25-cc0-bang-firework-sfx
-  - paragraph: 25 CC0 bang / firework SFX by rubberduck (OpenGameArt.org), CC0
+  - heading "The Free Firearm Sound Library" [level=2]
+  - paragraph: Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0-1.0
+  - link "https://opengameart.org/content/the-free-firearm-sound-library":
+    - /url: https://opengameart.org/content/the-free-firearm-sound-library
+  - paragraph: The Free Firearm Sound Library by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0, three excerpts
+  - heading "Missile Sound" [level=2]
+  - paragraph: mikeask, CC0-1.0
+  - link "https://opengameart.org/content/missile-sound":
+    - /url: https://opengameart.org/content/missile-sound
+  - paragraph: Missile Sound by mikeask (OpenGameArt.org), CC0
+  - heading "Cannon Fire" [level=2]
+  - paragraph: Thimras, CC0-1.0
+  - link "https://opengameart.org/content/cannon-fire":
+    - /url: https://opengameart.org/content/cannon-fire
+  - paragraph: Cannon Fire by Thimras (OpenGameArt.org), CC0
+  - heading "Explosions" [level=2]
+  - paragraph: EZduzziteh, CC0-1.0
+  - link "https://opengameart.org/content/explosions-4":
+    - /url: https://opengameart.org/content/explosions-4
+  - paragraph: Explosions by EZduzziteh (OpenGameArt.org), CC0
+  - heading "Weapon sounds" [level=2]
+  - paragraph: Military-TD, from the four items above, CC0-1.0
+  - link "https://opengameart.org/content/the-free-firearm-sound-library":
+    - /url: https://opengameart.org/content/the-free-firearm-sound-library
+  - paragraph: Built by scripts/weapon-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Missile Sound by mikeask, Cannon Fire by Thimras and Explosions by EZduzziteh, all CC0
   - heading "100 CC0 SFX" [level=2]
   - paragraph: rubberduck, CC0-1.0
   - link "https://opengameart.org/content/100-cc0-sfx":
