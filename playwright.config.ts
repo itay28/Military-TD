@@ -3,6 +3,10 @@ import { defineConfig, devices } from '@playwright/test';
 // E2E_PORT lets sessions in parallel worktrees each serve their own build.
 const PORT = Number(process.env['E2E_PORT'] ?? 4173);
 
+// Cloud sessions ship an older Chromium than the pinned Playwright wants; the session doctor sets this
+// to that browser (scripts/doctor.ts). Unset in CI, which uses the Playwright container's own build.
+const CHROMIUM_PATH = process.env['PW_CHROMIUM_PATH'];
+
 // UI tests against the built game in headless Chromium (ADR-0003). `npm run test:e2e`.
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -19,6 +23,7 @@ export default defineConfig({
     viewport: { width: 900, height: 560 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    ...(CHROMIUM_PATH ? { launchOptions: { executablePath: CHROMIUM_PATH } } : {}),
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 900, height: 560 } } }],
   webServer: {
