@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.5.0](https://github.com/itay28/Military-TD/compare/v0.4.0...v0.5.0) (2026-11-03)
+
+
+### Features
+
+* build bar shows the tower sprites ([#348](https://github.com/itay28/Military-TD/issues/348)) ([085fe84](https://github.com/itay28/Military-TD/commit/085fe847540477e1aca7cbafd92e6d37e5d2eacb))
+* map unlocks and star ratings ([#290](https://github.com/itay28/Military-TD/issues/290)) ([4d8dd97](https://github.com/itay28/Military-TD/commit/4d8dd97a7255383b058979d031c886ed2ae9d938))
+* maps 3 and 4 (Serpentine, Hairpin) ([#291](https://github.com/itay28/Military-TD/issues/291)) ([5e2ff72](https://github.com/itay28/Military-TD/commit/5e2ff72b1e713da2493302029726ea84be2b37fd))
+* second map (Switchback) with per-map wave schedules ([#289](https://github.com/itay28/Military-TD/issues/289)) ([f48c575](https://github.com/itay28/Military-TD/commit/f48c5751df5dc63defb0c546d790d0be2a339097))
+* shots start at the barrel tips, two on the AA Gun ([#349](https://github.com/itay28/Military-TD/issues/349)) ([ac16386](https://github.com/itay28/Military-TD/commit/ac163864ec6a5e0594c0dcf90e805da8f510b2d3))
+* versioned saved progress under its own localStorage key ([#288](https://github.com/itay28/Military-TD/issues/288)) ([c6ceec6](https://github.com/itay28/Military-TD/commit/c6ceec6a47701488750256988b4c3a94b53ef9ff))
+
+
+### Bug Fixes
+
+* close the tower panel when a build kind is picked ([#347](https://github.com/itay28/Military-TD/issues/347)) ([869f136](https://github.com/itay28/Military-TD/commit/869f1361023ca871e936e054a28e5d251f94a87a))
+* pinch and pan show no placement Ghost on touch ([#345](https://github.com/itay28/Military-TD/issues/345)) ([3db9f2b](https://github.com/itay28/Military-TD/commit/3db9f2b4925dc0ef0536c12f0199613d7afa98d3))
+* refuse tower placement off the visible map ([#346](https://github.com/itay28/Military-TD/issues/346)) ([0dbba7b](https://github.com/itay28/Military-TD/commit/0dbba7b378a5ee2a6607f0e6d1de1fbb2f521de7))
+* towers turn to face their target before they fire ([#351](https://github.com/itay28/Military-TD/issues/351)) ([0559862](https://github.com/itay28/Military-TD/commit/0559862fcbc643113d826251dc1e6ba3459a6925))
+
+
+### Miscellaneous Chores
+
+* release 0.5.0 ([#357](https://github.com/itay28/Military-TD/issues/357)) ([a3fe700](https://github.com/itay28/Military-TD/commit/a3fe7005fd302b0c182fc374a5e5d0dc13ab18fd))
+
 ## [0.4.0](https://github.com/itay28/Military-TD/compare/v0.3.0...v0.4.0) (2026-11-02)
 
 
