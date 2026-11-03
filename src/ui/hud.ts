@@ -97,12 +97,10 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
     const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
     setText(banner, showBanner ? bannerText : '');
-    // In timed mode the countdown is always up while a wave is due, during a wave too.
+    // In timed mode the countdown is always up while a wave is due, during a wave too. Short, so it fits the message
+    // slot at 900 px beside an overlap counter; the "cleared" banner follows it there when there's room.
     const { nextWaveAtMs } = state;
-    setText(
-      nextWave,
-      nextWaveAtMs === undefined ? '' : `Next wave in ${Math.ceil((nextWaveAtMs - state.timeMs) / 1000)}`,
-    );
+    setText(nextWave, nextWaveAtMs === undefined ? '' : `Next ${Math.ceil((nextWaveAtMs - state.timeMs) / 1000)}s`);
   };
   const offWaveCleared = game.events.on('waveCleared', ({ waveNumber }) => {
     bannerText = `Wave ${waveNumber} cleared`;

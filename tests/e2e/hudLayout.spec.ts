@@ -33,7 +33,7 @@ for (const viewport of [
     };
     const step = (ticks: number) => page.evaluate((n) => window.__TD__!.step(n), ticks);
 
-    await expect(page.getByTestId('hud-next-wave')).toHaveText(/Next wave in/);
+    await expect(page.getByTestId('hud-next-wave')).toHaveText(/^Next \d+s$/);
     await check('build window countdown');
     await selectKind(page);
     await clickTile(page, BESIDE_PATH);
@@ -54,7 +54,7 @@ for (const viewport of [
     });
     await expect(page.getByTestId('wave-banner')).toHaveText(/cleared/);
     await check('wave cleared (banner up)');
-    await expect(page.getByTestId('hud-next-wave')).toHaveText(/Next wave in/);
+    await expect(page.getByTestId('hud-next-wave')).toHaveText(/^Next \d+s$/);
     await check('countdown showing');
     // Two calls in a row put waves 2 and 3 on the field together.
     await page.getByTestId('start-wave').click();

@@ -320,17 +320,17 @@ describe('HUD', () => {
       expect(button()?.disabled).toBe(true);
     });
 
-    it('shows "Next wave in N", in whole seconds rounded up, during the build window and during a wave', () => {
+    it('shows "Next Ns", in whole seconds rounded up, during the build window and during a wave', () => {
       const game = timedGame();
       const hud = mountHud(root, game, fakeSpeed());
-      expect(nextWave()?.textContent).toBe('Next wave in 10');
+      expect(nextWave()?.textContent).toBe('Next 10s');
       game.tick(TIMER_MS - 1500);
       hud.update();
-      expect(nextWave()?.textContent).toBe('Next wave in 2');
+      expect(nextWave()?.textContent).toBe('Next 2s');
       game.tick(1500);
       hud.update();
       expect(game.state.phase).toBe('wave');
-      expect(nextWave()?.textContent).toBe('Next wave in 10');
+      expect(nextWave()?.textContent).toBe('Next 10s');
     });
 
     it('shows no countdown once the last wave has started', () => {

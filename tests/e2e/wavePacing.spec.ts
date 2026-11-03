@@ -20,14 +20,14 @@ async function turnOnTactical(page: Page) {
 test('timed mode: wave 1 arrives by itself when the build window runs out', async ({ page }) => {
   await openGame(page);
   await expect(page.getByTestId('start-wave')).toHaveText('Call next wave');
-  await expect(page.getByTestId('hud-next-wave')).toHaveText(`Next wave in ${DEFAULT_WAVE_AFTER_MS / 1000}`);
+  await expect(page.getByTestId('hud-next-wave')).toHaveText(`Next ${DEFAULT_WAVE_AFTER_MS / 1000}s`);
 
   expect(await step(page, TIMER_TICKS - 1)).toMatchObject({ phase: 'build', waveNumber: 0 });
-  await expect(page.getByTestId('hud-next-wave')).toHaveText('Next wave in 1');
+  await expect(page.getByTestId('hud-next-wave')).toHaveText('Next 1s');
   expect(await step(page, 1)).toMatchObject({ phase: 'wave', waveNumber: 1 });
   await expect(page.getByTestId('hud-wave')).toHaveText(/^Wave 1 \//);
   // The countdown to wave 2 stays up during wave 1.
-  await expect(page.getByTestId('hud-next-wave')).toHaveText(/^Next wave in \d+$/);
+  await expect(page.getByTestId('hud-next-wave')).toHaveText(/^Next \d+s$/);
 });
 
 test('timed mode: calling a wave in starts it now, overlapping the one on the field, and restarts the timer', async ({
@@ -43,6 +43,30 @@ test('timed mode: calling a wave in starts it now, overlapping the one on the fi
   expect(now.nextWaveAtMs).toBe(now.timeMs + DEFAULT_WAVE_AFTER_MS);
   await expect(page.getByTestId('hud-wave')).toHaveText(/^Waves 1–2 \//);
 });
+
+// The countdown shares the HUD's one-line message slot (#274), so it has to fit there, overlap counter and all.
+for (const viewport of [
+  { width: 900, height: 560 },
+  { width: 844, height: 390 },
+  { width: 390, height: 844 },
+]) {
+  test(`on ${viewport.width} × ${viewport.height}, the countdown fits whole beside "Waves 1–2 / 10"`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await openGame(page);
+    await page.getByTestId('start-wave').click();
+    await page.getByTestId('start-wave').click();
+    await expect(page.getByTestId('hud-wave')).toHaveText(/^Waves 1–2 \//);
+    await expect(page.getByTestId('hud-next-wave')).toHaveText(/^Next \d+s$/);
+    // Nothing else is in the slot yet (no banner), so any overflow is the countdown being cut off.
+    const fits = await page.evaluate(() => {
+      const slot = document.querySelector<HTMLElement>('#hud .hud-message')!;
+      return slot.scrollWidth <= slot.clientWidth;
+    });
+    expect(fits).toBe(true);
+  });
+}
 
 test('Tactical mode: no timer, and a wave starts only when the player calls it', async ({ page }) => {
   await openGame(page);
