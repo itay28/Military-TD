@@ -14,4 +14,4 @@ When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the 
 
 Edit the "Label in our tracker" column to match whatever vocabulary you actually use.
 
-Outside the triage roles, `needs-you` marks a PR the PR steward couldn't finish (stuck after 2 rounds). It and `needs-info` both push to the maintainer's phone; see **Hand-off** in `docs/agents/issue-tracker.md`.
+Outside the triage roles, `needs-you` marks a PR the PR steward couldn't finish (stuck after 2 rounds), and `needs-approval` a green PR that changes a critical path and waits for the maintainer's `/approve` (#206, #417). Both, and `needs-info`, push to the maintainer's phone; see **Hand-off** in `docs/agents/issue-tracker.md`. Closing a PR or an issue removes `needs-you` and `needs-approval` from it (*Board sync*).

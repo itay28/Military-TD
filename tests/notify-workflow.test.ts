@@ -11,9 +11,9 @@ describe('notify workflow', () => {
     expect(notify).toMatch(/^on:\n {2}pull_request:\n {4}types: \[labeled\]\n {2}issues:\n {4}types: \[labeled\]\n/m);
   });
 
-  it('only starts for the needs-you and needs-info labels', () => {
+  it('only starts for the needs-you, needs-approval and needs-info labels', () => {
     expect(notify).toContain(
-      "    if: github.event.label.name == 'needs-you' || github.event.label.name == 'needs-info'\n",
+      "    if: github.event.label.name == 'needs-you' || github.event.label.name == 'needs-approval' || github.event.label.name == 'needs-info'\n",
     );
   });
 

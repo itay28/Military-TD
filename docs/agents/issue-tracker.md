@@ -90,7 +90,7 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 The current milestone is the open one with the earliest due date, else the lowest version.
 
 **API quota (#293):** `PROJECT_TOKEN` is the maintainer's own classic PAT, so Board sync, PR steward and every other workflow that uses it share one hourly GitHub quota (REST and GraphQL points). To keep a burst of events from spending it:
-- **Debounce:** an event run of Board sync or PR steward first waits 60 s in a `debounce` job, in a concurrency group where a newer event cancels the older wait. A burst (a relabel, an agent's pushes and comments, CI and the review finishing together) ends in one sweep, and a sweep is never cancelled mid-write. Scheduled and manual runs skip the wait, so the hourly sweep still runs while events keep coming.
+- **Debounce (#417):** every run of Board sync or PR steward first passes a `debounce` job (`scripts/debounce.ts`, with `GITHUB_TOKEN`). It sweeps at once when no other run of the workflow is active, yields to a newer run that will sweep (that run reads the board after this event), and waits while an older run is still active. A burst (a relabel, an agent's pushes and comments, CI and the review finishing together) ends in the sweep already running plus one more. There's no fixed wait, nothing is cancelled (GitHub shows a cancelled run as a red ✗ next to a PR's green checks), and two sweeps never overlap. A yielded run passes green and its sweep job shows as skipped.
 - **Fewer, cheaper queries:** the retry check reads every claimed issue in one GraphQL call, and PR steward reads 5 open issues per milestone (enough to tell whether only the release issue is left) rather than 100, which was most of its query cost.
 - **Measured:** each run ends with a log line: `GitHub API: <n> REST + <n> GraphQL requests. Quota left: core …, graphql … (fell by <n> during the run).` (`scripts/rate-limit.ts`). Check it in the run log before cutting more.
 - **Fail soft:** once GitHub answers with a rate limit, the run sends no more GitHub requests, logs a warning with the reset time and passes green (no red run, no failure report). The next scheduled run catches up.
@@ -122,7 +122,7 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack, `FE
 
 | The PR | Steward does |
 | --- | --- |
-| from a fork, labelled `hold`, a draft that isn't stranded (below), or `needs-you` with no maintainer comment since the hand-off | nothing |
+| from a fork, labelled `hold`, a draft that isn't stranded (below), or `needs-you`/`needs-approval` with no maintainer comment since the hand-off | nothing |
 | mergeability still computing, a round in flight (no done marker yet, under 1 h old), or checks running (CI, CI review) | waits |
 | a conflict, a failing check, a CI review with findings or a maintainer comment newer than the last done marker, or unresolved review threads (a review that ends with `<!-- code-review:clean -->` has nothing to answer and starts no round, #303) | fires a **round** of the `pr-steward` task, which fixes what it can and ends with a `<!-- pr-steward:done -->` comment |
 | the same, after 2 rounds since the latest maintainer comment, or a conflict a round couldn't resolve | hands off: `needs-you` label + a summary comment |
@@ -132,7 +132,7 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack, `FE
 | no CI review comment yet | adds `review-again` itself, once per head commit, with a comment saying so (#209): a PR marked ready while it had a conflict never started the review, as GitHub runs no PR workflow on a conflicted PR. Then waits (add `review-again` to ask again) |
 | closes an issue that is still blocked by open issues, or labelled `needs-info` | waits |
 | closes an issue in a later milestone than the current one (auto-start's look-ahead) | waits until the current milestone ships (its release closes the milestone); rounds still run |
-| green, review answered, threads resolved, targets `main`, but it changes a **critical path** (#206) and no maintainer `/approve` came after both the latest round and the latest commit that isn't a merge | hands off for approval: `needs-you` + a comment listing the paths. Comment `/approve` to merge it, or comment what to change (that fires a round, and it asks again after). Critical paths (`CRITICAL_PATHS` in `scripts/pr-steward.ts`): the pipeline and the checks that gate merging (`.github/`, `.claude/`, `.husky/`, `CLAUDE.md`, `docs/agents/`, `scripts/` except `scenario.ts` and `itch-build.ts`, the lint/TS/Vite/Playwright configs), the release-please config and manifest, `docs/adr/`, `package.json` and its lockfile, `assets/manifest.json` and `LICENSE`; a renamed file (its old path is unknown) and a PR with more than 100 files count too |
+| green, review answered, threads resolved, targets `main`, but it changes a **critical path** (#206) and no maintainer `/approve` came after both the latest round and the latest commit that isn't a merge | hands off for approval: `needs-approval` + a comment listing the paths. Comment `/approve` to merge it, or comment what to change (that fires a round, and it asks again after). Critical paths (`CRITICAL_PATHS` in `scripts/pr-steward.ts`): the pipeline and the checks that gate merging (`.github/`, `.claude/`, `.husky/`, `CLAUDE.md`, `docs/agents/`, `scripts/` except `scenario.ts` and `itch-build.ts`, the lint/TS/Vite/Playwright configs), the release-please config and manifest, `docs/adr/`, `package.json` and its lockfile, `assets/manifest.json` and `LICENSE`; a file renamed away from a critical path (old paths come from the REST file list; a rename whose old path can't be read counts too) and a PR with more than 100 files count too |
 | any PR that would merge (the release and milestone report PRs too) while `ci` or `e2e` failed on `main`'s head commit (#220) | waits (`main CI is failing (#n)`), unless it closes the open *Failure report* issue for CI: that PR is the fix and merges. Rounds and base merges still run. Pair it with branch protection's *Require branches to be up to date before merging* on `main`, so every merge was tested against the current `main` |
 | green, review answered, threads resolved, targets `main` | squash-merges it with the PR title (+ ` (#n)`) and body; if GitHub refuses, hands off |
 | release-please's release PR | no rounds and no review needed. It merges only when its version is the current milestone's (`v0.2.0 — …` → `release 0.2.0`), once its checks are green; merging publishes the release, and the release push tells you. A patch release (`release 0.1.2`) waits for you to merge it by hand (#187). Its checks only run with the `RELEASE_PLEASE_TOKEN` secret (`docs/agents/releasing.md`); without it, it waits for you |
@@ -170,20 +170,20 @@ gh project item-edit --project-id <project-id> --id <item-id> \
 
 ## Hand-off
 
-The maintainer isn't watching the board. They get an [ntfy](https://ntfy.sh) phone push when they're needed, and the **Needs you** board view (filter `label:needs-you,needs-info`) lists what's waiting on them.
+The maintainer isn't watching the board. They get an [ntfy](https://ntfy.sh) phone push when they're needed, and the **Needs you** board view (filter `label:needs-you,needs-approval,needs-info`) lists what's waiting on them.
 
 | Push | When | Clicks through to |
 | --- | --- | --- |
 | *Military-TD vX.Y.Z released*, with the changelog link | release-please publishes a release (`notify` job in `release-please.yml`) | the GitHub Release |
-| *PR #n needs your approval*, with the paths | a PR that changes a critical path is otherwise ready to merge (#206); comment `/approve` | the PR |
+| *PR #n needs your approval*, with the paths | a PR that changes a critical path is otherwise ready to merge and gets `needs-approval` (#206, #417); comment `/approve` | the PR |
 | *PR #n is stuck*, with the steward's summary | a PR gets `needs-you`: the PR steward gave up after 2 rounds, or its trigger has a setup error | the PR |
 | *Issue #n needs you*, with auto-start's summary | an issue gets `needs-you`: auto-start's trigger has a setup error (#200) | the issue |
 | *Question on #n*, with the issue title | an issue gets `needs-info`: an agent asked a question (`docs/agents/prompts/implement.md`) | the issue |
 | *Issue #n needs you*, with the idle summary | Board sync finds the pipeline starved: nothing to start and no agent working (#226); again when the reasons change | the *Pipeline is idle* issue |
 | *<workflow> failing: issue #n* | CI on `main`, Release or Deploy fails and `failure-report.yml` opens its issue (#207) | the issue |
 
-- **Labels:** `needs-you` goes on a stuck PR or an issue auto-start couldn't start, `needs-info` on an issue with an open question. Removing the label takes the item out of the view. `hold` on the item means no push.
-- **Steward summary:** the PR steward posts its summary as a PR comment that starts with `<!-- pr-steward:stuck -->`, then adds `needs-you`; auto-start does the same on an issue with `<!-- auto-start:stuck -->`. The push carries the latest such comment, or the title when there's none.
+- **Labels:** `needs-you` goes on a stuck PR or an issue auto-start couldn't start, `needs-approval` on a PR waiting for `/approve`, `needs-info` on an issue with an open question. Removing the label takes the item out of the view; closing the PR or issue removes `needs-you` and `needs-approval` (*Board sync*'s `clear-hand-off` job, #417). `hold` on the item means no push.
+- **Steward summary:** the PR steward posts its summary as a PR comment that starts with `<!-- pr-steward:stuck -->`, then adds `needs-you` (`needs-approval` for an approval request); auto-start does the same on an issue with `<!-- auto-start:stuck -->`. The push carries the latest such comment, or the title when there's none.
 - **Failure reports:** `.github/workflows/failure-report.yml` (logic and tests in `scripts/failure-report.ts`) runs when `CI` (on `main`), `Release` or `Deploy` completes. Its job is skipped for CI and Release runs off `main`, so PR CI costs no Actions minutes (#217). A failure opens `fix: <workflow> failing on main` (`… failing for <tag>` for Deploy) labelled `bug`, `needs-triage`, `area:infra`, a sub-issue of the Infra epic (#24) in the current milestone, and pushes. It is `needs-triage`, not `ready-for-agent`, so a human or `/triage` decides first. The body carries `<!-- failure-report:<workflow> -->`: while that issue is open, later failures add a comment instead, and a green run comments that it's green again (the fixing PR closes the issue). `Deploy` is also called by the release workflow, and a called workflow raises no `workflow_run` of its own: a failed deploy after a release shows up as a `Release` failure; only a manual Deploy dispatch takes the `Deploy` path.
 - **How:** `.github/workflows/notify.yml` runs on those labels; logic and tests in `scripts/notify.ts`. Labels added with `GITHUB_TOKEN` don't start workflows, so an Action that labels that way runs `node scripts/notify.ts pr <n>` (or `issue <n>`) itself. A missing `NTFY_TOPIC` secret or an ntfy error fails the run.
 
@@ -191,7 +191,7 @@ The maintainer isn't watching the board. They get an [ntfy](https://ntfy.sh) pho
 1. Pick a long random topic name (it's the only secret: anyone who knows it can read and send), e.g. `openssl rand -hex 16` → `mtd-<hex>`.
 2. GitHub → Settings → Secrets and variables → Actions → **Secrets**: add `NTFY_TOPIC` with that name.
 3. Install the ntfy app (Android or iOS), tap **+**, and subscribe to that topic on `ntfy.sh`.
-4. Project board → **New view** (table) named **Needs you**, filter `label:needs-you,needs-info`.
+4. Project board → **New view** (table) named **Needs you**, filter `label:needs-you,needs-approval,needs-info`.
 5. Check: Actions → *Notify* runs when you add `needs-info` to a test issue; the phone shows *Question on #n*.
 
 ## Wayfinding operations
