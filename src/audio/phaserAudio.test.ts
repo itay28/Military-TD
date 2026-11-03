@@ -20,13 +20,13 @@ const full = () => 1;
 describe('createPhaserAudio', () => {
   it('plays a loaded sound by its cache key', () => {
     const sound = manager();
-    createPhaserAudio(sound, () => true, full).play('cannonShot');
-    expect(sound.plays).toEqual([soundKey('cannonShot')]);
+    createPhaserAudio(sound, () => true, full).play('missileLaunch');
+    expect(sound.plays).toEqual([soundKey('missileLaunch')]);
   });
 
   it('stays silent until the browser unlocks audio (the first input)', () => {
     const sound = manager({ locked: true });
-    createPhaserAudio(sound, () => true, full).play('cannonShot');
+    createPhaserAudio(sound, () => true, full).play('missileLaunch');
     expect(sound.plays).toEqual([]);
   });
 
@@ -53,7 +53,7 @@ describe('createPhaserAudio', () => {
       () => true,
       () => volume,
     );
-    audio.play('cannonShot');
+    audio.play('missileLaunch');
     volume = 0.2;
     audio.play('leak');
     expect(sound.volumes).toEqual([0.64, 0.2]);
@@ -65,7 +65,15 @@ describe('createPhaserAudio', () => {
       sound,
       () => true,
       () => 0,
-    ).play('cannonShot');
+    ).play('missileLaunch');
     expect(sound.plays).toEqual([]);
+  });
+
+  it('plays at the volume it is given, full by default (#404)', () => {
+    const sound = manager();
+    const audio = createPhaserAudio(sound, () => true, full);
+    audio.play('mortarBlast', 0.25);
+    audio.play('rifleShot');
+    expect(sound.volumes).toEqual([0.25, 1]);
   });
 });
