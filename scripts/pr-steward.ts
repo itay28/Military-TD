@@ -308,29 +308,43 @@ export function decide(
   return heldByRedMain(pr, decideIgnoringMain(pr, now, defaultBranch, current), mainRed);
 }
 
-/**
- * A draft is left alone while someone may be working on it. It is stranded (#326) when a check
- * fails and nothing was committed or commented for DRAFT_IDLE_MS: null then, so the normal flow
- * fires a `ci` round. A draft whose steward round ended with every check green is marked ready.
- */
-function draftGate(pr: StewardPr, now: Date): Decision | null {
-  const skip: Decision = { kind: 'skip', why: 'draft' };
-  if (pr.labels.includes(NEEDS_YOU_LABEL)) return skip;
-  const relevant = currentChecks(pr.checks).filter((c) => !IGNORED_CHECKS.includes(c.name));
-  const all = currentChecks(pr.checks);
-  const times = [...pr.comments.map((c) => Date.parse(c.createdAt)), pr.lastCommitAt ? Date.parse(pr.lastCommitAt) : 0];
-  const lastActivity = Math.max(0, ...times);
-  const latest = (marker: string) =>
-    Math.max(0, ...pr.comments.filter((c) => c.body.includes(marker)).map((c) => Date.parse(c.createdAt)));
-  const lastRound = latest(ROUND_MARKER);
-  const green =
+/** The checks that count toward a PR's state: the latest run of each, minus the ones that never gate it. */
+const relevantChecks = (pr: StewardPr) => currentChecks(pr.checks).filter((c) => !IGNORED_CHECKS.includes(c.name));
+
+/** The time of the latest comment matching `test`, or 0. */
+const lastCommentAt = (pr: StewardPr, test: (c: PrComment) => boolean) =>
+  Math.max(0, ...pr.comments.filter(test).map((c) => Date.parse(c.createdAt)));
+
+/** Every check that counts passed, none is still running, and the PR merges cleanly. */
+const checksGreen = (pr: StewardPr) => {
+  const relevant = relevantChecks(pr);
+  return (
     relevant.length > 0 &&
     relevant.every((c) => c.state === 'success') &&
-    !all.some((c) => c.state === 'pending') &&
-    pr.mergeable === 'MERGEABLE';
-  if (lastRound > 0 && latest(DONE_MARKER) >= lastRound && green) return { kind: 'ready' };
-  const red = relevant.some((c) => c.state === 'failure');
-  return red && now.getTime() - lastActivity >= DRAFT_IDLE_MS ? null : skip;
+    !currentChecks(pr.checks).some((c) => c.state === 'pending') &&
+    pr.mergeable === 'MERGEABLE'
+  );
+};
+
+/**
+ * The whole draft rule (#326), in one place: a draft never reaches review, update or merge. It is
+ * left alone while someone may be working on it. It is `stranded` when a check fails and nothing
+ * was committed or commented for DRAFT_IDLE_MS: the normal flow then fires a `ci` round, and only
+ * `ci` (decideIgnoringMain keeps no other reason for a draft). A draft whose steward round ended
+ * with everything green is marked ready.
+ */
+function draftStage(pr: StewardPr, now: Date): Decision | 'stranded' {
+  const skip: Decision = { kind: 'skip', why: 'draft' };
+  if (pr.labels.includes(NEEDS_YOU_LABEL)) return skip;
+  const lastRound = lastCommentAt(pr, (c) => c.body.includes(ROUND_MARKER));
+  const lastDone = lastCommentAt(pr, (c) => c.body.includes(DONE_MARKER));
+  if (lastRound > 0 && lastDone >= lastRound && checksGreen(pr)) return { kind: 'ready' };
+  const lastActivity = Math.max(
+    lastCommentAt(pr, () => true),
+    pr.lastCommitAt ? Date.parse(pr.lastCommitAt) : 0,
+  );
+  const red = relevantChecks(pr).some((c) => c.state === 'failure');
+  return red && now.getTime() - lastActivity >= DRAFT_IDLE_MS ? 'stranded' : skip;
 }
 
 function decideIgnoringMain(
@@ -342,17 +356,15 @@ function decideIgnoringMain(
   if (pr.fork) return { kind: 'skip', why: 'fork' };
   if (pr.labels.includes(HOLD_LABEL)) return { kind: 'skip', why: HOLD_LABEL };
   if (pr.isDraft) {
-    const gate = draftGate(pr, now);
-    if (gate) return gate;
+    const stage = draftStage(pr, now);
+    if (stage !== 'stranded') return stage;
   }
   if (pr.head.startsWith(RELEASE_BRANCH)) return decideRelease(pr, current);
   const report = REPORT_BRANCH.exec(pr.head)?.[1];
   if (report) return decideReport(pr, current, report);
   const checks = currentChecks(pr.checks);
 
-  // The time of the latest comment matching `test`, or 0.
-  const last = (test: (c: PrComment) => boolean) =>
-    Math.max(0, ...pr.comments.filter(test).map((c) => Date.parse(c.createdAt)));
+  const last = (test: (c: PrComment) => boolean) => lastCommentAt(pr, test);
   const lastMaintainer = last(isMaintainer);
   const lastDone = last((c) => c.body.includes(DONE_MARKER));
   const lastRound = last((c) => c.body.includes(ROUND_MARKER));
@@ -370,7 +382,7 @@ function decideIgnoringMain(
   if (lastRound > lastDone && now.getTime() - lastRound < ROUND_TIMEOUT_MS)
     return { kind: 'wait', why: 'a steward round is in flight' };
 
-  const relevant = checks.filter((c) => !IGNORED_CHECKS.includes(c.name));
+  const relevant = relevantChecks(pr);
   const conflict = pr.mergeable === 'CONFLICTING';
   const pending =
     relevant.some((c) => c.state === 'pending') ||
@@ -385,7 +397,7 @@ function decideIgnoringMain(
   if (lastFindings > lastDone && lastFindings === lastReview) reasons.push('review');
   if (last((c) => isMaintainer(c) && !isApproval(c)) > lastDone) reasons.push('comment');
   if (pr.unresolvedThreads > 0) reasons.push('threads');
-  // A draft is mid-work: only red CI starts a round, and it never reaches review or merge (#326).
+  // A draft only ever gets a `ci` round (see draftStage).
   if (pr.isDraft) reasons.splice(0, reasons.length, ...reasons.filter((r) => r === 'ci'));
   if (reasons.length) {
     const since = pr.comments.filter((c) => c.body.includes(ROUND_MARKER) && Date.parse(c.createdAt) > lastMaintainer);
@@ -448,7 +460,7 @@ function wrongVersion(name: string, version: string, current: CurrentMilestone |
 
 /** A generated PR merges once its checks are green (some must have run), and is brought up to date when behind. */
 function whenGreen(pr: StewardPr, name: string, unmergeable: string): Decision {
-  const relevant = currentChecks(pr.checks).filter((c) => !IGNORED_CHECKS.includes(c.name));
+  const relevant = relevantChecks(pr);
   if (pr.mergeable !== 'MERGEABLE') return { kind: 'wait', why: `${name}: ${unmergeable}` };
   if (!relevant.length) return { kind: 'wait', why: `${name}: no checks ran on it` };
   if (relevant.some((c) => c.state !== 'success')) return { kind: 'wait', why: `${name}: checks running or failing` };

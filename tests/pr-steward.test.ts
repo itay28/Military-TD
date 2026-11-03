@@ -1066,6 +1066,23 @@ describe('act', () => {
     });
   });
 
+  it('marks a green draft ready with the GraphQL mutation, then says so (#326)', async () => {
+    const gql = vi.fn(async () => new Response(JSON.stringify({ data: { markPullRequestReadyForReview: {} } })));
+    vi.stubGlobal('fetch', gql);
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    try {
+      await act({ ...pr(), id: 'PR_node' }, { kind: 'ready' }, 'gh-token', settings, fetchFn);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    const [url, init] = gql.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.github.com/graphql');
+    const sent = JSON.parse(init.body as string) as { query: string; variables: { id: string } };
+    expect(sent.query).toContain('markPullRequestReadyForReview');
+    expect(sent.variables).toEqual({ id: 'PR_node' });
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`]);
+  });
+
   it('hands off when GitHub refuses the merge', async () => {
     const fetchFn = vi.fn<Fetch>(async (url: string) =>
       url.endsWith('/merge') ? new Response('{"message":"Review required"}', { status: 405 }) : ok(),
