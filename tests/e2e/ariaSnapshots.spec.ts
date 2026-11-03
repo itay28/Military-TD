@@ -33,12 +33,18 @@ test('the build bar marks the selected tower', async ({ page }) => {
   await expectAria(page.locator('#build-bar'), 'build-bar-selected.aria.yml');
 });
 
-test('the pause menu offers Resume, Restart, Settings, and Quit to menu disabled until it is wired', async ({
+test('the pause menu offers Resume, Restart, Settings, Keys, and Quit to menu disabled until it is wired', async ({
   page,
 }) => {
   await openGame(page);
   await page.getByRole('button', { name: 'Pause' }).click();
   await expectAria(page.locator('#pause-menu'), 'pause-menu.aria.yml');
+});
+
+test('the Keys help overlay lists every shortcut, then Back', async ({ page }) => {
+  await openGame(page);
+  await page.keyboard.press('h');
+  await expectAria(page.locator('#pause-menu'), 'help-overlay.aria.yml');
 });
 
 test('the Main menu shows the title, Play, Settings, and Credits', async ({ page }) => {
