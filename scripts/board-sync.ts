@@ -23,9 +23,9 @@ import {
   type Routines,
   type SizingCandidate,
   type StartIssue,
+  isFeatureFreeze,
 } from './auto-start.ts';
 import { ApiMeter, softFail } from './rate-limit.ts';
-import { isFeatureFreeze } from './pr-title.ts';
 import { applyIdle, findIdleIssue, idleReasons, isStarved, planIdle, type IdleIssue } from './pipeline-idle.ts';
 
 // Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule

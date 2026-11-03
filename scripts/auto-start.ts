@@ -19,6 +19,11 @@ export const INFRA_LABEL = 'area:infra';
 /** Feature work: frozen during the feature freeze (#84), unless it is also a bug or infra. */
 export const ENHANCEMENT_LABEL = 'enhancement';
 export const BUG_LABEL = 'bug';
+
+/** The feature freeze is on only when the repo variable FEATURE_FREEZE is `true`; unset or anything else is off. */
+export function isFeatureFreeze(value: string | undefined): boolean {
+  return value?.trim().toLowerCase() === 'true';
+}
 /** The label an issue needs before agents may pick it up (docs/agents/triage-labels.md). */
 export const READY_LABEL = 'ready-for-agent';
 /** Starts the comment auto-start posts before labelling an issue `needs-you`; the push carries it. */

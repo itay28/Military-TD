@@ -1,9 +1,14 @@
 import { pathToFileURL } from 'node:url';
+import { isFeatureFreeze } from './auto-start.ts';
 
 /** Commit types allowed in PR titles. The squash commit's type drives the version bump (ADR-0004). */
 export const COMMIT_TYPES = ['feat', 'fix', 'test', 'chore', 'docs', 'refactor', 'ci'] as const;
 
 const TITLE = new RegExp(`^(${COMMIT_TYPES.join('|')})(\\([\\w./-]+\\))?!?: \\S`);
+
+function titleType(title: string): string | undefined {
+  return TITLE.exec(title)?.[1];
+}
 
 /** True when `title` is a Conventional Commit header: `type(scope)!: description`. */
 export function isConventionalTitle(title: string): boolean {
@@ -12,13 +17,6 @@ export function isConventionalTitle(title: string): boolean {
 
 /** The PR label that lets one `feat` PR merge during the feature freeze (#84). */
 export const FREEZE_EXCEPTION_LABEL = 'freeze-exception';
-
-/** The feature freeze is on only when the repo variable FEATURE_FREEZE is `true`; unset or anything else is off. */
-export function isFeatureFreeze(value: string | undefined): boolean {
-  return value?.trim().toLowerCase() === 'true';
-}
-
-const FEATURE = /^feat(\([\w./-]+\))?!?:/;
 
 export interface TitleOptions {
   /** FEATURE_FREEZE is on. */
@@ -40,7 +38,7 @@ export function checkTitle(title: string, { freeze, labels }: TitleOptions): { o
         `Use "<type>: <description>" or "<type>(scope)!: <description>", where type is one of: ${COMMIT_TYPES.join(', ')}.\n` +
         'Example: "feat: tower targeting and firing". See docs/agents/workflow.md (Commit types and versions).',
     };
-  if (freeze && FEATURE.test(title) && !labels.includes(FREEZE_EXCEPTION_LABEL))
+  if (freeze && titleType(title) === 'feat' && !labels.includes(FREEZE_EXCEPTION_LABEL))
     return {
       ok: false,
       message:

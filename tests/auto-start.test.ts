@@ -3,6 +3,7 @@ import {
   AUTO_AGENT_LABEL,
   DONE_MARKER,
   FIRED_MARKER,
+  isFeatureFreeze,
   GIVE_UP_MARKER,
   HANDOFF_MARKER,
   SPLIT_LABEL,
@@ -825,5 +826,16 @@ describe('retryIssue: fire again, keep the claim (#201)', () => {
     await expect(retryIssue(retry, 'gh-token', routines, fetchFn)).rejects.toThrow(/#7/);
     expect(calls(fetchFn)).toEqual(['POST https://fire.example/sonnet', `POST ${api}/comments`, `POST ${api}/labels`]);
     expect(JSON.parse(fetchFn.mock.calls[2]![1].body as string)).toEqual({ labels: ['needs-you'] });
+  });
+});
+
+// The feature freeze switch (#84): only FEATURE_FREEZE=true turns it on.
+describe('isFeatureFreeze', () => {
+  it.each(['true', 'TRUE', ' true '])('is on for %j', (value) => {
+    expect(isFeatureFreeze(value)).toBe(true);
+  });
+
+  it.each([undefined, '', 'false', 'off', 'on', '1'])('is off for %j', (value) => {
+    expect(isFeatureFreeze(value)).toBe(false);
   });
 });

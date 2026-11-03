@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkTitle, FREEZE_EXCEPTION_LABEL, isConventionalTitle, isFeatureFreeze } from '../scripts/pr-title';
+import { checkTitle, FREEZE_EXCEPTION_LABEL, isConventionalTitle } from '../scripts/pr-title';
 
 // The PR title becomes the squash commit, and its type drives the version bump (ADR-0004).
 describe('isConventionalTitle', () => {
@@ -24,17 +24,6 @@ describe('isConventionalTitle', () => {
     expect(isConventionalTitle('feat:towers')).toBe(false);
     expect(isConventionalTitle('Feat: towers')).toBe(false);
     expect(isConventionalTitle('Add towers')).toBe(false);
-  });
-});
-
-// The feature freeze (#84): while FEATURE_FREEZE is `true`, `feat` PRs don't merge unless labelled freeze-exception.
-describe('isFeatureFreeze', () => {
-  it.each(['true', 'TRUE', ' true '])('is on for %j', (value) => {
-    expect(isFeatureFreeze(value)).toBe(true);
-  });
-
-  it.each([undefined, '', 'false', 'off', 'on', '1'])('is off for %j', (value) => {
-    expect(isFeatureFreeze(value)).toBe(false);
   });
 });
 
