@@ -1,4 +1,5 @@
-import { TOWER_LEVELS, TOWER_STATS, type TowerKind } from '../data/towers';
+import { AIM_TOLERANCE, TOWER_LEVELS, TOWER_STATS, TURN_RATES, type TowerKind } from '../data/towers';
+import { aimAngle, turnToward, wrap } from './aim';
 import { damageTaken, type Layer } from './combat';
 import type { Enemy } from './enemies';
 import { tileCenter, type Position, type Tile } from './map';
@@ -39,6 +40,8 @@ export interface Tower extends TowerStats {
   readonly spent: number;
   /** Time left until a sold tower is gone; undefined while it stands. A dismantling tower doesn't fire. */
   readonly dismantleMs?: number;
+  /** Where its turret points, in radians (0 east, rows grow down); it turns at its kind's `TURN_RATES`. */
+  readonly heading: number;
 }
 
 /** Every level's stats for `kind`, level 1 (`TOWER_STATS`) first. */
@@ -102,13 +105,14 @@ export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | u
 }
 
 /**
- * Counts each tower's cooldown down by `dtMs`; a ready tower with a target hits it once,
- * for `damage` less the target's armor (see `damageTaken`).
+ * Counts each tower's cooldown down by `dtMs` and turns it toward its target at its kind's turn rate (`TURN_RATES`);
+ * a ready tower facing its target (within `AIM_TOLERANCE`) hits it once, for `damage` less the target's armor
+ * (see `damageTaken`). A kind with no turn rate (the Mortar) faces its target at once.
  * A tower with `shell` doesn't hit: it returns a launch at its target's position, to become a Shell.
  * Towers act in order, and an enemy at 0 HP is removed at once, so later towers retarget.
- * A dismantling tower does neither.
+ * A dismantling tower neither turns nor fires.
  * Time past the end of a cooldown carries into the next, so the fire rate holds at any tick size;
- * an idle tower waits at 0, ready.
+ * an idle or still-turning tower waits at 0, ready.
  */
 export function fireTowers(
   towers: readonly Tower[],
@@ -122,14 +126,19 @@ export function fireTowers(
   const nextTowers = towers.map((tower) => {
     if (tower.dismantleMs !== undefined) return tower;
     const cooldownMs = tower.cooldownMs - dtMs;
-    const target = cooldownMs <= COOLDOWN_EPSILON ? selectTarget(tower, alive) : undefined;
-    if (!target) return { ...tower, cooldownMs: Math.max(0, cooldownMs) };
+    const target = selectTarget(tower, alive);
+    const aim = aimAngle(tileCenter(tower.tile), target?.position, tower.heading);
+    const turnRate = TURN_RATES[tower.kind];
+    const heading = turnRate === null ? wrap(aim) : turnToward(tower.heading, aim, (turnRate * dtMs) / 1000);
+    const aimed = Math.abs(wrap(aim - heading)) <= AIM_TOLERANCE;
+    if (!target || !aimed || cooldownMs > COOLDOWN_EPSILON)
+      return { ...tower, heading, cooldownMs: Math.max(0, cooldownMs) };
     if (tower.shell) launches.push({ tower, target: target.position, shell: tower.shell });
     else fireDirect(tower, target);
     // A tower that came off cooldown mid-tick fired late; take that time off its next cooldown.
-    // One that was already waiting at 0 only now saw a target, so it gets a full cooldown.
+    // One that was already waiting at 0 only now saw (or faced) a target, so it gets a full cooldown.
     const lateMs = tower.cooldownMs > 0 ? Math.max(0, -cooldownMs) : 0;
-    return { ...tower, cooldownMs: Math.max(0, 1000 / tower.fireRate - lateMs) };
+    return { ...tower, heading, cooldownMs: Math.max(0, 1000 / tower.fireRate - lateMs) };
   });
   return { towers: nextTowers, enemies: alive, shots, launches, kills };
 

@@ -15,6 +15,7 @@ const tower = (id: number, kind: 'cannon' | 'rifleNest'): Tower => ({
   cooldownMs: 0,
   level: 1,
   spent: TOWER_STATS[kind].cost,
+  heading: -Math.PI / 2,
 });
 
 const enemy = (id: number, stats: Partial<Enemy> = {}): Enemy => ({

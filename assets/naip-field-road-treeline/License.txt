@@ -1,0 +1,7 @@
+naip-field-road-treeline.png: cut from USDA Farm Service Agency NAIP imagery,
+scene ia_m_4209359_nw_15_030_20230902_20240104 (Iowa, 2023, 0.3 m), served by
+Microsoft Planetary Computer: https://planetarycomputer.microsoft.com/dataset/naip
+
+NAIP imagery is a work of the US Government and is in the public domain
+(17 U.S.C. 105). Courtesy of the USDA Farm Service Agency.
+Made by scripts/naip-patch.py (cropped and resampled to 128 px per tile).

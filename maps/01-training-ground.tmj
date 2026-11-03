@@ -3,15 +3,43 @@
  "version": "1.10",
  "tiledversion": "1.11.2",
  "orientation": "orthogonal",
+ "properties": [
+  {
+   "name": "attacker",
+   "type": "string",
+   "value": "russia"
+  },
+  {
+   "name": "defender",
+   "type": "string",
+   "value": "us"
+  }
+ ],
  "renderorder": "right-down",
  "infinite": false,
  "width": 16,
  "height": 10,
  "tilewidth": 48,
  "tileheight": 48,
- "nextlayerid": 3,
+ "nextlayerid": 4,
  "nextobjectid": 2,
  "layers": [
+  {
+   "id": 3,
+   "name": "ground-image",
+   "type": "imagelayer",
+   "image": "../assets/naip-maps/training-ground.jpg",
+   "imagewidth": 1536,
+   "imageheight": 960,
+   "x": 0,
+   "y": 0,
+   "offsetx": 0,
+   "offsety": 0,
+   "opacity": 1,
+   "visible": true,
+   "repeatx": false,
+   "repeaty": false
+  },
   {
    "id": 1,
    "type": "tilelayer",

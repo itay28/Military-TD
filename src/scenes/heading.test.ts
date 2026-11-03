@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { RENDER_FACING } from '../data/renders';
 import { SPRITE_HEADING } from '../data/sprites';
 import { headingOf, spriteRotation } from './heading';
 
@@ -26,10 +27,14 @@ describe('headingOf', () => {
 describe('spriteRotation', () => {
   it('turns a sprite from the way its frame faces to the heading', () => {
     expect(SPRITE_HEADING.infantry).toBe(0); // the Kenney TD units face east
-    expect(spriteRotation('infantry', 0)).toBeCloseTo(0);
-    expect(spriteRotation('infantry', Math.PI / 2)).toBeCloseTo(Math.PI / 2);
+    expect(spriteRotation(SPRITE_HEADING.infantry, 0)).toBeCloseTo(0);
+    expect(spriteRotation(SPRITE_HEADING.infantry, Math.PI / 2)).toBeCloseTo(Math.PI / 2);
     expect(SPRITE_HEADING.tank).toBeCloseTo(-Math.PI / 2); // the Tanks pack body faces north
-    expect(spriteRotation('tank', 0)).toBeCloseTo(Math.PI / 2);
-    expect(spriteRotation('tank', -Math.PI / 2)).toBeCloseTo(0);
+    expect(spriteRotation(SPRITE_HEADING.tank, 0)).toBeCloseTo(Math.PI / 2);
+    expect(spriteRotation(SPRITE_HEADING.tank, -Math.PI / 2)).toBeCloseTo(0);
+  });
+
+  it('turns a render, which faces north, the same way', () => {
+    expect(spriteRotation(RENDER_FACING, Math.PI / 2)).toBeCloseTo(Math.PI); // south: a half turn
   });
 });

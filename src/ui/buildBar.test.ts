@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
+import { renderFor } from '../data/renders';
+import { towerIcon } from '../data/sprites';
 import { TOWER_STATS } from '../data/towers';
 import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
 
@@ -38,6 +40,9 @@ describe('buildOptions', () => {
           shape: TOWER_STYLE[kind as keyof typeof TOWER_STATS].shape,
           size: TOWER_STYLE[kind as keyof typeof TOWER_STATS].size,
         },
+        ...(kind === 'aaGun'
+          ? { render: expect.objectContaining({ hullUrl: renderFor('aaGun')!.hullUrl }) }
+          : { sprite: towerIcon(kind as keyof typeof TOWER_STATS) }),
       })),
     );
     expect(buildOptions()[0]).toMatchObject({ kind: 'rifleNest', name: 'Rifle Nest', cost: 50 });
@@ -72,7 +77,7 @@ describe('Build bar', () => {
   });
 
   it('matches every kind icon shape to TOWER_STYLE, so a new kind cannot drift', () => {
-    const options = buildOptions();
+    const options = buildOptions(() => false); // shapes only: a render icon has none
     mountBuildBar(root, wallet(500), options);
     for (const { kind } of options) {
       const icon = button(kind).querySelector<HTMLElement>('.build-icon')!;
@@ -232,5 +237,129 @@ describe('Build bar', () => {
     expect(root.children).toHaveLength(0);
     pressKey('2');
     expect(bar.selected).toBeUndefined();
+  });
+});
+
+describe('Build bar sprite icons', () => {
+  const atlas = {
+    url: 'atlas.png',
+    frame: (name: string) => (name === 'missing' ? null : { x: 10, y: 20, w: 64, h: 64 }),
+  };
+  const sprite = { base: 'baseFrame', turret: 'turretFrame', turretRotation: -Math.PI / 2 };
+  const iconOf = (kind: string) => button(kind).querySelector<HTMLElement>('.build-icon')!;
+
+  it('draws a kind with a sprite as its base and turret layers from the atlas, with no shape fill', () => {
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, sprite }, OPTIONS[1]!], { atlas });
+    const layers = iconOf('rifle').querySelectorAll<HTMLElement>('.build-icon-layer');
+    expect(layers).toHaveLength(2);
+    expect(layers[0]!.style.backgroundImage).toContain('atlas.png');
+    expect(layers[0]!.style.backgroundPosition).toBe('-10px -20px');
+    expect(layers[1]!.style.transform).toContain('rotate(-90deg)');
+    expect(iconOf('rifle').style.backgroundColor).toBe('');
+  });
+
+  it('keeps the shape for a kind whose sprite frame is missing', () => {
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[1]!, sprite: { ...sprite, turret: 'missing' } }], { atlas });
+    const icon = iconOf('cannon');
+    expect(icon.querySelector('.build-icon-layer')).toBeNull();
+    expect(icon.style.backgroundColor).not.toBe('');
+  });
+
+  it('keeps the shape for a kind without a sprite', () => {
+    mountBuildBar(root, wallet(500), [OPTIONS[2]!], { atlas });
+    expect(iconOf('mortar').querySelector('.build-icon-layer')).toBeNull();
+    expect(iconOf('mortar').style.backgroundColor).not.toBe('');
+  });
+
+  it('keeps the shape when there is no atlas', () => {
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, sprite }]);
+    expect(iconOf('rifle').querySelector('.build-icon-layer')).toBeNull();
+    expect(iconOf('rifle').style.backgroundColor).not.toBe('');
+  });
+
+  it('scales a smaller tower’s sprite layers to its smaller icon', () => {
+    mountBuildBar(
+      root,
+      wallet(500),
+      [
+        { ...OPTIONS[0]!, sprite },
+        { ...OPTIONS[1]!, sprite },
+      ],
+      { atlas },
+    );
+    const scale = (kind: string) =>
+      Number(
+        /scale\(([\d.]+)\)/.exec(iconOf(kind).querySelector<HTMLElement>('.build-icon-layer')!.style.transform)![1],
+      );
+    const ratio = parseFloat(iconOf('rifle').style.width) / parseFloat(iconOf('cannon').style.width);
+    expect(scale('rifle') / scale('cannon')).toBeCloseTo(ratio);
+  });
+
+  it('buildOptions gives each kind with a sprite its icon layers', () => {
+    expect(buildOptions().find((o) => o.kind === 'cannon')!.sprite).toMatchObject({ turretRotation: 0 });
+  });
+});
+
+describe('Build bar render icons', () => {
+  const render = { hullUrl: 'hull.png', turretUrl: 'turret.png', canvasPx: 160 };
+  const iconOf = (kind: string) => button(kind).querySelector<HTMLElement>('.build-icon')!;
+
+  it('buildOptions gives a kind with a render its images and no Kenney sprite; others keep Kenney', () => {
+    const options = buildOptions();
+    const aa = options.find((o) => o.kind === 'aaGun')!;
+    expect(aa.render).toEqual({
+      hullUrl: renderFor('aaGun')!.hullUrl,
+      turretUrl: renderFor('aaGun')!.turretUrl,
+      canvasPx: renderFor('aaGun')!.canvasPx,
+    });
+    expect(aa.sprite).toBeUndefined();
+    const cannon = options.find((o) => o.kind === 'cannon')!;
+    expect(cannon.render).toBeUndefined();
+    expect(cannon.sprite).toBeDefined();
+  });
+
+  it('falls back to the Kenney sprite when the render did not load', () => {
+    const aa = buildOptions(() => false).find((o) => o.kind === 'aaGun')!;
+    expect(aa.render).toBeUndefined();
+    expect(aa.sprite).toEqual(towerIcon('aaGun'));
+  });
+
+  it('draws hull then turret from the render images, scaled to the box, needing no atlas', () => {
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, render }]);
+    const layers = iconOf('rifle').querySelectorAll<HTMLElement>('.build-icon-layer');
+    expect(layers).toHaveLength(2);
+    expect(layers[0]!.style.backgroundImage).toContain('hull.png');
+    expect(layers[1]!.style.backgroundImage).toContain('turret.png');
+    expect(layers[1]!.style.transform).toContain(`scale(${24 / 160})`);
+    expect(layers[1]!.style.transform).not.toContain('rotate');
+    expect(iconOf('rifle').style.backgroundColor).toBe('');
+  });
+});
+
+describe('mountBuildBar onSelect and clear', () => {
+  it('calls onSelect when a click or a hotkey selects a kind, not when one is cleared', () => {
+    let calls = 0;
+    const bar = mountBuildBar(root, wallet(500), OPTIONS, { onSelect: () => calls++ });
+    button('rifle').click();
+    pressKey('2');
+    expect(calls).toBe(2);
+    button('cannon').click(); // clears
+    expect(bar.selected).toBeUndefined();
+    expect(calls).toBe(2);
+  });
+
+  it('does not call onSelect for a kind the player cannot afford', () => {
+    let calls = 0;
+    mountBuildBar(root, wallet(10), OPTIONS, { onSelect: () => calls++ });
+    pressKey('1');
+    expect(calls).toBe(0);
+  });
+
+  it('clear() drops the selection and unpresses the button', () => {
+    const bar = mountBuildBar(root, wallet(500), OPTIONS);
+    button('rifle').click();
+    bar.clear();
+    expect(bar.selected).toBeUndefined();
+    expect(pressed()).toHaveLength(0);
   });
 });

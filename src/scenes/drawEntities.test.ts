@@ -71,6 +71,7 @@ const rifleNest = (id: number, col: number, row: number): Tower => ({
   kind: 'rifleNest',
   tile: { col, row },
   cooldownMs: 0,
+  heading: 0,
   level: 1,
   spent: 50,
 });
@@ -81,6 +82,7 @@ const mortar = (id: number, col: number, row: number): Tower => ({
   kind: 'mortar',
   tile: { col, row },
   cooldownMs: 0,
+  heading: 0,
   level: 1,
   spent: 125,
 });
@@ -295,6 +297,7 @@ describe('drawTower for the AA Gun', () => {
       kind: 'aaGun',
       tile: { col: 0, row: 0 },
       cooldownMs: 0,
+      heading: 0,
       level: 1,
       spent: 75,
     });

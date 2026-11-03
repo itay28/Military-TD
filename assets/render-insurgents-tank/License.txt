@@ -1,0 +1,9 @@
+Rendered sprites of "T 54/55 Tank" by SGAstudios3DandGameDevelopment
+https://sketchfab.com/3d-models/6bde9f748c3e472e878d333998b506f9
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated, split into hull and turret layers).
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-02.
