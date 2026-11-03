@@ -182,6 +182,113 @@ describe('DPS meter', () => {
     expect(root.querySelectorAll('[data-kind]')).toHaveLength(0);
   });
 
+  describe('clicking rows (#244)', () => {
+    const kindButton = (kind: string) => q<HTMLButtonElement>(`dps-kind-highlight-${kind}`)!;
+    const towerButton = (id: number) => q<HTMLButtonElement>(`dps-tower-button-${id}`)!;
+    const mountWith = (game = fakeGame(wave1())) => {
+      const calls = { selected: [] as number[], highlighted: [] as (string | undefined)[] };
+      const meter = mountDpsMeter(root, game, {
+        now,
+        narrow: () => false,
+        onSelectTower: (id) => calls.selected.push(id),
+        onHighlightKind: (kind) => calls.highlighted.push(kind),
+      });
+      meter.toggle();
+      return { meter, calls };
+    };
+
+    it('names the buttons and starts with nothing highlighted', () => {
+      const { meter } = mountWith();
+      expect(kindButton('cannon').getAttribute('aria-label')).toBe('Highlight all Cannons');
+      expect(kindButton('rifleNest').getAttribute('aria-label')).toBe('Highlight all Rifle Nests');
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('false');
+      expect(towerButton(2).getAttribute('aria-label')).toBe('Select Cannon #2');
+      expect(towerButton(3).getAttribute('aria-label')).toBe('Select Rifle Nest #3');
+      expect(meter.highlightedKind).toBeUndefined();
+    });
+
+    it('highlights a kind on click and clears it on a second click', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      expect(meter.highlightedKind).toBe('cannon');
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('true');
+      kindButton('cannon').click();
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('false');
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('highlights one kind at a time', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      kindButton('rifleNest').click();
+      expect(meter.highlightedKind).toBe('rifleNest');
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('false');
+      expect(kindButton('rifleNest').getAttribute('aria-pressed')).toBe('true');
+      expect(calls.highlighted).toEqual(['cannon', 'rifleNest']);
+    });
+
+    it('clears the highlight on Escape, and ignores other keys', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+      expect(meter.highlightedKind).toBe('cannon');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('false');
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('lets Escape reach other handlers when nothing is highlighted', () => {
+      mountWith();
+      const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+      document.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('selects the tower of a tower row', () => {
+      const { calls } = mountWith();
+      towerButton(2).click();
+      towerButton(3).click();
+      expect(calls.selected).toEqual([2, 3]);
+    });
+
+    it('does not let a sold tower be selected', () => {
+      const game = fakeGame(wave1());
+      game.state = { ...game.state, towers: game.state.towers.filter((t) => t.id !== 3) };
+      const { calls } = mountWith(game);
+      expect(towerButton(3).disabled).toBe(true);
+      expect(towerButton(1).disabled).toBe(false);
+      towerButton(3).click();
+      expect(calls.selected).toEqual([]);
+    });
+
+    it('clears the highlight when its kind leaves the meter', () => {
+      const game = fakeGame(wave1());
+      const { meter, calls } = mountWith(game);
+      kindButton('cannon').click();
+      game.state = { ...game.state, stats: emptyStats(), towers: [] };
+      clock += DPS_METER_REFRESH_MS;
+      meter.update();
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('clears the highlight when destroyed', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      meter.destroy();
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('keeps the expand button apart from the highlight button', () => {
+      const { meter, calls } = mountWith();
+      q<HTMLButtonElement>('dps-kind-toggle-cannon')!.click();
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(calls.highlighted).toEqual([]);
+    });
+  });
+
   it('removes its element on destroy', () => {
     mount().destroy();
     expect(q('dps-meter')).toBeNull();

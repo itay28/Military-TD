@@ -1,6 +1,17 @@
 import Phaser from 'phaser';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
-import { CAMERA, DISMANTLE, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
+import {
+  CAMERA,
+  DISMANTLE,
+  EFFECT,
+  FLOATING_TEXT,
+  HIGHLIGHT,
+  SHELL,
+  SPRITE_SCALE,
+  TILE_PX,
+  TOWER_STYLE,
+  TRACER,
+} from '../data/display';
 import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
@@ -21,6 +32,7 @@ import {
   clampView,
   fitView,
   panBy,
+  panToReveal,
   screenToWorld,
   zoomAt,
   type CameraBounds,
@@ -32,6 +44,7 @@ import {
   drawDismantleRing,
   drawEnemy,
   drawGhost,
+  drawHighlight,
   drawHpBar,
   drawLevelPips,
   drawRangeRing,
@@ -81,6 +94,7 @@ const DEPTH = {
   shells: 4,
   effects: 4,
   ghost: 5,
+  highlight: 5.5,
   rangeRing: 6,
   floatingText: 7,
 } as const;
@@ -196,6 +210,11 @@ export class GameScene extends Phaser.Scene {
   /** With Always show tower ranges: every tower's range ring but the selected one's, which `selectedRing` draws. */
   private allRings!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
+  /** A view-only glow on every tower of the kind highlighted in the DPS meter (#244). */
+  private highlightGraphics!: Phaser.GameObjects.Graphics;
+  private highlightedKind: TowerKind | undefined;
+  /** The towers of the highlighted kind, by id, for `view()`. */
+  private highlightedIds: readonly number[] = [];
   /** The ghost last drawn, and its kind, so it is redrawn only when its tile, colour or kind changes. */
   private ghost: (Ghost & { readonly kind: TowerKind }) | undefined;
   private floatingTexts!: FloatingTexts;
@@ -284,6 +303,7 @@ export class GameScene extends Phaser.Scene {
       ].sort((a, b) => a - b),
       tracers: this.tracers.active(),
       effects: this.effects.active(),
+      highlight: { kind: this.highlightedKind ?? null, towerIds: [...this.highlightedIds] },
       ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
@@ -571,6 +591,9 @@ export class GameScene extends Phaser.Scene {
     this.input.on('gameout', () => (this.pointerTile = undefined));
 
     this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
+    this.highlightGraphics = onLayer(this.add.graphics(), 'highlight');
+    this.highlightedKind = undefined;
+    this.highlightedIds = [];
     this.floatingTexts = createFloatingTexts(this.flags.anim ? FLOATING_TEXT : { ...FLOATING_TEXT, durationMs: 0 });
     this.floatingTextViews = createViewSync<FloatingTextView, Phaser.GameObjects.Text>({
       create: ({ text }) => onLayer(this.add.text(0, 0, text, FLOATING_TEXT.style).setOrigin(0.5, 1), 'floatingText'),
@@ -587,7 +610,10 @@ export class GameScene extends Phaser.Scene {
       get: () => this.gameSpeed,
       set: (value) => (this.gameSpeed = value),
     };
-    this.hud = mountHud(this.hudRoot, this.sim, speed);
+    this.hud = mountHud(this.hudRoot, this.sim, speed, {
+      onSelectTower: (id) => this.selectTower(id),
+      onHighlightKind: (kind) => (this.highlightedKind = kind),
+    });
     // Placing a new tower and inspecting a placed one are exclusive: picking one closes the other.
     this.buildBar = mountBuildBar(
       this.buildBarRoot,
@@ -635,6 +661,32 @@ export class GameScene extends Phaser.Scene {
     );
     this.progress.recordResult(mapId, stars);
     return unlocks ? { stars, unlockedMap: MAPS[index + 1]!.name } : { stars };
+  }
+
+  /** Selects tower `id` as a tap on it would, and pans the camera to it if it is off screen (#244). */
+  private selectTower(id: number): void {
+    const tower = this.sim.state.towers.find((t) => t.id === id);
+    if (!tower) return;
+    this.towerPanel.select(id);
+    const view = panToReveal(this.view, towerCenter(tower), CAMERA.revealMarginPx, this.cameraBounds());
+    if (view === this.view) return;
+    this.fitted = false;
+    this.setView(view);
+  }
+
+  /** Outlines every tower of the highlighted kind, pulsing; redrawn each frame while there is one. */
+  private drawHighlights(towers: readonly Tower[]): void {
+    const kind = this.highlightedKind;
+    const marked = kind === undefined ? [] : towers.filter((tower) => tower.kind === kind);
+    this.highlightedIds = marked.map((tower) => tower.id);
+    this.highlightGraphics.clear();
+    const pulse = this.flags.anim ? 0.5 + 0.5 * Math.sin((this.animMs / HIGHLIGHT.pulseMs) * 2 * Math.PI) : 1;
+    for (const tower of marked) {
+      const { x, y } = towerCenter(tower);
+      this.highlightGraphics.translateCanvas(x, y);
+      drawHighlight(this.highlightGraphics, TOWER_STYLE[tower.kind], pulse);
+      this.highlightGraphics.translateCanvas(-x, -y);
+    }
   }
 
   /** The camera's limits now: the canvas size and the map's size in world pixels. */
@@ -786,6 +838,7 @@ export class GameScene extends Phaser.Scene {
     drawTracers(this.tracerGraphics, this.tracers.active());
     this.effectGraphics.clear();
     drawEffects(this.effectGraphics, this.effects.active());
+    this.drawHighlights(towers);
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);
     this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected);

@@ -16,10 +16,16 @@ export interface DpsMeterOptions {
   readonly now?: () => number;
   /** Whether the screen is narrow, so kinds start collapsed. Default: the window is under `DPS_METER_NARROW_PX`. */
   readonly narrow?: () => boolean;
+  /** Runs when a tower row is clicked: the scene selects that tower. A sold tower's row can't be clicked. */
+  readonly onSelectTower?: (towerId: number) => void;
+  /** Runs when the highlighted kind changes (undefined: none), so the scene can outline that kind's towers. */
+  readonly onHighlightKind?: (kind: TowerKind | undefined) => void;
 }
 
 export interface DpsMeter {
   readonly open: boolean;
+  /** The kind whose towers are highlighted on the map, if any. At most one. */
+  readonly highlightedKind: TowerKind | undefined;
   /** Opens or closes the panel; it redraws at once when it opens. */
   toggle(): void;
   /** Redraws from `game.state` while open, at most every `DPS_METER_REFRESH_MS`. Call once per frame. */
@@ -50,10 +56,12 @@ const order = (parent: HTMLElement, children: readonly HTMLElement[]) => {
 
 interface TowerView {
   readonly el: HTMLElement;
+  readonly button: HTMLButtonElement;
 }
 
 interface KindView {
   readonly el: HTMLElement;
+  readonly highlight: HTMLButtonElement;
   readonly toggle: HTMLButtonElement;
   readonly dps: HTMLElement;
   readonly kills: HTMLElement;
@@ -109,14 +117,35 @@ export function mountDpsMeter(root: HTMLElement, game: DpsMeterGame, options: Dp
   /** Real time of the last redraw; the first update after opening always draws. */
   let drawnAtMs = Number.NEGATIVE_INFINITY;
   const kindViews = new Map<TowerKind, KindView>();
+  let highlightedKind: TowerKind | undefined;
+  const highlightKind = (kind: TowerKind | undefined) => {
+    if (kind === highlightedKind) return;
+    highlightedKind = kind;
+    for (const [k, view] of kindViews) setAttr(view.highlight, 'aria-pressed', String(k === kind));
+    options.onHighlightKind?.(kind);
+  };
+  // Esc clears the highlight, and doesn't also pause (pauseMenu.ts) or close the tower panel.
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || highlightedKind === undefined) return;
+    event.preventDefault();
+    highlightKind(undefined);
+  };
+  doc.addEventListener('keydown', onKeyDown);
 
   const kindView = (kind: TowerKind): KindView => {
     const existing = kindViews.get(kind);
     if (existing) return existing;
     const el = make('li', 'dps-kind', `dps-kind-${kind}`);
     el.dataset.kind = kind;
-    const toggle = make('button', 'dps-kind-row', `dps-kind-toggle-${kind}`);
+    const head = make('div', 'dps-kind-head');
+    const highlight = make('button', 'dps-kind-row', `dps-kind-highlight-${kind}`);
+    highlight.type = 'button';
+    highlight.setAttribute('aria-label', `Highlight all ${TOWER_NAMES[kind]}s`);
+    highlight.setAttribute('aria-pressed', String(highlightedKind === kind));
+    const toggle = make('button', 'dps-kind-expand', `dps-kind-toggle-${kind}`);
     toggle.type = 'button';
+    toggle.setAttribute('aria-label', `Show ${TOWER_NAMES[kind]} towers`);
+    toggle.setAttribute('aria-controls', `dps-towers-${kind}`);
     const swatch = make('span', 'dps-swatch', `dps-kind-swatch-${kind}`);
     const style = TOWER_STYLE[kind];
     swatch.dataset.shape = style.shape;
@@ -130,16 +159,19 @@ export function mountDpsMeter(root: HTMLElement, game: DpsMeterGame, options: Dp
     const track = make('span', 'dps-bar');
     const bar = make('span', 'dps-bar-fill', `dps-kind-bar-${kind}`);
     track.append(bar);
-    toggle.append(swatch, name, dps, killCount, share, track);
+    highlight.append(swatch, name, dps, killCount, share, track);
+    head.append(highlight, toggle);
     const list = make('ul', 'dps-towers', `dps-towers-${kind}`);
-    const view: KindView = { el, toggle, dps, kills: killCount, share, bar, list, towers: new Map() };
+    list.id = `dps-towers-${kind}`;
+    const view: KindView = { el, highlight, toggle, dps, kills: killCount, share, bar, list, towers: new Map() };
     const expand = (expanded: boolean) => {
       toggle.setAttribute('aria-expanded', String(expanded));
       list.hidden = !expanded;
     };
     expand(!narrow());
     toggle.addEventListener('click', () => expand(toggle.getAttribute('aria-expanded') !== 'true'));
-    el.append(toggle, list);
+    highlight.addEventListener('click', () => highlightKind(highlightedKind === kind ? undefined : kind));
+    el.append(head, list);
     kindViews.set(kind, view);
     return view;
   };
@@ -149,7 +181,11 @@ export function mountDpsMeter(root: HTMLElement, game: DpsMeterGame, options: Dp
     if (existing) return existing;
     const el = make('li', 'dps-tower', `dps-tower-${row.towerId}`);
     el.dataset.towerId = String(row.towerId);
-    const view = { el };
+    const button = make('button', 'dps-tower-button', `dps-tower-button-${row.towerId}`);
+    button.type = 'button';
+    button.addEventListener('click', () => options.onSelectTower?.(row.towerId));
+    el.append(button);
+    const view = { el, button };
     kind.towers.set(row.towerId, view);
     return view;
   };
@@ -164,9 +200,11 @@ export function mountDpsMeter(root: HTMLElement, game: DpsMeterGame, options: Dp
     const shown = new Set(row.towers.map((t) => t.towerId));
     for (const id of view.towers.keys()) if (!shown.has(id)) view.towers.delete(id);
     const towerEls = row.towers.map((tower) => {
-      const { el } = towerView(view, tower);
+      const { el, button } = towerView(view, tower);
       const label = tower.sold ? 'sold' : `Lv ${tower.level}`;
-      setText(el, `#${tower.towerId} ${label} · ${dpsText(tower.dps)} · ${kills(tower.kills)}`);
+      setText(button, `#${tower.towerId} ${label} · ${dpsText(tower.dps)} · ${kills(tower.kills)}`);
+      setAttr(button, 'aria-label', `Select ${TOWER_NAMES[row.kind]} #${tower.towerId}`);
+      if (button.disabled !== tower.sold) button.disabled = tower.sold;
       setAttr(el, 'data-sold', String(tower.sold));
       return el;
     });
@@ -184,12 +222,17 @@ export function mountDpsMeter(root: HTMLElement, game: DpsMeterGame, options: Dp
     setHidden(empty, kinds.length > 0);
     const shown = new Set(kinds.map((k) => k.kind));
     for (const kind of kindViews.keys()) if (!shown.has(kind)) kindViews.delete(kind);
+    if (highlightedKind !== undefined && !shown.has(highlightedKind)) highlightKind(undefined);
+    for (const [kind, view] of kindViews) setAttr(view.highlight, 'aria-pressed', String(kind === highlightedKind));
     order(kindList, kinds.map(drawKind));
   };
 
   return {
     get open() {
       return open;
+    },
+    get highlightedKind() {
+      return highlightedKind;
     },
     toggle() {
       open = !open;
@@ -200,6 +243,8 @@ export function mountDpsMeter(root: HTMLElement, game: DpsMeterGame, options: Dp
       if (open && now() - drawnAtMs >= DPS_METER_REFRESH_MS) draw();
     },
     destroy() {
+      doc.removeEventListener('keydown', onKeyDown);
+      highlightKind(undefined);
       panel.remove();
     },
   };
