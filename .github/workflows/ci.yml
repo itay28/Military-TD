@@ -49,6 +49,10 @@ jobs:
       - name: Test
         run: npm test
 
+      # The hard performance gate: mean sim tick time for the Heavy load (docs/performance.md).
+      - name: Sim performance budget
+        run: npm run test:perf
+
       - name: Build
         run: npm run build
 
@@ -78,6 +82,11 @@ jobs:
 
       - name: Run e2e tests
         run: npm run test:e2e
+
+      # Mean and p95 frame time for the Heavy load, in the job summary; fails only below 30 fps (docs/performance.md).
+      - name: Frame-time report
+        if: ${{ !cancelled() }}
+        run: npm run test:perf:browser
 
       - name: Upload report and traces
         if: failure()
