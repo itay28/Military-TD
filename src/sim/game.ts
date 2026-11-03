@@ -1,5 +1,5 @@
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
-import { DISMANTLE_MS, SELL_REFUND, TOWER_STATS, type TowerKind } from '../data/towers';
+import { DISMANTLE_MS, SELL_REFUND, START_HEADING, TOWER_STATS, type TowerKind } from '../data/towers';
 import { AUTO_START_DELAY_MS } from '../data/waves';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
@@ -349,7 +349,16 @@ export function createGame(config: GameConfig): Game {
       const towerId = nextId++;
       state.money -= stats.cost;
       state.stats = addTower(state.stats, towerId, kind, tile);
-      state.towers.push({ ...stats, id: towerId, kind, tile, cooldownMs: 0, level: 1, spent: stats.cost });
+      state.towers.push({
+        ...stats,
+        id: towerId,
+        kind,
+        tile,
+        cooldownMs: 0,
+        level: 1,
+        spent: stats.cost,
+        heading: START_HEADING,
+      });
       return { ok: true, towerId };
     },
     canPlaceTower,
