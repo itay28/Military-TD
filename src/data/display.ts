@@ -13,9 +13,6 @@ export const CANVAS_HEIGHT = GRID_ROWS * TILE_PX;
 /** Atlas sprites are drawn at this scale: a 64 px Kenney tile fills one map tile. */
 export const SPRITE_SCALE = TILE_PX / 64;
 
-/** Turrets: how fast they turn toward their target (radians per second), and where they point when placed (north). */
-export const TURRET = { turnRate: 2 * Math.PI, startAngle: -Math.PI / 2 } as const;
-
 /** How the map is drawn with shapes, when the atlas is missing, and the tint for the tileset's blocked ground. */
 export const MAP_STYLE = {
   path: 0xc2a46b, // sand

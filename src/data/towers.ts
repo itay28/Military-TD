@@ -18,6 +18,24 @@ export const TOWER_STATS = {
 
 export type TowerKind = keyof typeof TOWER_STATS;
 
+/**
+ * How fast each kind's turret turns toward its target, in radians per second; it fires only once it faces it
+ * (within `AIM_TOLERANCE`). A soldier and a light AA mount swing fast, a heavy gun slowly.
+ * `null`: the Mortar lobs shells (indirect fire), so it fires without turning.
+ */
+export const TURN_RATES: Record<TowerKind, number | null> = {
+  rifleNest: 8 * Math.PI,
+  aaGun: 3 * Math.PI,
+  cannon: Math.PI / 2,
+  mortar: null,
+};
+
+/** How far off its target, in radians, a turret may point and still fire (about 6°). */
+export const AIM_TOLERANCE = 0.1;
+
+/** The way a placed tower faces, in radians (0 east, rows grow down): north. */
+export const START_HEADING = -Math.PI / 2;
+
 /** How long selling a tower takes, in ms: it stops firing at once and the refund comes when this is up. */
 export const DISMANTLE_MS = 2000;
 

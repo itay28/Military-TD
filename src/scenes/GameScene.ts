@@ -1,16 +1,6 @@
 import Phaser from 'phaser';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
-import {
-  CAMERA,
-  DISMANTLE,
-  EFFECT,
-  FLOATING_TEXT,
-  SHELL,
-  SPRITE_SCALE,
-  TILE_PX,
-  TRACER,
-  TURRET,
-} from '../data/display';
+import { CAMERA, DISMANTLE, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
 import { createPhaserAudio } from '../audio/phaserAudio';
@@ -27,7 +17,7 @@ import { starsFor, unlocksNext } from '../sim/progression';
 import { setUpGame, type GameSetup } from '../sim/scenario';
 import type { ProgressStore, WinStars } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
-import { selectTarget, towerAt, type Tower } from '../sim/towers';
+import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import {
@@ -69,7 +59,6 @@ import { resolveClick } from './selection';
 import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
 import { TILESET_FRAMES, tileArt } from './tileset';
-import { aimAngle, turnToward } from './turret';
 import { buildOptions, mountBuildBar, type BuildBar, type IconAtlas } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
@@ -140,7 +129,7 @@ interface TowerView extends EntityView {
   /** The level last drawn, so the pips are redrawn only when an upgrade changes it. */
   level: number;
   readonly ring: Phaser.GameObjects.Graphics;
-  /** Radians, 0 east (see `aimAngle`); cosmetic only, the sim's targeting doesn't read it. */
+  /** Radians, 0 east: the sim's `Tower.heading`, as last drawn. */
   angle: number;
 }
 
@@ -200,8 +189,6 @@ export class GameScene extends Phaser.Scene {
   private towerViews!: ViewSync<Tower>;
   /** Each tower's view by id, for `view()`'s turret angles. */
   private readonly towerViewById = new Map<number, TowerView>();
-  /** How far a turret may turn this frame, in radians. */
-  private turretStep = 0;
   private effects!: Effects;
   private effectGraphics!: Phaser.GameObjects.Graphics;
   private tracers!: Tracers;
@@ -383,10 +370,9 @@ export class GameScene extends Phaser.Scene {
     return { sprite, graphics, rendered: true, spriteScale: 1, facing: RENDER_FACING };
   }
 
-  /** Where `tower`'s shots start now: its barrel tips, turned with the turret as drawn (cosmetic only). */
+  /** Where `tower`'s shots start now: its barrel tips, turned with the turret to the sim's heading. */
   private muzzlesOf(tower: Tower): Pixel[] {
-    const angle = this.towerViewById.get(tower.id)?.angle ?? TURRET.startAngle;
-    return muzzlePoints(this.renderOf(tower.kind), towerCenter(tower), angle);
+    return muzzlePoints(this.renderOf(tower.kind), towerCenter(tower), tower.heading);
   }
 
   /** A tower drawn from `render`: its hull as the base, its turret turning around the pivot, a Graphics over both. */
@@ -551,18 +537,16 @@ export class GameScene extends Phaser.Scene {
           ...(render === null ? this.addKenneyTowerView(tower.kind, at) : this.addRenderedTowerView(render, at)),
           level: 0,
           ring: onLayer(this.add.graphics(), 'towers').setPosition(at.x, at.y),
-          angle: TURRET.startAngle,
+          angle: tower.heading,
         };
         this.towerViewById.set(tower.id, view);
         return view;
       },
-      // The turret turns toward the sim's own choice of target, at most `turretStep` a frame; none while dismantling.
+      // The turret is drawn at the sim's heading: the sim turns it toward its target and fires only once it faces it.
       // Redrawn only when an upgrade changes the level pips; a dismantling tower is faded, with a shrinking ring.
       update: (view, tower) => {
         const dismantling = tower.dismantleMs !== undefined;
-        const center = tileCenter(tower.tile);
-        const target = dismantling ? undefined : selectTarget(tower, this.sim.state.enemies);
-        view.angle = turnToward(view.angle, aimAngle(center, target?.position, view.angle), this.turretStep);
+        view.angle = tower.heading;
         view.sprite?.setRotation(spriteRotation(view.facing, view.angle));
         view.graphics.setAlpha(dismantling ? DISMANTLE.alpha : 1);
         view.sprite?.setAlpha(dismantling ? DISMANTLE.alpha : 1);
@@ -821,7 +805,6 @@ export class GameScene extends Phaser.Scene {
     this.pauseMenu.update();
 
     const { enemies, towers } = this.sim.state;
-    this.turretStep = (TURRET.turnRate * deltaMs) / 1000;
     this.towerViews.sync(towers);
     this.enemyViews.sync(enemies);
     this.tracerGraphics.clear();
