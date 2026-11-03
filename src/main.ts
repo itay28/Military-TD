@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { createMusicController } from './audio/music';
+import { createPhaserMusicBackend, type LoopingSound } from './audio/phaserMusic';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
@@ -82,3 +84,30 @@ const game = new Phaser.Game({
 new ResizeObserver(() => {
   if (game.scale.getParentBounds()) game.scale.refresh();
 }).observe(gameRoot);
+
+// Music (#66): each scene's track, crossfaded on a change, from the first input on (browsers block audio before it).
+// Test mode is muted, so e2e runs and scenarios are unchanged.
+const music = createMusicController(
+  createPhaserMusicBackend({
+    add: (key, config) => game.sound.add(key, config) as unknown as LoopingSound,
+    has: (key) => game.cache.audio.exists(key),
+    now: () => performance.now(),
+    every: (tick) => {
+      const id = window.setInterval(tick, 50);
+      return () => window.clearInterval(id);
+    },
+  }),
+  { muted: flags.test },
+);
+game.events.once(Phaser.Core.Events.READY, () => {
+  for (const scene of game.scene.getScenes(false)) {
+    scene.events.on(Phaser.Scenes.Events.START, () => music.enterScene(scene.scene.key));
+  }
+});
+const unlockMusic = (): void => {
+  music.unlock();
+  window.removeEventListener('pointerdown', unlockMusic);
+  window.removeEventListener('keydown', unlockMusic);
+};
+window.addEventListener('pointerdown', unlockMusic);
+window.addEventListener('keydown', unlockMusic);

@@ -394,6 +394,16 @@
       "attribution": "85 Short music jingles by Kenney (kenney.nl), CC0",
       "downloaded": "2026-11-02",
       "files": ["assets/kenney-jingles/**"]
+    },
+    {
+      "id": "yd-war-on-water",
+      "name": "War on Water tracks",
+      "author": "yd",
+      "source": "https://opengameart.org/content/war-on-water-tracks",
+      "license": "CC0-1.0",
+      "attribution": "War on Water tracks by yd (opengameart.org), CC0",
+      "downloaded": "2026-11-02",
+      "files": ["assets/yd-war-on-water/**"]
     }
   ]
 }
