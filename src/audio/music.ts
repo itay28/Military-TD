@@ -12,6 +12,12 @@ export const TRACK_IDS: readonly TrackId[] = ['menu', 'game'];
 /** How long the old track fades out and the new one fades in when the track changes. */
 export const CROSSFADE_MS = 1000;
 
+/** The music's volume while a radio cue plays (#396), so the voice is clear. */
+export const DUCK_VOLUME = 0.4;
+
+/** How long the music takes to drop to the duck volume, and to come back up. */
+export const DUCK_FADE_MS = 200;
+
 /**
  * The track a scene plays: the menu track on the Main menu and Level select (Settings and Credits are overlays on the
  * Main menu, so they keep it), the game track in the Game (the End screen is an overlay on it). Boot, or any scene this
@@ -46,6 +52,8 @@ export interface MusicController {
   enterScene(scene: string): void;
   /** Call on the first input: browsers block audio until then, so nothing plays before it. */
   unlock(): void;
+  /** Drops the music to `DUCK_VOLUME` while a radio cue plays (true), and brings it back up afterwards (false). */
+  setDucked(on: boolean): void;
 }
 
 export interface MusicOptions {
@@ -57,6 +65,8 @@ export interface MusicOptions {
 export function createMusicController(backend: MusicBackend, options: MusicOptions): MusicController {
   const fadeMs = options.crossfadeMs ?? CROSSFADE_MS;
   let unlocked = false;
+  let ducked = false;
+  const fullVolume = (): number => (ducked ? DUCK_VOLUME : 1);
   /** The track the current scene wants, whether or not it's playing yet. */
   let wanted: TrackId | null = null;
   /** The track playing (or failed to load, with no voice) since the last change. */
@@ -77,7 +87,7 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
     } catch {
       voice = null;
     }
-    voice?.fadeTo(1, fadeMs);
+    voice?.fadeTo(fullVolume(), fadeMs);
     playing = { track: wanted, voice };
   };
 
@@ -90,6 +100,11 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
       if (unlocked) return;
       unlocked = true;
       sync();
+    },
+    setDucked(on) {
+      if (on === ducked) return;
+      ducked = on;
+      playing?.voice?.fadeTo(fullVolume(), DUCK_FADE_MS);
     },
   };
 }

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createMusicController, trackFor, type MusicBackend, type MusicVoice, type TrackId } from './music';
+import {
+  createMusicController,
+  DUCK_FADE_MS,
+  DUCK_VOLUME,
+  trackFor,
+  type MusicBackend,
+  type MusicVoice,
+  type TrackId,
+} from './music';
 
 interface FakeVoice extends MusicVoice {
   readonly track: TrackId;
@@ -173,5 +181,67 @@ describe('createMusicController', () => {
     music.unlock();
     music.unlock();
     expect(voices).toHaveLength(1);
+  });
+});
+
+describe('ducking (#396)', () => {
+  it('drops the playing track to the duck volume, then brings it back', () => {
+    const { backend, voices } = fakeBackend();
+    const music = createMusicController(backend, { muted: false });
+    music.unlock();
+    music.enterScene('Game');
+    music.setDucked(true);
+    expect(DUCK_VOLUME).toBeCloseTo(0.4);
+    expect(voices[0]?.fades.at(-1)).toEqual({ volume: DUCK_VOLUME, ms: DUCK_FADE_MS });
+    music.setDucked(false);
+    expect(voices[0]?.fades.at(-1)).toEqual({ volume: 1, ms: DUCK_FADE_MS });
+  });
+
+  it('does nothing when the duck state does not change', () => {
+    const { backend, voices } = fakeBackend();
+    const music = createMusicController(backend, { muted: false });
+    music.unlock();
+    music.enterScene('Game');
+    const before = voices[0]?.fades.length;
+    music.setDucked(false);
+    expect(voices[0]?.fades.length).toBe(before);
+  });
+
+  it('fades a track that starts while ducked in to the duck volume', () => {
+    const { backend, voices } = fakeBackend();
+    const music = createMusicController(backend, { muted: false });
+    music.unlock();
+    music.enterScene('Menu');
+    music.setDucked(true);
+    music.enterScene('Game');
+    expect(voices[1]?.fades).toEqual([{ volume: DUCK_VOLUME, ms: 1000 }]);
+  });
+
+  it('does not bring a fading-out track back up when the duck ends', () => {
+    const { backend, voices } = fakeBackend();
+    const music = createMusicController(backend, { muted: false });
+    music.unlock();
+    music.enterScene('Game');
+    music.setDucked(true);
+    music.enterScene('Boot');
+    const before = voices[0]?.fades.length;
+    music.setDucked(false);
+    expect(voices[0]?.fades.length).toBe(before);
+  });
+
+  it('is safe with nothing playing, before the first input, and when muted', () => {
+    const { backend, voices } = fakeBackend(['game']);
+    const locked = createMusicController(backend, { muted: false });
+    locked.enterScene('Menu');
+    locked.setDucked(true);
+    const muted = createMusicController(backend, { muted: true });
+    muted.unlock();
+    muted.enterScene('Menu');
+    muted.setDucked(true);
+    const missing = createMusicController(backend, { muted: false });
+    missing.unlock();
+    missing.enterScene('Game');
+    expect(() => missing.setDucked(true)).not.toThrow();
+    expect(voices).toHaveLength(0);
   });
 });

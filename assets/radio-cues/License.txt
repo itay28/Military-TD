@@ -1,0 +1,12 @@
+Radio comms cues (waveStart.ogg, victory.ogg, defeat.ogg) for Military-TD
+
+Built by scripts/radio-fx.ts (ffmpeg) from:
+- Voiceover Pack by Kenney (kenney.nl), CC0 1.0
+  https://opengameart.org/content/voiceover-pack-40-lines
+  (assets/kenney-voiceover/)
+- Radio Noise 1 by Kresiek The Furry, CC0 1.0
+  https://opengameart.org/content/radio-noise-1
+  (assets/kresiek-radio-noise/)
+
+License: Creative Commons Zero (CC0 1.0), as its sources.
+https://creativecommons.org/publicdomain/zero/1.0/

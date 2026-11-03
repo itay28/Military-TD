@@ -4,7 +4,8 @@ import { CAMERA, DISMANTLE, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX,
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
 import { createPhaserAudio } from '../audio/phaserAudio';
-import { SOUND_THROTTLE } from '../data/sounds';
+import { duckForRadio, MUSIC_REGISTRY_KEY, type MusicDuck } from '../audio/radio';
+import { RADIO_CUE_MS, SOUND_THROTTLE } from '../data/sounds';
 import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
@@ -428,15 +429,22 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Plays the sim's events as sounds (#45). Test mode is silent, so e2e runs don't change. Otherwise each sound is
-   * throttled, waits for the browser's first input, and stays silent if its file didn't load.
+   * throttled, waits for the browser's first input, and stays silent if its file didn't load. The music ducks under a
+   * radio cue (#396), on a real-time timer, since the cue plays on after a restart or a speed change.
    */
   private wireSounds(): void {
+    const music = this.registry.get(MUSIC_REGISTRY_KEY) as MusicDuck | undefined;
     const audio = this.flags.test
       ? silentAudio
-      : throttleAudio(
-          createPhaserAudio(this.sound, (key) => this.cache.audio.exists(key)),
-          SOUND_THROTTLE,
-          () => this.time.now,
+      : duckForRadio(
+          throttleAudio(
+            createPhaserAudio(this.sound, (key) => this.cache.audio.exists(key)),
+            SOUND_THROTTLE,
+            () => this.time.now,
+          ),
+          music ?? { setDucked: () => {} },
+          RADIO_CUE_MS,
+          (ms, run) => window.setTimeout(run, ms),
         );
     const play = (event: SoundEvent): void => {
       const id = soundFor(event);

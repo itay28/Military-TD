@@ -1,0 +1,9 @@
+Radio Noise 1, by Kresiek The Furry
+https://opengameart.org/content/radio-noise-1
+
+License: Creative Commons Zero (CC0 1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The item ships no license file. This notice copies the license shown on the
+source page above (checked 2026-11-03). radio-noise.flac is the first 8 s of
+radio_noise_loop.wav, real noise from a radio captured on a Uniden SDS100.

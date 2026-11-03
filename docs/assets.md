@@ -104,13 +104,26 @@ An enemy sprite turns to face the way it travels: `SPRITE_HEADING` in `src/data/
 
 ## Sound effects (#45)
 
-Downloaded 2026-11-02, CC0 only. kenney.nl wasn't reachable from the cloud session, so each pack comes from its author's own OpenGameArt upload. Only the `.ogg` files below are committed. Kenney's jingles keep the pack's `license.txt` (as `License.txt`); rubberduck's packs ship none, so their `License.txt` copies the source page's notice. The files were picked by name and length, not by ear: swap any that sound wrong in `src/data/sounds.ts`.
+Downloaded 2026-11-02, CC0 only. kenney.nl wasn't reachable from the cloud session, so each pack comes from its author's own OpenGameArt upload. Only the `.ogg` files below are committed. Rubberduck's packs ship no license file, so their `License.txt` copies the source page's notice. The files were picked by name and length, not by ear: swap any that sound wrong in `src/data/sounds.ts`.
 
 | Pack (`assets/<id>/`) | Source | Used for |
 | --- | --- | --- |
 | 25 CC0 bang / firework SFX (`rubberduck-bang-sfx`) | opengameart.org/content/25-cc0-bang-firework-sfx | Rifle Nest (`shot_03`), AA Gun (`shot_02`), Cannon (`cannon_03`), Mortar launch (`cannon_04`), shell explosion (`bang_02`) |
 | 100 CC0 SFX (`rubberduck-100-sfx`) | opengameart.org/content/100-cc0-sfx | enemy death (`hit_02`), leak (`bell_02`) |
-| 85 Short music jingles (`kenney-jingles`) | opengameart.org/content/85-short-music-jingles | wave start, victory, defeat (`jingles_STEEL00`–`02`) |
+
+Wave start, victory and defeat first used Kenney's STEEL jingles. They're replaced by the radio comms cues below (#396).
+
+## Radio comms cues (#396)
+
+Wave start, victory and defeat sound like military radio traffic. Downloaded 2026-11-03, CC0 only (the maintainer's choice). Freesound isn't reachable from the cloud session, so both sources are OpenGameArt items. `scripts/radio-fx.ts` (`npm run radio-fx`, needs ffmpeg) builds `assets/radio-cues/{waveStart,victory,defeat}.ogg` from the committed inputs below. Each voice line gets a compressor and a soft clip inside a 300–3400 Hz band-pass, with squelch bursts at key-up and key-down and a static bed under the voice. After a rebuild, copy the printed lengths into `RADIO_CUE_MS` (`src/data/sounds.ts`); a test checks them. The music ducks to 40 % while a cue plays.
+
+| Pack (`assets/<id>/`) | Source | Used for |
+| --- | --- | --- |
+| Voiceover Pack (`kenney-voiceover`), the pack's `License.txt` | opengameart.org/content/voiceover-pack-40-lines | the male lines `war_look_out`, `war_go_go_go`, `mission_completed`, `war_call_for_backup`, `mission_failed` |
+| Radio Noise 1 (`kresiek-radio-noise`), `License.txt` copies the page's notice | opengameart.org/content/radio-noise-1 | squelch and static: an 8 s FLAC excerpt of real scanner noise |
+| Radio comms cues (`radio-cues`), the script's output | built from the two above | wave start ("Look out! Go go go!"), victory ("Mission completed."), defeat ("Call for backup! Mission failed", breaking up, then the signal cuts out) |
+
+Rejected: the VoiceBosch announcer packs (*Radio soldier*, *Grenadier*, *Warlord*), which are CC-BY-SA; the *General phrases* announcer packs, which are CC-BY (only CC0 was wanted); and *Frequency static* (CC0, but 42 MB per file).
 
 ## Music (#66)
 

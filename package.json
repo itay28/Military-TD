@@ -26,6 +26,7 @@
     "credits": "node scripts/credits.ts",
     "check:assets": "node scripts/check-assets.ts",
     "atlas": "node scripts/atlas.ts",
+    "radio-fx": "node scripts/radio-fx.ts",
     "render:pivot": "node scripts/render-pivot.ts"
   },
   "lint-staged": {

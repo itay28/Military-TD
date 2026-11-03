@@ -344,15 +344,6 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/rubberduck-100-sfx/**`
 
-## 85 Short music jingles
-
-- Author: Kenney
-- Source: <https://opengameart.org/content/85-short-music-jingles>
-- License: CC0-1.0
-- Attribution: 85 Short music jingles by Kenney (kenney.nl), CC0
-- Downloaded: 2026-11-02
-- Files: `assets/kenney-jingles/**`
-
 ## War on Water tracks
 
 - Author: yd
@@ -361,3 +352,30 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: War on Water tracks by yd (opengameart.org), CC0
 - Downloaded: 2026-11-02
 - Files: `assets/yd-war-on-water/**`
+
+## Voiceover Pack (40 lines)
+
+- Author: Kenney
+- Source: <https://opengameart.org/content/voiceover-pack-40-lines>
+- License: CC0-1.0
+- Attribution: Voiceover Pack by Kenney (kenney.nl), CC0
+- Downloaded: 2026-11-03
+- Files: `assets/kenney-voiceover/**`
+
+## Radio Noise 1
+
+- Author: Kresiek The Furry
+- Source: <https://opengameart.org/content/radio-noise-1>
+- License: CC0-1.0
+- Attribution: Radio Noise 1 by Kresiek The Furry (OpenGameArt.org), CC0, an 8 s excerpt
+- Downloaded: 2026-11-03
+- Files: `assets/kresiek-radio-noise/**`
+
+## Radio comms cues
+
+- Author: Military-TD, from Kenney's Voiceover Pack and Kresiek The Furry's Radio Noise 1
+- Source: <https://opengameart.org/content/voiceover-pack-40-lines>
+- License: CC0-1.0
+- Attribution: Built by scripts/radio-fx.ts from Voiceover Pack by Kenney (kenney.nl) and Radio Noise 1 by Kresiek The Furry, both CC0
+- Downloaded: 2026-11-03
+- Files: `assets/radio-cues/**`

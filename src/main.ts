@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { createMusicController } from './audio/music';
 import { createPhaserMusicBackend, type LoopingSound } from './audio/phaserMusic';
+import { MUSIC_REGISTRY_KEY } from './audio/radio';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
@@ -99,6 +100,8 @@ const music = createMusicController(
   }),
   { muted: flags.test },
 );
+// The Game scene ducks the music under its radio cues (#396).
+game.registry.set(MUSIC_REGISTRY_KEY, music);
 game.events.once(Phaser.Core.Events.READY, () => {
   for (const scene of game.scene.getScenes(false)) {
     scene.events.on(Phaser.Scenes.Events.START, () => music.enterScene(scene.scene.key));
