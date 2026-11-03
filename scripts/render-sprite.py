@@ -24,7 +24,8 @@ material its own `color` and `specular`), for a model painted in the wrong colou
 
 `sun` (optional) overrides keys of the global sun for one model: soldiers use a higher sun so the shadow stays short
 (issue #342). The global `alphaFloor` zeroes the faint alpha the shadow catcher leaves over the whole ground plane
-(sky occlusion), so a sprite has no baked haze and its frame can be cropped to the figure.
+(sky occlusion), so a sprite has no baked haze and its frame can be cropped to the figure. It applies to every model:
+only the soldier sets were re-rendered for #342, so re-rendering a vehicle or tower changes its alpha the same way.
 
 `turnDeg` turns a model clockwise after `frontAxis`, for one set down at an angle (not along an axis).
 
