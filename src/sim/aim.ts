@@ -1,4 +1,4 @@
-import type { Position } from '../sim/map';
+import type { Position } from './map';
 
 /**
  * The angle from `from` toward `target`, in radians: 0 is east, −π/2 north (rows grow down).
@@ -12,7 +12,7 @@ export function aimAngle(from: Position, target: Position | undefined, last: num
 }
 
 /** `angle` wrapped into (−π, π]. */
-function wrap(angle: number): number {
+export function wrap(angle: number): number {
   const turns = Math.ceil((angle - Math.PI) / (2 * Math.PI));
   return angle - turns * 2 * Math.PI;
 }

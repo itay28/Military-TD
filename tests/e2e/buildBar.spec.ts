@@ -3,6 +3,8 @@ import { TOWER_STATS, type TowerKind } from '../../src/data/towers';
 import { clickTile, openGame, selectKind, state } from './helpers';
 
 const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
+// Tower kinds drawn from a render (src/data/renders.ts). Not imported: Playwright can't load its PNG/JSON imports.
+const RENDERED: TowerKind[] = ['aaGun'];
 const FIRST = KINDS[0]!;
 const BESIDE_PATH = { col: 1, row: 3 };
 
@@ -78,4 +80,33 @@ test('a kind the player cannot afford is disabled but stays selected, and a clic
   await expect(first).toHaveAttribute('aria-pressed', 'true');
   await first.click({ force: true }); // force: Playwright won't click an aria-disabled button, a player can
   await expect(first).toHaveAttribute('aria-pressed', 'false');
+});
+
+test("each build button shows the tower's sprite layers, not a coloured shape", async ({ page }) => {
+  await openGame(page);
+  for (const kind of KINDS) {
+    const icon = page.getByTestId(`build-${kind}`).locator('.build-icon');
+    await expect(icon.locator('.build-icon-layer')).toHaveCount(2);
+    // Not Phaser's blob URL, which is revoked once the texture has loaded.
+    await expect(icon.locator('.build-icon-layer').first()).not.toHaveCSS('background-image', /blob:/);
+    await expect(icon).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  }
+});
+
+test('a blocked atlas leaves the build bar with coloured shapes, except for kinds with their own render', async ({
+  page,
+}) => {
+  await page.route(/\/sprites[^/]*\.(png|json)$/, (route) => route.abort());
+  await openGame(page);
+  for (const kind of KINDS) {
+    const icon = page.getByTestId(`build-${kind}`).locator('.build-icon');
+    if (RENDERED.includes(kind)) {
+      // A render is separate PNGs, not part of the atlas, so its icon still loads.
+      await expect(icon.locator('.build-icon-layer')).toHaveCount(2);
+      await expect(icon).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    } else {
+      await expect(icon.locator('.build-icon-layer')).toHaveCount(0);
+      await expect(icon).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    }
+  }
 });

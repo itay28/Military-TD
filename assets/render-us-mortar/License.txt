@@ -1,0 +1,9 @@
+Rendered sprites of "Mortar - M224" by jcherry3d
+https://sketchfab.com/3d-models/c86a73e40d994431bcdb57dc741cf8be
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated, set in a generated sandbag pit, split into hull and turret layers).
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-02.

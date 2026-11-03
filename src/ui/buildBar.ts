@@ -1,4 +1,6 @@
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
+import { renderFor, type RenderedSprite } from '../data/renders';
+import { towerIcon, type TowerIcon } from '../data/sprites';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 
 /** One button on the build bar. */
@@ -13,6 +15,19 @@ export interface BuildOption<K extends string = TowerKind> {
     readonly shape: 'square' | 'circle';
     readonly size: number;
   };
+  /** The tower's sprite layers: shown instead of the shape when the atlas has the frames. */
+  readonly sprite?: TowerIcon;
+  /** The tower's render (hull and turret images, turret facing north): wins over `sprite`, as it does on the map. */
+  readonly render?: RenderIcon;
+}
+
+/** What the build bar needs of a render: the two image URLs and the square canvas they share, in pixels. */
+export type RenderIcon = Pick<RenderedSprite, 'hullUrl' | 'turretUrl' | 'canvasPx'>;
+
+/** The atlas as the page sees it: the image's URL and each frame's rectangle in it, or null for an absent frame. */
+export interface IconAtlas {
+  readonly url: string;
+  frame(name: string): { readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
 }
 
 /** The parts of the Game the build bar reads. */
@@ -25,21 +40,33 @@ export interface BuildBar<K extends string = TowerKind> {
   readonly selected: K | undefined;
   /** Whether the bar is folded down to its toggle, leaving the map more room. */
   readonly collapsed: boolean;
+  /** Drops the selected kind, if any. */
+  clear(): void;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
   /** Removes the bar's elements and stops listening for hotkeys. */
   destroy(): void;
 }
 
-/** One option per tower kind, in `TOWER_STATS` order, so a kind added there shows up on the bar. */
-export function buildOptions(): BuildOption[] {
+/**
+ * One option per tower kind, in `TOWER_STATS` order, so a kind added there shows up on the bar. A kind with a render
+ * gets its icon from it, unless `renderLoaded` says its textures didn't (then Kenney, as the map does).
+ */
+export function buildOptions(renderLoaded: (render: RenderedSprite) => boolean = () => true): BuildOption[] {
   return (Object.keys(TOWER_STATS) as TowerKind[]).map((kind) => {
     const { fill, outline, shape, size } = TOWER_STYLE[kind];
+    const rendered = renderFor(kind);
+    const render = rendered !== null && renderLoaded(rendered) ? rendered : null;
+    const sprite = render ? null : towerIcon(kind);
     return {
       kind,
       name: TOWER_NAMES[kind],
       cost: TOWER_STATS[kind].cost,
       icon: { fill, outline, shape, size },
+      ...(render
+        ? { render: { hullUrl: render.hullUrl, turretUrl: render.turretUrl, canvasPx: render.canvasPx } }
+        : {}),
+      ...(sprite ? { sprite } : {}),
     };
   });
 }
@@ -48,6 +75,39 @@ export function buildOptions(): BuildOption[] {
 const ICON_BOX = 24;
 
 const cssColor = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
+
+/** The base and turret layers of a sprite icon, each scaled to fill the icon's `box` (so smaller towers keep their size ratio); null when the atlas lacks a frame. */
+function spriteLayers(doc: Document, atlas: IconAtlas, sprite: TowerIcon, box: number): HTMLElement[] | null {
+  const frames = [
+    { name: sprite.base, rotation: 0 },
+    { name: sprite.turret, rotation: sprite.turretRotation },
+  ].map(({ name, rotation }) => ({ rect: atlas.frame(name), rotation }));
+  if (frames.some(({ rect }) => rect === null)) return null;
+  return frames.map(({ rect, rotation }) => {
+    const { x, y, w, h } = rect!;
+    const layer = doc.createElement('span');
+    layer.className = 'build-icon-layer';
+    layer.style.cssText =
+      `position:absolute;left:50%;top:50%;width:${w}px;height:${h}px;background-repeat:no-repeat;` +
+      `background-image:url("${atlas.url}");background-position:-${x}px -${y}px;image-rendering:pixelated;`;
+    // Fit the frame's longer side to the box, turned about its centre.
+    layer.style.transform = `translate(-50%,-50%) scale(${box / Math.max(w, h)}) rotate(${(rotation * 180) / Math.PI}deg)`;
+    return layer;
+  });
+}
+
+/** The hull and turret images of a render icon, the canvas fitted to the icon's `box`; the turret already faces north. */
+function renderLayers(doc: Document, render: RenderIcon, box: number): HTMLElement[] {
+  return [render.hullUrl, render.turretUrl].map((url) => {
+    const layer = doc.createElement('span');
+    layer.className = 'build-icon-layer';
+    layer.style.cssText =
+      `position:absolute;left:50%;top:50%;width:${render.canvasPx}px;height:${render.canvasPx}px;background-repeat:no-repeat;` +
+      `background-image:url("${url}");background-size:100% 100%;`;
+    layer.style.transform = `translate(-50%,-50%) scale(${box / render.canvasPx})`;
+    return layer;
+  });
+}
 
 /**
  * Builds the build bar inside `root`: a collapse toggle, then one button per option, none selected. A click or the
@@ -58,6 +118,8 @@ export function mountBuildBar<K extends string>(
   root: HTMLElement,
   game: BuildBarGame,
   options: readonly BuildOption<K>[],
+  /** `onSelect` runs when a kind becomes selected (not when it is cleared), so the scene can close the tower panel. `atlas` supplies the sprite icons. */
+  { onSelect, atlas }: { readonly onSelect?: () => void; readonly atlas?: IconAtlas | undefined } = {},
 ): BuildBar<K> {
   if (options.length === 0) throw new Error('The build bar needs at least one tower kind');
   const doc = root.ownerDocument;
@@ -94,12 +156,22 @@ export function mountBuildBar<K extends string>(
     button.title = `${option.name} (${hotkey}): ${option.cost}`;
     const icon = doc.createElement('span');
     icon.className = 'build-icon';
-    icon.style.backgroundColor = cssColor(option.icon.fill);
-    icon.style.borderColor = cssColor(option.icon.outline);
-    const side = `${(ICON_BOX * option.icon.size) / largest}px`;
-    icon.style.width = side;
-    icon.style.height = side;
-    if (option.icon.shape === 'circle') icon.style.borderRadius = '50%';
+    const box = (ICON_BOX * option.icon.size) / largest;
+    icon.style.width = `${box}px`;
+    icon.style.height = `${box}px`;
+    const layers = option.render
+      ? renderLayers(doc, option.render, box)
+      : atlas && option.sprite
+        ? spriteLayers(doc, atlas, option.sprite, box)
+        : null;
+    if (layers) {
+      icon.style.border = 'none';
+      icon.append(...layers);
+    } else {
+      icon.style.backgroundColor = cssColor(option.icon.fill);
+      icon.style.borderColor = cssColor(option.icon.outline);
+      if (option.icon.shape === 'circle') icon.style.borderRadius = '50%';
+    }
     const cost = doc.createElement('span');
     cost.className = 'build-cost';
     cost.textContent = String(option.cost);
@@ -117,6 +189,7 @@ export function mountBuildBar<K extends string>(
     if (!affordable(option)) return;
     selected = option;
     update();
+    onSelect?.();
   };
   const clear = () => {
     selected = undefined;
@@ -159,6 +232,7 @@ export function mountBuildBar<K extends string>(
     get collapsed() {
       return collapsed;
     },
+    clear,
     update,
     destroy() {
       doc.removeEventListener('keydown', onKey);

@@ -1,0 +1,10 @@
+{
+  "id": "russia-tank",
+  "kind": "tank",
+  "pxPerTile": 128,
+  "canvasPx": 192,
+  "pivot": {
+    "x": 95.5,
+    "y": 116.5
+  }
+}

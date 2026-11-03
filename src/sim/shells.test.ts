@@ -120,6 +120,7 @@ describe('createShell', () => {
       targets: ['ground'],
       armorPierce: 3,
       cooldownMs: 0,
+      heading: 0,
       level: 1,
       spent: 50,
       shell: { flightMs: 800, innerRadius: 0.5, outerRadius: 1.5 },
@@ -151,6 +152,7 @@ describe('createShell', () => {
       fireRate: 1,
       targets: ['ground'],
       cooldownMs: 0,
+      heading: 0,
       level: 1,
       spent: 1,
     } as const;

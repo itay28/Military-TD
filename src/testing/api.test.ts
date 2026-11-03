@@ -33,6 +33,7 @@ const EMPTY_VIEW: TestView = {
   mapTiles: 'sprites',
   enemies: [],
   turrets: [],
+  rendered: [],
 };
 
 const api = (hooks: TestHooks, scenarios: ScenarioLoaders = {}) => createTestApi(hooks, scenarios);
@@ -144,6 +145,7 @@ describe('createTestApi', () => {
       mapTiles: 'sprites' as const,
       enemies: [{ id: 3, kind: 'tank' as const, facing: Math.PI / 2, frame: 1 }],
       turrets: [{ towerId: 1, angle: -Math.PI / 2 }],
+      rendered: ['aaGun' as const],
     };
     const hooks = { ...fakeHooks(), view: () => scene };
     const view = api(hooks).view();

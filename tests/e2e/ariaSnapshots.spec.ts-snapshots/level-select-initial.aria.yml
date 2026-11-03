@@ -2,5 +2,11 @@
   - heading "Select map" [level=1]
   - list:
     - listitem:
-      - button "Training Ground"
+      - button "Training Ground, no stars yet": Training Ground
+    - listitem:
+      - button "Switchback, locked. Complete Training Ground to unlock" [disabled]: Switchback
+    - listitem:
+      - button "Serpentine, locked. Complete Switchback to unlock" [disabled]: Serpentine
+    - listitem:
+      - button "Hairpin, locked. Complete Serpentine to unlock" [disabled]: Hairpin
   - button "Back"

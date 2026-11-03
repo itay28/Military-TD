@@ -64,11 +64,12 @@ describe('upgradeTower', () => {
     const game = newGame(300, { waves: ONE_INFANTRY });
     const id = place(game);
     game.startWave();
-    game.tick(TICK_MS); // fires its first shot
-    const { cooldownMs, tile } = game.state.towers[0]!;
+    // Turns to face the Infantry, then fires its first shot.
+    for (let i = 0; i < 60 && game.state.towers[0]!.cooldownMs === 0; i++) game.tick(TICK_MS);
+    const { cooldownMs, tile, heading } = game.state.towers[0]!;
     expect(cooldownMs).toBeGreaterThan(0);
     expect(game.upgradeTower(id)).toMatchObject({ ok: true });
-    expect(game.state.towers[0]).toMatchObject({ cooldownMs, tile });
+    expect(game.state.towers[0]).toMatchObject({ cooldownMs, tile, heading });
   });
 
   it('works in the Wave phase too', () => {

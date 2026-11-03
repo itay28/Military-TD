@@ -1,0 +1,9 @@
+Rendered sprites of "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661
+https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated, set on a generated sandbag pad, split into hull and turret layers).
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-02.
