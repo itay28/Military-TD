@@ -120,7 +120,7 @@ describe('mountPauseMenu', () => {
     expect(onQuit).toHaveBeenCalledOnce();
   });
 
-  it('disables Quit to menu while there is no menu to quit to', () => {
+  it('disables Quit to menu when it is given no onQuit', () => {
     mount().open();
     expect(button('quit')!.disabled).toBe(true);
   });

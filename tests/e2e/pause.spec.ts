@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { START_MONEY } from '../../src/data/start';
-import { clickTile, openGame, playToEnd, selectKind, state } from './helpers';
+import { clickTile, openGame, playToEnd, selectKind, state, stepToEnd } from './helpers';
 
 const BESIDE_PATH = { col: 1, row: 3 };
 
@@ -75,13 +75,14 @@ test('Restart from the pause menu starts a new Build phase', async ({ page }) =>
   expect(await state(page)).toMatchObject({ phase: 'build', waveNumber: 0, money: START_MONEY });
 });
 
-test('Quit to menu is shown but disabled until it is wired to the Main menu (#46); Settings is enabled (#48)', async ({
-  page,
-}) => {
+test('Quit to menu goes to the Level select; Settings is enabled (#48)', async ({ page }) => {
   await openGame(page);
   await pauseButton(page).click();
   await expect(page.getByRole('button', { name: 'Settings' })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Quit to menu' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Quit to menu' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Quit to menu' }).click();
+  await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();
+  await expect(pauseMenu(page)).toBeHidden();
 });
 
 test('pausing is unavailable once the game is over', async ({ page }) => {
@@ -92,4 +93,14 @@ test('pausing is unavailable once the game is over', async ({ page }) => {
   await expect(pauseButton(page)).toBeDisabled();
   await page.keyboard.press('Escape');
   await expect(pauseMenu(page)).toBeHidden();
+});
+
+test('the End screen has a Level select button that leaves the map', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await stepToEnd(page);
+  await page.getByRole('button', { name: 'Level select' }).click();
+  await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /Victory|Defeat/ })).toBeHidden();
 });
