@@ -26,7 +26,7 @@ const BOOM_SMALL = 'assets/ezduzziteh-explosions/explosion2.ogg';
 const BOOM_MID = 'assets/ezduzziteh-explosions/explosion3.ogg';
 
 interface Layer {
-  /** The clip, or a synthesized source: `whistle` (descending tonal shriek with flutter), `thump` (sub-bass hit), `crackle` (debris). */
+  /** The clip, or a synthesized source: `whistle` (falling band of air), `thump` (sub-bass hit), `crackle` (debris). */
   readonly file: string | 'whistle' | 'thump' | 'crackle';
   /** Where in the sound this layer starts, in s. */
   readonly delay?: number;
@@ -130,17 +130,22 @@ const SOUNDS: readonly Sound[] = [
 ];
 
 /**
- * An incoming mortar bomb's descending shriek ("fweeoo"): a thin tone sweeping down from 1900 to 500 Hz, with a faint
- * second harmonic, a fast flutter from the tumbling fins and a little air noise. It swells for the first two thirds,
- * then thins out before impact, unlike a missile's steady, rising rush.
+ * An incoming mortar bomb's descending whistle: mostly air, not a tone. Pink-ish noise through a low-Q band-pass whose
+ * centre falls from 1400 to 450 Hz (the Doppler drop), with slow, irregular turbulence.
+ * It swells over the first half and is cut off by the impact, so it is a falling "fsshhh", neither a whine (a clean
+ * sweep) nor a missile's steady rising rush.
  */
 function whistleSource(dur: number): string {
-  const phase = `2*PI*(1900*t-(1400/(2*${dur}))*t*t)`;
-  const flutter = '(0.65+0.35*sin(2*PI*31*t))';
-  const env = `min(1,t/${(dur * 0.35).toFixed(3)})*min(1,(${dur}-t)/${(dur * 0.3).toFixed(3)}+0.25)`;
+  const steps = 10;
+  const cmds = Array.from({ length: steps }, (_, i) => {
+    const f = Math.round(1400 - 950 * (i / (steps - 1)));
+    return `${((i * dur) / steps).toFixed(3)} bandpass@w f ${f}`;
+  }).join(';');
+  const env = `min(1,t/${(dur * 0.5).toFixed(3)})*(1-0.35*t/${dur})*(0.8+0.2*sin(2*PI*13*t+1.3)*sin(2*PI*5.1*t))`;
   return (
-    `aevalsrc='${env}*(0.6*${flutter}*(sin(${phase})+0.25*sin(2*${phase}))+0.12*(2*random(0)-1))':s=${RATE}:d=${dur},` +
-    'highpass=f=350,lowpass=f=5000'
+    `anoisesrc=c=pink:r=${RATE}:d=${dur}:a=0.9:seed=404,` +
+    `asendcmd=c='${cmds}',bandpass@w=f=1400:width_type=q:w=0.8,` +
+    `volume='${env}':eval=frame,highpass=f=250`
   );
 }
 
