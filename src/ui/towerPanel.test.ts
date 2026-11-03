@@ -23,6 +23,7 @@ const rifleNest = (id: number): Tower => ({
   kind: 'rifleNest',
   tile: { col: id, row: 3 },
   cooldownMs: 0,
+  heading: 0,
   level: 1,
   spent: 50,
 });
