@@ -363,3 +363,100 @@ describe('mountBuildBar onSelect and clear', () => {
     expect(pressed()).toHaveLength(0);
   });
 });
+
+describe('Build bar tooltips', () => {
+  const tooltip = (name: string) => ({ name, role: `${name} role`, rows: [{ label: 'Cost', value: '1' }] });
+  const TIPPED = OPTIONS.map((option) => ({ ...option, tooltip: tooltip(option.name) }));
+  const tip = (kind: string) => root.querySelector<HTMLElement>(`[data-testid="build-tip-${kind}"]`)!;
+  const shown = () =>
+    [...root.querySelectorAll<HTMLElement>('[role="tooltip"]')].filter((el) => !el.hidden).map((el) => el.dataset.testid);
+  const enter = (kind: string) => button(kind).dispatchEvent(new Event('pointerenter'));
+  const leave = (kind: string) => button(kind).dispatchEvent(new Event('pointerleave'));
+
+  it('gives every kind from buildOptions a tooltip', () => {
+    for (const option of buildOptions()) expect(option.tooltip?.name).toBe(option.name);
+  });
+
+  it("points each button's aria-describedby at its tooltip, which lists the name, role and rows", () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    for (const { kind, name } of TIPPED) {
+      const id = button(kind).getAttribute('aria-describedby');
+      expect(id).toBeTruthy();
+      const el = document.getElementById(id!)!;
+      expect(el.getAttribute('role')).toBe('tooltip');
+      expect(el.textContent).toContain(name);
+      expect(el.textContent).toContain(`${name} role`);
+      expect(el.textContent).toContain('Cost');
+    }
+    // The tooltip replaces the native title, so two never show at once.
+    expect(button('cannon').title).toBe('');
+  });
+
+  it('names the hotkey in the tooltip', () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    expect(tip('cannon').textContent).toContain('[2]');
+  });
+
+  it('starts with every tooltip hidden', () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    expect(shown()).toEqual([]);
+  });
+
+  it('shows on hover and hides when the pointer leaves', () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    enter('cannon');
+    expect(shown()).toEqual(['build-tip-cannon']);
+    leave('cannon');
+    expect(shown()).toEqual([]);
+  });
+
+  it('shows on keyboard focus and hides on blur', () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    button('mortar').dispatchEvent(new FocusEvent('focus'));
+    expect(shown()).toEqual(['build-tip-mortar']);
+    button('mortar').dispatchEvent(new FocusEvent('blur'));
+    expect(shown()).toEqual([]);
+  });
+
+  it('shows while a kind is selected (touch has no hover) and hides on clear or Escape', () => {
+    const bar = mountBuildBar(root, wallet(500), TIPPED);
+    pressKey('1');
+    expect(shown()).toEqual(['build-tip-rifle']);
+    pressKey('Escape');
+    expect(shown()).toEqual([]);
+    button('cannon').click();
+    expect(shown()).toEqual(['build-tip-cannon']);
+    bar.clear();
+    expect(shown()).toEqual([]);
+  });
+
+  it('shows one at a time: the hovered one wins over the selected one', () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    pressKey('1');
+    enter('mortar');
+    expect(shown()).toEqual(['build-tip-mortar']);
+    leave('mortar');
+    expect(shown()).toEqual(['build-tip-rifle']);
+  });
+
+  it('hides once the bar is collapsed', () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    pressKey('1');
+    toggle().click();
+    expect(shown()).toEqual([]);
+  });
+
+  it('takes the tile to keep clear with avoid(), and still works without one', () => {
+    const bar = mountBuildBar(root, wallet(500), TIPPED);
+    pressKey('1');
+    bar.avoid({ left: 0, top: 0, width: 10, height: 10 });
+    bar.avoid(undefined);
+    expect(shown()).toEqual(['build-tip-rifle']);
+  });
+
+  it('keeps the native title for an option without a tooltip', () => {
+    mountBuildBar(root, wallet(500), OPTIONS);
+    expect(button('cannon').getAttribute('aria-describedby')).toBeNull();
+    expect(root.querySelector('[role="tooltip"]')).toBeNull();
+  });
+});
