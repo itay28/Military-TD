@@ -29,7 +29,7 @@ test.describe('on a short screen (900 × 420)', () => {
     expect(overflows).toBe(true);
     expect(scrollTop).toBe(0);
     expect(cue).toBe(true);
-    await expect(page.getByRole('heading', { name: /Victory|Defeat/ })).toBeInViewport();
+    await expect(page.getByRole('heading', { name: /MISSION COMPLETE|MISSION FAILED/ })).toBeInViewport();
     await expect(page.getByTestId('restart')).toBeFocused();
   });
 });

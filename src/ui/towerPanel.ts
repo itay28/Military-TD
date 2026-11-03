@@ -1,4 +1,4 @@
-import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, UPGRADE_REFUSAL_TEXT } from '../data/display';
+import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, UPGRADE_REFUSAL_TEXT, formatFunds } from '../data/display';
 import type { Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
@@ -97,13 +97,16 @@ export function mountTowerPanel(
     setText(kills, String(figures?.total.kills ?? 0));
     // The sim decides what selling pays and whether it is allowed (not while already dismantling).
     const sale = game.canSellTower(tower.id);
-    setText(sell, sale.ok ? `Sell (+${sale.refund})` : sale.reason === 'dismantling' ? 'Dismantling…' : 'Sell');
+    setText(
+      sell,
+      sale.ok ? `Sell (+${formatFunds(sale.refund)})` : sale.reason === 'dismantling' ? 'Dismantling…' : 'Sell',
+    );
     if (sell.disabled === sale.ok) sell.disabled = !sale.ok;
     // The sim decides whether the upgrade is allowed; the panel only names it and shows why not.
     const next = nextLevel(tower);
     setHidden(upgrade, !next);
     if (!next) return;
-    setText(upgrade, `${LEVEL_NAME[tower.level + 1]} (${next.cost})`);
+    setText(upgrade, `${LEVEL_NAME[tower.level + 1]} (${formatFunds(next.cost)})`);
     const allowed = game.canUpgradeTower(tower.id);
     if (upgrade.disabled === allowed.ok) upgrade.disabled = !allowed.ok;
     const reason = allowed.ok ? '' : UPGRADE_REFUSAL_TEXT[allowed.reason];

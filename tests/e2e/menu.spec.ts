@@ -11,7 +11,7 @@ const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
 test('a player opening the game sees the Main menu, not the HUD or build bar', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Military TD' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Play' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Deploy' })).toBeFocused();
   await expect(page.getByRole('button', { name: 'Settings' })).toBeEnabled();
   await expect(page.locator('#hud')).toBeHidden();
   await expect(page.locator('#build-bar')).toBeHidden();
@@ -20,10 +20,10 @@ test('a player opening the game sees the Main menu, not the HUD or build bar', a
 
 test('Play on the Main menu opens the Level select', async ({ page }) => {
   await openMenu(page);
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: 'Deploy' }).click();
 
   await expect(page.getByRole('heading', { name: 'Military TD' })).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
   await expect(page.locator('#hud')).toBeHidden();
   await expect(page.locator('#build-bar')).toBeHidden();
 });
@@ -54,7 +54,7 @@ test('Credits on the Main menu lists every pack from the manifest, and Back retu
     await expect(links.first()).toHaveAttribute('href', pack.source);
     await expect(links.first()).toHaveAttribute('target', '_blank');
   }
-  await expect(page.getByRole('button', { name: 'Play' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Deploy' })).toBeHidden();
   await expect(page.locator('#hud')).toBeHidden();
 
   await page.getByRole('button', { name: 'Back' }).click();

@@ -1,3 +1,4 @@
+import { TERMS, lockedLine } from '../data/display';
 import type { MapEntry } from '../data/maps';
 import { createMap } from '../sim/map';
 import type { Stars } from '../sim/progression';
@@ -29,8 +30,8 @@ export interface LevelSelect {
   destroy(): void;
 }
 
-/** "★★☆", or "🔒 Locked": hidden from screen readers, which hear the button's name instead. */
-function buildStatus(doc: Document, { unlocked, bestStars }: MapStatus): HTMLElement {
+/** "★★☆", or "Locked: complete <the map before>": hidden from screen readers, which hear the button's name instead. */
+function buildStatus(doc: Document, { unlocked, bestStars }: MapStatus, previous: MapEntry | undefined): HTMLElement {
   const line = doc.createElement('span');
   line.setAttribute('aria-hidden', 'true');
   if (unlocked) {
@@ -40,7 +41,7 @@ function buildStatus(doc: Document, { unlocked, bestStars }: MapStatus): HTMLEle
   } else {
     line.dataset.testid = 'locked';
     line.className = 'locked';
-    line.textContent = '🔒 Locked';
+    line.textContent = lockedLine(previous?.name);
   }
   return line;
 }
@@ -62,7 +63,7 @@ export function mountLevelSelect(
   const doc = root.ownerDocument;
   let live = true;
   const title = doc.createElement('h1');
-  title.textContent = 'Select map';
+  title.textContent = TERMS.levelSelect;
   const list = doc.createElement('ul');
   const mapButtons = maps.map(({ id, name, data }, index) => {
     const status = statusOf(index);
@@ -78,7 +79,7 @@ export function mountLevelSelect(
     drawMapPreview(preview, createMap(data));
     const label = doc.createElement('span');
     label.textContent = name;
-    button.append(preview, label, buildStatus(doc, status));
+    button.append(preview, label, buildStatus(doc, status, maps[index - 1]));
     button.addEventListener('click', () => live && status.unlocked && onPick(id));
     const item = doc.createElement('li');
     item.append(button);

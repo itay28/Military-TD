@@ -34,7 +34,7 @@
         grid-area: hud;
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 14px;
         box-sizing: border-box;
         min-height: 36px;
         padding: 0 8px;
@@ -44,9 +44,9 @@
       #hud .hud-stats {
         display: flex;
         flex: none;
-        gap: 12px;
+        gap: 8px;
       }
-      /* Fixed widths, so Money 100 → 75 or DPS – → DPS 12 doesn't shift its neighbours. */
+      /* Fixed widths, so Funds $100 → $75 or DPS – → DPS 12 doesn't shift its neighbours. */
       #hud .hud-stats > span {
         display: block;
         white-space: nowrap;
@@ -54,14 +54,40 @@
       #hud [data-testid='hud-money'] {
         min-width: 11ch;
       }
-      #hud [data-testid='hud-lives'] {
-        min-width: 8ch;
+      /* The HQ: label, a bar of the Lives left and "14/20". The digits keep a fixed width, so a leak shifts nothing.
+         The bar turns amber at half and red at a quarter; the number says the same without colour. */
+      #hud .hud-stats > .hq {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      #hud .hq-bar {
+        position: relative;
+        width: 32px;
+        height: 10px;
+        box-sizing: border-box;
+        border: 1px solid #a2a58f;
+        background: #2b3022;
+      }
+      #hud .hq-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: #6fcf4f;
+      }
+      #hud .hq[data-level='low'] .hq-fill {
+        background: #f0c95a;
+      }
+      #hud .hq[data-level='critical'] .hq-fill {
+        background: #e0533d;
+      }
+      #hud .hq-count {
+        min-width: 5ch;
       }
       #hud [data-testid='hud-wave'] {
         min-width: 12ch;
       }
       #hud [data-testid='hud-dps'] {
-        min-width: 9ch;
+        min-width: 8ch;
       }
       #hud .hud-message {
         flex: 1;
@@ -332,6 +358,12 @@
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #f0c95a;
+      }
+      #end-screen h3 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: 0.06em;
+        color: #c2a46b;
       }
       #end-screen p,
       #pause-menu p {
