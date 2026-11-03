@@ -49,7 +49,7 @@ test('picking a map starts a new game on it, in the Build phase', async ({ page 
 
   await page.waitForFunction(() => window.__TD__ !== undefined);
   await expect(page.getByRole('heading', { name: 'Select map' })).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Start Wave' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Call next wave' })).toBeEnabled();
   await expect(page.locator('#build-bar')).toBeVisible();
   await expect(page.getByTestId('hud-money')).toHaveText(`Money ${START_MONEY}`);
   expect(await state(page)).toMatchObject({
@@ -73,7 +73,7 @@ test('picking the second map starts a game on its Path, with its own waves', asy
   await page.getByRole('button', { name: `${SECOND_MAP.name}, no stars yet` }).click();
 
   await page.waitForFunction(() => window.__TD__ !== undefined);
-  await expect(page.getByRole('button', { name: 'Start Wave' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Call next wave' })).toBeEnabled();
   expect(await state(page)).toMatchObject({
     mapId: SECOND_MAP.id,
     phase: 'build',

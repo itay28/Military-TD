@@ -1,7 +1,6 @@
-- text: Money 100 Lives 20 Wave 0 / 10 DPS –
+- text: Money 100 Lives 20 Wave 0 / 10 DPS – Next wave in 40
 - status
-- button "Start Wave"
-- button "Auto-start"
+- button "Call next wave"
 - group "Game speed":
   - button "×1" [pressed]
   - button "×2"
