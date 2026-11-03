@@ -9,6 +9,9 @@ export type TrackId = 'menu' | 'game';
 
 export const TRACK_IDS: readonly TrackId[] = ['menu', 'game'];
 
+/** The volume each track fades in to (0–1). The menu track is mixed lower: it sat too loud. The music channel's volume (#67) scales it. */
+export const TRACK_VOLUME: Readonly<Record<TrackId, number>> = { menu: 0.6, game: 1 };
+
 /** How long the old track fades out and the new one fades in when the track changes. */
 export const CROSSFADE_MS = 1000;
 
@@ -64,6 +67,8 @@ export interface MusicOptions {
 export function createMusicController(backend: MusicBackend, options: MusicOptions): MusicController {
   const fadeMs = options.crossfadeMs ?? CROSSFADE_MS;
   const volume = options.volume ?? (() => 1);
+  /** A track's volume: the music channel's, scaled by the track's own mix level. */
+  const level = (track: TrackId): number => volume() * TRACK_VOLUME[track];
   let unlocked = false;
   /** The track the current scene wants, whether or not it's playing yet. */
   let wanted: TrackId | null = null;
@@ -85,7 +90,7 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
     } catch {
       voice = null;
     }
-    voice?.fadeTo(volume(), fadeMs);
+    voice?.fadeTo(level(wanted), fadeMs);
     playing = { track: wanted, voice };
   };
 
@@ -100,7 +105,7 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
       sync();
     },
     refreshVolume() {
-      playing?.voice?.fadeTo(volume(), VOLUME_RAMP_MS);
+      if (playing) playing.voice?.fadeTo(level(playing.track), VOLUME_RAMP_MS);
     },
   };
 }
