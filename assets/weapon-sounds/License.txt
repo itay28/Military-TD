@@ -1,0 +1,18 @@
+Weapon sounds (rifleShot, aaGunBurst, missileLaunch, gunReport, recoillessBlast,
+mortarLaunch, mortarWhistle, mortarBlast, vehicleExplosion, infantryHit .ogg)
+for Military-TD
+
+Built by scripts/weapon-fx.ts (ffmpeg) from these CC0 1.0 items:
+- The Free Firearm Sound Library by Ben Jaszczak, Brian Nelson, Kevin Heras
+  and Matthew Nanney (assets/free-firearm-sfx/)
+  https://opengameart.org/content/the-free-firearm-sound-library
+- Missile Sound by mikeask (assets/mikeask-missile/)
+  https://opengameart.org/content/missile-sound
+- Cannon Fire by Thimras (assets/thimras-cannon/)
+  https://opengameart.org/content/cannon-fire
+- Explosions by EZduzziteh (assets/ezduzziteh-explosions/)
+  https://opengameart.org/content/explosions-4
+mortarWhistle.ogg is synthesized by the script.
+
+License: Creative Commons Zero (CC0 1.0), as its sources.
+https://creativecommons.org/publicdomain/zero/1.0/
