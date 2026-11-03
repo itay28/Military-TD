@@ -12,6 +12,7 @@ import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type 
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { groundTextureKey, MAPS, mapById } from '../data/maps';
+import type { Faction } from '../sim/factions';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
@@ -443,22 +444,15 @@ export class GameScene extends Phaser.Scene {
           SOUND_THROTTLE,
           () => this.time.now,
         );
-    const { defender } = mapById(this.mapId);
+    // The map actually played (a loaded scenario's own map included); one outside the registry falls back to the selected map.
+    const defenderOf = (): Faction =>
+      (MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId)).defender;
     const play = (event: SoundEvent, at?: Position): void => {
-      const id = soundFor(event, defender);
+      const id = soundFor(event, defenderOf());
       if (id === null) return;
       if (at === undefined) return audio.play(id);
       const camera = this.cameras.main;
-      const center = viewCenter(
-        {
-          scrollX: camera.scrollX,
-          scrollY: camera.scrollY,
-          zoom: camera.zoom,
-          width: camera.width,
-          height: camera.height,
-        },
-        TILE_PX,
-      );
+      const center = viewCenter(camera, TILE_PX);
       audio.play(id, distanceVolume(Math.hypot(at.x - center.x, at.y - center.y), SOUND_FALLOFF));
     };
     const towerOf = (towerId: number): Tower | undefined => this.sim.state.towers.find((t) => t.id === towerId);
