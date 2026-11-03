@@ -47,6 +47,10 @@ describe('board sync workflow: auto-start', () => {
     expect(yaml).toContain('AUTO_STACK: ${{ vars.AUTO_STACK }}');
   });
 
+  it('passes the feature freeze switch from its repo variable (#84)', () => {
+    expect(yaml).toContain('FEATURE_FREEZE: ${{ vars.FEATURE_FREEZE }}');
+  });
+
   it('passes both routine triggers from secrets', () => {
     for (const name of ['ROUTINE_SONNET_URL', 'ROUTINE_SONNET_TOKEN', 'ROUTINE_OPUS_URL', 'ROUTINE_OPUS_TOKEN'])
       expect(yaml).toContain(`${name}: \${{ secrets.${name} }}`);
