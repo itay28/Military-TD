@@ -108,9 +108,37 @@ Downloaded 2026-11-02, CC0 only. kenney.nl wasn't reachable from the cloud sessi
 
 | Pack (`assets/<id>/`) | Source | Used for |
 | --- | --- | --- |
-| 25 CC0 bang / firework SFX (`rubberduck-bang-sfx`) | opengameart.org/content/25-cc0-bang-firework-sfx | Rifle Nest (`shot_03`), AA Gun (`shot_02`), Cannon (`cannon_03`), Mortar launch (`cannon_04`), shell explosion (`bang_02`) |
-| 100 CC0 SFX (`rubberduck-100-sfx`) | opengameart.org/content/100-cc0-sfx | enemy death (`hit_02`), leak (`bell_02`) |
+| 100 CC0 SFX (`rubberduck-100-sfx`) | opengameart.org/content/100-cc0-sfx | leak (`bell_02`) |
 | 85 Short music jingles (`kenney-jingles`) | opengameart.org/content/85-short-music-jingles | wave start, victory, defeat (`jingles_STEEL00`–`02`) |
+
+The weapon shots, the shell explosion and the enemy death first used rubberduck's bang pack and `hit_02`. They're replaced by the weapon sounds below (#404).
+
+## Weapon sounds (#404)
+
+One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesound isn't reachable from the cloud session). `scripts/weapon-fx.ts` (`npm run weapon-fx`, needs ffmpeg) builds `assets/weapon-sounds/<id>.ogg` from the committed inputs below: it layers, trims, re-pitches and filters them, and synthesizes the mortar's incoming whistle (a falling tone), since no CC0 recording of one was found. `SHOT_SOUND` in `src/audio/sounds.ts` maps each tower kind × defender Faction to a sound (ADR-0009). The sounds were checked by spectrogram and level, not by ear.
+
+| Sound | Plays for | Built from |
+| --- | --- | --- |
+| `rifleShot` | Rifle Nest | an AK-47 short burst over an AR-15 crack |
+| `aaGunBurst` | AA Gun | four .30-06 reports pitched down, about 6 rounds a second |
+| `missileLaunch` | Cannon: TOW (US), HJ-8 (China) | the missile launch whoosh, with a low eject thump |
+| `gunReport` | Cannon: MT-12 (Russia) | the cannon shot, with a rifle's supersonic crack on top |
+| `recoillessBlast` | Cannon: SPG-9 (Insurgents) | the cannon shot, lower and duller, with a backblast hiss |
+| `mortarLaunch`, `mortarWhistle`, `mortarBlast` | Mortar: launch, incoming (0.5 s before impact), impact | the cannon shot low-passed and pitched down; the synthesized whistle; `explosion3` |
+| `vehicleExplosion` | a jeep, tank or helicopter destroyed | `explosion1`, with extra low end |
+| `infantryHit` | infantry killed | `explosion2`, shorter and lighter |
+
+| Pack (`assets/<id>/`) | Source | Used for |
+| --- | --- | --- |
+| The Free Firearm Sound Library (`free-firearm-sfx`), by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney | opengameart.org/content/the-free-firearm-sound-library | three one-take excerpts (AK-47 burst, AR-15 shot, Springfield 1917 shot) as 48 kHz FLAC; the 194 MB archive isn't committed |
+| Missile Sound (`mikeask-missile`), by mikeask | opengameart.org/content/missile-sound | the missile launch |
+| Cannon Fire (`thimras-cannon`), by Thimras | opengameart.org/content/cannon-fire | the gun, recoilless and mortar reports |
+| Explosions (`ezduzziteh-explosions`), by EZduzziteh | opengameart.org/content/explosions-4 | the explosions |
+| Weapon sounds (`weapon-sounds`) | the script's output | the ten sounds above |
+
+Each source ships no license file, so its `License.txt` copies the source page's CC0 notice. Rejected: *Light Machine Gun* and *4 Projectile Launches* (CC-BY), *2 Big Gun Shots* and *Q009's weapon sounds* (CC-BY-SA), the *Whistles* items (CC-BY, and not shell whistles).
+
+Volume falls off with distance from the camera's centre: full within 5 tiles, down to 35 % at 16 tiles (`SOUND_FALLOFF` in `src/data/sounds.ts`). Wave start, a leak and the end of the game play at full volume.
 
 ## Candidate sources
 
