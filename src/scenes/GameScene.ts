@@ -12,6 +12,10 @@ import {
   TILE_PX,
   TRACER,
 } from '../data/display';
+import { soundFor, type SoundEvent } from '../audio/sounds';
+import { silentAudio, throttleAudio } from '../audio/audioOut';
+import { createPhaserAudio } from '../audio/phaserAudio';
+import { SOUND_THROTTLE } from '../data/sounds';
 import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
@@ -455,6 +459,32 @@ export class GameScene extends Phaser.Scene {
     return 'sprites';
   }
 
+  /**
+   * Plays the sim's events as sounds (#45). Test mode is silent, so e2e runs don't change. Otherwise each sound is
+   * throttled, waits for the browser's first input, and stays silent if its file didn't load.
+   */
+  private wireSounds(): void {
+    const audio = this.flags.test
+      ? silentAudio
+      : throttleAudio(
+          createPhaserAudio(this.sound, (key) => this.cache.audio.exists(key)),
+          SOUND_THROTTLE,
+          () => this.time.now,
+        );
+    const play = (event: SoundEvent): void => {
+      const id = soundFor(event);
+      if (id !== null) audio.play(id);
+    };
+    const kindOf = (towerId: number): TowerKind | undefined =>
+      this.sim.state.towers.find((t) => t.id === towerId)?.kind;
+    const { events } = this.sim;
+    events.on('towerFired', ({ towerId }) => play({ type: 'towerFired', kind: kindOf(towerId) }));
+    events.on('shellFired', ({ towerId }) => play({ type: 'shellFired', kind: kindOf(towerId) }));
+    for (const type of ['shellLanded', 'enemyKilled', 'enemyLeaked', 'waveStarted', 'victory', 'defeat'] as const) {
+      events.on(type, () => play({ type }));
+    }
+  }
+
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
   init(data: { readonly mapId?: string } = {}): void {
     if (data.mapId !== undefined) this.mapId = mapById(data.mapId).id;
@@ -590,6 +620,8 @@ export class GameScene extends Phaser.Scene {
         this.effects.add('muzzleFlash', at);
       }
     });
+
+    this.wireSounds();
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
     this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
