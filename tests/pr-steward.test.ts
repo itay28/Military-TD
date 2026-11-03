@@ -14,6 +14,7 @@ import {
   codeCommittedAt,
   criticalFiles,
   renamedFiles,
+  renameSources,
   currentChecks,
   decide,
   mainCiRed,
@@ -169,8 +170,28 @@ describe('decide: skip', () => {
     expect(decide(answered, now)).toMatchObject({
       kind: 'steward',
       reasons: ['review', 'comment'],
-      clearNeedsYou: true,
+      clearHandOff: ['needs-you'],
     });
+  });
+
+  it('treats needs-approval as a hand-off too, and clears it once the maintainer comments (#417)', () => {
+    const asked = pr({ labels: ['needs-approval'], comments: [review(90), action(STUCK_MARKER, 20)] });
+    expect(kind(asked)).toBe('skip');
+    expect(decide({ ...asked, comments: [...asked.comments, maintainer(5)] }, now)).toMatchObject({
+      kind: 'steward',
+      clearHandOff: ['needs-approval'],
+    });
+  });
+
+  it('leaves a stranded draft alone while it waits for an approval (#417)', () => {
+    const draft = pr({
+      isDraft: true,
+      labels: ['needs-approval'],
+      checks: [{ name: 'ci', state: 'failure' }],
+      lastCommitAt: at(600),
+      comments: [action(STUCK_MARKER, 600)],
+    });
+    expect(decide(draft, now)).toEqual({ kind: 'skip', why: 'draft' });
   });
 });
 
@@ -477,7 +498,7 @@ describe('decide: steward rounds', () => {
         reasons: ['ci'],
         round: 1,
         retry: true,
-        clearNeedsYou: false,
+        clearHandOff: [],
       });
     });
 
@@ -792,11 +813,22 @@ describe('decide: approval gate (#206)', () => {
     expect(decide(pr({ files: null }), now)).toMatchObject({ kind: 'approval' });
   });
 
-  it('asks for approval when a file was renamed, since its old path may be critical', () => {
-    expect(decide(pr({ renamed: ['docs/notes.md'] }), now)).toEqual({
+  it("asks for approval when a file was renamed and its old path isn't known", () => {
+    expect(decide(pr({ renamed: [{ path: 'docs/notes.md', from: null }] }), now)).toEqual({
       kind: 'approval',
-      paths: ['docs/notes.md (renamed: its old path may be critical)'],
+      paths: ['docs/notes.md (renamed: its old path is unknown)'],
     });
+  });
+
+  it('asks for approval when a file was renamed away from a critical path', () => {
+    expect(decide(pr({ renamed: [{ path: 'tools/notes.md', from: 'docs/adr/0009-x.md' }] }), now)).toEqual({
+      kind: 'approval',
+      paths: ['tools/notes.md (renamed from docs/adr/0009-x.md)'],
+    });
+  });
+
+  it('merges a rename whose old path is game code, like #351 (#417)', () => {
+    expect(kind(pr({ renamed: [{ path: 'src/sim/aim.ts', from: 'src/sim/turn.ts' }] }))).toBe('merge');
   });
 
   it('asks again when code was committed after the approval', () => {
@@ -835,7 +867,7 @@ describe('decide: approval gate (#206)', () => {
 
   it('waits on the maintainer after asking, then merges on /approve', () => {
     const asked = { ...action(`${STUCK_MARKER}\n${APPROVAL_MARKER}`, 20) };
-    const waiting = critical({ labels: ['needs-you'], comments: [review(60), agent(DONE_MARKER, 30), asked] });
+    const waiting = critical({ labels: ['needs-approval'], comments: [review(60), agent(DONE_MARKER, 30), asked] });
     expect(kind(waiting)).toBe('skip');
     expect(kind({ ...waiting, comments: [...waiting.comments, approve(5)] })).toBe('merge');
   });
@@ -850,9 +882,20 @@ describe('changedFiles', () => {
     expect(changedFiles(null)).toBeNull();
   });
 
-  it('lists renamed files by their new path', () => {
-    expect(renamedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts', 'RENAMED')] })).toEqual(['b.ts']);
+  it('lists renamed files by their new path, old path not known yet', () => {
+    expect(renamedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts', 'RENAMED')] })).toEqual([
+      { path: 'b.ts', from: null },
+    ]);
     expect(renamedFiles(null)).toEqual([]);
+  });
+
+  it("fills in each rename's old path from the REST file list", () => {
+    const rest = [
+      { filename: 'a.ts', status: 'modified' },
+      { filename: 'b.ts', status: 'renamed', previous_filename: 'scripts/b.ts' },
+    ];
+    expect(renameSources([{ path: 'b.ts', from: null }], rest)).toEqual([{ path: 'b.ts', from: 'scripts/b.ts' }]);
+    expect(renameSources([{ path: 'c.ts', from: null }], rest)).toEqual([{ path: 'c.ts', from: null }]);
   });
 });
 
@@ -933,7 +976,7 @@ describe('act', () => {
     reasons: ['ci', 'review'],
     round: 2,
     retry: false,
-    clearNeedsYou: false,
+    clearHandOff: [],
   };
 
   it('fires a steward round with the PR, reasons and round, then posts the round marker with the session link', async () => {
@@ -950,10 +993,11 @@ describe('act', () => {
     expect(body).toContain(roundMeta(['ci', 'review'], 'base-1'));
   });
 
-  it('removes needs-you when a maintainer comment restarted the PR', async () => {
+  it('removes the hand-off labels when a maintainer comment restarted the PR', async () => {
     fireOk.mockClear();
-    await act(pr(), { ...steward, clearNeedsYou: true }, 'gh-token', settings, fireOk);
+    await act(pr(), { ...steward, clearHandOff: ['needs-you', 'needs-approval'] }, 'gh-token', settings, fireOk);
     expect(calls(fireOk)).toContain(`DELETE ${api}/issues/7/labels/needs-you`);
+    expect(calls(fireOk)).toContain(`DELETE ${api}/issues/7/labels/needs-approval`);
   });
 
   it('says a retried round is a retry', async () => {
@@ -1025,9 +1069,10 @@ describe('act', () => {
     expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
     const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
     expect(body).toContain(STUCK_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: ['needs-you'] });
   });
 
-  it('asks for approval: a summary naming the paths with both markers, then needs-you', async () => {
+  it('asks for approval: a summary naming the paths with both markers, then needs-approval (#417)', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await act(pr(), { kind: 'approval', paths: ['docs/adr/0009-new.md'] }, 'gh-token', settings, fetchFn);
     expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
@@ -1036,6 +1081,7 @@ describe('act', () => {
     expect(body).toContain('/approve');
     expect(body).toContain(STUCK_MARKER);
     expect(body).toContain(APPROVAL_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: ['needs-approval'] });
   });
 
   it('asks for approval only when merging is on', async () => {

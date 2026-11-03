@@ -6,11 +6,15 @@ name: Board sync
 # anything an event missed. Logic and tests: scripts/board-sync.ts.
 #
 # API quota (#293): PROJECT_TOKEN's requests count against the maintainer's own hourly quota,
-# shared with PR steward and every other workflow that uses it. So an event run first waits 60 s
-# in the debounce job, where a newer event cancels it: a burst of events (a relabel, an agent's
-# pushes) ends in one sweep, and nothing is ever cancelled mid-write. The hourly schedule skips the
-# wait, so it still runs while events keep coming. Each run logs the requests it made and the quota
-# left; an exhausted quota logs its reset time and passes green (scripts/rate-limit.ts).
+# shared with PR steward and every other workflow that uses it. So every run first passes the
+# debounce job (scripts/debounce.ts, #417): it sweeps at once when no other run is active, yields
+# green to a newer run that will sweep, and waits for an older one that is still sweeping. A burst of
+# events (a relabel, an agent's pushes) ends in at most two sweeps, nothing is cancelled (a cancelled
+# run shows as a red ✗ on the PR), and runs never overlap. Each run logs the requests it made and the
+# quota left; an exhausted quota logs its reset time and passes green (scripts/rate-limit.ts).
+#
+# Closing a PR or an issue also removes its hand-off labels (`needs-you`, `needs-approval`): nobody
+# needs to act on a closed item (#417).
 #
 # GITHUB_TOKEN can't edit a user-owned project, so this uses the PROJECT_TOKEN
 # secret (classic PAT, project + repo scopes). Without it, the run fails.
@@ -37,21 +41,33 @@ jobs:
     name: debounce
     # Fork PRs get no secrets; the next scheduled sweep covers them.
     if: >-
-      github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' &&
-      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
-    # A newer event cancels this wait, so only the last run of a burst goes on to sweep.
-    concurrency:
-      group: board-sync-debounce
-      cancel-in-progress: true
+      github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
+    # Lets only the newest run of a burst sweep, with no fixed wait and nothing cancelled (#417):
+    # older runs pass green and their sweep is skipped (scripts/debounce.ts).
+    permissions:
+      actions: read
+    outputs:
+      go: ${{ steps.gate.outputs.go }}
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for the burst to settle
-        run: sleep 60
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Let the newest run of a burst sweep
+        id: gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/debounce.ts
 
   board-sync:
     name: board-sync
     needs: debounce
-    if: always() && (needs.debounce.result == 'success' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: needs.debounce.outputs.go == 'true'
     # Runs queue instead of overlapping; each one reads the board fresh.
     concurrency:
       group: board-sync
@@ -78,3 +94,25 @@ jobs:
           ROUTINE_OPUS_URL: ${{ secrets.ROUTINE_OPUS_URL }}
           ROUTINE_OPUS_TOKEN: ${{ secrets.ROUTINE_OPUS_TOKEN }}
         run: node scripts/board-sync.ts
+
+  clear-hand-off:
+    name: clear-hand-off
+    # The steward hands PRs off with needs-you or needs-approval; once closed, nothing is waiting on
+    # the maintainer. Fork PRs get a read-only token, and the steward never labels them.
+    if: github.event.action == 'closed' && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
+    permissions:
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove hand-off labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          jq -r '(.pull_request // .issue).labels[].name' "$GITHUB_EVENT_PATH" |
+            { grep -xE 'needs-you|needs-approval' || true; } |
+            while read -r label; do
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels/$label" --silent
+              echo "Removed $label from #$NUMBER."
+            done
