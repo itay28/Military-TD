@@ -134,6 +134,8 @@ const NEEDS_YOU_LABEL = 'needs-you';
 export const MAX_ROUNDS = 2;
 /** A round with no done marker after this long has died (e.g. its session hit a usage limit) and is retried, not counted (#200). Real rounds take minutes (#196). */
 const ROUND_TIMEOUT_MS = 60 * 60 * 1000;
+/** A draft that is red and has had no commit or comment for this long is stranded, and gets a round (#326). */
+export const DRAFT_IDLE_MS = 60 * 60 * 1000;
 /** Checks that report on bookkeeping, not on the PR's code; the CI review is judged by its comment. */
 const IGNORED_CHECKS = ['board-sync', 'release-issue', 'claude-review', 'pr-steward'];
 const MAINTAINER_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'];
@@ -184,6 +186,8 @@ export function currentChecks(checks: readonly Check[]): { name: string; state: 
 
 /** An open PR, with what the steward reads. */
 export interface StewardPr {
+  /** GraphQL node id, for marking a draft ready. */
+  readonly id: string;
   readonly number: number;
   readonly title: string;
   readonly body: string;
@@ -214,6 +218,8 @@ export interface StewardPr {
   readonly renamed: readonly string[];
   /** When the latest commit that isn't a merge was made: an approval must come after it. */
   readonly codeCommittedAt: string | null;
+  /** When the latest commit of any kind was made (a draft's activity, #326). */
+  readonly lastCommitAt: string | null;
   /** Conversation comments, oldest first. */
   readonly comments: readonly PrComment[];
 }
@@ -225,6 +231,8 @@ export type Decision =
   | { readonly kind: 'skip'; readonly why: string }
   | { readonly kind: 'wait'; readonly why: string }
   | { readonly kind: 'update' }
+  /** A draft whose steward round ended green (#326): mark it ready for review. */
+  | { readonly kind: 'ready' }
   /** No CI review ever ran on this PR: add `review-again` to start one (#209). */
   | { readonly kind: 'review' }
   | {
@@ -300,15 +308,43 @@ export function decide(
   return heldByRedMain(pr, decideIgnoringMain(pr, now, defaultBranch, current), mainRed);
 }
 
+/**
+ * A draft is left alone while someone may be working on it. It is stranded (#326) when a check
+ * fails and nothing was committed or commented for DRAFT_IDLE_MS: null then, so the normal flow
+ * fires a `ci` round. A draft whose steward round ended with every check green is marked ready.
+ */
+function draftGate(pr: StewardPr, now: Date): Decision | null {
+  const skip: Decision = { kind: 'skip', why: 'draft' };
+  if (pr.labels.includes(NEEDS_YOU_LABEL)) return skip;
+  const relevant = currentChecks(pr.checks).filter((c) => !IGNORED_CHECKS.includes(c.name));
+  const all = currentChecks(pr.checks);
+  const times = [...pr.comments.map((c) => Date.parse(c.createdAt)), pr.lastCommitAt ? Date.parse(pr.lastCommitAt) : 0];
+  const lastActivity = Math.max(0, ...times);
+  const latest = (marker: string) =>
+    Math.max(0, ...pr.comments.filter((c) => c.body.includes(marker)).map((c) => Date.parse(c.createdAt)));
+  const lastRound = latest(ROUND_MARKER);
+  const green =
+    relevant.length > 0 &&
+    relevant.every((c) => c.state === 'success') &&
+    !all.some((c) => c.state === 'pending') &&
+    pr.mergeable === 'MERGEABLE';
+  if (lastRound > 0 && latest(DONE_MARKER) >= lastRound && green) return { kind: 'ready' };
+  const red = relevant.some((c) => c.state === 'failure');
+  return red && now.getTime() - lastActivity >= DRAFT_IDLE_MS ? null : skip;
+}
+
 function decideIgnoringMain(
   pr: StewardPr,
   now: Date,
   defaultBranch: string,
   current: CurrentMilestone | null,
 ): Decision {
-  if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.fork) return { kind: 'skip', why: 'fork' };
   if (pr.labels.includes(HOLD_LABEL)) return { kind: 'skip', why: HOLD_LABEL };
+  if (pr.isDraft) {
+    const gate = draftGate(pr, now);
+    if (gate) return gate;
+  }
   if (pr.head.startsWith(RELEASE_BRANCH)) return decideRelease(pr, current);
   const report = REPORT_BRANCH.exec(pr.head)?.[1];
   if (report) return decideReport(pr, current, report);
@@ -349,6 +385,8 @@ function decideIgnoringMain(
   if (lastFindings > lastDone && lastFindings === lastReview) reasons.push('review');
   if (last((c) => isMaintainer(c) && !isApproval(c)) > lastDone) reasons.push('comment');
   if (pr.unresolvedThreads > 0) reasons.push('threads');
+  // A draft is mid-work: only red CI starts a round, and it never reaches review or merge (#326).
+  if (pr.isDraft) reasons.splice(0, reasons.length, ...reasons.filter((r) => r === 'ci'));
   if (reasons.length) {
     const since = pr.comments.filter((c) => c.body.includes(ROUND_MARKER) && Date.parse(c.createdAt) > lastMaintainer);
     const finished = finishedRound(pr.comments);
@@ -360,6 +398,7 @@ function decideIgnoringMain(
       ? { kind: 'stuck', reasons }
       : { kind: 'steward', reasons, round: used + 1, retry: !!latest && !finished(latest), clearNeedsYou };
   }
+  if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.behind) return { kind: 'update' };
   if (!lastReview)
     return pr.comments.some((c) => c.body.includes(reviewRequestMarker(pr.headSha)))
@@ -555,6 +594,18 @@ ${APPROVAL_MARKER}`,
       });
       await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [REVIEW_AGAIN_LABEL] });
       return;
+    case 'ready':
+      await graphql(
+        token,
+        'mutation($id: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $id }) { clientMutationId } }',
+        {
+          id: pr.id,
+        },
+      );
+      await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+        body: `PR steward: the round ended green, so I marked this draft ready for review. That starts the CI review.`,
+      });
+      return;
     case 'update':
       await github(fetchFn, token, 'PUT', `pulls/${n}/update-branch`, { expected_head_sha: pr.headSha });
       return;
@@ -614,7 +665,7 @@ export const PR_QUERY = `query($owner: String!, $name: String!) {
     pullRequests(states: OPEN, first: 50) {
       totalCount
       nodes {
-        number title body isDraft isCrossRepository baseRefName baseRefOid headRefName headRefOid mergeable mergeStateStatus
+        id number title body isDraft isCrossRepository baseRefName baseRefOid headRefName headRefOid mergeable mergeStateStatus
         baseRef { target { oid } }
         labels(first: 20) { nodes { name } }
         reviewThreads(first: 100) { nodes { isResolved } }
@@ -655,6 +706,7 @@ interface ContextNode {
 }
 
 interface PrNode {
+  id: string;
   number: number;
   title: string;
   body: string;
@@ -752,6 +804,7 @@ function toCheck(node: ContextNode): Check {
 
 export function toStewardPr(node: PrNode): StewardPr {
   return {
+    id: node.id,
     number: node.number,
     title: node.title,
     body: node.body,
@@ -777,6 +830,7 @@ export function toStewardPr(node: PrNode): StewardPr {
     files: changedFiles(node.files),
     renamed: renamedFiles(node.files),
     codeCommittedAt: codeCommittedAt(node.recentCommits.nodes),
+    lastCommitAt: node.recentCommits.nodes.at(-1)?.commit.committedDate ?? null,
     comments: node.comments.nodes.map((c) => ({
       author: c.author?.login ?? '',
       bot: c.author?.__typename === 'Bot',

@@ -121,10 +121,11 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack, and
 
 | The PR | Steward does |
 | --- | --- |
-| draft, from a fork, labelled `hold`, or `needs-you` with no maintainer comment since the hand-off | nothing |
+| from a fork, labelled `hold`, a draft that isn't stranded (below), or `needs-you` with no maintainer comment since the hand-off | nothing |
 | mergeability still computing, a round in flight (no done marker yet, under 1 h old), or checks running (CI, CI review) | waits |
 | a conflict, a failing check, a CI review with findings or a maintainer comment newer than the last done marker, or unresolved review threads (a review that ends with `<!-- code-review:clean -->` has nothing to answer and starts no round, #303) | fires a **round** of the `pr-steward` task, which fixes what it can and ends with a `<!-- pr-steward:done -->` comment |
 | the same, after 2 rounds since the latest maintainer comment, or a conflict a round couldn't resolve | hands off: `needs-you` label + a summary comment |
+| a **stranded draft** (#326): a failing check and no commit or comment for 1 h | fires a `ci` round like for a ready PR (only `ci`: a draft never gets review, conflict or merge handling), then **marks it ready** once the round has ended with every check green and no conflict. Active drafts, and drafts that are green or have checks running, are left alone |
 | the steward's trigger refuses the fire with a setup error (any 4xx but 429: bad token, deleted routine) | hands off the same way, naming the HTTP status and the secrets to check; the run goes red |
 | only behind its base | merges the base in itself (no agent, not a round) |
 | no CI review comment yet | adds `review-again` itself, once per head commit, with a comment saying so (#209): a PR marked ready while it had a conflict never started the review, as GitHub runs no PR workflow on a conflicted PR. Then waits (add `review-again` to ask again) |
