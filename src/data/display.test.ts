@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  CANVAS_HEIGHT,
-  CANVAS_WIDTH,
-  ENEMY_NAMES,
-  ENEMY_WEAKNESS,
-  TILE_PX,
-  TOWER_NAMES,
-  TOWER_ROLES,
-} from './display';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, ENEMY_NAMES, ENEMY_WEAKNESS, TILE_PX, TOWER_NAMES, TOWER_ROLES } from './display';
 import { ENEMY_STATS, type EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
 import { TOWER_STATS, type TowerKind } from './towers';
