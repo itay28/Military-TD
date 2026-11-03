@@ -7,7 +7,8 @@
  *
  * Each sound is a few layers mixed together: a clip from `at` s, `dur` s long, optionally re-pitched (`rate`, which also
  * changes its length, as a heavier gun's lower report would), filtered and set to `db`. The mortar's incoming whistle is
- * synthesized (a falling tone), since no CC0 recording of one was found.
+ * synthesized (band-passed noise falling in pitch), since no CC0 recording of one was found; the explosions add a
+ * synthesized sub-bass thump and a debris crackle to their recordings for weight.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -25,8 +26,8 @@ const BOOM_SMALL = 'assets/ezduzziteh-explosions/explosion2.ogg';
 const BOOM_MID = 'assets/ezduzziteh-explosions/explosion3.ogg';
 
 interface Layer {
-  /** The clip, or `whistle` for the synthesized falling tone. */
-  readonly file: string | 'whistle';
+  /** The clip, or a synthesized source: `whistle` (airy falling shriek), `thump` (sub-bass hit), `crackle` (debris). */
+  readonly file: string | 'whistle' | 'thump' | 'crackle';
   /** Where in the sound this layer starts, in s. */
   readonly delay?: number;
   /** Where in the clip to start, and how much of it to take, in s. */
@@ -101,27 +102,66 @@ const SOUNDS: readonly Sound[] = [
     length: 0.8,
     layers: [{ file: CANNON, dur: 0.6, rate: 0.7, db: -7, filter: 'lowpass=f=700' }],
   },
-  { id: 'mortarWhistle', length: 0.5, layers: [{ file: 'whistle', dur: 0.5, db: -6 }] },
+  { id: 'mortarWhistle', length: 0.5, layers: [{ file: 'whistle', dur: 0.5, db: 14 }] },
   { id: 'mortarBlast', length: 1.5, layers: [{ file: BOOM_MID, dur: 1.5, db: 3 }] },
   {
-    // A vehicle destroyed: the big explosion, with extra low end.
+    // A vehicle destroyed: a slowed big blast for the weight, a sub-bass thump under it, the mid blast's rumble as a
+    // tail and a debris crackle; the top is rolled off so it is not bright or clipped.
     id: 'vehicleExplosion',
-    length: 2.2,
-    layers: [{ file: BOOM_BIG, dur: 2.2, db: 3, filter: 'bass=g=4:f=90' }],
+    length: 3,
+    layers: [
+      { file: BOOM_BIG, dur: 2.8, rate: 0.8, db: -7, filter: 'lowpass=f=4500,bass=g=5:f=80' },
+      { file: 'thump', dur: 1, db: 2 },
+      { file: BOOM_MID, dur: 2, rate: 0.6, delay: 0.2, db: -4, filter: 'lowpass=f=1500' },
+      { file: 'crackle', dur: 1.8, delay: 0.25, db: -14 },
+    ],
   },
-  // Infantry hit: a short, lighter blast.
-  { id: 'infantryHit', length: 0.6, layers: [{ file: BOOM_SMALL, dur: 0.6, db: -4, filter: 'highpass=f=120' }] },
+  {
+    // Infantry hit: short, but with a low thump and a little debris so it is not a pop.
+    id: 'infantryHit',
+    length: 0.9,
+    layers: [
+      { file: BOOM_SMALL, dur: 0.8, rate: 0.85, db: -5, filter: 'lowpass=f=4500,bass=g=3:f=100' },
+      { file: 'thump', dur: 0.5, db: -4, rate: 1.3 },
+      { file: 'crackle', dur: 0.5, delay: 0.05, db: -18 },
+    ],
+  },
 ];
 
-/** A falling tone from 1700 to 700 Hz with a little flutter, fading in, as a shell's whistle does. */
+/**
+ * An incoming shell's shriek: noise through a narrow band-pass whose centre falls from 3200 to 1100 Hz (the Doppler
+ * drop), with a wider airy hiss under it and a loudness that rises as the shell closes in.
+ */
 function whistleSource(dur: number): string {
-  // Phase of a linear sweep f(t) = f0 + (f1 - f0) t / dur, plus a 9 Hz flutter.
-  const f0 = 1700;
-  const f1 = 700;
-  const k = (f1 - f0) / dur;
-  const tone = `sin(2*PI*(${f0}*t+${k / 2}*t*t)+0.4*sin(2*PI*9*t))`;
-  return `aevalsrc='0.5*${tone}*min(1,t/${dur * 0.6})':s=${RATE}:d=${dur}`;
+  const steps = 10;
+  const cmds = Array.from({ length: steps + 1 }, (_, i) => {
+    const t = (dur * i) / steps;
+    return `${t.toFixed(3)} bandpass@w frequency ${Math.round(3200 - (2100 * i) / steps)}`;
+  }).join('; ');
+  return (
+    `anoisesrc=c=pink:r=${RATE}:d=${dur}:a=0.9:seed=404,asendcmd=c='${cmds}',bandpass@w=f=3200:width_type=q:w=2.5,` +
+    `volume='0.15+0.85*pow(t/${dur},1.6)':eval=frame`
+  );
 }
+
+/** A sub-bass hit: a 55 Hz sine falling to 38 Hz, decaying over about 0.4 s. */
+function thumpSource(dur: number): string {
+  return `aevalsrc='0.9*sin(2*PI*(38*t+17*0.12*(1-exp(-t/0.12))))*exp(-t*7)':s=${RATE}:d=${dur}`;
+}
+
+/** Debris: noise crackling in irregular bursts, decaying. Deterministic: ffmpeg's noise seed is fixed. */
+function crackleSource(dur: number): string {
+  return (
+    `anoisesrc=c=white:r=${RATE}:d=${dur}:a=0.9:seed=404,highpass=f=800,lowpass=f=6000,` +
+    `volume='pow(max(0,sin(2*PI*23*t)*sin(2*PI*7.3*t+1)),2)*exp(-t*2.2)':eval=frame`
+  );
+}
+
+const SYNTH: Record<string, (dur: number) => string> = {
+  whistle: whistleSource,
+  thump: thumpSource,
+  crackle: crackleSource,
+};
 
 function layerChain(layer: Layer, input: number, label: string): string {
   const parts: string[] = [`[${input}]aresample=${RATE}`, 'aformat=channel_layouts=mono'];
@@ -136,7 +176,8 @@ function layerChain(layer: Layer, input: number, label: string): string {
 function build(sound: Sound): void {
   const args: string[] = [];
   sound.layers.forEach((layer) => {
-    if (layer.file === 'whistle') args.push('-f', 'lavfi', '-i', whistleSource(layer.dur));
+    const synth = SYNTH[layer.file];
+    if (synth) args.push('-f', 'lavfi', '-i', synth(layer.dur));
     else args.push('-i', layer.file);
   });
   const chains = sound.layers.map((layer, i) => layerChain(layer, i, `l${i}`));

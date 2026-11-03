@@ -115,7 +115,7 @@ The weapon shots, the shell explosion and the enemy death first used rubberduck'
 
 ## Weapon sounds (#404)
 
-One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesound isn't reachable from the cloud session). `scripts/weapon-fx.ts` (`npm run weapon-fx`, needs ffmpeg) builds `assets/weapon-sounds/<id>.ogg` from the committed inputs below: it layers, trims, re-pitches and filters them, and synthesizes the mortar's incoming whistle (a falling tone), since no CC0 recording of one was found. `SHOT_SOUND` in `src/audio/sounds.ts` maps each tower kind × defender Faction to a sound (ADR-0009). The sounds were checked by spectrogram and level, not by ear.
+One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesound isn't reachable from the cloud session). `scripts/weapon-fx.ts` (`npm run weapon-fx`, needs ffmpeg) builds `assets/weapon-sounds/<id>.ogg` from the committed inputs below: it layers, trims, re-pitches and filters them, and synthesizes the mortar's incoming whistle (band-passed noise whose pitch falls while it gets louder), since no CC0 recording of one was found, and a sub-bass thump and a debris crackle that give the unit explosions their weight. `SHOT_SOUND` in `src/audio/sounds.ts` maps each tower kind × defender Faction to a sound (ADR-0009). The sounds were checked by spectrogram and level, not by ear.
 
 | Sound | Plays for | Built from |
 | --- | --- | --- |
@@ -125,8 +125,8 @@ One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesoun
 | `gunReport` | Cannon: MT-12 (Russia) | the cannon shot, with a rifle's supersonic crack on top |
 | `recoillessBlast` | Cannon: SPG-9 (Insurgents) | the cannon shot, lower and duller, with a backblast hiss |
 | `mortarLaunch`, `mortarWhistle`, `mortarBlast` | Mortar: launch, incoming (0.5 s before impact), impact | the cannon shot low-passed and pitched down; the synthesized whistle; `explosion3` |
-| `vehicleExplosion` | a jeep, tank or helicopter destroyed | `explosion1`, with extra low end |
-| `infantryHit` | infantry killed | `explosion2`, shorter and lighter |
+| `vehicleExplosion` | a jeep, tank or helicopter destroyed | `explosion1` slowed and low-passed, `explosion3` as a rumbling tail, a synthesized sub-bass thump and a debris crackle |
+| `infantryHit` | infantry killed | `explosion2` slowed and low-passed, with a short thump and a little debris |
 
 | Pack (`assets/<id>/`) | Source | Used for |
 | --- | --- | --- |
