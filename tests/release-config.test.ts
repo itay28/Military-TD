@@ -44,8 +44,19 @@ describe('release-please', () => {
 });
 
 describe('pr title workflow', () => {
-  it('runs when a PR is opened, edited, synchronized or reopened', () => {
-    expect(titleWorkflow).toMatch(/types: \[opened, edited, synchronize, reopened\]/);
+  // Labelled and unlabelled too, so adding or removing freeze-exception re-runs the check (#84).
+  it('runs when a PR is opened, edited, synchronized, reopened, labelled or unlabelled', () => {
+    expect(titleWorkflow).toMatch(/types: \[opened, edited, synchronize, reopened, labeled, unlabeled\]/);
+  });
+
+  // The feature freeze (#84): the repo variable reaches the check, and the labels come from the API.
+  it('passes FEATURE_FREEZE and the PR labels to the check', () => {
+    expect(titleWorkflow).toContain('FEATURE_FREEZE: ${{ vars.FEATURE_FREEZE }}');
+    expect(titleWorkflow).toContain(
+      'PR_LABELS="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq \'[.labels[].name] | join(",")\')"',
+    );
+    expect(titleWorkflow).toContain('export PR_TITLE PR_LABELS');
+    expect(titleWorkflow).not.toContain('github.event.pull_request.labels');
   });
 
   it('has one job named pr-title', () => {
