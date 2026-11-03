@@ -238,6 +238,7 @@ export function mountDpsMeter(root: HTMLElement, game: DpsMeterGame, options: Dp
       open = !open;
       panel.hidden = !open;
       if (open) draw();
+      else highlightKind(undefined);
     },
     update() {
       if (open && now() - drawnAtMs >= DPS_METER_REFRESH_MS) draw();

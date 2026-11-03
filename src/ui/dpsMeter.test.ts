@@ -274,6 +274,14 @@ describe('DPS meter', () => {
       expect(calls.highlighted).toEqual(['cannon', undefined]);
     });
 
+    it('clears the highlight when the meter is closed', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      meter.toggle();
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
     it('clears the highlight when destroyed', () => {
       const { meter, calls } = mountWith();
       kindButton('cannon').click();
