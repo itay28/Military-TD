@@ -277,6 +277,7 @@ describe('withFieldUpdates', () => {
     labelled: true,
     hold: false,
     infra: false,
+    feature: false,
     needsYou: false,
     autoAgent: false,
     size: undefined,
