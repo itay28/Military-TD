@@ -190,16 +190,26 @@
   - link "https://opengameart.org/content/100-cc0-sfx":
     - /url: https://opengameart.org/content/100-cc0-sfx
   - paragraph: 100 CC0 SFX by rubberduck (OpenGameArt.org), CC0
-  - heading "85 Short music jingles" [level=2]
-  - paragraph: Kenney, CC0-1.0
-  - link "https://opengameart.org/content/85-short-music-jingles":
-    - /url: https://opengameart.org/content/85-short-music-jingles
-  - paragraph: 85 Short music jingles by Kenney (kenney.nl), CC0
   - heading "War on Water tracks" [level=2]
   - paragraph: yd, CC0-1.0
   - link "https://opengameart.org/content/war-on-water-tracks":
     - /url: https://opengameart.org/content/war-on-water-tracks
   - paragraph: War on Water tracks by yd (opengameart.org), CC0
+  - heading "Voiceover Pack (40 lines)" [level=2]
+  - paragraph: Kenney, CC0-1.0
+  - link "https://opengameart.org/content/voiceover-pack-40-lines":
+    - /url: https://opengameart.org/content/voiceover-pack-40-lines
+  - paragraph: Voiceover Pack by Kenney (kenney.nl), CC0
+  - heading "Radio Noise 1" [level=2]
+  - paragraph: Kresiek The Furry, CC0-1.0
+  - link "https://opengameart.org/content/radio-noise-1":
+    - /url: https://opengameart.org/content/radio-noise-1
+  - paragraph: Radio Noise 1 by Kresiek The Furry (OpenGameArt.org), CC0, an 8 s excerpt
+  - heading "Radio comms cues" [level=2]
+  - paragraph: Military-TD, from Kenney's Voiceover Pack and Kresiek The Furry's Radio Noise 1, CC0-1.0
+  - link "https://opengameart.org/content/voiceover-pack-40-lines":
+    - /url: https://opengameart.org/content/voiceover-pack-40-lines
+  - paragraph: Built by scripts/radio-fx.ts from Voiceover Pack by Kenney (kenney.nl) and Radio Noise 1 by Kresiek The Furry, both CC0
   - heading "Military TD" [level=2]
   - paragraph: "Engine: Phaser"
   - paragraph: "Code license: UNLICENSED"
