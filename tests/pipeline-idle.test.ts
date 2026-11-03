@@ -80,6 +80,12 @@ describe('idleReasons: waiting on you', () => {
     expect(texts(rs, 'waiting').join('\n')).toContain('PR #213');
   });
 
+  it('lists a PR waiting for an approval (needs-approval, #417)', () => {
+    const rs = reasons([], [pr(214, [7], { labels: ['needs-approval'] })]);
+    expect(keys(rs.filter((r) => r.group === 'waiting'))).toEqual(['waiting:PR#214']);
+    expect(texts(rs, 'waiting').join('\n')).toContain('needs-approval');
+  });
+
   it('lists ready-for-human issues in the current milestone only', () => {
     const rs = reasons([
       issue(8, { labels: ['ready-for-human'], milestone: 2 }),
