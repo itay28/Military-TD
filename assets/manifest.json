@@ -364,6 +364,36 @@
       "attribution": "\"Russian Transport Heli\" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down",
       "downloaded": "2026-11-02",
       "files": ["assets/render-insurgents-helicopter/**"]
+    },
+    {
+      "id": "rubberduck-bang-sfx",
+      "name": "25 CC0 bang / firework SFX",
+      "author": "rubberduck",
+      "source": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+      "license": "CC0-1.0",
+      "attribution": "25 CC0 bang / firework SFX by rubberduck (OpenGameArt.org), CC0",
+      "downloaded": "2026-11-02",
+      "files": ["assets/rubberduck-bang-sfx/**"]
+    },
+    {
+      "id": "rubberduck-100-sfx",
+      "name": "100 CC0 SFX",
+      "author": "rubberduck",
+      "source": "https://opengameart.org/content/100-cc0-sfx",
+      "license": "CC0-1.0",
+      "attribution": "100 CC0 SFX by rubberduck (OpenGameArt.org), CC0",
+      "downloaded": "2026-11-02",
+      "files": ["assets/rubberduck-100-sfx/**"]
+    },
+    {
+      "id": "kenney-jingles",
+      "name": "85 Short music jingles",
+      "author": "Kenney",
+      "source": "https://opengameart.org/content/85-short-music-jingles",
+      "license": "CC0-1.0",
+      "attribution": "85 Short music jingles by Kenney (kenney.nl), CC0",
+      "downloaded": "2026-11-02",
+      "files": ["assets/kenney-jingles/**"]
     }
   ]
 }
