@@ -48,7 +48,7 @@ beforeEach(() => {
 describe('End screen', () => {
   it('is hidden in the Build and Wave phases', () => {
     const game = newGame();
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     expect(root.hidden).toBe(true);
     game.startWave();
     end.update();
@@ -58,7 +58,7 @@ describe('End screen', () => {
 
   it('after Victory shows "Victory" and every wave survived', () => {
     const game = newGame();
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
     playWave(game);
     playWave(game);
@@ -71,7 +71,7 @@ describe('End screen', () => {
 
   it('after Defeat shows "Defeat" and the waves cleared before it', () => {
     const game = newGame(2);
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
     playWave(game);
     end.update();
@@ -83,7 +83,7 @@ describe('End screen', () => {
 
   it('is a modal dialog labelled by its heading, and focuses Restart when it opens', () => {
     const game = newGame(1);
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
     end.update();
     const labelId = dialog()?.getAttribute('aria-labelledby');
@@ -96,7 +96,7 @@ describe('End screen', () => {
   it('focuses Restart without scrolling the dialog', () => {
     const game = newGame(1);
     const focus = vi.spyOn(HTMLElement.prototype, 'focus');
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
     end.update();
     expect(focus).toHaveBeenCalledWith({ preventScroll: true });
@@ -106,16 +106,32 @@ describe('End screen', () => {
   it('clicking Restart calls onRestart once', () => {
     const game = newGame(1);
     let restarts = 0;
-    const end = mountEndScreen(root, game, { onRestart: () => restarts++ });
+    const end = mountEndScreen(root, game, { onRestart: () => restarts++, onLevelSelect: () => {} });
     playWave(game);
     end.update();
     restart()!.click();
     expect(restarts).toBe(1);
   });
 
+  it('clicking Level select calls onLevelSelect once, and the button follows Restart', () => {
+    const game = newGame(1);
+    let picks = 0;
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => picks++ });
+    playWave(game);
+    end.update();
+    const button = root.querySelector<HTMLButtonElement>('button[data-testid="level-select"]')!;
+    expect(button.textContent).toBe('Level select');
+    expect(restart()!.nextElementSibling).toBe(button);
+    button.click();
+    expect(picks).toBe(1);
+    end.destroy();
+    button.click();
+    expect(picks).toBe(1);
+  });
+
   it("update() doesn't write to the DOM once the overlay is open", () => {
     const game = newGame(1);
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
     end.update();
     const writes: string[] = [];
@@ -133,7 +149,7 @@ describe('End screen', () => {
   it('destroy() empties and hides the overlay, and a later click on the old button does nothing', () => {
     const game = newGame(1);
     let restarts = 0;
-    const end = mountEndScreen(root, game, { onRestart: () => restarts++ });
+    const end = mountEndScreen(root, game, { onRestart: () => restarts++, onLevelSelect: () => {} });
     playWave(game);
     end.update();
     const oldButton = restart()!;
@@ -146,7 +162,7 @@ describe('End screen', () => {
 
   it('update() after destroy() leaves the overlay hidden', () => {
     const game = newGame(1);
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
     end.destroy();
     end.update();
@@ -158,7 +174,7 @@ describe('damage report', () => {
   /** Rifle Nest 1 beside the Path plays every wave; Rifle Nest 2 is sold during wave 1. Ends in Victory. */
   const played = () => {
     const game = newGame();
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     game.placeTower('rifleNest', { col: 2, row: 2 });
     const second = game.placeTower('rifleNest', { col: 4, row: 2 });
     game.startWave();
@@ -239,6 +255,7 @@ describe('damage report', () => {
     root = document.getElementById('end-screen')!;
     const end = mountEndScreen(root, { ...game, state: { ...game.state, stats: fake } } as unknown as Game, {
       onRestart: () => {},
+      onLevelSelect: () => {},
     });
     end.update();
     const damageCells = (caption: string, section = 'tbody') =>
@@ -252,7 +269,7 @@ describe('damage report', () => {
 
   it('says so when no tower was placed', () => {
     const game = newGame(1);
-    const end = mountEndScreen(root, game, { onRestart: () => {} });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
     end.update();
     expect(byTestId('no-towers')?.textContent).toBe('No towers were placed.');

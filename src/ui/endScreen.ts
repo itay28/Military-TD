@@ -8,6 +8,8 @@ export type EndScreenGame = Pick<Game, 'state'>;
 export interface EndScreenOptions {
   /** Called when the player presses Restart. */
   readonly onRestart: () => void;
+  /** Called when the player presses Level select. */
+  readonly onLevelSelect: () => void;
 }
 
 export interface EndScreen {
@@ -95,7 +97,11 @@ function buildReport(doc: Document, { towers, kinds, waves, total }: DamageRepor
 }
 
 /** Builds the End screen inside `root`, an overlay over the canvas. It's DOM, so tests can query it (ADR-0003). */
-export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onRestart }: EndScreenOptions): EndScreen {
+export function mountEndScreen(
+  root: HTMLElement,
+  game: EndScreenGame,
+  { onRestart, onLevelSelect }: EndScreenOptions,
+): EndScreen {
   const doc = root.ownerDocument;
   const dialog = doc.createElement('div');
   dialog.setAttribute('role', 'dialog');
@@ -111,9 +117,15 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
   restart.textContent = 'Restart';
   const onClick = () => onRestart();
   restart.addEventListener('click', onClick);
+  const levelSelect = doc.createElement('button');
+  levelSelect.type = 'button';
+  levelSelect.dataset.testid = 'level-select';
+  levelSelect.textContent = 'Level select';
+  const onLevelSelectClick = () => onLevelSelect();
+  levelSelect.addEventListener('click', onLevelSelectClick);
   const report = doc.createElement('div');
   report.className = 'report';
-  dialog.append(heading, wavesSurvived, report, restart);
+  dialog.append(heading, wavesSurvived, report, restart, levelSelect);
   root.append(dialog);
   root.hidden = true;
   let destroyed = false;
@@ -135,6 +147,7 @@ export function mountEndScreen(root: HTMLElement, game: EndScreenGame, { onResta
     destroy() {
       destroyed = true;
       restart.removeEventListener('click', onClick);
+      levelSelect.removeEventListener('click', onLevelSelectClick);
       root.replaceChildren();
       root.hidden = true;
     },
