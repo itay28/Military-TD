@@ -30,8 +30,8 @@ export function duckForRadio(
       if (playing > 0) music.setDucked(false);
       playing = 0;
     },
-    play(id) {
-      sink.play(id);
+    play(id, volume) {
+      sink.play(id, volume);
       const ms = cueMs[id];
       if (ms === undefined) return;
       if (playing++ === 0) music.setDucked(true);

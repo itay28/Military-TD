@@ -1,0 +1,12 @@
+The Free Firearm Sound Library, by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney
+https://opengameart.org/content/the-free-firearm-sound-library
+
+License: Creative Commons Zero (CC0 1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The item ships no license file. This notice copies the license shown on the
+source page above (checked 2026-11-03). Excerpts of the Prepared SFX Library,
+cut to one take each and saved as 48 kHz 16-bit mono FLAC:
+- ak47-burst.flac: AK-47/C_29P.wav (short burst, near), from 0.95 s, 1 s
+- ar15-shot.flac: AR-15/D_32P.wav (single shot, near), from 0.6 s, 0.8 s
+- springfield-shot.flac: 1917/B_24P.wav (Springfield 1917, .30-06, near), from 1.2 s, 0.95 s
