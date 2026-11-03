@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { renderFor } from '../../src/data/renders';
 import { TOWER_STATS, type TowerKind } from '../../src/data/towers';
 import { clickTile, openGame, selectKind, state } from './helpers';
 
 const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
+// Tower kinds drawn from a render (src/data/renders.ts). Not imported: Playwright can't load its PNG/JSON imports.
+const RENDERED: TowerKind[] = ['aaGun'];
 const FIRST = KINDS[0]!;
 const BESIDE_PATH = { col: 1, row: 3 };
 
@@ -99,7 +100,7 @@ test('a blocked atlas leaves the build bar with coloured shapes, except for kind
   await openGame(page);
   for (const kind of KINDS) {
     const icon = page.getByTestId(`build-${kind}`).locator('.build-icon');
-    if (renderFor(kind) !== null) {
+    if (RENDERED.includes(kind)) {
       // A render is separate PNGs, not part of the atlas, so its icon still loads.
       await expect(icon.locator('.build-icon-layer')).toHaveCount(2);
       await expect(icon).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
