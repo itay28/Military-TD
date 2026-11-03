@@ -1,3 +1,4 @@
+import { START_LIVES } from '../../src/data/start';
 import { isDeepStrictEqual } from 'node:util';
 import { readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
@@ -247,6 +248,25 @@ describe('Tiled map files', () => {
       waves: entry.waves,
       autoStartWaves: true,
       bot: buildOrder(fitOrder(entry.data, BALANCED_ORDER)),
+      until: 'end',
+    });
+    expect(result.outcome).toBe('victory');
+  });
+
+  // ADR-0011: waves come on their timers. A bot that never calls a wave in early still has to hold the overlap.
+  it.each(MAPS)('$id: the reference bot wins on the wave timers alone, never calling a wave in', ({ data, waves }) => {
+    const result = runScenario({ map: data, waves, bot: buildOrder(fitOrder(data, BALANCED_ORDER)), until: 'end' });
+    expect(result.outcome).toBe('victory');
+    expect(result.finalState.lives).toBeGreaterThanOrEqual(START_LIVES / 2);
+  });
+
+  it.each(MAPS)('$id: the reference bot wins in Tactical mode too', ({ data, waves }) => {
+    const result = runScenario({
+      map: data,
+      waves,
+      tacticalMode: true,
+      autoStartWaves: true,
+      bot: buildOrder(fitOrder(data, BALANCED_ORDER)),
       until: 'end',
     });
     expect(result.outcome).toBe('victory');
