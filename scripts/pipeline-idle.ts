@@ -23,6 +23,8 @@ export const IDLE_TITLE = 'Pipeline is idle';
 const INFRA_EPIC = 24;
 const TRIAGE_LABEL = 'needs-triage';
 const HUMAN_LABEL = 'ready-for-human';
+/** The PR steward's approval hand-off (#206, #417). */
+const NEEDS_APPROVAL_LABEL = 'needs-approval';
 const REASONS = /<!-- pipeline-starved:reasons ?(.*?) -->/;
 
 /**
@@ -81,7 +83,7 @@ const labelList = (labels: readonly string[]) => labels.map((l) => `\`${l}\``).j
 
 /**
  * Why nothing is startable, grouped by what would unblock it: waiting on you (`needs-you`/`needs-info` issues
- * and PRs, `ready-for-human` in the current milestone), needs triage (counts in the current and next
+ * and PRs, `needs-approval` PRs, `ready-for-human` in the current milestone), needs triage (counts in the current and next
  * milestone), not startable (`ready-for-agent` issues in those milestones, or with none, that lack a Size, are
  * XL, are game work with no milestone, are blocked, or are frozen by the feature freeze), and nothing left (neither milestone has an open
  * `ready-for-agent` issue).
@@ -110,7 +112,7 @@ export function idleReasons(
     });
   }
   for (const pr of [...prs].sort((a, b) => a.number - b.number)) {
-    const asks = pr.labels.filter((l) => l === NEEDS_YOU_LABEL || l === NEEDS_INFO_LABEL);
+    const asks = pr.labels.filter((l) => l === NEEDS_YOU_LABEL || l === NEEDS_APPROVAL_LABEL || l === NEEDS_INFO_LABEL);
     if (asks.length)
       reasons.push({ group: 'waiting', key: `waiting:PR#${pr.number}`, text: `PR #${pr.number} ${labelList(asks)}` });
   }
