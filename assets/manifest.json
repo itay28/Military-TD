@@ -366,14 +366,54 @@
       "files": ["assets/render-insurgents-helicopter/**"]
     },
     {
-      "id": "rubberduck-bang-sfx",
-      "name": "25 CC0 bang / firework SFX",
-      "author": "rubberduck",
-      "source": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+      "id": "free-firearm-sfx",
+      "name": "The Free Firearm Sound Library",
+      "author": "Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney",
+      "source": "https://opengameart.org/content/the-free-firearm-sound-library",
       "license": "CC0-1.0",
-      "attribution": "25 CC0 bang / firework SFX by rubberduck (OpenGameArt.org), CC0",
-      "downloaded": "2026-11-02",
-      "files": ["assets/rubberduck-bang-sfx/**"]
+      "attribution": "The Free Firearm Sound Library by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0, three excerpts",
+      "downloaded": "2026-11-03",
+      "files": ["assets/free-firearm-sfx/**"]
+    },
+    {
+      "id": "mikeask-missile",
+      "name": "Missile Sound",
+      "author": "mikeask",
+      "source": "https://opengameart.org/content/missile-sound",
+      "license": "CC0-1.0",
+      "attribution": "Missile Sound by mikeask (OpenGameArt.org), CC0",
+      "downloaded": "2026-11-03",
+      "files": ["assets/mikeask-missile/**"]
+    },
+    {
+      "id": "thimras-cannon",
+      "name": "Cannon Fire",
+      "author": "Thimras",
+      "source": "https://opengameart.org/content/cannon-fire",
+      "license": "CC0-1.0",
+      "attribution": "Cannon Fire by Thimras (OpenGameArt.org), CC0",
+      "downloaded": "2026-11-03",
+      "files": ["assets/thimras-cannon/**"]
+    },
+    {
+      "id": "ezduzziteh-explosions",
+      "name": "Explosions",
+      "author": "EZduzziteh",
+      "source": "https://opengameart.org/content/explosions-4",
+      "license": "CC0-1.0",
+      "attribution": "Explosions by EZduzziteh (OpenGameArt.org), CC0",
+      "downloaded": "2026-11-03",
+      "files": ["assets/ezduzziteh-explosions/**"]
+    },
+    {
+      "id": "weapon-sounds",
+      "name": "Weapon sounds",
+      "author": "Military-TD, from the four items above",
+      "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+      "license": "CC0-1.0",
+      "attribution": "Built by scripts/weapon-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Missile Sound by mikeask, Cannon Fire by Thimras and Explosions by EZduzziteh, all CC0",
+      "downloaded": "2026-11-03",
+      "files": ["assets/weapon-sounds/**"]
     },
     {
       "id": "rubberduck-100-sfx",
