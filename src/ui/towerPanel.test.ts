@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TOWER_STATS } from '../data/towers';
 import { createGame, TICK_MS, type GameState } from '../sim/game';
 import type { MapData } from '../sim/map';
@@ -233,6 +233,25 @@ describe('Tower panel upgrades', () => {
     expect(upgradeButton().title).toBe('');
   });
 
+  it('upgrade() does what a click does, for the U key', () => {
+    const { game, id } = gameWithTower(100);
+    const panel = mountTowerPanel(root, game);
+    panel.select(id);
+    panel.upgrade();
+    expect(game.state.money).toBe(60);
+    expect(value('tower-level')).toBe('Level 2');
+  });
+
+  it('upgrade() does nothing while the button is disabled, or with nothing selected', () => {
+    const { game, id } = gameWithTower(39);
+    const panel = mountTowerPanel(root, game);
+    panel.upgrade();
+    panel.select(id);
+    panel.upgrade();
+    expect(game.state.towers[0]).toMatchObject({ level: 1 });
+    expect(game.state.money).toBe(39);
+  });
+
   it('is hidden at the top level', () => {
     const { game, id } = gameWithTower(110);
     const panel = mountTowerPanel(root, game);
@@ -264,6 +283,24 @@ describe('Tower panel Sell button', () => {
     expect(game.state.money).toBe(85);
     expect(panel.selectedId).toBeUndefined();
     expect(root.hidden).toBe(true);
+  });
+});
+
+describe('Tower panel sell()', () => {
+  it('does what a click on Sell does, for the S key, once', () => {
+    const game = createGame({ map: SMALL, money: 50, lives: 20, waves: [] });
+    const placed = game.placeTower('rifleNest', { col: 1, row: 3 });
+    if (!placed.ok) throw new Error(placed.reason);
+    const sellTower = vi.spyOn(game, 'sellTower');
+    const panel = mountTowerPanel(root, game);
+    panel.sell();
+    expect(sellTower).not.toHaveBeenCalled();
+    panel.select(placed.towerId);
+    panel.sell();
+    expect(sellTower).toHaveBeenCalledOnce();
+    // Now dismantling: Sell is disabled, so a second press does nothing.
+    panel.sell();
+    expect(sellTower).toHaveBeenCalledOnce();
   });
 });
 
