@@ -13,7 +13,7 @@ scenario gives the browser the same setup.
 ## Sim budget
 
 `tests/perf/simBudget.perf.test.ts` builds the Heavy load, warms up the JIT with one untimed run, then times five runs
-of `HEAVY_LOAD.measureTicks` ticks (5 s of game time) and checks the median of their mean tick times against
+of `HEAVY_LOAD_MEASURE_TICKS` ticks (5 s of game time) and checks the median of their mean tick times against
 `SIM_TICK_BUDGET_MS`. It has its own Vitest config (`vitest.perf.config.ts`), one file at a time, and `npm test`
 leaves `*.perf.test.ts` out, so other suites don't share the CPU while it's timed. It prints the measured mean.
 

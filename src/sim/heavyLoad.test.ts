@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAPS, SERPENTINE_MAP } from '../data/maps';
 import { TICK_MS } from './game';
 import { HEAVY_LOAD } from '../data/heavyLoad';
-import { createHeavyLoadGame, heavyLoadSetup } from './heavyLoad';
+import { createHeavyLoadGame, HEAVY_LOAD_MEASURE_TICKS, heavyLoadSetup } from './heavyLoad';
 import { createMap, tileKey } from './map';
 
 describe('heavyLoadSetup', () => {
@@ -47,9 +47,9 @@ describe('createHeavyLoadGame', () => {
     expect(enemies.length).toBeGreaterThanOrEqual(190);
   });
 
-  it(`stays heavy for the ${HEAVY_LOAD.measureTicks} measured ticks: no Defeat, and plenty of enemies left`, () => {
+  it(`stays heavy for the ${HEAVY_LOAD_MEASURE_TICKS} measured ticks: no Defeat, and plenty of enemies left`, () => {
     const game = createHeavyLoadGame();
-    for (let i = 0; i < HEAVY_LOAD.measureTicks; i++) game.tick(TICK_MS);
+    for (let i = 0; i < HEAVY_LOAD_MEASURE_TICKS; i++) game.tick(TICK_MS);
     expect(game.state.phase).toBe('wave');
     expect(game.state.enemies.length).toBeGreaterThanOrEqual(100);
   });

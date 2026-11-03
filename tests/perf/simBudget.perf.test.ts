@@ -1,7 +1,6 @@
 import { expect, it } from 'vitest';
 import { TICK_MS } from '../../src/sim/game';
-import { HEAVY_LOAD } from '../../src/data/heavyLoad';
-import { createHeavyLoadGame } from '../../src/sim/heavyLoad';
+import { createHeavyLoadGame, HEAVY_LOAD_MEASURE_TICKS } from '../../src/sim/heavyLoad';
 
 // The sim's hard performance gate (#73, docs/performance.md): `npm run test:perf`, on its own, one file at a time,
 // so other suites don't skew the clock.
@@ -19,8 +18,8 @@ const RUNS = 5;
 function meanTickMs(): number {
   const game = createHeavyLoadGame();
   const start = performance.now();
-  for (let i = 0; i < HEAVY_LOAD.measureTicks; i++) game.tick(TICK_MS);
-  return (performance.now() - start) / HEAVY_LOAD.measureTicks;
+  for (let i = 0; i < HEAVY_LOAD_MEASURE_TICKS; i++) game.tick(TICK_MS);
+  return (performance.now() - start) / HEAVY_LOAD_MEASURE_TICKS;
 }
 
 it(`a Heavy load tick takes under ${SIM_TICK_BUDGET_MS} ms on average`, () => {

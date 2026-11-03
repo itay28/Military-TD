@@ -46,11 +46,16 @@ export function heavyLoadSetup(seed: number = HEAVY_LOAD.seed): GameSetup {
   return { map: SERPENTINE_MAP, lives: HEAVY_LOAD.lives, money: 0, towers, waves: [{ groups }] };
 }
 
-/** A Heavy load game mid-wave: its setup, the wave started, and `warmupTicks` run so every enemy has spawned. */
+/** A Heavy load game mid-wave: its setup, the wave started, and `HEAVY_LOAD_WARMUP_TICKS` run so every enemy has spawned. */
 export function createHeavyLoadGame(seed: number = HEAVY_LOAD.seed): Game {
   const game = setUpGame(heavyLoadSetup(seed));
   const started = game.startWave();
   if (!started.ok) throw new Error(`Heavy load: the wave didn't start (${started.reason})`);
-  for (let i = 0; i < HEAVY_LOAD.warmupTicks; i++) game.tick(TICK_MS);
+  for (let i = 0; i < HEAVY_LOAD_WARMUP_TICKS; i++) game.tick(TICK_MS);
   return game;
 }
+
+/** Ticks after the wave starts until every enemy has spawned. */
+export const HEAVY_LOAD_WARMUP_TICKS = Math.ceil(HEAVY_LOAD.warmupMs / TICK_MS) + 1;
+/** Ticks the sim budget test times. */
+export const HEAVY_LOAD_MEASURE_TICKS = Math.round(HEAVY_LOAD.measureMs / TICK_MS);

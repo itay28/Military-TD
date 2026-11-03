@@ -1,6 +1,6 @@
 import { appendFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { HEAVY_LOAD } from '../../src/data/heavyLoad';
+import { HEAVY_LOAD_WARMUP_TICKS } from '../../src/sim/heavyLoad';
 import { openGame } from '../e2e/helpers';
 import { FRAME_P95_LIMIT_MS, frameStats, frameSummary } from './frameStats';
 
@@ -17,7 +17,7 @@ test('the Heavy load plays in real time above 30 fps (p95)', async ({ page }) =>
   await page.evaluate((warmupTicks) => {
     window.__TD__!.command({ type: 'startWave' });
     window.__TD__!.step(warmupTicks);
-  }, HEAVY_LOAD.warmupTicks);
+  }, HEAVY_LOAD_WARMUP_TICKS);
 
   const deltas = await page.evaluate(
     (recordMs) =>

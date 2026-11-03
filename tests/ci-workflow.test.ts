@@ -48,13 +48,7 @@ describe('ci workflow', () => {
     expect(runs(job('e2e'))).toEqual(['npm ci', 'npm run test:e2e', 'npm run test:perf:browser']);
   });
 
-  it('the frame-time report runs even when an e2e test failed, so the summary always has it', () => {
-    expect(job('e2e')).toMatch(
-      /if: \$\{\{ !cancelled\(\) \}\}\n(\s+continue-on-error: true\n)?\s+run: npm run test:perf:browser/,
-    );
-  });
-
-  it('the frame-time report never fails the e2e job: report only until rendering is faster (#73)', () => {
+  it('the frame-time report runs even when an e2e test failed but never fails the e2e job: report only until rendering is faster (#73)', () => {
     expect(job('e2e')).toMatch(
       /name: Frame-time report\n\s+if: \$\{\{ !cancelled\(\) \}\}\n\s+continue-on-error: true\n/,
     );
