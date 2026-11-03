@@ -23,11 +23,11 @@ describe('RADIO_CUE_MS (#396)', () => {
     expect(Object.keys(RADIO_CUE_MS).sort()).toEqual(['defeat', 'victory', 'waveStart']);
   });
 
-  it("gives each cue its file's length, 1.5–3.5 s", () => {
+  it("gives each cue its file's length, 1–3.5 s", () => {
     for (const [id, ms] of Object.entries(RADIO_CUE_MS)) {
       const fileMs = oggDurationMs(`assets/radio-cues/${id}.ogg`);
       expect(Math.abs(fileMs - ms), id).toBeLessThan(100);
-      expect(ms, id).toBeGreaterThanOrEqual(1500);
+      expect(ms, id).toBeGreaterThanOrEqual(1000);
       expect(ms, id).toBeLessThanOrEqual(3500);
     }
   });

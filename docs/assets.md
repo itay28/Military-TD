@@ -119,9 +119,9 @@ Wave start, victory and defeat sound like military radio traffic. Downloaded 202
 
 | Pack (`assets/<id>/`) | Source | Used for |
 | --- | --- | --- |
-| Voiceover Pack (`kenney-voiceover`), the pack's `License.txt` | opengameart.org/content/voiceover-pack-40-lines | the male lines `war_look_out`, `war_go_go_go`, `mission_completed`, `war_call_for_backup`, `mission_failed` |
+| Voiceover Pack (`kenney-voiceover`), the pack's `License.txt` | opengameart.org/content/voiceover-pack-40-lines | the male lines `war_look_out`, `mission_completed`, `war_call_for_backup`, `mission_failed` |
 | Radio Noise 1 (`kresiek-radio-noise`), `License.txt` copies the page's notice | opengameart.org/content/radio-noise-1 | squelch and static: an 8 s FLAC excerpt of real scanner noise |
-| Radio comms cues (`radio-cues`), the script's output | built from the two above | wave start ("Look out! Go go go!"), victory ("Mission completed."), defeat ("Call for backup! Mission failed", breaking up, then the signal cuts out) |
+| Radio comms cues (`radio-cues`), the script's output | built from the two above | wave start ("Look out!"), victory ("Mission completed."), defeat ("Call for backup! Mission failed", breaking up, then the signal cuts out) |
 
 Rejected: the VoiceBosch announcer packs (*Radio soldier*, *Grenadier*, *Warlord*), which are CC-BY-SA; the *General phrases* announcer packs, which are CC-BY (only CC0 was wanted); and *Frequency static* (CC0, but 42 MB per file).
 

@@ -33,7 +33,7 @@ export const SOUND_THROTTLE: ThrottleConfig = { maxPlays: 3, windowMs: 150 };
  * `scripts/radio-fx.ts`, which prints the lengths; a test checks them against the files.
  */
 export const RADIO_CUE_MS: Partial<Record<SoundId, number>> = {
-  waveStart: 2183,
+  waveStart: 1283,
   victory: 1880,
   defeat: 2850,
 };

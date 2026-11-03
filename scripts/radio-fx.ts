@@ -7,7 +7,8 @@
  *
  * Each cue is a timeline of parts mixed together: voice lines through a radio (a compressor and a soft clip inside a
  * 300–3400 Hz band-pass, so the clip's harmonics stay in the band), squelch bursts at the start and end of a
- * transmission, and a static bed under the voice. Defeat breaks up
+ * transmission, and a static bed under the voice. Victory and defeat have a narrower band and more drive, crush and
+ * static, and sit 13 dB down so they stay under the gameplay mix. Defeat breaks up
  * (a fast tremolo and bit crush on the last line) and cuts out on a static burst, with no closing squelch.
  * After a rebuild, update `RADIO_CUE_MS` in `src/data/sounds.ts` to the lengths this prints (a test checks them).
  */
@@ -20,7 +21,9 @@ const OUT_DIR = 'assets/radio-cues';
 const RATE = 44100;
 
 /** The radio's voice band, about a handheld's. */
-const BAND = 'highpass=f=300,highpass=f=300,lowpass=f=3400,lowpass=f=3400';
+const bandFor = (low: number, high: number): string =>
+  `highpass=f=${low},highpass=f=${low},lowpass=f=${high},lowpass=f=${high}`;
+const BAND = bandFor(300, 3400);
 /** Evens out a line and drives it into the clip, as a radio's mic gain does. */
 const COMPRESS = 'acompressor=threshold=-24dB:ratio=6:attack=5:release=80:makeup=4';
 
@@ -34,6 +37,14 @@ interface Cue {
   readonly id: 'waveStart' | 'victory' | 'defeat';
   /** The cue's length in s; anything past it is cut. */
   readonly length: number;
+  /** The cue's level in dB, applied last: victory and defeat sit under the gameplay mix (about -24 LUFS, like the SFX). */
+  readonly gainDb: number;
+  /** A tighter voice band for a rougher link (default 300–3400 Hz). */
+  readonly band?: string;
+  /** dB of extra drive into the clip, for more crunch. */
+  readonly driveDb?: number;
+  /** Bit crush on every voice line (bits), for a digital, crunchy link. */
+  readonly crushBits?: number;
   readonly parts: readonly Part[];
 }
 
@@ -44,24 +55,23 @@ const bed = (at: number, dur: number, db = -20): Part => ({ kind: 'static', at, 
 
 const CUES: readonly Cue[] = [
   {
-    // Alert: "Look out! Go go go!"
+    // Alert: "Look out!" (a defence calls the threat, it doesn't charge.)
     id: 'waveStart',
-    length: 2.2,
-    parts: [
-      squelch(0),
-      bed(0.1, 1.95),
-      { kind: 'voice', line: 'war_look_out', at: 0.14 },
-      { kind: 'voice', line: 'war_go_go_go', at: 0.85 },
-      squelch(1.98, 0.2),
-    ],
+    length: 1.3,
+    gainDb: 0,
+    parts: [squelch(0), bed(0.1, 1.05), { kind: 'voice', line: 'war_look_out', at: 0.14 }, squelch(1.08, 0.2)],
   },
   {
     // Relieved: "Mission completed." on a clean link.
     id: 'victory',
     length: 1.9,
+    gainDb: -13,
+    band: bandFor(400, 2800),
+    driveDb: 8,
+    crushBits: 10,
     parts: [
       squelch(0),
-      bed(0.1, 1.55, -26),
+      bed(0.1, 1.55, -18),
       { kind: 'voice', line: 'mission_completed', at: 0.18, db: 4 },
       squelch(1.68, 0.2),
     ],
@@ -70,9 +80,13 @@ const CUES: readonly Cue[] = [
     // Urgent and breaking up: "Call for backup! Mission failed—" then the signal dies.
     id: 'defeat',
     length: 2.85,
+    gainDb: -13,
+    band: bandFor(450, 2500),
+    driveDb: 10,
+    crushBits: 8,
     parts: [
       { kind: 'static', at: 0, dur: 0.3, db: 0, fadeIn: 0.004, fadeOut: 0.06 },
-      bed(0.2, 2.45, -14),
+      bed(0.2, 2.45, -10),
       { kind: 'voice', line: 'war_call_for_backup', at: 0.26 },
       { kind: 'voice', line: 'mission_failed', at: 1.38, breakUp: true },
       // The cut-out: a last loud burst that stops dead.
@@ -91,10 +105,13 @@ function build(cue: Cue): void {
   const chains: string[] = [];
   const labels: string[] = [];
 
+  const band = cue.band ?? BAND;
   voices.forEach((v, i) => {
+    const crush = cue.crushBits ? `,acrusher=bits=${cue.crushBits}:mix=0.5` : '';
     const breakUp = v.breakUp ? ',tremolo=f=11:d=0.6,acrusher=bits=8:mix=0.4' : '';
+    const drive = (v.db ?? 0) + (cue.driveDb ?? 0);
     chains.push(
-      `[${i}]aresample=${RATE},${BAND},${COMPRESS},volume=${v.db ?? 0}dB,asoftclip=type=tanh${breakUp},${BAND},${delay(v.at)}[v${i}]`,
+      `[${i}]aresample=${RATE},${band},${COMPRESS},volume=${drive}dB,asoftclip=type=tanh${crush}${breakUp},${band},${delay(v.at)}[v${i}]`,
     );
     labels.push(`[v${i}]`);
   });
@@ -105,14 +122,14 @@ function build(cue: Cue): void {
     const fadeIn = s.fadeIn ?? 0.01;
     const fadeOut = s.fadeOut ?? 0.01;
     chains.push(
-      `[n${i}]atrim=start=${start}:duration=${s.dur},asetpts=PTS-STARTPTS,${BAND},volume=${s.db}dB,` +
+      `[n${i}]atrim=start=${start}:duration=${s.dur},asetpts=PTS-STARTPTS,${band},volume=${s.db}dB,` +
         `afade=t=in:d=${fadeIn},afade=t=out:st=${Math.max(0, s.dur - fadeOut)}:d=${fadeOut},${delay(s.at)}[s${i}]`,
     );
     labels.push(`[s${i}]`);
   });
   chains.push(
     `${labels.join('')}amix=inputs=${labels.length}:normalize=0:duration=longest,` +
-      `atrim=end=${cue.length},alimiter=limit=0.9[out]`,
+      `atrim=end=${cue.length},alimiter=limit=0.9,volume=${cue.gainDb}dB[out]`,
   );
 
   const out = `${OUT_DIR}/${cue.id}.ogg`;
