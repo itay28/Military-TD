@@ -59,9 +59,9 @@ describe('throttleAudio', () => {
     const audio = throttleAudio(sink, { maxPlays: 1, windowMs: 100 }, clock().now);
     audio.play('rifleShot');
     audio.play('rifleShot');
-    audio.play('shellExplosion');
+    audio.play('mortarBlast');
     audio.play('waveStart');
-    expect(sink.played).toEqual(['rifleShot', 'shellExplosion', 'waveStart']);
+    expect(sink.played).toEqual(['rifleShot', 'mortarBlast', 'waveStart']);
   });
 });
 
