@@ -9,7 +9,7 @@ A military-themed tower defense game that runs in the browser.
 - **Hosting**: releases deploy to a restricted itch.io page (the repo is private; the page stays Restricted at 1.0). See [ADR-0005](adr/0005-host-on-itch-io.md).
 - **Maps**: authored in Tiled, imported and validated by code. See [ADR-0006](adr/0006-tiled-maps.md).
 - **Mechanics**: realistic and readable, with no hard counters: every enemy kind has at least two efficient counters, so no unit is mandatory. See [ADR-0007](adr/0007-realistic-readable-mechanics.md).
-- **Art**: satellite-style milsim look, with factions (US, Russia, China, Insurgents) chosen per map as visual skins. See [ADR-0009](adr/0009-satellite-milsim-art-and-factions.md) (proposed, pending the spike #286).
+- **Art**: satellite-style milsim look, with factions (US, Russia, China, Insurgents) chosen per map as visual skins. See [ADR-0009](adr/0009-satellite-milsim-art-and-factions.md) (accepted; the spike #286 look was approved 2026-11-02).
 - **Assets**: only CC0 / CC-BY / OFL, every file tracked. See [docs/assets.md](assets.md).
 - **How work gets done**: plan → tests first → implement → verify → PR, using Matt Pocock's skills. See [docs/agents/workflow.md](agents/workflow.md).
 - Vocabulary is in [GLOSSARY.md](../GLOSSARY.md).
@@ -102,7 +102,7 @@ From v0.3.0: Boot → Main menu (Play, Settings; Credits joins it in v0.4.0, #61
 - **v0.1–v0.3:** one map written as data in `src/data/maps.ts`.
 - **From v0.4:** maps are drawn in **[Tiled](https://www.mapeditor.org)** (free, open source) and saved as JSON in `maps/*.tmj`. Each map has a ground tile layer, the Path drawn as a polyline object, and buildable tiles marked by a tile property.
 - An importer turns the file into sim map data. Tests check every map automatically: the Path is connected and on the edges, there are enough buildable tiles, and a reference bot can win it.
-- You edit maps visually in Tiled; agents edit the same JSON as text. Tiled ships no game art; the tileset comes from the CC0 asset packs (e.g. Kenney's Tower Defense (Top-Down), which has ground, road and decoration tiles).
+- You edit maps visually in Tiled; agents edit the same JSON as text. Tiled ships no game art; the tileset comes from the CC0 asset packs (e.g. a CC0 top-down pack with ground, road and decoration tiles; not Kenney, per ADR-0009).
 - Asset packs give tiles, not Paths or game rules, so the Path and buildable areas are always authored by us.
 
 ## Architecture
