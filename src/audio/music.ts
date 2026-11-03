@@ -9,6 +9,9 @@ export type TrackId = 'menu' | 'game';
 
 export const TRACK_IDS: readonly TrackId[] = ['menu', 'game'];
 
+/** The volume each track fades in to (0–1). The menu track is mixed lower: it sat too loud. Master volume is #67. */
+export const TRACK_VOLUME: Readonly<Record<TrackId, number>> = { menu: 0.6, game: 1 };
+
 /** How long the old track fades out and the new one fades in when the track changes. */
 export const CROSSFADE_MS = 1000;
 
@@ -77,7 +80,7 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
     } catch {
       voice = null;
     }
-    voice?.fadeTo(1, fadeMs);
+    voice?.fadeTo(TRACK_VOLUME[wanted], fadeMs);
     playing = { track: wanted, voice };
   };
 
