@@ -7,11 +7,13 @@
  *
  * Each sound is a few layers mixed together: a clip from `at` s, `dur` s long, optionally re-pitched (`rate`, which also
  * changes its length, as a heavier gun's lower report would), filtered and set to `db`. The mortar's incoming whistle is
- * synthesized (band-passed noise falling in pitch), since no CC0 recording of one was found; the explosions add a
+ * synthesized (a breathy note falling in pitch), since no CC0 recording of one was found; the explosions add a
  * synthesized sub-bass thump and a debris crackle to their recordings for weight.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const OUT_DIR = 'assets/weapon-sounds';
 const RATE = 48000;
@@ -26,7 +28,7 @@ const BOOM_SMALL = 'assets/ezduzziteh-explosions/explosion2.ogg';
 const BOOM_MID = 'assets/ezduzziteh-explosions/explosion3.ogg';
 
 interface Layer {
-  /** The clip, or a synthesized source: `whistle` (falling band of air), `thump` (sub-bass hit), `crackle` (debris). */
+  /** The clip, or a synthesized source: `whistle` (falling breathy note), `thump` (sub-bass hit), `crackle` (debris). */
   readonly file: string | 'whistle' | 'thump' | 'crackle';
   /** Where in the sound this layer starts, in s. */
   readonly delay?: number;
@@ -44,6 +46,8 @@ interface Sound {
   readonly id: string;
   /** Total length in s, with a short fade at the end so nothing clicks. */
   readonly length: number;
+  /** That fade, in s (default 0.08). The whistle's is short: the impact cuts it off at full loudness. */
+  readonly fade?: number;
   readonly layers: readonly Layer[];
 }
 
@@ -101,7 +105,7 @@ const SOUNDS: readonly Sound[] = [
       { file: RIFLE_30, from: 0.1, dur: 0.15, db: -9, rate: 0.9, filter: 'lowpass=f=3000' },
     ],
   },
-  { id: 'mortarWhistle', length: 0.5, layers: [{ file: 'whistle', dur: 0.5, db: 14 }] },
+  { id: 'mortarWhistle', length: 0.5, fade: 0.008, layers: [{ file: 'whistle', dur: 0.5 }] },
   {
     // A mortar bomb's impact: a sharp crack, then the earth thump and a debris patter, not a gun's long boom.
     id: 'mortarBlast',
@@ -129,24 +133,102 @@ const SOUNDS: readonly Sound[] = [
   { id: 'infantryHit', length: 0.6, layers: [{ file: BOOM_SMALL, dur: 0.6, db: -4, filter: 'highpass=f=120' }] },
 ];
 
+/** A seeded PRNG (mulberry32), so `npm run weapon-fx` rebuilds the same whistle. */
+function seeded(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Gaussian white noise (Box-Muller). */
+function gaussian(n: number, rand: () => number): number[] {
+  return Array.from({ length: n }, () => Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand()));
+}
+
+/** A centred moving average over `w` samples. */
+function smooth(x: readonly number[], w: number): number[] {
+  const sum = [0];
+  for (const v of x) sum.push((sum[sum.length - 1] ?? 0) + v);
+  return x.map((_, i) => {
+    const lo = Math.max(0, i - (w >> 1));
+    const hi = Math.min(x.length, i + (w >> 1));
+    return ((sum[hi] ?? 0) - (sum[lo] ?? 0)) / (hi - lo);
+  });
+}
+
+/** Noise through a band-pass whose centre follows `freq(i)` (Hz): a breathy note at that pitch. */
+function resonate(x: readonly number[], freq: (i: number) => number, q: number): number[] {
+  let [x1, x2, y1, y2] = [0, 0, 0, 0];
+  return x.map((xn, n) => {
+    const w = (2 * Math.PI * freq(n)) / RATE;
+    const alpha = Math.sin(w) / (2 * q);
+    const a0 = 1 + alpha;
+    const yn = (alpha / a0) * (xn - x2) + ((2 * Math.cos(w)) / a0) * y1 - ((1 - alpha) / a0) * y2;
+    [x2, x1, y2, y1] = [x1, xn, y1, yn];
+    return yn;
+  });
+}
+
+function normalized(x: readonly number[]): number[] {
+  const peak = x.reduce((m, v) => Math.max(m, Math.abs(v)), 1e-9);
+  return x.map((v) => v / peak);
+}
+
 /**
- * An incoming mortar bomb's descending whistle: mostly air, not a tone. Pink-ish noise through a low-Q band-pass whose
- * centre falls from 1400 to 450 Hz (the Doppler drop), with slow, irregular turbulence.
- * It swells over the first half and is cut off by the impact, so it is a falling "fsshhh", neither a whine (a clean
- * sweep) nor a missile's steady rising rush.
+ * An incoming mortar bomb's whistle: a breathy note, not a clean tone (a person whistling) and not broadband air (a
+ * missile's rush). Noise through a narrow band-pass (Q 45) falling from 1.7 to 0.9 kHz, slowly at first and faster
+ * near impact (the Doppler drop), with a slight irregular flutter (air over the fins), a faint overtone and a little
+ * air. It gets louder as the bomb closes (20 dB) and is cut off by the impact. Written as a WAV for ffmpeg to mix.
  */
 function whistleSource(dur: number): string {
-  const steps = 10;
-  const cmds = Array.from({ length: steps }, (_, i) => {
-    const f = Math.round(1400 - 950 * (i / (steps - 1)));
-    return `${((i * dur) / steps).toFixed(3)} bandpass@w f ${f}`;
-  }).join(';');
-  const env = `min(1,t/${(dur * 0.5).toFixed(3)})*(1-0.35*t/${dur})*(0.8+0.2*sin(2*PI*13*t+1.3)*sin(2*PI*5.1*t))`;
-  return (
-    `anoisesrc=c=pink:r=${RATE}:d=${dur}:a=0.9:seed=404,` +
-    `asendcmd=c='${cmds}',bandpass@w=f=1400:width_type=q:w=0.8,` +
-    `volume='${env}':eval=frame,highpass=f=250`
+  const rand = seeded(404);
+  const n = Math.round(RATE * dur);
+  let acc = 0;
+  const walk = gaussian(n, rand).map((v) => (acc += v));
+  const trend = smooth(walk, 2400);
+  const flutter = normalized(
+    smooth(
+      walk.map((v, i) => v - (trend[i] ?? 0)),
+      600,
+    ),
   );
+  const freq = (i: number): number => (1700 - 800 * (i / n) ** 2.2) * (1 + 0.012 * (flutter[i] ?? 0));
+  const tone = normalized(resonate(gaussian(n, rand), freq, 45));
+  const overtone = normalized(resonate(gaussian(n, rand), (i) => 2 * freq(i), 67.5));
+  const air = normalized(resonate(gaussian(n, rand), (i) => 1.3 * freq(i), 1.2));
+  const mix = tone.map((v, i) => {
+    const t = i / RATE;
+    const gain = 10 ** ((-20 + 20 * (i / n) ** 1.5) / 20) * Math.min(1, t / 0.03) * Math.min(1, (dur - t) / 0.008);
+    return gain * (v + 0.2 * (overtone[i] ?? 0) + 0.1 * (air[i] ?? 0));
+  });
+  const path = join(tmpdir(), `weapon-fx-whistle-${process.pid}.wav`);
+  writeFileSync(path, wav(normalized(mix).map((v) => v * 0.7)));
+  return path;
+}
+
+/** A mono 16-bit WAV file. */
+function wav(samples: readonly number[]): Buffer {
+  const data = Buffer.alloc(samples.length * 2);
+  samples.forEach((v, i) => data.writeInt16LE(Math.round(Math.max(-1, Math.min(1, v)) * 32767), i * 2));
+  const head = Buffer.alloc(44);
+  head.write('RIFF', 0);
+  head.writeUInt32LE(36 + data.length, 4);
+  head.write('WAVEfmt ', 8);
+  head.writeUInt32LE(16, 16);
+  head.writeUInt16LE(1, 20);
+  head.writeUInt16LE(1, 22);
+  head.writeUInt32LE(RATE, 24);
+  head.writeUInt32LE(RATE * 2, 28);
+  head.writeUInt16LE(2, 32);
+  head.writeUInt16LE(16, 34);
+  head.write('data', 36);
+  head.writeUInt32LE(data.length, 40);
+  return Buffer.concat([head, data]);
 }
 
 /** A sub-bass hit: a 55 Hz sine falling to 38 Hz, decaying over about 0.4 s. */
@@ -162,17 +244,17 @@ function crackleSource(dur: number): string {
   );
 }
 
+/** Synthesized sources, as ffmpeg lavfi graphs. */
 const SYNTH: Record<string, (dur: number) => string> = {
-  whistle: whistleSource,
   thump: thumpSource,
   crackle: crackleSource,
 };
 
-function layerChain(layer: Layer, input: number, label: string): string {
+function layerChain(layer: Layer, input: number, label: string, fade: number): string {
   const parts: string[] = [`[${input}]aresample=${RATE}`, 'aformat=channel_layouts=mono'];
   if (layer.from !== undefined) parts.push(`atrim=start=${layer.from}`, 'asetpts=PTS-STARTPTS');
   if (layer.rate !== undefined) parts.push(`asetrate=${Math.round(RATE * layer.rate)}`, `aresample=${RATE}`);
-  parts.push(`atrim=duration=${layer.dur}`, `afade=t=out:st=${Math.max(0, layer.dur - 0.05)}:d=0.05`);
+  parts.push(`atrim=duration=${layer.dur}`, `afade=t=out:st=${Math.max(0, layer.dur - fade)}:d=${fade}`);
   if (layer.filter) parts.push(layer.filter);
   parts.push(`volume=${layer.db ?? 0}dB`, `adelay=${Math.round((layer.delay ?? 0) * 1000)}:all=1`);
   return `${parts.join(',')}[${label}]`;
@@ -180,16 +262,22 @@ function layerChain(layer: Layer, input: number, label: string): string {
 
 function build(sound: Sound): void {
   const args: string[] = [];
+  const temp: string[] = [];
   sound.layers.forEach((layer) => {
     const synth = SYNTH[layer.file];
-    if (synth) args.push('-f', 'lavfi', '-i', synth(layer.dur));
+    if (layer.file === 'whistle') {
+      const path = whistleSource(layer.dur);
+      temp.push(path);
+      args.push('-i', path);
+    } else if (synth) args.push('-f', 'lavfi', '-i', synth(layer.dur));
     else args.push('-i', layer.file);
   });
-  const chains = sound.layers.map((layer, i) => layerChain(layer, i, `l${i}`));
+  const fade = sound.fade ?? 0.08;
+  const chains = sound.layers.map((layer, i) => layerChain(layer, i, `l${i}`, Math.min(fade, 0.05)));
   const labels = sound.layers.map((_, i) => `[l${i}]`).join('');
   chains.push(
     `${labels}amix=inputs=${sound.layers.length}:normalize=0:duration=longest,` +
-      `atrim=end=${sound.length},afade=t=out:st=${sound.length - 0.08}:d=0.08,alimiter=limit=0.9[out]`,
+      `atrim=end=${sound.length},afade=t=out:st=${sound.length - fade}:d=${fade},alimiter=limit=0.9[out]`,
   );
   const out = `${OUT_DIR}/${sound.id}.ogg`;
   execFileSync('ffmpeg', [
@@ -197,6 +285,7 @@ function build(sound: Sound): void {
     ...['-filter_complex', chains.join(';'), '-map', '[out]'],
     ...['-ac', '1', '-ar', String(RATE), '-c:a', 'libvorbis', '-q:a', '4', '-map_metadata', '-1', out],
   ]);
+  for (const path of temp) rmSync(path, { force: true });
   console.log(out);
 }
 
