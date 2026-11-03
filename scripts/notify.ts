@@ -80,12 +80,13 @@ export interface LabelEvent {
 
 export type Target = { kind: 'pr' | 'issue' | 'stuck-issue'; number: number };
 
-/** What a label event pushes about: `needs-you` on a PR or an issue, `needs-info` on an issue, nothing on `hold`. */
+/** What a label event pushes about: `needs-you` on a PR or an issue, `needs-approval` on a PR, `needs-info` on an issue, nothing on `hold`. */
 export function pushFor(eventName: string, event: LabelEvent): Target | null {
   if (event.action !== 'labeled') return null;
   const onHold = (item: Labelled) => (item.labels ?? []).some((l) => l.name === 'hold');
   const label = event.label?.name;
-  if (eventName === 'pull_request' && label === 'needs-you' && event.pull_request) {
+  // A PR the steward gave up on (`needs-you`) or that waits for an approval (`needs-approval`, #417).
+  if (eventName === 'pull_request' && (label === 'needs-you' || label === 'needs-approval') && event.pull_request) {
     return onHold(event.pull_request) ? null : { kind: 'pr', number: event.pull_request.number };
   }
   // Labelling a PR sends a pull_request event, but an issue payload can still carry pull_request; skip those.
