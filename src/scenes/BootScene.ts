@@ -8,14 +8,17 @@ import menuOggUrl from '../../assets/yd-war-on-water/menu.ogg';
 import { musicKey } from '../audio/phaserMusic';
 import { groundTextureKey, MAPS } from '../data/maps';
 import { RENDERS } from '../data/renders';
+import { SOUND_URLS } from '../data/sounds';
+import { soundKey } from '../audio/phaserAudio';
+import { SOUND_IDS } from '../audio/sounds';
 import { ATLAS_KEY } from '../data/sprites';
 import { firstScene, type TestFlags } from '../testing/flags';
 
 /**
- * First scene. Preloads the sprite atlas, the rendered sprites and each map's ground image, then goes to the Main menu, or
- * the Game in test mode. A failed load doesn't stop the game: the Game scene draws the tileset for a missing ground image,
- * and shapes for any sprite it can't find. Music (#66) loads too, except in test mode, which is silent; a track that
- * fails to load stays silent.
+ * First scene. Preloads the sprite atlas, the rendered sprites, each map's ground image, the sounds (#45) and the music
+ * (#66), then goes to the Main menu, or the Game in test mode. A failed load doesn't stop the game: the Game scene draws
+ * the tileset for a missing ground image, shapes for any sprite it can't find, and stays silent for a sound or track that
+ * didn't load. Test mode is silent, so it skips the audio files.
  */
 export class BootScene extends Phaser.Scene {
   private readonly flags: TestFlags;
@@ -35,7 +38,9 @@ export class BootScene extends Phaser.Scene {
       this.load.image(render.hullKey, render.hullUrl);
       this.load.image(render.turretKey, render.turretUrl);
     }
+    // Test mode is silent (#45, #66), so it skips the audio files too.
     if (!this.flags.test) {
+      for (const id of SOUND_IDS) this.load.audio(soundKey(id), SOUND_URLS[id]);
       // OGG first; Phaser falls back to the MP3 on a browser without OGG Vorbis (older Safari).
       this.load.audio(musicKey('menu'), [menuOggUrl, menuMp3Url]);
       this.load.audio(musicKey('game'), [gameOggUrl, gameMp3Url]);

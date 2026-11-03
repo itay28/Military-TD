@@ -334,3 +334,30 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: War on Water tracks by yd (opengameart.org), CC0
 - Downloaded: 2026-11-02
 - Files: `assets/yd-war-on-water/**`
+
+## 25 CC0 bang / firework SFX
+
+- Author: rubberduck
+- Source: <https://opengameart.org/content/25-cc0-bang-firework-sfx>
+- License: CC0-1.0
+- Attribution: 25 CC0 bang / firework SFX by rubberduck (OpenGameArt.org), CC0
+- Downloaded: 2026-11-02
+- Files: `assets/rubberduck-bang-sfx/**`
+
+## 100 CC0 SFX
+
+- Author: rubberduck
+- Source: <https://opengameart.org/content/100-cc0-sfx>
+- License: CC0-1.0
+- Attribution: 100 CC0 SFX by rubberduck (OpenGameArt.org), CC0
+- Downloaded: 2026-11-02
+- Files: `assets/rubberduck-100-sfx/**`
+
+## 85 Short music jingles
+
+- Author: Kenney
+- Source: <https://opengameart.org/content/85-short-music-jingles>
+- License: CC0-1.0
+- Attribution: 85 Short music jingles by Kenney (kenney.nl), CC0
+- Downloaded: 2026-11-02
+- Files: `assets/kenney-jingles/**`

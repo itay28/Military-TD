@@ -113,6 +113,16 @@ Downloaded 2026-11-02 from [War on Water tracks](https://opengameart.org/content
 
 Each had its trailing silence (~0.1 s) trimmed and a 10 ms fade at both ends (ffmpeg), so the loop has no gap or click. `trackFor` in `src/audio/music.ts` maps scenes to tracks; a change of track crossfades over 1 s. Music starts on the first input, is muted in test mode, and a file that fails to load stays silent.
 
+## Sound effects (#45)
+
+Downloaded 2026-11-02, CC0 only. kenney.nl wasn't reachable from the cloud session, so each pack comes from its author's own OpenGameArt upload. Only the `.ogg` files below are committed. Kenney's jingles keep the pack's `license.txt` (as `License.txt`); rubberduck's packs ship none, so their `License.txt` copies the source page's notice. The files were picked by name and length, not by ear: swap any that sound wrong in `src/data/sounds.ts`.
+
+| Pack (`assets/<id>/`) | Source | Used for |
+| --- | --- | --- |
+| 25 CC0 bang / firework SFX (`rubberduck-bang-sfx`) | opengameart.org/content/25-cc0-bang-firework-sfx | Rifle Nest (`shot_03`), AA Gun (`shot_02`), Cannon (`cannon_03`), Mortar launch (`cannon_04`), shell explosion (`bang_02`) |
+| 100 CC0 SFX (`rubberduck-100-sfx`) | opengameart.org/content/100-cc0-sfx | enemy death (`hit_02`), leak (`bell_02`) |
+| 85 Short music jingles (`kenney-jingles`) | opengameart.org/content/85-short-music-jingles | wave start, victory, defeat (`jingles_STEEL00`–`02`) |
+
 ## Candidate sources
 
 - **Kenney** (kenney.nl): CC0. Tower Defense (Top-Down), Top-down Tanks Remastered (formerly Redux), UI Pack, Impact/Interface sounds, Music Jingles.
