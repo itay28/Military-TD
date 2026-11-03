@@ -1,0 +1,9 @@
+Explosions, by EZduzziteh
+https://opengameart.org/content/explosions-4
+
+License: Creative Commons Zero (CC0 1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The item ships no license file. This notice copies the license shown on the
+source page above (checked 2026-11-03). explosion1.ogg is the page's
+explosion1_0.ogg; explosion2.ogg and explosion3.ogg are unchanged.
