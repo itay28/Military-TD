@@ -8,9 +8,9 @@ import { createHeavyLoadGame } from '../../src/sim/heavyLoad';
 //
 // Measured mean tick time for the Heavy load (median of RUNS):
 //   - Claude Code cloud container (4 vCPU), Node 22: 0.17–0.18 ms
-//   - GitHub ubuntu-latest runner, Node 24: CI_MEASURED ms
+//   - GitHub ubuntu-latest runner, Node 24: 0.088 ms (runs 0.086–0.101), PR #384
 // The budget is about 3× the CI mean. To update it, see docs/performance.md → Updating the budget.
-const SIM_TICK_BUDGET_MS = 0.6;
+const SIM_TICK_BUDGET_MS = 0.27;
 
 /** Timed runs; the median of their means is checked, so one hiccup doesn't fail the gate. */
 const RUNS = 5;
