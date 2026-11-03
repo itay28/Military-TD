@@ -403,11 +403,6 @@ export class GameScene extends Phaser.Scene {
     return { base, sprite, graphics, rendered: true, spriteScale: scale, facing: RENDER_FACING };
   }
 
-  /**
-   * The map: its painted ground image and the grid over it (#312). Without the image, the tileset: ground and road
-   * tiles, the grid, then decorations over it. Flat shapes instead when the atlas lacks any tileset frame. Returns
-   * which it drew.
-   */
   /** The enemy card open now, for the test view. */
   private enemyCardView(): TestView['enemyCard'] {
     const enemy = this.sim.state.enemies.find((e) => e.id === this.enemyCard.shownId);
@@ -420,6 +415,11 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  /**
+   * The map: its painted ground image and the grid over it (#312). Without the image, the tileset: ground and road
+   * tiles, the grid, then decorations over it. Flat shapes instead when the atlas lacks any tileset frame. Returns
+   * which it drew.
+   */
   private drawMapView(): TestView['mapTiles'] {
     const { map } = this.sim.state;
     const groundKey = groundTextureKey(this.mapId);
