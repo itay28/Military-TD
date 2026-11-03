@@ -120,13 +120,13 @@ One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesoun
 | Sound | Plays for | Built from |
 | --- | --- | --- |
 | `rifleShot` | Rifle Nest | an AK-47 short burst over an AR-15 crack |
-| `aaGunBurst` | AA Gun | four .30-06 reports pitched down, about 6 rounds a second |
+| `aaGunBurst` | AA Gun | one .30-06 report pitched down, 0.26 s: one sound per shot, so it keeps the gun's 3 to 3.75 shots a second |
 | `missileLaunch` | Cannon: TOW (US), HJ-8 (China) | the missile launch whoosh, with a low eject thump |
 | `gunReport` | Cannon: MT-12 (Russia) | the cannon shot, with a rifle's supersonic crack on top |
 | `recoillessBlast` | Cannon: SPG-9 (Insurgents) | the cannon shot, lower and duller, with a backblast hiss |
-| `mortarLaunch`, `mortarWhistle`, `mortarBlast` | Mortar: launch, incoming (0.5 s before impact), impact | the cannon shot low-passed and pitched down; the synthesized whistle; `explosion3` |
-| `vehicleExplosion` | a jeep, tank or helicopter destroyed | `explosion1` slowed and low-passed, `explosion3` as a rumbling tail, a synthesized sub-bass thump and a debris crackle |
-| `infantryHit` | infantry killed | `explosion2` slowed and low-passed, with a short thump and a little debris |
+| `mortarLaunch`, `mortarWhistle`, `mortarBlast` | Mortar: launch, incoming (0.5 s before impact), impact | a sharp light-mortar "tonk" (cannon shot plus a rifle crack); the synthesized broad-band noise whistle; `explosion3` with a crack, a thump and debris |
+| `vehicleExplosion` | a jeep, tank or helicopter destroyed | `explosion1` at about half speed, a sub-bass thump, `explosion3` as a second blast and rumbling tail, a debris crackle |
+| `infantryHit` | infantry killed | `explosion2`, short and light |
 
 | Pack (`assets/<id>/`) | Source | Used for |
 | --- | --- | --- |
