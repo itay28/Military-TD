@@ -94,6 +94,10 @@ for (const [name, viewport] of [
       await page.getByRole('button', { name: 'Settings' }).click();
       await settingsDialog(page).waitFor();
       expect(await fits(page, ['#settings'])).toContain('#settings');
+      // Taller than the window at 150 %: the dialog scrolls, so Back can still be reached.
+      const backButton = page.getByRole('button', { name: 'Back' });
+      await backButton.scrollIntoViewIfNeeded();
+      await expect(backButton).toBeInViewport();
       await page.getByRole('button', { name: 'Back' }).click();
       await page.getByRole('button', { name: 'Play' }).click();
       await page.getByRole('heading', { name: 'Select map' }).waitFor();
