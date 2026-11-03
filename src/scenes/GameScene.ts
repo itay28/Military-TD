@@ -434,8 +434,8 @@ export class GameScene extends Phaser.Scene {
    */
   private wireSounds(): void {
     const music = this.registry.get(MUSIC_REGISTRY_KEY) as MusicDuck | undefined;
-    const audio = this.flags.test
-      ? silentAudio
+    const radio = this.flags.test
+      ? undefined
       : duckForRadio(
           throttleAudio(
             createPhaserAudio(this.sound, (key) => this.cache.audio.exists(key)),
@@ -444,8 +444,13 @@ export class GameScene extends Phaser.Scene {
           ),
           music ?? { setDucked: () => {} },
           RADIO_CUE_MS,
-          (ms, run) => window.setTimeout(run, ms),
+          (ms, run) => {
+            const id = window.setTimeout(run, ms);
+            return () => window.clearTimeout(id);
+          },
         );
+    const audio = radio ?? silentAudio;
+    if (radio) this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => radio.dispose());
     const play = (event: SoundEvent): void => {
       const id = soundFor(event);
       if (id !== null) audio.play(id);

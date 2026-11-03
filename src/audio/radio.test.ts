@@ -10,8 +10,13 @@ function setup(cueMs: Partial<Record<SoundId, number>> = { waveStart: 2000, vict
   const music: MusicDuck = { setDucked: (on) => ducked.push(on) };
   let now = 0;
   const timers: { at: number; run: () => void }[] = [];
-  const schedule = (ms: number, run: () => void): void => {
-    timers.push({ at: now + ms, run });
+  const schedule = (ms: number, run: () => void): (() => void) => {
+    const timer = { at: now + ms, run };
+    timers.push(timer);
+    return () => {
+      const i = timers.indexOf(timer);
+      if (i >= 0) timers.splice(i, 1);
+    };
   };
   const advance = (ms: number): void => {
     now += ms;
@@ -60,5 +65,20 @@ describe('duckForRadio', () => {
     advance(2000);
     audio.play('waveStart');
     expect(ducked).toEqual([true, false, true]);
+  });
+
+  it('on dispose, cancels pending releases and lets the music back up once', () => {
+    const { audio, ducked, advance } = setup();
+    audio.play('waveStart');
+    audio.dispose();
+    expect(ducked).toEqual([true, false]);
+    advance(5000);
+    expect(ducked).toEqual([true, false]);
+  });
+
+  it('does nothing on dispose when no cue is playing', () => {
+    const { audio, ducked } = setup();
+    audio.dispose();
+    expect(ducked).toEqual([]);
   });
 });
