@@ -5,6 +5,7 @@ import { renderFor } from '../data/renders';
 import { towerIcon } from '../data/sprites';
 import { TOWER_STATS } from '../data/towers';
 import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
+import { towerTooltip } from './towerTooltip';
 
 // Only the Rifle Nest exists today, so most tests use made-up kinds to have more than one.
 const OPTIONS: readonly BuildOption<'rifle' | 'cannon' | 'mortar'>[] = [
@@ -40,6 +41,7 @@ describe('buildOptions', () => {
           shape: TOWER_STYLE[kind as keyof typeof TOWER_STATS].shape,
           size: TOWER_STYLE[kind as keyof typeof TOWER_STATS].size,
         },
+        tooltip: towerTooltip(kind as keyof typeof TOWER_STATS),
         ...(kind === 'aaGun'
           ? { render: expect.objectContaining({ hullUrl: renderFor('aaGun')!.hullUrl }) }
           : { sprite: towerIcon(kind as keyof typeof TOWER_STATS) }),
@@ -369,7 +371,9 @@ describe('Build bar tooltips', () => {
   const TIPPED = OPTIONS.map((option) => ({ ...option, tooltip: tooltip(option.name) }));
   const tip = (kind: string) => root.querySelector<HTMLElement>(`[data-testid="build-tip-${kind}"]`)!;
   const shown = () =>
-    [...root.querySelectorAll<HTMLElement>('[role="tooltip"]')].filter((el) => !el.hidden).map((el) => el.dataset.testid);
+    [...root.querySelectorAll<HTMLElement>('[role="tooltip"]')]
+      .filter((el) => !el.hidden)
+      .map((el) => el.dataset.testid);
   const enter = (kind: string) => button(kind).dispatchEvent(new Event('pointerenter'));
   const leave = (kind: string) => button(kind).dispatchEvent(new Event('pointerleave'));
 
