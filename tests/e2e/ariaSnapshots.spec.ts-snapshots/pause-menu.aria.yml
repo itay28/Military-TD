@@ -8,4 +8,4 @@
   - button "Restart"
   - button "Settings"
   - button "Keys"
-  - button "Quit to menu" [disabled]
+  - button "Quit to menu"

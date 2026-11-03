@@ -16,7 +16,7 @@ export interface PauseMenuOptions {
   readonly blocked: readonly HTMLElement[];
   /** Called when the player presses Restart. */
   readonly onRestart: () => void;
-  /** Called when the player presses Quit to menu. Without it, Quit is disabled: there is no menu yet (#46). */
+  /** Called when the player presses Quit to menu. Without it, Quit is disabled. */
   readonly onQuit?: () => void;
   /** Opens the Settings screen in place of the Paused dialog. Without it, Settings is disabled. */
   readonly openSettings?: OpenSettings;
