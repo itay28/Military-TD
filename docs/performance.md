@@ -8,7 +8,7 @@ scenario gives the browser the same setup.
 | Check | Command | Where it runs in CI | Fails when |
 | --- | --- | --- | --- |
 | Sim budget (hard gate) | `npm run test:perf` | `ci` job, after the tests | the mean sim tick time is over `SIM_TICK_BUDGET_MS` |
-| Frame-time report | `npm run test:perf:browser` | `e2e` job, after the e2e tests | the p95 frame time is over 33 ms (below 30 fps) |
+| Frame-time report | `npm run test:perf:browser` | `e2e` job, after the e2e tests | never: report only for now (the 33 ms p95 limit is not enforced in CI) |
 
 ## Sim budget
 
@@ -27,8 +27,10 @@ spawns, then records `requestAnimationFrame` frame times for 4 s. It writes fram
 (`GITHUB_STEP_SUMMARY`) and prints them locally.
 
 Headless Chromium on a CI runner has no GPU and draws in software, and its frame rate varies from run to run, so this
-is a trend to watch, not a strict target: it fails only below 30 fps at p95. It runs even when an e2e test failed, so
-the summary always has the numbers.
+is a trend to watch, not a strict target. The step is `continue-on-error`, so it never turns the `e2e` check red, and it
+runs even when an e2e test failed, so the summary always has the numbers. Today's game renders at about 10 fps there
+(p95 around 100 ms), so the 33 ms p95 limit (`FRAME_P95_LIMIT_MS`, below 30 fps) is only a target: it will be enforced
+once rendering is faster (#73, option 1). Locally the test still fails over the limit.
 
 ## Running them locally
 

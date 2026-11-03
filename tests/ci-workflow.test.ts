@@ -49,7 +49,15 @@ describe('ci workflow', () => {
   });
 
   it('the frame-time report runs even when an e2e test failed, so the summary always has it', () => {
-    expect(job('e2e')).toMatch(/if: \$\{\{ !cancelled\(\) \}\}\n\s+run: npm run test:perf:browser/);
+    expect(job('e2e')).toMatch(
+      /if: \$\{\{ !cancelled\(\) \}\}\n(\s+continue-on-error: true\n)?\s+run: npm run test:perf:browser/,
+    );
+  });
+
+  it('the frame-time report never fails the e2e job: report only until rendering is faster (#73)', () => {
+    expect(job('e2e')).toMatch(
+      /name: Frame-time report\n\s+if: \$\{\{ !cancelled\(\) \}\}\n\s+continue-on-error: true\n/,
+    );
   });
 
   it('e2e runs in the Playwright container that matches the @playwright/test version', () => {

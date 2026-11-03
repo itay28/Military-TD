@@ -5,7 +5,7 @@ import { openGame } from '../e2e/helpers';
 import { FRAME_P95_LIMIT_MS, frameStats, frameSummary } from './frameStats';
 
 // The browser frame-time report (#73, docs/performance.md): `npm run test:perf:browser`. It writes mean and p95 to
-// the job summary and fails only below 30 fps, since headless Chromium on CI has no GPU and its frame rate varies.
+// the job summary. The CI step is continue-on-error (report only) until rendering is faster; the test still fails over 33 ms p95.
 
 /** How long frames are recorded for, in ms. */
 const RECORD_MS = 4000;
