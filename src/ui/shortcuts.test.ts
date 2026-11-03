@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { Phase } from '../sim/game';
 import { mountShortcuts, type ShortcutHandlers } from './shortcuts';
 
 let game: { state: { phase: Phase } };
-let handlers: { [K in keyof ShortcutHandlers]: ReturnType<typeof vi.fn> };
+let handlers: { [K in keyof ShortcutHandlers]: Mock<() => void> };
 let destroy: () => void;
 
 const press = (key: string, init: KeyboardEventInit = {}, target: EventTarget = document.body) => {

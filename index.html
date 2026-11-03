@@ -344,6 +344,29 @@
         color: #f0c95a;
         vertical-align: middle;
       }
+      /* The Keys help overlay: its wrapper adds no box, so the dialog sizes against the pause menu like the Paused one. */
+      #pause-menu .help:not([hidden]) {
+        display: contents;
+      }
+      #pause-menu .help table {
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      #pause-menu .help th,
+      #pause-menu .help td {
+        padding: 3px 10px;
+        text-align: left;
+        font-weight: normal;
+      }
+      #pause-menu .help thead th {
+        border-bottom: 1px solid #5b6b3a;
+        color: #a2a58f;
+      }
+      #pause-menu .help kbd {
+        font: bold 14px monospace;
+        color: #f0c95a;
+        white-space: nowrap;
+      }
       /* The damage report: small tables side by side, wrapping as the dialog narrows. */
       #end-screen .report {
         display: flex;

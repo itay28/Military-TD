@@ -11,6 +11,10 @@ export interface TowerPanel {
   readonly selectedId: number | undefined;
   /** Selects tower `id` and shows its panel, or with undefined deselects and hides it. */
   select(id: number | undefined): void;
+  /** What a click on Upgrade does (the U key): nothing while it is disabled, hidden or nothing is selected. */
+  upgrade(): void;
+  /** What a click on Sell does (the S key): nothing while it is disabled or nothing is selected. */
+  sell(): void;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. Deselects once the tower is gone. */
   update(): void;
   /** Removes the panel's elements and listeners and hides it; select() and update() do nothing after this. */
@@ -117,12 +121,12 @@ export function mountTowerPanel(
   };
   const onClose = () => select(undefined);
   const onUpgrade = () => {
-    if (selectedId === undefined) return;
+    if (selectedId === undefined || upgrade.disabled || upgrade.hidden) return;
     game.upgradeTower(selectedId);
     update();
   };
   const onSell = () => {
-    if (selectedId === undefined) return;
+    if (selectedId === undefined || sell.disabled) return;
     game.sellTower(selectedId);
     update(); // now dismantling; the panel closes once the tower is gone
   };
@@ -140,6 +144,12 @@ export function mountTowerPanel(
       return selectedId;
     },
     select,
+    upgrade: () => {
+      if (!destroyed) onUpgrade();
+    },
+    sell: () => {
+      if (!destroyed) onSell();
+    },
     update,
     destroy() {
       destroyed = true;

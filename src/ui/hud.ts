@@ -12,6 +12,8 @@ export type HudSpeed = GameSpeedControl;
 export interface Hud {
   /** The group holding the HUD's buttons; the pause menu adds its Pause button here. */
   readonly controls: HTMLElement;
+  /** What a click on Start Wave does (the Space key): nothing while it is disabled. */
+  startWave(): void;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
   /** Removes the HUD's elements and unsubscribes from game events. */
@@ -107,10 +109,12 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     bannerUntilMs = game.state.timeMs + WAVE_BANNER_MS;
   });
   // The sim decides; a refused start changes nothing. Redraw at once so a second click can't land first.
-  startWave.addEventListener('click', () => {
+  const onStartWave = () => {
+    if (startWave.disabled) return;
     game.startWave();
     update();
-  });
+  };
+  startWave.addEventListener('click', onStartWave);
   autoStart.addEventListener('click', () => {
     game.setAutoStart(!game.state.autoStart);
     update();
@@ -118,6 +122,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   update();
   return {
     controls,
+    startWave: onStartWave,
     update,
     destroy() {
       offWaveCleared();
