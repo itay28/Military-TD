@@ -33,9 +33,7 @@ test('the build bar marks the selected tower', async ({ page }) => {
   await expectAria(page.locator('#build-bar'), 'build-bar-selected.aria.yml');
 });
 
-test('the pause menu offers Resume, Restart, Settings, and Quit to menu disabled until it is wired', async ({
-  page,
-}) => {
+test('the pause menu offers Resume, Restart, Settings, and Quit to menu', async ({ page }) => {
   await openGame(page);
   await page.getByRole('button', { name: 'Pause' }).click();
   await expectAria(page.locator('#pause-menu'), 'pause-menu.aria.yml');
