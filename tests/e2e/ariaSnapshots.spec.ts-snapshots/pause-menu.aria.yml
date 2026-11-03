@@ -7,4 +7,4 @@
     - button "×3"
   - button "Restart"
   - button "Settings"
-  - button "Quit to menu" [disabled]
+  - button "Quit to menu"

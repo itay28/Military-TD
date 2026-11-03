@@ -596,6 +596,7 @@ export class GameScene extends Phaser.Scene {
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, {
       onRestart: () => this.scene.restart(),
+      onLevelSelect: () => this.scene.start('LevelSelect'),
       result: () => this.result,
     });
     this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim, { onSelect: () => this.buildBar.clear() });
@@ -605,6 +606,7 @@ export class GameScene extends Phaser.Scene {
       buttonRoot: this.hud.controls,
       blocked: [this.hudRoot, this.buildBarRoot, this.towerPanelRoot],
       onRestart: () => this.scene.restart(),
+      onQuit: () => this.scene.start('LevelSelect'),
       openSettings: this.openSettings,
       speed,
     });
