@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isConventionalTitle } from '../scripts/pr-title';
+import { checkTitle, FREEZE_EXCEPTION_LABEL, isConventionalTitle } from '../scripts/pr-title';
 
 // The PR title becomes the squash commit, and its type drives the version bump (ADR-0004).
 describe('isConventionalTitle', () => {
@@ -24,5 +24,42 @@ describe('isConventionalTitle', () => {
     expect(isConventionalTitle('feat:towers')).toBe(false);
     expect(isConventionalTitle('Feat: towers')).toBe(false);
     expect(isConventionalTitle('Add towers')).toBe(false);
+  });
+});
+
+describe('checkTitle', () => {
+  const on = { freeze: true, labels: [] };
+  const off = { freeze: false, labels: [] };
+
+  it('accepts feat titles while the freeze is off', () => {
+    expect(checkTitle('feat: towers', off).ok).toBe(true);
+  });
+
+  it.each(['feat: towers', 'feat(ui): a panel', 'feat!: new save format'])(
+    'rejects %j while the freeze is on',
+    (title) => {
+      const result = checkTitle(title, on);
+      expect(result.ok).toBe(false);
+      expect(result.message).toContain('feature freeze');
+      expect(result.message).toContain('FEATURE_FREEZE');
+      expect(result.message).toContain(FREEZE_EXCEPTION_LABEL);
+    },
+  );
+
+  it('lets a feat title through with the freeze-exception label', () => {
+    expect(FREEZE_EXCEPTION_LABEL).toBe('freeze-exception');
+    expect(checkTitle('feat: towers', { freeze: true, labels: ['area:ui', 'freeze-exception'] }).ok).toBe(true);
+  });
+
+  it.each(['fix', 'test', 'docs', 'chore', 'refactor', 'ci'])('accepts %s titles while the freeze is on', (type) => {
+    expect(checkTitle(`${type}: something`, on).ok).toBe(true);
+  });
+
+  it('still rejects a title that is not a Conventional Commit, freeze or not', () => {
+    for (const options of [on, off]) {
+      const result = checkTitle('Add towers', options);
+      expect(result.ok).toBe(false);
+      expect(result.message).toContain('not a Conventional Commit');
+    }
   });
 });
