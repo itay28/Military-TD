@@ -115,7 +115,7 @@ The weapon shots, the shell explosion and the enemy death first used rubberduck'
 
 ## Weapon sounds (#404)
 
-One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesound isn't reachable from the cloud session). `scripts/weapon-fx.ts` (`npm run weapon-fx`, needs ffmpeg) builds `assets/weapon-sounds/<id>.ogg` from the committed inputs below: it layers, trims, re-pitches and filters them, and synthesizes the mortar's incoming whistle (band-passed noise whose pitch falls while it gets louder), since no CC0 recording of one was found, and a sub-bass thump and a debris crackle that give the unit explosions their weight. `SHOT_SOUND` in `src/audio/sounds.ts` maps each tower kind × defender Faction to a sound (ADR-0009). The sounds were checked by spectrogram and level, not by ear.
+One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesound isn't reachable from the cloud session). `scripts/weapon-fx.ts` (`npm run weapon-fx`, needs ffmpeg) builds `assets/weapon-sounds/<id>.ogg` from the committed inputs below: it layers, trims, re-pitches and filters them, and synthesizes the mortar's incoming whistle (a fluttering tone sweeping down from 1.9 kHz to 500 Hz with a little air noise), since no CC0 recording of one was found, and a sub-bass thump and a debris crackle that give the unit explosions their weight. `SHOT_SOUND` in `src/audio/sounds.ts` maps each tower kind × defender Faction to a sound (ADR-0009). The sounds were checked by spectrogram and level, not by ear.
 
 | Sound | Plays for | Built from |
 | --- | --- | --- |
@@ -124,7 +124,7 @@ One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesoun
 | `missileLaunch` | Cannon: TOW (US), HJ-8 (China) | the missile launch whoosh, with a low eject thump |
 | `gunReport` | Cannon: MT-12 (Russia) | the cannon shot, with a rifle's supersonic crack on top |
 | `recoillessBlast` | Cannon: SPG-9 (Insurgents) | the cannon shot, lower and duller, with a backblast hiss |
-| `mortarLaunch`, `mortarWhistle`, `mortarBlast` | Mortar: launch, incoming (0.5 s before impact), impact | a sharp light-mortar "tonk" (cannon shot plus a rifle crack); the synthesized broad-band noise whistle; `explosion3` with a crack, a thump and debris |
+| `mortarLaunch`, `mortarWhistle`, `mortarBlast` | Mortar: launch, incoming (0.5 s before impact), impact | a sharp light-mortar "tonk" (cannon shot plus a rifle crack); the synthesized descending, fluttering whistle; `explosion3` with a crack, a thump and debris |
 | `vehicleExplosion` | a jeep, tank or helicopter destroyed | `explosion1` at about half speed, a sub-bass thump, `explosion3` as a second blast and rumbling tail, a debris crackle |
 | `infantryHit` | infantry killed | `explosion2`, short and light |
 

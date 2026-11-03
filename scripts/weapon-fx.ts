@@ -26,7 +26,7 @@ const BOOM_SMALL = 'assets/ezduzziteh-explosions/explosion2.ogg';
 const BOOM_MID = 'assets/ezduzziteh-explosions/explosion3.ogg';
 
 interface Layer {
-  /** The clip, or a synthesized source: `whistle` (airy falling shriek), `thump` (sub-bass hit), `crackle` (debris). */
+  /** The clip, or a synthesized source: `whistle` (descending tonal shriek with flutter), `thump` (sub-bass hit), `crackle` (debris). */
   readonly file: string | 'whistle' | 'thump' | 'crackle';
   /** Where in the sound this layer starts, in s. */
   readonly delay?: number;
@@ -130,18 +130,17 @@ const SOUNDS: readonly Sound[] = [
 ];
 
 /**
- * An incoming bomb's rushing shriek: noise through a broad band-pass (Q 0.9, so a hiss, not a tone) whose centre falls
- * from 3200 to 1400 Hz (the Doppler drop), louder as the bomb closes in.
+ * An incoming mortar bomb's descending shriek ("fweeoo"): a thin tone sweeping down from 1900 to 500 Hz, with a faint
+ * second harmonic, a fast flutter from the tumbling fins and a little air noise. It swells for the first two thirds,
+ * then thins out before impact, unlike a missile's steady, rising rush.
  */
 function whistleSource(dur: number): string {
-  const steps = 10;
-  const cmds = Array.from({ length: steps + 1 }, (_, i) => {
-    const t = (dur * i) / steps;
-    return `${t.toFixed(3)} bandpass@w frequency ${Math.round(3200 - (1800 * i) / steps)}`;
-  }).join('; ');
+  const phase = `2*PI*(1900*t-(1400/(2*${dur}))*t*t)`;
+  const flutter = '(0.65+0.35*sin(2*PI*31*t))';
+  const env = `min(1,t/${(dur * 0.35).toFixed(3)})*min(1,(${dur}-t)/${(dur * 0.3).toFixed(3)}+0.25)`;
   return (
-    `anoisesrc=c=pink:r=${RATE}:d=${dur}:a=0.9:seed=404,asendcmd=c='${cmds}',bandpass@w=f=3200:width_type=q:w=0.9,` +
-    `volume='0.15+0.85*pow(t/${dur},1.6)':eval=frame`
+    `aevalsrc='${env}*(0.6*${flutter}*(sin(${phase})+0.25*sin(2*${phase}))+0.12*(2*random(0)-1))':s=${RATE}:d=${dur},` +
+    'highpass=f=350,lowpass=f=5000'
   );
 }
 
