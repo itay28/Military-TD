@@ -10,4 +10,5 @@
     - text: ×3
   - checkbox "Always show tower ranges"
   - text: Always show tower ranges
+  - button "Show hints again"
   - button "Back"

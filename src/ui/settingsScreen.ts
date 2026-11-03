@@ -1,9 +1,12 @@
 import { GAME_SPEEDS } from '../scenes/gameSpeed';
+import type { ProgressStore } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
 
 export interface SettingsScreenOptions {
   /** Called when the player presses Back (or Esc), after the screen has closed. */
   readonly onBack: () => void;
+  /** Saved progress, for Show hints again (#68), which clears its hints flag. No button without it. */
+  readonly progress?: Pick<ProgressStore, 'setHintsDone'>;
 }
 
 export interface SettingsScreen {
@@ -26,7 +29,7 @@ const TITLE_ID = 'settings-title';
 export function mountSettingsScreen(
   root: HTMLElement,
   settings: SettingsStore,
-  { onBack }: SettingsScreenOptions,
+  { onBack, progress }: SettingsScreenOptions,
 ): SettingsScreen {
   const doc = root.ownerDocument;
   const labelled = (input: HTMLInputElement, text: string) => {
@@ -55,6 +58,23 @@ export function mountSettingsScreen(
   showAllRanges.checked = current.showAllRanges;
   showAllRanges.addEventListener('change', () => settings.set({ showAllRanges: showAllRanges.checked }));
 
+  // Show hints again: the first map's hints come back on its next game. A status line confirms it, the button stays.
+  const hintControls: HTMLElement[] = [];
+  if (progress) {
+    const showHints = doc.createElement('button');
+    showHints.type = 'button';
+    showHints.textContent = 'Show hints again';
+    showHints.className = 'show-hints';
+    const note = doc.createElement('p');
+    note.setAttribute('role', 'status');
+    note.className = 'hints-note';
+    showHints.addEventListener('click', () => {
+      progress.setHintsDone(false);
+      note.textContent = 'Hints will show on the first map.';
+    });
+    hintControls.push(showHints, note);
+  }
+
   const backButton = doc.createElement('button');
   backButton.type = 'button';
   backButton.textContent = 'Back';
@@ -66,7 +86,7 @@ export function mountSettingsScreen(
   const heading = doc.createElement('h2');
   heading.id = TITLE_ID;
   heading.textContent = 'Settings';
-  dialog.append(heading, speeds, labelled(showAllRanges, 'Always show tower ranges'), backButton);
+  dialog.append(heading, speeds, labelled(showAllRanges, 'Always show tower ranges'), ...hintControls, backButton);
   root.append(dialog);
   root.hidden = false;
   speeds.querySelector<HTMLInputElement>('input:checked')?.focus();

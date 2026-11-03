@@ -7,7 +7,7 @@ import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { groundTextureKey, MAPS, mapById } from '../data/maps';
 import type { Enemy } from '../sim/enemies';
-import { TICK_MS, type Game } from '../sim/game';
+import { isGameOver, TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
 import { starsFor, unlocksNext } from '../sim/progression';
 import { setUpGame, type GameSetup } from '../sim/scenario';
@@ -22,6 +22,7 @@ import {
   fitView,
   panBy,
   screenToWorld,
+  worldToScreen,
   zoomAt,
   type CameraBounds,
   type CameraView,
@@ -58,6 +59,7 @@ import { TILESET_FRAMES, tileArt } from './tileset';
 import { buildOptions, mountBuildBar, type BuildBar, type IconAtlas } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
+import { hintFor, INITIAL_HINTS, mountHints, type HintEvent, type Hints, type HintState, type Rect } from '../ui/hints';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
@@ -140,6 +142,8 @@ export interface GameSceneOptions {
   readonly towerPanelRoot: HTMLElement;
   /** The DOM element over the canvas the pause menu is drawn in (`#pause-menu` in index.html). */
   readonly pauseMenuRoot: HTMLElement;
+  /** The DOM layer over the page the first-map hints are drawn in (`#hints` in index.html). */
+  readonly hintsRoot: HTMLElement;
   /** Test mode's URL flags (ADR-0003). */
   readonly flags: TestFlags;
   /** The player's settings, read live: each game starts at the default speed, and range rings follow every frame. */
@@ -159,6 +163,7 @@ export class GameScene extends Phaser.Scene {
   private readonly endScreenRoot: HTMLElement;
   private readonly towerPanelRoot: HTMLElement;
   private readonly pauseMenuRoot: HTMLElement;
+  private readonly hintsRoot: HTMLElement;
   private readonly flags: TestFlags;
   private readonly settings: SettingsStore;
   private readonly openSettings: OpenSettings;
@@ -181,6 +186,18 @@ export class GameScene extends Phaser.Scene {
   private result: VictoryResult | undefined;
   private towerPanel!: TowerPanel;
   private pauseMenu!: PauseMenu;
+  private hints!: Hints;
+  /** Which hinted actions this game has seen; each game starts over. */
+  private hintState: HintState = INITIAL_HINTS;
+  /** Skip hints was pressed, to feed the sequence on the next frame. */
+  private hintsSkipped = false;
+  /** Whether this game has saved the hints flag already, so it saves once. */
+  private hintsSaved = false;
+  /**
+   * Test mode's override (`__TD__.setHints`): true or false forces the hints on or off; undefined follows the rule
+   * (the first map, until done). Test mode starts with them off, so specs that don't test hints never see one.
+   */
+  private hintsForced: boolean | undefined;
   private enemyViews!: ViewSync<Enemy, EnemyView>;
   private towerViews!: ViewSync<Tower>;
   /** Each tower's view by id, for `view()`'s turret angles. */
@@ -225,6 +242,7 @@ export class GameScene extends Phaser.Scene {
     endScreenRoot,
     towerPanelRoot,
     pauseMenuRoot,
+    hintsRoot,
     flags,
     settings,
     openSettings,
@@ -237,6 +255,8 @@ export class GameScene extends Phaser.Scene {
     this.endScreenRoot = endScreenRoot;
     this.towerPanelRoot = towerPanelRoot;
     this.pauseMenuRoot = pauseMenuRoot;
+    this.hintsRoot = hintsRoot;
+    this.hintsForced = flags.test ? false : undefined;
     this.flags = flags;
     this.settings = settings;
     this.openSettings = openSettings;
@@ -264,6 +284,12 @@ export class GameScene extends Phaser.Scene {
         });
       },
       view: () => this.testView(),
+      setHints: (on) => {
+        this.hintsForced = on;
+        this.hintState = INITIAL_HINTS;
+        this.hintsSkipped = false;
+        this.hintsSaved = false;
+      },
     };
   }
 
@@ -608,7 +634,12 @@ export class GameScene extends Phaser.Scene {
       openSettings: this.openSettings,
       speed,
     });
+    this.hintState = INITIAL_HINTS;
+    this.hintsSkipped = false;
+    this.hintsSaved = false;
+    this.hints = mountHints(this.hintsRoot, { onSkip: () => (this.hintsSkipped = true) });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.hints.destroy();
       this.hud.destroy();
       this.buildBar.destroy();
       this.endScreen.destroy();
@@ -616,6 +647,47 @@ export class GameScene extends Phaser.Scene {
       this.pauseMenu.destroy();
     });
     this.onCreate?.();
+  }
+
+  /**
+   * The first-map hints (#68): on the first map until done or skipped (or as test mode forces), fed what the player
+   * has done so far, each pointing at its element. Hidden while paused and after the game ends.
+   */
+  private updateHints(): void {
+    const { map, towers, waveNumber, wavesCleared, phase } = this.sim.state;
+    const active = this.hintsForced ?? (map.id === MAPS[0]!.id && !this.progress.get().hintsDone);
+    if (!active) return this.hints.hide();
+    const events: HintEvent[] = [];
+    if (towers.length > 0) events.push('towerPlaced');
+    if (waveNumber >= 1) events.push('waveStarted');
+    if (wavesCleared >= 1) events.push('waveCleared');
+    if (this.towerPanel.selectedId !== undefined) events.push('towerPanelOpened');
+    if (this.hintsSkipped) events.push('skipped');
+    const { state, hint, done } = hintFor(this.hintState, events);
+    this.hintState = state;
+    if (done && !this.hintsSaved) {
+      this.hintsSaved = true;
+      this.progress.setHintsDone(true);
+    }
+    const anchor = hint && !this.pauseMenu.paused && !isGameOver(phase) ? this.hintAnchor(hint) : undefined;
+    if (hint && anchor) this.hints.show(hint, anchor);
+    else this.hints.hide();
+  }
+
+  /** What `hint` points at, in viewport pixels: the build bar, Start Wave, or the first tower on the map. */
+  private hintAnchor(hint: 'place' | 'startWave' | 'selectTower'): Rect | undefined {
+    // The tower buttons, not the whole bar down the edge; the bar itself while it's collapsed.
+    if (hint === 'place')
+      return (
+        this.buildBarRoot.querySelector('.build-grid:not([hidden])') ?? this.buildBarRoot
+      ).getBoundingClientRect();
+    if (hint === 'startWave') return this.hudRoot.querySelector('[data-testid="start-wave"]')?.getBoundingClientRect();
+    const tower = this.sim.state.towers[0];
+    if (!tower) return undefined;
+    const canvas = this.game.canvas.getBoundingClientRect();
+    const half = (TILE_PX / 2) * this.view.zoom;
+    const { x, y } = worldToScreen(this.view, towerCenter(tower));
+    return { left: canvas.left + x - half, top: canvas.top + y - half, width: half * 2, height: half * 2 };
   }
 
   /** Saves a win of `mapId` and says what it earned, including the next map when this win unlocked it. */
@@ -771,6 +843,7 @@ export class GameScene extends Phaser.Scene {
     this.endScreen.update();
     this.towerPanel.update();
     this.pauseMenu.update();
+    this.updateHints();
 
     const { enemies, towers } = this.sim.state;
     this.towerViews.sync(towers);

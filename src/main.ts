@@ -26,6 +26,9 @@ if (!towerPanelRoot) throw new Error('index.html has no #tower-panel element');
 const pauseMenuRoot = document.getElementById('pause-menu');
 if (!pauseMenuRoot) throw new Error('index.html has no #pause-menu element');
 
+const hintsRoot = document.getElementById('hints');
+if (!hintsRoot) throw new Error('index.html has no #hints element');
+
 const app = document.getElementById('app');
 if (!app) throw new Error('index.html has no #app element');
 const menuRoot = document.getElementById('menu');
@@ -40,7 +43,7 @@ const storage = flags.test && !flags.persist ? createMemoryStorage() : browserSt
 const settings = createPersistedSettings(storage);
 // Saved progress (maps won, best stars) lives under its own key: the Game records wins, the Level select unlocks from it.
 const progress = createPersistedProgress(storage);
-const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
+const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack, progress });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
@@ -50,6 +53,7 @@ const gameScene = new GameScene({
   endScreenRoot,
   towerPanelRoot,
   pauseMenuRoot,
+  hintsRoot,
   flags,
   settings,
   openSettings,

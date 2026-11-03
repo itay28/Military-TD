@@ -503,7 +503,7 @@
         cursor: pointer;
       }
       /* The Main menu and Level select cover the whole page; the game's UI is hidden behind them, out of the accessibility tree too. */
-      #app[data-screen] :is(#hud, #build-bar, #tower-panel) {
+      #app[data-screen] :is(#hud, #build-bar, #tower-panel, #hints) {
         display: none;
       }
       #menu,
@@ -701,9 +701,81 @@
         border-radius: 3px;
         cursor: pointer;
       }
+      #settings .show-hints {
+        width: auto;
+        min-width: 160px;
+        padding: 6px 12px;
+      }
+      #settings .hints-note {
+        margin: 0;
+        text-align: center;
+      }
+      #settings .hints-note:empty {
+        display: none;
+      }
       #settings :is(button, input):focus-visible {
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
+      }
+      /* The first-map hints (#68): a layer over the whole page that never takes the pointer, but for Skip hints. The
+         callout is placed by script next to what it points at, with an arrow toward it. */
+      #hints {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+      }
+      #hints[hidden] {
+        display: none;
+      }
+      #hints .hint {
+        position: absolute;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: min(240px, calc(100vw - 16px));
+        padding: 8px 10px;
+        font: 13px monospace;
+        color: #1b1e16;
+        background: #f0c95a;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+      }
+      #hints .hint p {
+        margin: 0 0 6px;
+      }
+      #hints .hint button {
+        pointer-events: auto;
+        padding: 2px 8px;
+        font: inherit;
+        color: #e4e0c8;
+        background: #3a3f2f;
+        border: 1px solid #1b1e16;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #hints .hint button:focus-visible {
+        outline: 2px solid #1b1e16;
+        outline-offset: 2px;
+      }
+      #hints .hint::after {
+        content: '';
+        position: absolute;
+        border: 8px solid transparent;
+      }
+      #hints .hint[data-side='below']::after {
+        bottom: 100%;
+        left: calc(var(--arrow-x, 50%) - 8px);
+        border-bottom-color: #f0c95a;
+      }
+      #hints .hint[data-side='above']::after {
+        top: 100%;
+        left: calc(var(--arrow-x, 50%) - 8px);
+        border-top-color: #f0c95a;
+      }
+      #hints .hint[data-side='left']::after {
+        left: 100%;
+        top: calc(50% - 8px);
+        border-left-color: #f0c95a;
       }
       #version {
         position: fixed;
@@ -725,6 +797,7 @@
         <div id="pause-menu" hidden></div>
       </div>
       <nav id="build-bar" aria-label="Build"></nav>
+      <div id="hints" hidden></div>
     </div>
     <main id="menu" hidden></main>
     <main id="level-select" hidden></main>

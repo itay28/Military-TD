@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createProgress } from '../progress/progress';
 import { createSettings, type SettingsStore } from '../settings/settings';
 import { mountSettingsScreen, type SettingsScreen } from './settingsScreen';
 
@@ -78,6 +79,22 @@ describe('mountSettingsScreen', () => {
   it('focuses the checked speed when it opens', () => {
     mount();
     expect(document.activeElement).toBe(speed('×1'));
+  });
+
+  it('has no Show hints again without saved progress', () => {
+    mount();
+    expect(root.textContent).not.toContain('Show hints again');
+  });
+
+  it('Show hints again clears the saved hints flag and says so', () => {
+    const progress = createProgress();
+    progress.setHintsDone(true);
+    mounted.push(mountSettingsScreen(root, settings, { onBack: () => {}, progress }));
+    const button = [...root.querySelectorAll('button')].find((b) => b.textContent === 'Show hints again')!;
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('');
+    button.click();
+    expect(progress.get().hintsDone).toBe(false);
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('Hints will show on the first map.');
   });
 
   it('closes and calls onBack when Back is pressed', () => {
