@@ -1,0 +1,109 @@
+import { readFileSync } from 'node:fs';
+import { PNG } from 'pngjs';
+import { describe, expect, it } from 'vitest';
+import { SPRITES } from '../src/data/sprites';
+import { FACTIONS } from '../src/sim/factions';
+import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
+
+/** A transparent `w` × `h` image with the given rectangles (x, y, w, h) opaque. */
+function image(w: number, h: number, rects: [number, number, number, number][]): PNG {
+  const png = new PNG({ width: w, height: h });
+  for (const [rx, ry, rw, rh] of rects) {
+    for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) png.data[(y * w + x) * 4 + 3] = 255;
+  }
+  return png;
+}
+
+describe('turretPivot', () => {
+  it('is the centre of the turret body, ignoring a thin barrel', () => {
+    // Body 20 × 20 at (10, 30); barrel 2 wide running north from it to the top edge.
+    const png = image(40, 60, [
+      [10, 30, 20, 20],
+      [19, 0, 2, 30],
+    ]);
+    expect(turretPivot(png)).toEqual({ x: 20, y: 40 });
+  });
+
+  it('is the image centre for a body alone, centred', () => {
+    expect(turretPivot(image(32, 32, [[8, 8, 16, 16]]))).toEqual({ x: 16, y: 16 });
+  });
+
+  it('ignores faint pixels (soft edges, the denoiser’s haze)', () => {
+    const png = image(32, 32, [[8, 8, 16, 16]]);
+    for (let x = 0; x < 32; x++) png.data[x * 4 + 3] = 40; // a faint top row as wide as the image
+    expect(turretPivot(png)).toEqual({ x: 16, y: 16 });
+  });
+
+  it('refuses an empty turret', () => {
+    expect(() => turretPivot(image(8, 8, []))).toThrow(/no opaque pixel/);
+  });
+});
+
+describe('renderMeta', () => {
+  it('measures the pivot of a model with a turret', () => {
+    const read = () => image(32, 32, [[8, 8, 16, 16]]);
+    const meta = renderMeta({ id: 'x', kind: 'tank', canvasTiles: 0.25, turret: { names: ['t'] } }, 128, read);
+    expect(meta).toEqual({ id: 'x', kind: 'tank', pxPerTile: 128, canvasPx: 32, pivot: { x: 16, y: 16 } });
+  });
+
+  it('gives a model without a turret (Infantry, Jeep, Helicopter) no pivot, and reads no turret PNG', () => {
+    const read = () => {
+      throw new Error('read a turret PNG');
+    };
+    const meta = renderMeta({ id: 'y', kind: 'jeep', canvasTiles: 1 }, 128, read);
+    expect(meta).toEqual({ id: 'y', kind: 'jeep', pxPerTile: 128, canvasPx: 128 });
+  });
+
+  it('turns a tower on a base (its sandbagged pit) about the pit centre, the canvas centre', () => {
+    const read = () => image(160, 160, [[10, 10, 20, 20]]); // a turret far off-centre: not measured
+    const meta = renderMeta(
+      { id: 'z', kind: 'mortar', canvasTiles: 1.25, turret: { allBut: [] }, base: { radiusTiles: 0.4 } },
+      128,
+      read,
+    );
+    expect(meta.pivot).toEqual({ x: 80, y: 80 });
+  });
+});
+
+describe('the committed render data', () => {
+  it('has one entry per model in render-sprite.json', () => {
+    expect(buildRenderMeta().map((m) => m.json.id)).toEqual(RENDER_CONFIG.models.map((m) => m.id));
+  });
+
+  for (const { path, json } of buildRenderMeta()) {
+    it(`${path} is up to date (run npm run render:pivot)`, () => {
+      expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual(json);
+    });
+  }
+
+  it('puts each measured pivot off the canvas centre, on the turret body (the reason it is data)', () => {
+    const measured = RENDER_CONFIG.models.filter((m) => m.turret !== undefined && m.base === undefined);
+    expect(measured.length).toBeGreaterThan(0);
+    for (const { json } of buildRenderMeta().filter((m) => measured.some((x) => x.id === m.json.id))) {
+      const { canvasPx } = json;
+      const pivot = json.pivot!;
+      expect(pivot.y, json.id).toBeGreaterThan(canvasPx / 2 + 8); // behind the centre: the barrel reaches forward
+      expect(Math.abs(pivot.x - canvasPx / 2), json.id).toBeLessThan(2); // on the centre line
+    }
+  });
+
+  it('sizes the canvas from canvasTiles × pxPerTile', () => {
+    for (const model of RENDER_CONFIG.models) {
+      const { canvasPx, pxPerTile } = buildRenderMeta().find((m) => m.json.id === model.id)!.json;
+      expect(pxPerTile).toBe(RENDER_CONFIG.pxPerTile);
+      expect(canvasPx).toBe(Math.round(model.canvasTiles * RENDER_CONFIG.pxPerTile));
+      expect(renderMetaPath(model.id)).toBe(`assets/render-${model.id}/${model.id}.json`);
+    }
+  });
+});
+
+describe('the complete Faction sets (ADR-0009, point 5)', () => {
+  const kinds = Object.keys(SPRITES).sort();
+  // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
+  for (const faction of FACTIONS) {
+    it(`has one render per kind for ${faction}`, () => {
+      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
+      expect(models.map((m) => m.kind).sort()).toEqual(kinds);
+    });
+  }
+});

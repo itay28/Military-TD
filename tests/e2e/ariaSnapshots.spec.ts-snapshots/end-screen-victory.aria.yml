@@ -1,6 +1,8 @@
 - dialog "Victory":
   - heading "Victory" [level=2]
   - paragraph: Waves survived 1 / 1
+  - paragraph: 3 of 3 stars
+  - paragraph: "New map unlocked: Switchback"
   - table "By tower":
     - caption: By tower
     - rowgroup:
@@ -11,12 +13,12 @@
         - columnheader "Kills"
         - columnheader "DPS"
     - rowgroup:
-      - row "Rifle Nest 1, 3 30 1 29.5":
+      - row "Rifle Nest 1, 3 30 1 29.0":
         - rowheader "Rifle Nest"
         - cell "1, 3"
         - cell "30"
         - cell "1"
-        - cell "29.5"
+        - cell "29.0"
   - table "By tower type":
     - caption: By tower type
     - rowgroup:
@@ -27,12 +29,12 @@
         - columnheader "Kills"
         - columnheader "DPS"
     - rowgroup:
-      - row "Rifle Nest 1 30 1 29.5":
+      - row "Rifle Nest 1 30 1 29.0":
         - rowheader "Rifle Nest"
         - cell "1"
         - cell "30"
         - cell "1"
-        - cell "29.5"
+        - cell "29.0"
   - table "By wave":
     - caption: By wave
     - rowgroup:
@@ -43,18 +45,18 @@
         - columnheader "Kills"
         - columnheader "DPS"
     - rowgroup:
-      - row "1 1.0 s 30 1 29.5":
+      - row "1 1.0 s 30 1 29.0":
         - rowheader "1"
         - cell "1.0 s"
         - cell "30"
         - cell "1"
-        - cell "29.5"
+        - cell "29.0"
     - rowgroup:
-      - row "Total 1.0 s 30 1 29.5":
+      - row "Total 1.0 s 30 1 29.0":
         - rowheader "Total"
         - cell "1.0 s"
         - cell "30"
         - cell "1"
-        - cell "29.5"
+        - cell "29.0"
   - button "Restart"
   - button "Level select"

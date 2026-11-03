@@ -1,4 +1,5 @@
 import type { EnemyKind } from '../data/enemies';
+import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
 import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
@@ -47,8 +48,11 @@ export interface TestView {
   readonly drawOrder: readonly string[];
   /** Whether the sprite atlas loaded. Without it, everything is drawn as shapes. */
   readonly sprites: boolean;
-  /** How the map was drawn: from the tileset, or as flat shapes when the atlas lacks a tileset frame. */
-  readonly mapTiles: 'sprites' | 'shapes';
+  /**
+   * How the map was drawn: its painted ground image (#312), else the tileset, else flat shapes when the atlas lacks a
+   * tileset frame.
+   */
+  readonly mapTiles: 'image' | 'sprites' | 'shapes';
   /**
    * Each enemy drawn: `facing` is the way it is heading, in radians on the canvas (0 east, π/2 south); `frame` its
    * movement animation frame (always 0 with `?anim=0`).
@@ -64,6 +68,8 @@ export interface TestView {
    * tower, drawn only for one with a turret sprite.
    */
   readonly turrets: readonly { readonly towerId: number; readonly angle: number }[];
+  /** The kinds on the map drawn from a render (ADR-0009) rather than Kenney's sprites, sorted. */
+  readonly rendered: readonly SpriteKind[];
 }
 
 /** `window.__TD__` with `?test=1` (ADR-0003). */

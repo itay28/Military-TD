@@ -637,7 +637,9 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         }
       continue;
     }
-    const what = `#${retry.issue}: retry ${retry.model} on ${retry.branch ?? retry.base} (no activity for 1 h)`;
+    const why = retry.resume ? 'resume' : 'retry';
+    const since = retry.resume ? 'question answered' : 'no activity for 1 h';
+    const what = `#${retry.issue}: ${why} ${retry.model} on ${retry.branch ?? retry.base} (${since})`;
     if (limited.has(retry.model)) {
       console.log(`${what}: skipped, the ${retry.model} routine refused a fire this run; retrying next run`);
       continue;

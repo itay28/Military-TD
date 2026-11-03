@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aimAngle, turnToward } from './turret';
+import { aimAngle, turnToward } from './aim';
 
 const TOWER = { x: 2.5, y: 2.5 };
 

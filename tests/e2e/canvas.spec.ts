@@ -75,7 +75,7 @@ test('after Restart, a tower placed on the same tile shows its range ring when h
     .toEqual({ visible: true, towerId: second!.id, center: centerOf(BESIDE_PATH) });
 });
 
-test("a tower's shot draws a tracer from the tower's tile center to its target, which then fades", async ({ page }) => {
+test("a tower's shot draws a tracer from the tower's barrel tip to its target, which then fades", async ({ page }) => {
   await openGame(page, { anim: true });
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
   await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
@@ -84,7 +84,9 @@ test("a tower's shot draws a tracer from the tower's tile center to its target, 
   const [tower] = fired.state.towers;
   expect(fired.view.tracers).toHaveLength(1);
   const [tracer] = fired.view.tracers;
-  expect(tracer!.from).toEqual(centerOf(tower!.tile));
+  // Starts at a barrel tip: near the tile center, not at it (#340).
+  const center = centerOf(tower!.tile);
+  expect(Math.hypot(tracer!.from.x - center.x, tracer!.from.y - center.y)).toBeLessThanOrEqual(TILE_PX);
   expect(tracer!.alpha).toBe(1);
   const length = Math.hypot(tracer!.to.x - tracer!.from.x, tracer!.to.y - tracer!.from.y);
   expect(length).toBeGreaterThan(0);
@@ -126,14 +128,17 @@ test('draw order, back to front: map, towers, enemies, tracers, range ring', asy
   expect(ring.visible).toBe(true);
 });
 
-test('a shot shows a muzzle flash at the tower and its kill a puff, which then expire', async ({ page }) => {
+test('a shot shows a muzzle flash at the barrel tip and its kill a puff, which then expire', async ({ page }) => {
   await openGame(page, { anim: true });
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
   await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
 
   const fired = await stepUntilTracer(page);
   const [tower] = fired.state.towers;
-  expect(fired.view.effects).toContainEqual({ kind: 'muzzleFlash', at: centerOf(tower!.tile), progress: 0 });
+  const center = centerOf(tower!.tile);
+  const flash = fired.view.effects.find((effect) => effect.kind === 'muzzleFlash');
+  expect(flash).toMatchObject({ progress: 0 });
+  expect(Math.hypot(flash!.at.x - center.x, flash!.at.y - center.y)).toBeLessThanOrEqual(TILE_PX);
 
   const kinds = await page.evaluate(() => {
     const td = window.__TD__!;

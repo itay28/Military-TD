@@ -266,6 +266,7 @@
         outline-offset: 2px;
       }
       #build-bar .build-icon {
+        position: relative;
         box-sizing: border-box;
         width: 24px;
         height: 24px;
@@ -335,6 +336,13 @@
       #end-screen p,
       #pause-menu p {
         margin: 0;
+      }
+      /* A win's Stars, big enough to read at a glance; the words after them say the same for screen readers. */
+      #end-screen .star-glyphs {
+        font-size: 28px;
+        letter-spacing: 0.1em;
+        color: #f0c95a;
+        vertical-align: middle;
       }
       /* The damage report: small tables side by side, wrapping as the dialog narrows. */
       #end-screen .report {
@@ -599,6 +607,25 @@
       }
       #level-select button.map:hover {
         border-color: #c2a46b;
+      }
+      /* Best Stars, or the lock mark and "Locked", under the name. */
+      #level-select .stars {
+        font-size: 20px;
+        letter-spacing: 0.1em;
+        color: #f0c95a;
+      }
+      #level-select .locked {
+        font-size: 14px;
+        color: #a2a58f;
+      }
+      /* A locked map stays focusable (aria-disabled), but looks and acts disabled. */
+      #level-select button.map[aria-disabled='true'] {
+        color: #a2a58f;
+        border-color: #3e4234;
+        cursor: default;
+      }
+      #level-select button.map[aria-disabled='true'] canvas {
+        opacity: 0.45;
       }
       #level-select canvas {
         display: block;

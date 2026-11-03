@@ -76,3 +76,13 @@ export function zoomAt(view: CameraView, factor: number, at: Pixel, bounds: Came
   const under = screenToWorld(view, at);
   return clampView({ scrollX: under.x - at.x / zoom, scrollY: under.y - at.y / zoom, zoom }, bounds);
 }
+
+/**
+ * Whether a placement at screen point `at` may land: the point is on the visible canvas (so not over the build bar,
+ * the HUD or past the screen edge) and shows a point of the map (so not the margin around a small map).
+ */
+export function canPlaceAt(view: CameraView, { viewport, world }: CameraBounds, at: Pixel): boolean {
+  if (at.x < 0 || at.y < 0 || at.x >= viewport.width || at.y >= viewport.height) return false;
+  const point = screenToWorld(view, at);
+  return point.x >= 0 && point.y >= 0 && point.x < world.width && point.y < world.height;
+}

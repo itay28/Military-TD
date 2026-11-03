@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MVP_MAP } from '../data/maps';
+import { mapById, MVP_MAP } from '../data/maps';
 import { START_LIVES, START_MONEY } from '../data/start';
 import { AUTO_START_DELAY_MS, WAVES } from '../data/waves';
 import { TICK_MS } from './game';
@@ -271,6 +271,18 @@ describe('setUpGame', () => {
     expect(state.money).toBe(7);
     expect(state.towers.map((t) => t.tile)).toEqual([{ col: 1, row: 2 }]);
     expect(state.totalWaves).toBe(1);
+  });
+
+  it("plays the map's own wave schedule from the registry", () => {
+    const switchback = mapById('switchback');
+    expect(setUpGame({ map: switchback.data }).state.totalWaves).toBe(switchback.waves.length);
+    expect(setUpGame({ map: MVP_MAP }).state.totalWaves).toBe(WAVES.length);
+    expect(switchback.waves.length).not.toBe(WAVES.length);
+  });
+
+  it("plays `WAVES` on a map outside the registry, and `waves` still overrides the map's own", () => {
+    expect(setUpGame({ map: SMALL }).state.totalWaves).toBe(WAVES.length);
+    expect(setUpGame({ map: mapById('switchback').data, waves: ONE_INFANTRY }).state.totalWaves).toBe(1);
   });
 
   it('throws for a pre-placed tower that cannot be placed', () => {
