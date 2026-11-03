@@ -425,6 +425,7 @@
         "skip": ["MetalStuff", "Lamp", "RedLight", "Bamper"],
         "overrides": {
           "GreenUaz": {
+            "flat": true,
             "color": [0.075, 0.075, 0.035],
             "specular": 0
           }
