@@ -18,6 +18,18 @@ const TWO_MAPS: readonly MapEntry[] = [
   { ...MAPS[0]!, id: 'second', name: 'Second Map', data: { ...MAPS[0]!.data, id: 'second' } },
 ];
 
+describe('Tactical mode note (#413)', () => {
+  it('says "Tactical: max 2 stars" under the title while Tactical mode is on', () => {
+    mount({ tacticalMode: true });
+    expect(root.querySelector('[data-testid="tactical-cap"]')?.textContent).toBe('Tactical: max 2 stars');
+  });
+
+  it('says nothing of it while Tactical mode is off', () => {
+    mount();
+    expect(root.querySelector('[data-testid="tactical-cap"]')).toBeNull();
+  });
+});
+
 function mount(options: Partial<LevelSelectOptions> = {}) {
   return mountLevelSelect(root, { app, maps: MAPS, onPick: () => {}, onBack: () => {}, ...options });
 }

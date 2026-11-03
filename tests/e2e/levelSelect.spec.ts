@@ -80,7 +80,7 @@ test('picking the second map starts a game on its Path, with its own waves', asy
     totalWaves: SWITCHBACK_WAVES.length,
   });
   // Its Path enters on the top edge (column 2), where the first map's enters on the left.
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await page.evaluate(() => window.__TD__!.step(1));
   const [enemy] = (await state(page)).enemies;
   expect(enemy?.position.x).toBe(2.5);

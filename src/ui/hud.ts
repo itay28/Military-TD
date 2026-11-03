@@ -4,7 +4,7 @@ import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 
 /** The parts of the Game the HUD reads and commands. */
-export type HudGame = Pick<Game, 'state' | 'events' | 'startWave' | 'setAutoStart'>;
+export type HudGame = Pick<Game, 'state' | 'events' | 'callNextWave'>;
 
 /** The player's game speed, which the scene owns: the HUD shows it and sets the one clicked. */
 export type HudSpeed = GameSpeedControl;
@@ -14,7 +14,7 @@ export interface Hud {
   readonly controls: HTMLElement;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
-  /** Removes the HUD's elements and unsubscribes from game events. */
+  /** Removes the HUD's elements, its Space shortcut, and unsubscribes from game events. */
   destroy(): void;
 }
 
@@ -42,18 +42,13 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   const lives = field('hud-lives', stats);
   const wave = field('hud-wave', stats);
   const dps = field('hud-dps', stats);
-  const startWave = doc.createElement('button');
-  startWave.type = 'button';
-  startWave.dataset.testid = 'start-wave';
-  startWave.textContent = 'Start Wave';
-  controls.append(startWave);
-  // A toggle button: aria-pressed says whether it's on. Not "Auto-start waves": that name would also match "Start Wave".
-  const autoStart = doc.createElement('button');
-  autoStart.type = 'button';
-  autoStart.dataset.testid = 'auto-start';
-  autoStart.className = 'hud-toggle';
-  autoStart.textContent = 'Auto-start';
-  controls.append(autoStart);
+  const { tacticalMode } = game.state;
+  // Timed mode (ADR-0011): waves come on their timers and this calls the next one in early. Tactical: it starts each.
+  const callNextWave = doc.createElement('button');
+  callNextWave.type = 'button';
+  callNextWave.dataset.testid = 'start-wave';
+  callNextWave.textContent = tacticalMode ? 'Start Wave' : 'Call next wave';
+  controls.append(callNextWave);
   const nextWave = field('hud-next-wave', message);
   const speedButtons = mountSpeedButtons(
     controls,
@@ -84,43 +79,57 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     const { state } = game;
     setText(money, `Money ${state.money}`);
     setText(lives, `Lives ${state.lives}`);
-    setText(wave, `Wave ${state.waveNumber} / ${state.totalWaves}`);
+    const { activeWaves } = state;
+    const overlap = activeWaves.length > 1;
+    setText(
+      wave,
+      overlap
+        ? `Waves ${activeWaves[0]}–${activeWaves.at(-1)} / ${state.totalWaves}`
+        : `Wave ${state.waveNumber} / ${state.totalWaves}`,
+    );
     const { damage, elapsedMs } = state.stats.wave;
     // The wave figures freeze when the wave ends, so between waves this keeps showing the last wave's DPS.
     setText(dps, state.waveNumber === 0 ? 'DPS –' : `DPS ${Math.round(waveDps(damage, elapsedMs))}`);
-    setDisabled(startWave, state.phase !== 'build');
-    const pressed = String(state.autoStart);
-    if (autoStart.getAttribute('aria-pressed') !== pressed) autoStart.setAttribute('aria-pressed', pressed);
-    setDisabled(autoStart, isGameOver(state.phase));
+    const wavesLeft = state.waveNumber < state.totalWaves && !isGameOver(state.phase);
+    setDisabled(callNextWave, !wavesLeft || (tacticalMode && state.phase !== 'build'));
     // Ticks stop once the game is over, so a faster speed would change nothing.
     speedButtons.sync(isGameOver(state.phase));
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
     const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
     setText(banner, showBanner ? bannerText : '');
-    // The countdown waits for the banner to go, so the HUD isn't too wide for one line.
-    const { autoStartAtMs } = state;
-    const counting = autoStartAtMs !== undefined && !showBanner;
-    setText(nextWave, counting ? `Next wave in ${Math.ceil((autoStartAtMs - state.timeMs) / 1000)}` : '');
+    // In timed mode the countdown is always up while a wave is due, during a wave too.
+    const { nextWaveAtMs } = state;
+    setText(
+      nextWave,
+      nextWaveAtMs === undefined ? '' : `Next wave in ${Math.ceil((nextWaveAtMs - state.timeMs) / 1000)}`,
+    );
   };
   const offWaveCleared = game.events.on('waveCleared', ({ waveNumber }) => {
     bannerText = `Wave ${waveNumber} cleared`;
     bannerUntilMs = game.state.timeMs + WAVE_BANNER_MS;
   });
   // The sim decides; a refused start changes nothing. Redraw at once so a second click can't land first.
-  startWave.addEventListener('click', () => {
-    game.startWave();
+  callNextWave.addEventListener('click', () => {
+    game.callNextWave();
     update();
   });
-  autoStart.addEventListener('click', () => {
-    game.setAutoStart(!game.state.autoStart);
-    update();
-  });
+  // Space calls the next wave (#70), unless a control has focus: there Space is that control's own key.
+  const win = doc.defaultView;
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.code !== 'Space' || event.repeat || event.defaultPrevented || !callNextWave.isConnected) return;
+    const target = event.target as Element | null;
+    if (target?.closest?.('button, input, select, textarea, [contenteditable="true"]')) return;
+    event.preventDefault();
+    if (!callNextWave.disabled) callNextWave.click();
+  };
+  win?.addEventListener('keydown', onKeyDown);
   update();
   return {
     controls,
     update,
     destroy() {
       offWaveCleared();
+      win?.removeEventListener('keydown', onKeyDown);
       root.replaceChildren();
     },
   };

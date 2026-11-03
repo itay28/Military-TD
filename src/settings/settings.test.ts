@@ -2,19 +2,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { createSettings, DEFAULT_SETTINGS } from './settings';
 
 describe('createSettings', () => {
-  it('starts at the defaults: ×1, only the selected or hovered tower’s range, and 80/60/80 volumes', () => {
+  it('starts at the defaults: ×1, only the selected or hovered tower’s range, 80/60/80 volumes, and Tactical mode off (timed waves)', () => {
     expect(DEFAULT_SETTINGS).toEqual({
       defaultSpeed: 1,
       showAllRanges: false,
       masterVolume: 80,
       musicVolume: 60,
       sfxVolume: 80,
+      tacticalMode: false,
     });
     expect(createSettings().get()).toEqual(DEFAULT_SETTINGS);
   });
 
   it('starts at the values it is given', () => {
-    const given = { defaultSpeed: 3, showAllRanges: true, masterVolume: 10, musicVolume: 20, sfxVolume: 30 } as const;
+    const given = { defaultSpeed: 3, showAllRanges: true, masterVolume: 10, musicVolume: 20, sfxVolume: 30, tacticalMode: true } as const;
     expect(createSettings(given).get()).toEqual(given);
   });
 

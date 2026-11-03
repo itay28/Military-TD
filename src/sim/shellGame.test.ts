@@ -137,7 +137,7 @@ describe('shell towers', () => {
     game.events.on('waveCleared', ({ waveNumber }) => cleared.push(waveNumber));
     placeMortar(game, { col: 2, row: 2 });
     game.placeTower('rifleNest', { col: 2, row: 0 });
-    game.startWave();
+    game.callNextWave();
     // The Rifle Nest kills the lone Infantry while the Mortar's shell is still up.
     for (let t = 0; t < 600 && game.state.phase === 'wave'; t++) game.tick(TICK_MS);
     expect(cleared).toEqual([1]);

@@ -42,7 +42,14 @@ describe('createPersistedSettings', () => {
 
   it('loads the saved settings at boot', () => {
     const storage = createMemoryStorage();
-    const chosen = { defaultSpeed: 3, showAllRanges: true, masterVolume: 50, musicVolume: 0, sfxVolume: 100 } as const;
+    const chosen = {
+      defaultSpeed: 3,
+      showAllRanges: true,
+      masterVolume: 50,
+      musicVolume: 0,
+      sfxVolume: 100,
+      tacticalMode: true,
+    } as const;
     createPersistedSettings(storage).set(chosen);
     expect(createPersistedSettings(storage).get()).toEqual(chosen);
   });
@@ -141,26 +148,46 @@ describe('loadSettings', () => {
 });
 
 describe('migrate', () => {
-  it('is at version 2, the first with volumes', () => {
-    expect(SETTINGS_VERSION).toBe(2);
+  it('is at version 3, the first with Tactical mode', () => {
+    expect(SETTINGS_VERSION).toBe(3);
   });
 
-  it('brings v1 (and v0) up to v2 by adding the default volumes', () => {
+  it('brings v1 (and v0) up to v3 by adding the default volumes and Tactical mode off', () => {
     const v1 = { defaultSpeed: 2, showAllRanges: true };
-    const v2 = { ...v1, masterVolume: 80, musicVolume: 60, sfxVolume: 80 };
-    expect(migrate(1, v1)).toEqual(v2);
-    expect(migrate(0, v1)).toEqual(v2);
+    const v3 = { ...v1, masterVolume: 80, musicVolume: 60, sfxVolume: 80, tacticalMode: false };
+    expect(migrate(1, v1)).toEqual(v3);
+    expect(migrate(0, v1)).toEqual(v3);
   });
 
-  it('keeps a v1 save’s other fields for sanitize to judge, and leaves a v2 save as it is', () => {
+  it('brings v2 up to v3 with Tactical mode off, keeping the rest (#413)', () => {
+    const v2 = { defaultSpeed: 2, showAllRanges: true, masterVolume: 1, musicVolume: 2, sfxVolume: 3 };
+    expect(migrate(2, v2)).toEqual({ ...v2, tacticalMode: false });
+  });
+
+  it('keeps a saved Tactical mode, and replaces one that is not a boolean', () => {
+    const v3 = (tacticalMode: unknown) =>
+      withRaw(JSON.stringify({ version: 3, settings: { ...DEFAULT_SETTINGS, tacticalMode } }));
+    expect(loadSettings(v3(true)).tacticalMode).toBe(true);
+    expect(loadSettings(v3('yes')).tacticalMode).toBe(false);
+  });
+
+  it('keeps a v1 save’s other fields for sanitize to judge, and leaves a v3 save as it is', () => {
     expect(migrate(1, { defaultSpeed: 9 })).toEqual({
       defaultSpeed: 9,
       masterVolume: 80,
       musicVolume: 60,
       sfxVolume: 80,
+      tacticalMode: false,
     });
-    const data = { defaultSpeed: 2, showAllRanges: true, masterVolume: 1, musicVolume: 2, sfxVolume: 3 };
-    expect(migrate(2, data)).toEqual(data);
+    const data = {
+      defaultSpeed: 2,
+      showAllRanges: true,
+      masterVolume: 1,
+      musicVolume: 2,
+      sfxVolume: 3,
+      tacticalMode: true,
+    };
+    expect(migrate(3, data)).toEqual(data);
   });
 
   it('passes a v1 save that is not an object on, for sanitize to replace', () => {

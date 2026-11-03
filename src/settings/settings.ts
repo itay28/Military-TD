@@ -12,6 +12,8 @@ export interface Settings {
   readonly musicVolume: number;
   /** The sound-effects channel, 0–100. */
   readonly sfxVolume: number;
+  /** Tactical mode (ADR-0011): no wave timers, each wave called by the player; a win earns at most 2 stars. Next game. */
+  readonly tacticalMode: boolean;
 }
 
 /** The settings that are volumes: each a whole number from 0 to 100. */
@@ -25,6 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   masterVolume: 80,
   musicVolume: 60,
   sfxVolume: 80,
+  tacticalMode: false,
 };
 
 /** The one place the settings live. `createPersistedSettings` (persist.ts) saves them between visits. */

@@ -98,7 +98,7 @@ test('pausing is unavailable once the game is over', async ({ page }) => {
 test('the End screen has a Level select button that leaves the map', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await stepToEnd(page);
   await page.getByRole('button', { name: 'Level select' }).click();
   await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();

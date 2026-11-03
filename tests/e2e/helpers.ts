@@ -98,7 +98,7 @@ export async function playToEnd(page: Page, maxTicks = 60 * 60 * 30): Promise<Te
   for (let ticks = 0; ticks < maxTicks; ticks += 600) {
     const now = await page.evaluate(() => {
       const td = window.__TD__!;
-      if (td.state().phase === 'build') td.command({ type: 'startWave' });
+      if (td.state().phase === 'build') td.command({ type: 'callNextWave' });
       return td.step(600);
     });
     if (now.phase === 'victory' || now.phase === 'defeat') return now;

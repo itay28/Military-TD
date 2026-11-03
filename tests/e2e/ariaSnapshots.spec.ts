@@ -68,7 +68,7 @@ test('the Level select lists each map by name and best stars, then Back', async 
 test('the End screen after a won one-wave game shows the result and the damage report tables', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await stepToEnd(page);
   await expectAria(page.locator('#end-screen'), 'end-screen-victory.aria.yml');
 });

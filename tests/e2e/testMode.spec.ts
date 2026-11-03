@@ -31,7 +31,7 @@ test("loadScenario sets up a named scenario's game, and the test plays it from t
   });
   await expect(page.getByTestId('hud-wave')).toHaveText('Wave 0 / 1');
 
-  expect(await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }))).toEqual({ ok: true });
+  expect(await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }))).toEqual({ ok: true });
   expect(await stepToEnd(page)).toMatchObject({ phase: 'victory', lives: START_LIVES });
 });
 

@@ -23,7 +23,7 @@ const infantry = (count: number, afterMs?: number): WaveData => ({
 });
 
 // Nobody shoots, so each wave clears when its Infantry leak.
-const newGame = (waves: readonly WaveData[], tacticalMode?: boolean, lives = 20): Game =>
+const newGame = (waves: readonly WaveData[], tacticalMode?: boolean, lives = 100): Game =>
   createGame({ map: SMALL, money: 100, lives, waves, ...(tacticalMode === undefined ? {} : { tacticalMode }) });
 
 describe('wave timers (the default, timed mode)', () => {
