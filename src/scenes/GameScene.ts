@@ -589,13 +589,19 @@ export class GameScene extends Phaser.Scene {
     };
     this.hud = mountHud(this.hudRoot, this.sim, speed);
     // Placing a new tower and inspecting a placed one are exclusive: picking one closes the other.
-    this.buildBar = mountBuildBar(this.buildBarRoot, this.sim, buildOptions(), {
-      onSelect: () => this.towerPanel.select(undefined),
-      atlas: this.iconAtlas(),
-    });
+    this.buildBar = mountBuildBar(
+      this.buildBarRoot,
+      this.sim,
+      buildOptions((render) => this.textures.exists(render.hullKey) && this.textures.exists(render.turretKey)),
+      {
+        onSelect: () => this.towerPanel.select(undefined),
+        atlas: this.iconAtlas(),
+      },
+    );
     // Restart: Phaser destroys the scene's display objects and input listeners, then create() builds a fresh sim.
     this.endScreen = mountEndScreen(this.endScreenRoot, this.sim, {
       onRestart: () => this.scene.restart(),
+      onLevelSelect: () => this.scene.start('LevelSelect'),
       result: () => this.result,
     });
     this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim, { onSelect: () => this.buildBar.clear() });
@@ -605,6 +611,7 @@ export class GameScene extends Phaser.Scene {
       buttonRoot: this.hud.controls,
       blocked: [this.hudRoot, this.buildBarRoot, this.towerPanelRoot],
       onRestart: () => this.scene.restart(),
+      onQuit: () => this.scene.start('LevelSelect'),
       openSettings: this.openSettings,
       speed,
     });

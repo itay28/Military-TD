@@ -15,6 +15,8 @@ export interface VictoryResult {
 export interface EndScreenOptions {
   /** Called when the player presses Restart. */
   readonly onRestart: () => void;
+  /** Called when the player presses Level select. */
+  readonly onLevelSelect: () => void;
   /** Read once when the overlay opens on a Victory; nothing is shown for it without one. */
   readonly result?: () => VictoryResult | undefined;
 }
@@ -127,7 +129,7 @@ function buildResult(doc: Document, { stars, unlockedMap }: VictoryResult): HTML
 export function mountEndScreen(
   root: HTMLElement,
   game: EndScreenGame,
-  { onRestart, result }: EndScreenOptions,
+  { onRestart, onLevelSelect, result }: EndScreenOptions,
 ): EndScreen {
   const doc = root.ownerDocument;
   const dialog = doc.createElement('div');
@@ -144,9 +146,15 @@ export function mountEndScreen(
   restart.textContent = 'Restart';
   const onClick = () => onRestart();
   restart.addEventListener('click', onClick);
+  const levelSelect = doc.createElement('button');
+  levelSelect.type = 'button';
+  levelSelect.dataset.testid = 'level-select';
+  levelSelect.textContent = 'Level select';
+  const onLevelSelectClick = () => onLevelSelect();
+  levelSelect.addEventListener('click', onLevelSelectClick);
   const report = doc.createElement('div');
   report.className = 'report';
-  dialog.append(heading, wavesSurvived, report, restart);
+  dialog.append(heading, wavesSurvived, report, restart, levelSelect);
   root.append(dialog);
   root.hidden = true;
   let destroyed = false;
@@ -170,6 +178,7 @@ export function mountEndScreen(
     destroy() {
       destroyed = true;
       restart.removeEventListener('click', onClick);
+      levelSelect.removeEventListener('click', onLevelSelectClick);
       root.replaceChildren();
       root.hidden = true;
     },
