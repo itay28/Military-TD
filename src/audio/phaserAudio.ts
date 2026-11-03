@@ -5,7 +5,7 @@ import type { SoundId } from './sounds';
 export interface SoundManagerLike {
   /** True until the browser lets the page play audio (after the first input). */
   readonly locked: boolean;
-  play(key: string): unknown;
+  play(key: string, config: { readonly volume: number }): unknown;
 }
 
 /** The audio cache key a sound loads under. */
@@ -19,11 +19,11 @@ export function soundKey(id: SoundId): string {
  */
 export function createPhaserAudio(sound: SoundManagerLike, isLoaded: (key: string) => boolean): AudioOut {
   return {
-    play(id) {
+    play(id, volume = 1) {
       const key = soundKey(id);
       if (sound.locked || !isLoaded(key)) return;
       try {
-        sound.play(key);
+        sound.play(key, { volume });
       } catch {
         // A blocked or undecodable file: stay silent.
       }

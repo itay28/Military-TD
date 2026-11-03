@@ -2,16 +2,25 @@ import type { SoundId } from './sounds';
 
 /** Where the game sends its sounds: the Phaser sink when playing, a silent or recording one in tests. */
 export interface AudioOut {
-  play(id: SoundId): void;
+  /** Plays `id` at `volume` (0–1, full by default). */
+  play(id: SoundId, volume?: number): void;
 }
 
 /** Plays nothing: test mode, so e2e runs and scenarios stay silent (ADR-0003). */
 export const silentAudio: AudioOut = { play: () => {} };
 
 /** A fake that records each play, in order. */
-export function createRecordingAudio(): AudioOut & { readonly played: SoundId[] } {
+export function createRecordingAudio(): AudioOut & { readonly played: SoundId[]; readonly volumes: number[] } {
   const played: SoundId[] = [];
-  return { played, play: (id) => played.push(id) };
+  const volumes: number[] = [];
+  return {
+    played,
+    volumes,
+    play: (id, volume = 1) => {
+      played.push(id);
+      volumes.push(volume);
+    },
+  };
 }
 
 export interface ThrottleConfig {
@@ -27,13 +36,13 @@ export interface ThrottleConfig {
 export function throttleAudio(sink: AudioOut, { maxPlays, windowMs }: ThrottleConfig, now: () => number): AudioOut {
   const recent = new Map<SoundId, number[]>();
   return {
-    play(id) {
+    play(id, volume) {
       const t = now();
       const times = (recent.get(id) ?? []).filter((at) => t - at < windowMs);
       recent.set(id, times);
       if (times.length >= maxPlays) return;
       times.push(t);
-      sink.play(id);
+      sink.play(id, volume);
     },
   };
 }
