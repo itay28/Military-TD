@@ -99,6 +99,10 @@ describe('pushFor', () => {
     expect(pushFor('pull_request', onPr('needs-you'))).toEqual({ kind: 'pr', number: 7 });
   });
 
+  it('needs-approval on a PR pushes for that PR too (#417)', () => {
+    expect(pushFor('pull_request', onPr('needs-approval'))).toEqual({ kind: 'pr', number: 7 });
+  });
+
   it('needs-you on an issue pushes a hand-off for that issue (#200)', () => {
     expect(pushFor('issues', onIssue('needs-you'))).toEqual({ kind: 'stuck-issue', number: 9 });
   });
