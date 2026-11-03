@@ -155,4 +155,12 @@ A milestone ends with a release of the next minor version (`0.N.0`) through a `R
 
 PR titles are checked by the *PR title* workflow (`.github/workflows/pr-title.yml`, rule in `scripts/pr-title.ts`). PRs are squash-merged with the PR title as the commit subject and the PR body as the commit body, so the title is what release-please reads. (`pr-title` isn't a required status check, so a red title doesn't block the merge button; fix it before merging.)
 
+### Feature freeze
+
+The run-up to 1.0 (#84): from v0.8.0's release until v1.0.0 ships, no new features merge; fixes, tests, docs and polish carry on. The maintainer flips it with the repo variable **`FEATURE_FREEZE`** (GitHub → Settings → Secrets and variables → Actions → **Variables**): `true` is on, unset or `false` is off.
+
+- **PR titles:** while it's on, the *PR title* check fails `feat:` titles (`feat(scope):` and `feat!:` too) with a message naming the freeze. `fix`, `test`, `docs`, `chore`, `refactor` and `ci` pass as usual. Retitle a PR that isn't really a feature; a feature the maintainer still wants in gets the **`freeze-exception`** label, which lets that one PR through (labelling re-runs the check). The PR steward only merges green PRs, so a red title holds the PR.
+- **Auto-start:** while it's on, `enhancement` issues don't start; `bug` and `area:infra` issues still do. The *Pipeline is idle* report lists the skipped ones as frozen (`docs/agents/issue-tracker.md` → **Auto-start**).
+- Logic and tests: `scripts/pr-title.ts` (`checkTitle`), `scripts/auto-start.ts` (`isFeatureWork`), `scripts/pipeline-idle.ts`.
+
 Releases, deploys and milestone close-out: `docs/agents/releasing.md`.
