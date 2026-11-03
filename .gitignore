@@ -9,3 +9,6 @@ blob-report/
 playwright/.cache/
 *.log
 .env*.local
+.cache/
+.venv-art/
+__pycache__/

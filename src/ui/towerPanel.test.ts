@@ -23,6 +23,7 @@ const rifleNest = (id: number): Tower => ({
   kind: 'rifleNest',
   tile: { col: id, row: 3 },
   cooldownMs: 0,
+  heading: 0,
   level: 1,
   spent: 50,
 });
@@ -263,5 +264,16 @@ describe('Tower panel Sell button', () => {
     expect(game.state.money).toBe(85);
     expect(panel.selectedId).toBeUndefined();
     expect(root.hidden).toBe(true);
+  });
+});
+
+describe('Tower panel onSelect', () => {
+  it('calls onSelect when a tower is selected, not when the panel is deselected', () => {
+    let calls = 0;
+    const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]), { onSelect: () => calls++ });
+    panel.select(1);
+    expect(calls).toBe(1);
+    panel.select(undefined);
+    expect(calls).toBe(1);
   });
 });

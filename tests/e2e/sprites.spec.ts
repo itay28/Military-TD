@@ -17,14 +17,29 @@ test('the atlas loads: sprites on, same draw order, the game plays to Victory', 
   await startWave(page);
   const { sprites, mapTiles, drawOrder } = await view(page);
   expect(sprites).toBe(true);
-  expect(mapTiles).toBe('sprites');
+  expect(mapTiles).toBe('image');
   expect(drawOrder.filter((layer) => LAYERS.includes(layer))).toEqual(LAYERS);
   expect((await stepToEnd(page)).phase).toBe('victory');
 });
 
-test('a blocked atlas falls back to shapes and never breaks the game', async ({ page }) => {
+test('a blocked ground image falls back to the tileset (#312)', async ({ page }) => {
   const blocked: string[] = [];
-  await page.route(/\/sprites[^/]*\.(png|json)$/, (route) => {
+  await page.route(/\/training-ground[^/]*\.jpg$/, (route) => {
+    blocked.push(route.request().url());
+    return route.abort();
+  });
+  await openGame(page);
+  expect(blocked.length).toBeGreaterThan(0);
+  await startWave(page);
+  const { sprites, mapTiles } = await view(page);
+  expect(sprites).toBe(true);
+  expect(mapTiles).toBe('sprites');
+  expect((await stepToEnd(page)).phase).toBe('victory');
+});
+
+test('a blocked atlas and ground image fall back to shapes and never break the game', async ({ page }) => {
+  const blocked: string[] = [];
+  await page.route(/\/(sprites[^/]*\.(png|json)|training-ground[^/]*\.jpg)$/, (route) => {
     blocked.push(route.request().url());
     return route.abort();
   });
@@ -64,4 +79,31 @@ test("a tower's turret turns to face its target", async ({ page }) => {
   await expect
     .poll(async () => (await view(page)).turrets.find((turret) => turret.towerId === towerId)?.angle)
     .toBeCloseTo(aim, 2);
+});
+
+/** Every tower kind beside the Path and a Tank and an Infantry walking it, all drawn. */
+async function towersAndTank(page: import('@playwright/test').Page) {
+  await page.evaluate(() => window.__TD__!.loadScenario('every-tower-kind'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'spawnEnemy', kind: 'tank' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'spawnEnemy', kind: 'infantry' }));
+  await page.evaluate(() => window.__TD__!.step(30));
+  await expect.poll(async () => (await view(page)).enemies.length).toBe(2);
+}
+
+test('the AA Gun and the Tank are drawn from their renders; every other kind keeps Kenney', async ({ page }) => {
+  await openGame(page);
+  await towersAndTank(page);
+  const { rendered, sprites, drawOrder } = await view(page);
+  expect(sprites).toBe(true);
+  expect(rendered).toEqual(['aaGun', 'tank']);
+  expect(drawOrder.filter((layer) => LAYERS.includes(layer))).toEqual(LAYERS);
+});
+
+test('a render that fails to load falls back to the Kenney sprite', async ({ page }) => {
+  await page.route(/-(hull|turret)[^/]*\.png$/, (route) => route.abort());
+  await openGame(page);
+  await towersAndTank(page);
+  const { rendered, sprites } = await view(page);
+  expect(sprites).toBe(true);
+  expect(rendered).toEqual([]);
 });

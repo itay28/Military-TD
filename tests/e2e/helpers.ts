@@ -27,15 +27,32 @@ export async function openGame(
   await page.waitForFunction(() => window.__TD__ !== undefined);
 }
 
+/** How the Main menu and Level select open: with saved progress, or every map unlocked. */
+export interface MenuOptions {
+  /** Saved before the page loads, as `localStorage`'s progress (`persist=1`), e.g. `{ mvp: { completed: true, bestStars: 2 } }`. */
+  readonly progress?: Readonly<Record<string, { completed: boolean; bestStars: number }>>;
+  /** `unlock=all`: every map can be picked. */
+  readonly unlockAll?: boolean;
+}
+
 /** Opens the Main menu in test mode (`menu=1`). `window.__TD__` appears only once Play starts a game. */
-export async function openMenu(page: Page) {
-  await page.goto('/?test=1&menu=1&step=manual&anim=0');
+export async function openMenu(page: Page, { progress, unlockAll = false }: MenuOptions = {}) {
+  const params = new URLSearchParams({ test: '1', menu: '1', step: 'manual', anim: '0' });
+  if (unlockAll) params.set('unlock', 'all');
+  if (progress !== undefined) {
+    params.set('persist', '1');
+    await page.addInitScript(
+      (maps) => localStorage.setItem('military-td.progress', JSON.stringify({ version: 1, progress: { maps } })),
+      progress,
+    );
+  }
+  await page.goto(`/?${params}`);
   await page.getByRole('button', { name: 'Play' }).waitFor();
 }
 
 /** Opens the Level select in test mode: the Main menu, then Play. */
-export async function openLevelSelect(page: Page) {
-  await openMenu(page);
+export async function openLevelSelect(page: Page, options: MenuOptions = {}) {
+  await openMenu(page, options);
   await page.getByRole('button', { name: 'Play' }).click();
   await page.getByRole('heading', { name: 'Select map' }).waitFor();
 }

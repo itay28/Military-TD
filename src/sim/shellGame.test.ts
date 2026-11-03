@@ -13,6 +13,9 @@ vi.mock('../data/towers', () => ({
       shell: { flightMs: 1000, innerRadius: 0.5, outerRadius: 1.5 },
     },
   },
+  TURN_RATES: { rifleNest: null, testMortar: null },
+  AIM_TOLERANCE: 0.1,
+  START_HEADING: -Math.PI / 2,
 }));
 
 const { createGame, TICK_MS } = await import('./game');

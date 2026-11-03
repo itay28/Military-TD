@@ -23,7 +23,12 @@ const TITLE_ID = 'tower-panel-title';
  * Builds the tower panel inside `root`, an overlay over the canvas. It owns the selection, which is UI state,
  * not a game rule. It's DOM, so tests can query it (ADR-0003).
  */
-export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerPanel {
+export function mountTowerPanel(
+  root: HTMLElement,
+  game: TowerPanelGame,
+  /** `onSelect` runs when a tower gets selected (not on deselect), so the scene can clear the build bar. */
+  { onSelect }: { readonly onSelect?: () => void } = {},
+): TowerPanel {
   const doc = root.ownerDocument;
   const dialog = doc.createElement('div');
   dialog.setAttribute('role', 'dialog');
@@ -108,6 +113,7 @@ export function mountTowerPanel(root: HTMLElement, game: TowerPanelGame): TowerP
     if (destroyed) return;
     selectedId = id;
     update();
+    if (id !== undefined) onSelect?.();
   };
   const onClose = () => select(undefined);
   const onUpgrade = () => {

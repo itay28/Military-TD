@@ -1,10 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ENEMY_STATS } from '../data/enemies';
-import { TOWER_STATS } from '../data/towers';
+import { START_HEADING, TOWER_STATS } from '../data/towers';
 import type { Enemy } from './enemies';
 import { createGame, TICK_MS, type Game } from './game';
 import type { MapData, Tile } from './map';
 import { fireTowers, selectTarget, towerAt, type Tower } from './towers';
+
+// These tests are about range, targeting, fire rate and damage, so every turret here turns at once;
+// turning to aim (#341) is in aiming.test.ts.
+vi.mock('../data/towers', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/towers')>()),
+  TURN_RATES: { rifleNest: null, aaGun: null, cannon: null, mortar: null },
+}));
 
 // Path line through tile centers: right along y = 1.5 from x = 0.5 to 3.5, then down x = 3.5 to y = 4.5.
 // Infantry walks 1.5 tiles/s, so tick(1000) puts a fresh enemy at distance 1.5, position (2, 1.5).
@@ -45,6 +52,7 @@ describe('placeTower', () => {
         cooldownMs: 0,
         level: 1,
         spent: 50,
+        heading: START_HEADING,
       },
     ]);
     expect(place(game, { col: 1, row: 2 })).not.toBe(id);
@@ -269,6 +277,7 @@ describe('kills', () => {
 
 // No data kind is ground-only, armored or airborne yet, so these build towers and enemies by hand.
 // The tower stands on tile (2, 2), center (2.5, 2.5); enemies sit on y = 1.5, all within its 2.5 range.
+// It faces north-west by default, at an enemy at distance 1, (1.5, 1.5).
 const handTower = (stats: Partial<Tower> = {}): Tower => ({
   id: 1,
   kind: 'rifleNest',
@@ -281,6 +290,7 @@ const handTower = (stats: Partial<Tower> = {}): Tower => ({
   cooldownMs: 0,
   level: 1,
   spent: 50,
+  heading: Math.atan2(-1, -1),
   ...stats,
 });
 
@@ -378,6 +388,7 @@ describe('AA Gun', () => {
     cooldownMs: 0,
     level: 1,
     spent: 75,
+    heading: Math.atan2(-1, -1),
   });
   const helicopter = (id: number, distance: number): Enemy =>
     handEnemy(id, distance, {
@@ -402,7 +413,7 @@ describe('AA Gun', () => {
   });
 
   it('shoots a Helicopter that is further along than a ground enemy', () => {
-    const result = fireTowers([aaGun()], [handEnemy(2, 1), helicopter(1, 2)], 0);
+    const result = fireTowers([{ ...aaGun(), heading: -Math.PI / 2 }], [handEnemy(2, 1), helicopter(1, 2)], 0);
     expect(result.shots.map((s) => s.targetId)).toEqual([1]);
   });
 });

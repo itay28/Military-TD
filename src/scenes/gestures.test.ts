@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGestures } from './gestures';
+import { createGestures, hoverFrom } from './gestures';
 
 const THRESHOLD = 8;
 const gestures = (placing = false) => createGestures({ dragThresholdPx: THRESHOLD, placing: () => placing });
@@ -135,5 +135,36 @@ describe('gestures', () => {
     expect(g.down(1, { x: 10, y: 10 })).toBeUndefined();
     expect(g.move(1, { x: 40, y: 10 })).toEqual({ type: 'pan', dx: 30, dy: 0 });
     expect(g.up(1, { x: 40, y: 10 })).toBeUndefined();
+  });
+});
+
+describe('hoverFrom', () => {
+  it('two touch pointers moving set no hover tile', () => {
+    const g = gestures(true);
+    g.down(1, { x: 10, y: 10 }, true);
+    g.down(2, { x: 50, y: 10 }, true);
+    for (const [id, x] of [
+      [1, 12],
+      [2, 48],
+      [1, 14],
+    ] as const) {
+      expect(hoverFrom(g.move(id, { x, y: 10 }), true)).toBe('clear');
+    }
+  });
+
+  it('an aiming touch drag hovers; a panning touch drag does not', () => {
+    const aim = gestures(true);
+    aim.down(1, { x: 10, y: 10 }, true);
+    expect(hoverFrom(aim.move(1, { x: 30, y: 10 }), true)).toBe('keep');
+    const pan = gestures(false);
+    pan.down(1, { x: 10, y: 10 }, true);
+    expect(hoverFrom(pan.move(1, { x: 30, y: 10 }), true)).toBe('clear');
+  });
+
+  it('a mouse hovers whatever the gesture', () => {
+    const g = gestures();
+    g.down(1, { x: 10, y: 10 });
+    expect(hoverFrom(g.move(1, { x: 30, y: 10 }), false)).toBe('follow');
+    expect(hoverFrom(undefined, false)).toBe('follow');
   });
 });
