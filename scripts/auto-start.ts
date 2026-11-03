@@ -16,6 +16,9 @@ export const NEEDS_YOU_LABEL = 'needs-you';
 export const NEEDS_INFO_LABEL = 'needs-info';
 /** Pipeline work: not tied to a game version, so it may have no milestone (#225). */
 export const INFRA_LABEL = 'area:infra';
+/** Feature work: frozen during the feature freeze (#84), unless it is also a bug or infra. */
+export const ENHANCEMENT_LABEL = 'enhancement';
+export const BUG_LABEL = 'bug';
 /** The label an issue needs before agents may pick it up (docs/agents/triage-labels.md). */
 export const READY_LABEL = 'ready-for-agent';
 /** Starts the comment auto-start posts before labelling an issue `needs-you`; the push carries it. */
@@ -63,6 +66,8 @@ export interface StartIssue {
   readonly autoAgent: boolean;
   /** Labelled `area:infra` (or Area `infra`): startable without a milestone (#225). */
   readonly infra: boolean;
+  /** Feature work (isFeatureWork): not started during the feature freeze (#84). */
+  readonly feature: boolean;
   readonly size: string | undefined;
   readonly priority: string | undefined;
   readonly milestone: number | null;
@@ -95,6 +100,8 @@ export interface StartOptions {
   /** AUTO_STACK: also start issues whose blockers are all in open PRs on one chain. */
   readonly stack?: boolean;
   readonly cap?: number;
+  /** FEATURE_FREEZE: don't start feature work (#84). */
+  readonly freeze?: boolean;
 }
 
 /**
@@ -135,13 +142,14 @@ export function stackBase(blockedBy: readonly number[], prs: readonly OpenPr[], 
  * milestone (`order[0]`) has nothing to start, the next one is used (one milestone of look-ahead).
  * Infra issues without a milestone are startable in every run, next to that milestone's (#225);
  * other issues without one never start. Ordered by Priority (P0 first, none last), then issue
- * number; capped so at most `cap` `auto-agent` issues are In progress.
+ * number; capped so at most `cap` `auto-agent` issues are In progress. With `freeze` on (the feature
+ * freeze, #84), feature work doesn't start.
  */
 export function planStarts(
   issues: readonly StartIssue[],
   prs: readonly OpenPr[],
   order: readonly number[],
-  { defaultBranch = 'main', stack = false, cap = MAX_AGENTS }: StartOptions = {},
+  { defaultBranch = 'main', stack = false, cap = MAX_AGENTS, freeze = false }: StartOptions = {},
 ): StartPlan {
   const running = issues.filter((i) => i.autoAgent && i.status === 'In progress').length;
   const slots = Math.max(0, cap - running);
@@ -157,6 +165,7 @@ export function planStarts(
         i.labelled &&
         !i.hold &&
         !i.needsYou &&
+        !(freeze && i.feature) &&
         !prs.some((pr) => pr.issues.includes(i.number)),
     );
     for (const i of eligible) {
@@ -198,6 +207,11 @@ export interface SizingNeeds {
 /** Infra is the `area:infra` label or the board's Area `infra` (#225). */
 export function isInfra(labels: readonly string[], boardArea?: string): boolean {
   return labels.includes(INFRA_LABEL) || boardArea === 'infra';
+}
+
+/** Feature work, which the feature freeze holds back (#84): `enhancement`, but not a `bug` and not infra. */
+export function isFeatureWork(labels: readonly string[], infra: boolean): boolean {
+  return labels.includes(ENHANCEMENT_LABEL) && !labels.includes(BUG_LABEL) && !infra;
 }
 
 export function sizingNeeds(

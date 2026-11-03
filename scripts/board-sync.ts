@@ -4,6 +4,7 @@ import {
   commentNoSize,
   github,
   HOLD_LABEL,
+  isFeatureWork,
   isInfra,
   MAX_SIZE_REQUESTS,
   NEEDS_INFO_LABEL,
@@ -24,6 +25,7 @@ import {
   type StartIssue,
 } from './auto-start.ts';
 import { ApiMeter, softFail } from './rate-limit.ts';
+import { isFeatureFreeze } from './pr-title.ts';
 import { applyIdle, findIdleIssue, idleReasons, isStarved, planIdle, type IdleIssue } from './pipeline-idle.ts';
 
 // Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule
@@ -433,6 +435,8 @@ export function readRetry(
 /** What auto-start needs beyond a sync: off unless AUTO_SPAWN is `on`. */
 export interface AutoStart {
   readonly stack: boolean;
+  /** FEATURE_FREEZE is `true`: feature work doesn't start (#84). */
+  readonly freeze: boolean;
   /** At most this many `auto-agent` issues In progress: AUTO_MAX_AGENTS, MAX_AGENTS when unset (#303). */
   readonly cap: number;
   readonly routines: Routines;
@@ -487,6 +491,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         hold: labels.includes(HOLD_LABEL),
         needsYou: labels.includes(NEEDS_YOU_LABEL),
         autoAgent: labels.includes(AUTO_AGENT_LABEL),
+        feature: isFeatureWork(labels, issues.at(-1)!.infra),
         size: node.size?.name,
         priority: node.priority?.name,
         blockedBy: c.blockedBy?.nodes.filter((b) => b.state === 'OPEN').map((b) => b.number) ?? [],
@@ -665,7 +670,12 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     ...i,
     status: moved.get(i.number) ?? i.status,
   }));
-  const plan = planStarts(startable, openPrs, order, { defaultBranch, stack: autoStart.stack, cap: autoStart.cap });
+  const plan = planStarts(startable, openPrs, order, {
+    defaultBranch,
+    stack: autoStart.stack,
+    cap: autoStart.cap,
+    freeze: autoStart.freeze,
+  });
   if (!plan.starts.length) console.log('Auto-start: nothing to start.');
   for (const start of plan.starts) {
     const what = `#${start.issue}: start ${start.model} on ${start.base}`;
@@ -700,6 +710,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       const reasons = idleReasons(idleIssues, openPrs, order, titles, {
         defaultBranch,
         stack: autoStart.stack,
+        freeze: autoStart.freeze,
         exclude: open?.number,
       });
       const action = planIdle(starved, started, open, reasons);
@@ -742,6 +753,7 @@ export function autoStartFromEnv(env: Readonly<Record<string, string | undefined
     );
   return {
     stack: env['AUTO_STACK']?.trim() === 'on',
+    freeze: isFeatureFreeze(env['FEATURE_FREEZE']),
     cap,
     routines: {
       sonnet: { url: read('ROUTINE_SONNET_URL'), token: read('ROUTINE_SONNET_TOKEN') },
@@ -751,7 +763,7 @@ export function autoStartFromEnv(env: Readonly<Record<string, string | undefined
 }
 
 // CLI: `node scripts/board-sync.ts [--dry-run]`, with PROJECT_TOKEN (classic PAT, project + repo scopes).
-// Auto-start reads AUTO_SPAWN, AUTO_STACK, AUTO_MAX_AGENTS and the ROUTINE_* secrets (autoStartFromEnv); --dry-run
+// Auto-start reads AUTO_SPAWN, AUTO_STACK, AUTO_MAX_AGENTS, FEATURE_FREEZE and the ROUTINE_* secrets (autoStartFromEnv); --dry-run
 // logs what it would start. A missing token or an API error fails the run, so a board that isn't
 // syncing shows up red; an exhausted API quota doesn't (#293): the run logs the reset time and
 // passes, and the next one catches up. Every run ends with the requests it made and the quota left.

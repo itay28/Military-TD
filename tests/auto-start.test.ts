@@ -10,6 +10,7 @@ import {
   commentNoSize,
   firedComment,
   giveUpIssue,
+  isFeatureWork,
   NO_SIZE_MARKER,
   MAX_AGENTS,
   MAX_SIZE_REQUESTS,
@@ -42,6 +43,7 @@ const issue = (number: number, over: Partial<StartIssue> = {}): StartIssue => ({
   needsYou: false,
   autoAgent: false,
   infra: false,
+  feature: false,
   size: 'S',
   priority: 'P1',
   milestone: 2,
@@ -189,6 +191,35 @@ describe('planStarts: infra issues without a milestone', () => {
 
   it('follows its milestone when it has one', () => {
     expect(numbers([infra(2, { milestone: 3, status: 'Backlog' }), issue(1)])).toEqual([1]);
+  });
+});
+
+// The feature freeze (#84): while FEATURE_FREEZE is on, auto-start leaves `enhancement` issues alone.
+describe('isFeatureWork', () => {
+  it('is an enhancement that is neither a bug nor infra', () => {
+    expect(isFeatureWork(['enhancement', 'area:towers'], false)).toBe(true);
+    expect(isFeatureWork(['enhancement', 'bug'], false)).toBe(false);
+    expect(isFeatureWork(['enhancement', 'area:infra'], true)).toBe(false);
+    expect(isFeatureWork(['bug'], false)).toBe(false);
+    expect(isFeatureWork([], false)).toBe(false);
+  });
+});
+
+describe('planStarts: the feature freeze (#84)', () => {
+  const issues = [issue(1, { feature: true }), issue(2), issue(3, { infra: true, milestone: null })];
+
+  it('starts feature issues while the freeze is off', () => {
+    expect(numbers(issues)).toEqual([1, 2, 3]);
+    expect(numbers(issues, [], { freeze: false })).toEqual([1, 2, 3]);
+  });
+
+  it('skips feature issues while it is on; bugs and infra still start', () => {
+    expect(numbers(issues, [], { freeze: true })).toEqual([2, 3]);
+  });
+
+  it('looks ahead when the current milestone holds only frozen work', () => {
+    const ahead = [issue(1, { feature: true }), issue(7, { milestone: 3, status: 'Backlog' })];
+    expect(numbers(ahead, [], { freeze: true })).toEqual([7]);
   });
 });
 
@@ -538,6 +569,7 @@ describe('autoStartFromEnv: the AUTO_SPAWN switch', () => {
   it('reads both routines, and stacking only with AUTO_STACK on', () => {
     expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on' })).toEqual({
       stack: false,
+      freeze: false,
       cap: MAX_AGENTS,
       routines: {
         sonnet: { url: 'https://fire.example/sonnet', token: 's' },
@@ -545,6 +577,12 @@ describe('autoStartFromEnv: the AUTO_SPAWN switch', () => {
       },
     });
     expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', AUTO_STACK: 'on' })?.stack).toBe(true);
+  });
+
+  it('freezes features only with FEATURE_FREEZE true (#84)', () => {
+    expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', FEATURE_FREEZE: 'true' })?.freeze).toBe(true);
+    expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', FEATURE_FREEZE: 'false' })?.freeze).toBe(false);
+    expect(autoStartFromEnv({ ...secrets, AUTO_SPAWN: 'on', FEATURE_FREEZE: '' })?.freeze).toBe(false);
   });
 
   it('caps agents In progress at AUTO_MAX_AGENTS, 5 when unset', () => {
