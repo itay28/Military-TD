@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
+import { renderFor } from '../data/renders';
 import { towerIcon } from '../data/sprites';
 import { TOWER_STATS } from '../data/towers';
 import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
@@ -39,7 +40,9 @@ describe('buildOptions', () => {
           shape: TOWER_STYLE[kind as keyof typeof TOWER_STATS].shape,
           size: TOWER_STYLE[kind as keyof typeof TOWER_STATS].size,
         },
-        sprite: towerIcon(kind as keyof typeof TOWER_STATS),
+        ...(kind === 'aaGun'
+          ? { render: expect.objectContaining({ hullUrl: renderFor('aaGun')!.hullUrl }) }
+          : { sprite: towerIcon(kind as keyof typeof TOWER_STATS) }),
       })),
     );
     expect(buildOptions()[0]).toMatchObject({ kind: 'rifleNest', name: 'Rifle Nest', cost: 50 });
@@ -74,7 +77,7 @@ describe('Build bar', () => {
   });
 
   it('matches every kind icon shape to TOWER_STYLE, so a new kind cannot drift', () => {
-    const options = buildOptions();
+    const options = buildOptions(() => false); // shapes only: a render icon has none
     mountBuildBar(root, wallet(500), options);
     for (const { kind } of options) {
       const icon = button(kind).querySelector<HTMLElement>('.build-icon')!;
@@ -294,6 +297,42 @@ describe('Build bar sprite icons', () => {
 
   it('buildOptions gives each kind with a sprite its icon layers', () => {
     expect(buildOptions().find((o) => o.kind === 'cannon')!.sprite).toMatchObject({ turretRotation: 0 });
+  });
+});
+
+describe('Build bar render icons', () => {
+  const render = { hullUrl: 'hull.png', turretUrl: 'turret.png', canvasPx: 160 };
+  const iconOf = (kind: string) => button(kind).querySelector<HTMLElement>('.build-icon')!;
+
+  it('buildOptions gives a kind with a render its images and no Kenney sprite; others keep Kenney', () => {
+    const options = buildOptions();
+    const aa = options.find((o) => o.kind === 'aaGun')!;
+    expect(aa.render).toEqual({
+      hullUrl: renderFor('aaGun')!.hullUrl,
+      turretUrl: renderFor('aaGun')!.turretUrl,
+      canvasPx: renderFor('aaGun')!.canvasPx,
+    });
+    expect(aa.sprite).toBeUndefined();
+    const cannon = options.find((o) => o.kind === 'cannon')!;
+    expect(cannon.render).toBeUndefined();
+    expect(cannon.sprite).toBeDefined();
+  });
+
+  it('falls back to the Kenney sprite when the render did not load', () => {
+    const aa = buildOptions(() => false).find((o) => o.kind === 'aaGun')!;
+    expect(aa.render).toBeUndefined();
+    expect(aa.sprite).toEqual(towerIcon('aaGun'));
+  });
+
+  it('draws hull then turret from the render images, scaled to the box, needing no atlas', () => {
+    mountBuildBar(root, wallet(500), [{ ...OPTIONS[0]!, render }]);
+    const layers = iconOf('rifle').querySelectorAll<HTMLElement>('.build-icon-layer');
+    expect(layers).toHaveLength(2);
+    expect(layers[0]!.style.backgroundImage).toContain('hull.png');
+    expect(layers[1]!.style.backgroundImage).toContain('turret.png');
+    expect(layers[1]!.style.transform).toContain(`scale(${24 / 160})`);
+    expect(layers[1]!.style.transform).not.toContain('rotate');
+    expect(iconOf('rifle').style.backgroundColor).toBe('');
   });
 });
 
