@@ -3,13 +3,16 @@ import atlasPngUrl from '../../assets/atlas/sprites.png';
 import { CAMERA, DISMANTLE, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
+import { distanceVolume, viewCenter } from '../audio/distance';
 import { createPhaserAudio } from '../audio/phaserAudio';
-import { SOUND_THROTTLE } from '../data/sounds';
+import { createWhistleTracker } from '../audio/whistle';
+import { SOUND_FALLOFF, SOUND_THROTTLE, WHISTLE_LEAD_MS } from '../data/sounds';
 import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { groundTextureKey, MAPS, mapById } from '../data/maps';
+import type { Faction } from '../sim/factions';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
@@ -174,6 +177,8 @@ export class GameScene extends Phaser.Scene {
   /** The map picked on the Level select, kept across restarts. A loaded scenario's own map overrides it. */
   private mapId: string = MAPS[0]!.id;
   private sim!: Game;
+  /** Starts the incoming whistle of each shell about to land; set up by `wireSounds`. */
+  private playWhistles: () => void = () => {};
   private loop!: FixedStep;
   /** How the map was drawn, for the test view. */
   private mapTiles: TestView['mapTiles'] = 'shapes';
@@ -429,7 +434,8 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Plays the sim's events as sounds (#45). Test mode is silent, so e2e runs don't change. Otherwise each sound is
-   * throttled, waits for the browser's first input, and stays silent if its file didn't load.
+   * throttled, waits for the browser's first input, and stays silent if its file didn't load. A shot sounds like the map
+   * defender's weapon, and a sound with a place on the map is quieter the further it is from the camera's centre (#404).
    */
   private wireSounds(): void {
     const audio = this.flags.test
@@ -439,18 +445,36 @@ export class GameScene extends Phaser.Scene {
           SOUND_THROTTLE,
           () => this.time.now,
         );
-    const play = (event: SoundEvent): void => {
-      const id = soundFor(event);
-      if (id !== null) audio.play(id);
+    // The map actually played (a loaded scenario's own map included); one outside the registry falls back to the selected map.
+    const defenderOf = (): Faction =>
+      (MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId)).defender;
+    const play = (event: SoundEvent, at?: Position): void => {
+      const id = soundFor(event, defenderOf());
+      if (id === null) return;
+      if (at === undefined) return audio.play(id);
+      const camera = this.cameras.main;
+      const center = viewCenter(camera, TILE_PX);
+      audio.play(id, distanceVolume(Math.hypot(at.x - center.x, at.y - center.y), SOUND_FALLOFF));
     };
-    const kindOf = (towerId: number): TowerKind | undefined =>
-      this.sim.state.towers.find((t) => t.id === towerId)?.kind;
+    const towerOf = (towerId: number): Tower | undefined => this.sim.state.towers.find((t) => t.id === towerId);
+    const shot = (type: 'towerFired' | 'shellFired', towerId: number): void => {
+      const tower = towerOf(towerId);
+      play({ type, kind: tower?.kind }, tower && tileCenter(tower.tile));
+    };
     const { events } = this.sim;
-    events.on('towerFired', ({ towerId }) => play({ type: 'towerFired', kind: kindOf(towerId) }));
-    events.on('shellFired', ({ towerId }) => play({ type: 'shellFired', kind: kindOf(towerId) }));
-    for (const type of ['shellLanded', 'enemyKilled', 'enemyLeaked', 'waveStarted', 'victory', 'defeat'] as const) {
+    events.on('towerFired', ({ towerId }) => shot('towerFired', towerId));
+    events.on('shellFired', ({ towerId }) => shot('shellFired', towerId));
+    events.on('shellLanded', ({ position }) => play({ type: 'shellLanded' }, position));
+    events.on('enemyKilled', ({ enemy }) => play({ type: 'enemyKilled', enemy: enemy.kind }, enemy.position));
+    for (const type of ['enemyLeaked', 'waveStarted', 'victory', 'defeat'] as const) {
       events.on(type, () => play({ type }));
     }
+    // The mortar's incoming whistle, half a second before each shell lands, on the sim's clock.
+    const whistles = createWhistleTracker(WHISTLE_LEAD_MS);
+    this.playWhistles = () => {
+      const { shells, timeMs } = this.sim.state;
+      for (const shell of whistles.due(shells, timeMs)) play({ type: 'shellIncoming' }, shell.target);
+    };
   }
 
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
@@ -815,6 +839,7 @@ export class GameScene extends Phaser.Scene {
     this.floatingTexts.advance(deltaMs);
     if (this.flags.anim) this.animMs += deltaMs;
     this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
+    this.playWhistles();
     this.hud.update();
     this.buildBar.update();
     this.endScreen.update();
