@@ -44,6 +44,17 @@ test('test mode shows no hints unless a spec turns them on', async ({ page }) =>
   await expect(skip(page)).toHaveCount(0);
 });
 
+test('a tower still selected when the first wave clears does not skip the select-a-tower hint', async ({ page }) => {
+  await openWithHints(page);
+  await selectKind(page);
+  await clickTile(page, BESIDE_PATH);
+  await page.getByTestId('start-wave').click();
+  await clickTile(page, BESIDE_PATH); // select the tower while wave 1 runs
+  await expect(page.getByRole('dialog', { name: 'Rifle Nest' })).toBeVisible();
+  await clearFirstWave(page);
+  await expect(hint(page)).toHaveText(new RegExp(HINT.selectTower));
+});
+
 test('the three hints follow the player: place a tower, start the wave, then select a tower', async ({ page }) => {
   await openWithHints(page);
   await expect(hint(page)).toHaveText(new RegExp(HINT.place));

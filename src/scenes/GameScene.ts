@@ -59,7 +59,16 @@ import { TILESET_FRAMES, tileArt } from './tileset';
 import { buildOptions, mountBuildBar, type BuildBar, type IconAtlas } from '../ui/buildBar';
 import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
-import { hintFor, INITIAL_HINTS, mountHints, type HintEvent, type Hints, type HintState, type Rect } from '../ui/hints';
+import {
+  hintFor,
+  INITIAL_HINTS,
+  mountHints,
+  type HintEvent,
+  type HintId,
+  type Hints,
+  type HintState,
+  type Rect,
+} from '../ui/hints';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
@@ -191,6 +200,8 @@ export class GameScene extends Phaser.Scene {
   private hintState: HintState = INITIAL_HINTS;
   /** Skip hints was pressed, to feed the sequence on the next frame. */
   private hintsSkipped = false;
+  /** Whether the tower panel was open on the previous hint update, to spot it opening. */
+  private hintPanelWasOpen = false;
   /** Whether this game has saved the hints flag already, so it saves once. */
   private hintsSaved = false;
   /**
@@ -287,6 +298,7 @@ export class GameScene extends Phaser.Scene {
       setHints: (on) => {
         this.hintsForced = on;
         this.hintState = INITIAL_HINTS;
+        this.hintPanelWasOpen = false;
         this.hintsSkipped = false;
         this.hintsSaved = false;
       },
@@ -635,6 +647,7 @@ export class GameScene extends Phaser.Scene {
       speed,
     });
     this.hintState = INITIAL_HINTS;
+    this.hintPanelWasOpen = false;
     this.hintsSkipped = false;
     this.hintsSaved = false;
     this.hints = mountHints(this.hintsRoot, { onSkip: () => (this.hintsSkipped = true) });
@@ -661,7 +674,10 @@ export class GameScene extends Phaser.Scene {
     if (towers.length > 0) events.push('towerPlaced');
     if (waveNumber >= 1) events.push('waveStarted');
     if (wavesCleared >= 1) events.push('waveCleared');
-    if (this.towerPanel.selectedId !== undefined) events.push('towerPanelOpened');
+    // Only the closed → open transition counts: a tower already selected when wave 1 clears isn't "opening" it.
+    const panelOpen = this.towerPanel.selectedId !== undefined;
+    if (panelOpen && !this.hintPanelWasOpen) events.push('towerPanelOpened');
+    this.hintPanelWasOpen = panelOpen;
     if (this.hintsSkipped) events.push('skipped');
     const { state, hint, done } = hintFor(this.hintState, events);
     this.hintState = state;
@@ -675,7 +691,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** What `hint` points at, in viewport pixels: the build bar, Start Wave, or the first tower on the map. */
-  private hintAnchor(hint: 'place' | 'startWave' | 'selectTower'): Rect | undefined {
+  private hintAnchor(hint: HintId): Rect | undefined {
     // The tower buttons, not the whole bar down the edge; the bar itself while it's collapsed.
     if (hint === 'place')
       return (
