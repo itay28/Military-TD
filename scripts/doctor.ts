@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -16,6 +16,46 @@ export interface Facts {
   readonly nodeModules: boolean;
   /** Locally `gh auth status`; in the cloud, whether `gh api` (REST through the proxy) reaches the repository. */
   readonly gh: 'logged-in' | 'logged-out' | 'missing' | 'rest-ok' | 'no-access' | 'unreachable';
+  /** Which Chromium `npm run test:e2e` will launch (#327); left out when unchecked. */
+  readonly e2e?: E2eBrowser | undefined;
+}
+
+export type E2eBrowser =
+  | { readonly kind: 'pinned' }
+  | { readonly kind: 'env'; readonly path: string }
+  | { readonly kind: 'fallback'; readonly path: string }
+  | { readonly kind: 'none' };
+
+/** The cloud image's Chromium, which may be an older build than the one Playwright is pinned to. */
+export const CLOUD_CHROMIUM = '/opt/pw-browsers/chromium';
+
+/**
+ * Which browser e2e will use: `PW_CHROMIUM_PATH` if set (playwright.config.ts passes it on), else the
+ * build Playwright is pinned to, else the cloud image's Chromium (which the session then points
+ * `PW_CHROMIUM_PATH` at), else nothing.
+ */
+export function chooseE2eBrowser(input: {
+  readonly envPath: string | undefined;
+  readonly pinnedExists: boolean;
+  readonly fallbackExists: boolean;
+}): E2eBrowser {
+  if (input.envPath) return { kind: 'env', path: input.envPath };
+  if (input.pinnedExists) return { kind: 'pinned' };
+  if (input.fallbackExists) return { kind: 'fallback', path: CLOUD_CHROMIUM };
+  return { kind: 'none' };
+}
+
+function describeE2e(browser: E2eBrowser): string {
+  switch (browser.kind) {
+    case 'pinned':
+      return 'e2e uses the pinned Playwright Chromium';
+    case 'env':
+      return `e2e uses PW_CHROMIUM_PATH=${browser.path}`;
+    case 'fallback':
+      return `e2e uses ${browser.path} via PW_CHROMIUM_PATH (the pinned Playwright build is not installed)`;
+    case 'none':
+      return 'e2e has no browser: the pinned Playwright build is not installed and there is no /opt/pw-browsers/chromium; do not run `playwright install` in the cloud';
+  }
 }
 
 const REPO = 'itay28/Military-TD';
@@ -38,9 +78,10 @@ export function diagnose(facts: Facts): { problems: string[]; summary: string } 
       `GitHub REST check failed (network or timeout), not an access error: retry \`gh api repos/${REPO}\` before deciding anything`,
     );
   const head = `doctor (${facts.environment})`;
-  const summary = problems.length
+  const base = problems.length
     ? `${head}: ${problems.length} problem${problems.length > 1 ? 's' : ''}. ${problems.join('; ')}`
     : `${head}: ready`;
+  const summary = facts.e2e ? `${base}. ${describeE2e(facts.e2e)}` : base;
   return { problems, summary };
 }
 
@@ -76,7 +117,20 @@ function cloudGhState(): Facts['gh'] {
   }
 }
 
-function gatherFacts(root: string): Facts {
+async function e2eBrowser(): Promise<E2eBrowser | undefined> {
+  try {
+    const { chromium } = await import('@playwright/test');
+    return chooseE2eBrowser({
+      envPath: process.env['PW_CHROMIUM_PATH'],
+      pinnedExists: existsSync(chromium.executablePath()),
+      fallbackExists: existsSync(CLOUD_CHROMIUM),
+    });
+  } catch {
+    return undefined; // dependencies not installed yet; the node_modules problem already says so
+  }
+}
+
+async function gatherFacts(root: string): Promise<Facts> {
   let wantedNode: string | undefined;
   try {
     wantedNode = /\d+/.exec(readFileSync(join(root, '.nvmrc'), 'utf8'))?.[0];
@@ -90,13 +144,18 @@ function gatherFacts(root: string): Facts {
     wantedNode,
     nodeModules: existsSync(join(root, 'node_modules')),
     gh: environment === 'cloud' ? cloudGhState() : ghState(),
+    e2e: await e2eBrowser(),
   };
 }
 
 // `--hook` prints SessionStart JSON for Claude Code; otherwise plain text.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const root = process.env['CLAUDE_PROJECT_DIR'] ?? process.cwd();
-  const { summary } = diagnose(gatherFacts(root));
+  const facts = await gatherFacts(root);
+  const { summary } = diagnose(facts);
+  // Later Bash calls in the session read CLAUDE_ENV_FILE, so e2e finds the browser with no manual steps.
+  const envFile = process.env['CLAUDE_ENV_FILE'];
+  if (envFile && facts.e2e?.kind === 'fallback') appendFileSync(envFile, `export PW_CHROMIUM_PATH=${facts.e2e.path}\n`);
   if (process.argv.includes('--hook'))
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: summary } }));
   else console.log(summary);

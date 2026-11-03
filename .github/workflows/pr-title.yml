@@ -3,9 +3,11 @@ name: PR title
 # The PR title becomes the squash commit on main, and its Conventional Commit
 # type drives release-please's version bump (ADR-0004). This check fails
 # when the title doesn't match. Rule and tests: scripts/pr-title.ts.
+# While the repo variable FEATURE_FREEZE is `true` (the feature freeze, #84), it also fails
+# `feat` titles, unless the PR has the `freeze-exception` label; labelling re-runs it.
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
 # No concurrency group: a push and a title edit at once (release-please) start two runs on the
 # same commit, and cancelling one would show a ✗ next to the green one (#257). Both runs check
@@ -27,14 +29,16 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # The title is read when the run starts, not from the event, so an older run can't report a
-      # stale title. It goes through a variable, never straight into the shell, so a title can't
-      # inject commands.
+      # The title and labels are read when the run starts, not from the event, so an older run can't
+      # report a stale title. They go through variables, never straight into the shell, so a title
+      # can't inject commands.
       - name: Check PR title
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          FEATURE_FREEZE: ${{ vars.FEATURE_FREEZE }}
         run: |
           PR_TITLE="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .title)"
-          export PR_TITLE
+          PR_LABELS="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '[.labels[].name] | join(",")')"
+          export PR_TITLE PR_LABELS
           node scripts/pr-title.ts
