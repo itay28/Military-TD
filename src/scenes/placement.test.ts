@@ -81,7 +81,7 @@ describe('placeAt', () => {
   });
 
   it('says why when the sim refuses', () => {
-    expect(placeAt(newGame(49), 'rifleNest', EMPTY)).toBe('Not enough money');
+    expect(placeAt(newGame(49), 'rifleNest', EMPTY)).toBe('Not enough funds');
     expect(placeAt(newGame(), 'rifleNest', PATH)).toBe("Can't build here");
     const game = newGame();
     placeAt(game, 'rifleNest', EMPTY);

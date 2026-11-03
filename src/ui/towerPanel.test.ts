@@ -198,7 +198,7 @@ describe('Tower panel upgrades', () => {
   it('names the next level and its cost on the Upgrade button', () => {
     const { game, id } = gameWithTower(100);
     mountTowerPanel(root, game).select(id);
-    expect(upgradeButton().textContent).toBe('Optics (40)');
+    expect(upgradeButton().textContent).toBe('Optics ($40)');
     expect(upgradeButton().hidden).toBe(false);
     expect(upgradeButton().disabled).toBe(false);
   });
@@ -210,14 +210,14 @@ describe('Tower panel upgrades', () => {
     expect(game.state.money).toBe(60);
     expect(value('tower-level')).toBe('Level 2');
     expect(value('tower-range')).toBe('3 tiles');
-    expect(upgradeButton().textContent).toBe('Heavier weapon (70)');
+    expect(upgradeButton().textContent).toBe('Heavier weapon ($70)');
   });
 
   it('is disabled, saying why, while the upgrade would be refused', () => {
     const { game, id } = gameWithTower(39);
     mountTowerPanel(root, game).select(id);
     expect(upgradeButton().disabled).toBe(true);
-    expect(upgradeButton().title).toBe('Not enough money');
+    expect(upgradeButton().title).toBe('Not enough funds');
     upgradeButton().click();
     expect(game.state.towers[0]).toMatchObject({ level: 1 });
   });
@@ -253,7 +253,7 @@ describe('Tower panel Sell button', () => {
     const panel = mountTowerPanel(root, game);
     panel.select(placed.towerId);
     const button = root.querySelector<HTMLButtonElement>('[data-testid="tower-sell"]')!;
-    expect(button.textContent).toBe('Sell (+35)');
+    expect(button.textContent).toBe('Sell (+$35)');
     button.click();
     expect(button.textContent).toBe('Dismantling…');
     expect(button.disabled).toBe(true);
