@@ -21,6 +21,7 @@ import {
   milestoneDone,
   PR_QUERY,
   settingsFromEnv,
+  switchedOn,
   toStewardPr,
   type Decision,
   type PrComment,
@@ -57,6 +58,7 @@ const maintainer = (minutesAgo: number): PrComment => ({
 
 // A PR that is ready to merge: green, reviewed, and the review answered.
 const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
+  id: 'PR_7',
   number: 7,
   title: 'feat: mortar tower',
   body: 'Closes #3',
@@ -79,6 +81,7 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
   files: ['src/sim/towers.ts', 'tests/sim/towers.test.ts'],
   renamed: [],
   codeCommittedAt: at(40),
+  lastCommitAt: at(40),
   comments: [review(60), agent(DONE_MARKER, 30)],
   ...over,
 });
@@ -87,6 +90,70 @@ const reasons = (p: StewardPr) => {
   const d = decide(p, now);
   return d.kind === 'steward' || d.kind === 'stuck' ? d.reasons : [];
 };
+
+describe('decide: draft PRs (#326)', () => {
+  const red = [
+    { name: 'ci', state: 'failure' as const },
+    { name: 'e2e', state: 'success' as const },
+  ];
+  const idleRed = (over: Partial<StewardPr> = {}) =>
+    pr({
+      isDraft: true,
+      checks: red,
+      lastCommitAt: at(90),
+      codeCommittedAt: at(90),
+      comments: [agent('x', 120)],
+      ...over,
+    });
+
+  it('still skips an active draft', () => {
+    expect(kind(pr({ isDraft: true }))).toBe('skip');
+  });
+
+  it('fires a ci round for a draft that is red and idle for an hour', () => {
+    const d = decide(idleRed(), now);
+    expect(d).toMatchObject({ kind: 'steward', reasons: ['ci'], round: 1 });
+  });
+
+  it('skips a red draft with a recent commit or comment', () => {
+    expect(kind(idleRed({ lastCommitAt: at(30) }))).toBe('skip');
+    expect(kind(idleRed({ comments: [maintainer(30)] }))).toBe('skip');
+  });
+
+  it('skips a green idle draft, and waits while a red draft still has checks running', () => {
+    expect(kind(idleRed({ checks: [{ name: 'ci', state: 'success' }] }))).toBe('skip');
+    expect(kind(idleRed({ checks: [...red, { name: 'lint', state: 'pending' }] }))).toBe('wait');
+  });
+
+  it('only ever fires a ci round: a conflict or review finding does not start one on a draft', () => {
+    expect(reasons(idleRed({ mergeable: 'CONFLICTING', comments: [review(100)] }))).toEqual(['ci']);
+  });
+
+  it('marks a draft ready when its round ended green', () => {
+    const done = pr({
+      isDraft: true,
+      lastCommitAt: at(5),
+      comments: [action(ROUND_MARKER, 30), agent(DONE_MARKER, 5)],
+    });
+    expect(kind(done)).toBe('ready');
+  });
+
+  it('never merges, reviews or updates a draft', () => {
+    expect(kind(pr({ isDraft: true, behind: true, comments: [] }))).toBe('skip');
+  });
+
+  it('does not mark a draft ready while its checks are red or running, or with a conflict', () => {
+    const base = { isDraft: true, comments: [action(ROUND_MARKER, 30), agent(DONE_MARKER, 5)] };
+    expect(kind(pr({ ...base, checks: red }))).not.toBe('ready');
+    expect(kind(pr({ ...base, checks: [{ name: 'ci', state: 'pending' }] }))).not.toBe('ready');
+    expect(kind(pr({ ...base, mergeable: 'CONFLICTING' }))).not.toBe('ready');
+  });
+
+  it('marks ready only when the steward switch is on', () => {
+    expect(switchedOn('ready', { merge: true })).toBe(false);
+    expect(switchedOn('ready', { merge: false, steward: { url: 'u', token: 't' } })).toBe(true);
+  });
+});
 
 describe('decide: skip', () => {
   it('skips drafts, forks and held PRs', () => {
@@ -824,6 +891,7 @@ const fireOk = vi.fn<Fetch>(async (url: string) =>
 // like the conflict a round had already resolved (#296).
 describe('toStewardPr: base SHA', () => {
   const node = (over: Partial<Parameters<typeof toStewardPr>[0]> = {}): Parameters<typeof toStewardPr>[0] => ({
+    id: 'PR_1',
     number: 1,
     title: 't',
     body: '',
@@ -996,6 +1064,23 @@ describe('act', () => {
       commit_message: 'Closes #3',
       sha: 'abc123',
     });
+  });
+
+  it('marks a green draft ready with the GraphQL mutation, then says so (#326)', async () => {
+    const gql = vi.fn(async () => new Response(JSON.stringify({ data: { markPullRequestReadyForReview: {} } })));
+    vi.stubGlobal('fetch', gql);
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    try {
+      await act({ ...pr(), id: 'PR_node' }, { kind: 'ready' }, 'gh-token', settings, fetchFn);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    const [url, init] = gql.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.github.com/graphql');
+    const sent = JSON.parse(init.body as string) as { query: string; variables: { id: string } };
+    expect(sent.query).toContain('markPullRequestReadyForReview');
+    expect(sent.variables).toEqual({ id: 'PR_node' });
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`]);
   });
 
   it('hands off when GitHub refuses the merge', async () => {
