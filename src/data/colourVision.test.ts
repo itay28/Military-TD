@@ -27,13 +27,11 @@ describe('simulate', () => {
     }
   });
 
-  it('makes pure red and green hard to tell apart for red-green deficiencies, but not for tritanopia', () => {
-    const red = 0xcc4433;
-    const green = 0x44aa33;
-    const apart = (deficiency: (typeof COLOUR_DEFICIENCIES)[number]) =>
-      deltaE(simulate(red, deficiency), simulate(green, deficiency));
-    expect(apart('deuteranopia')).toBeLessThan(deltaE(red, green) / 3);
-    expect(apart('protanopia')).toBeLessThan(deltaE(red, green) / 3);
-    expect(apart('tritanopia')).toBeGreaterThan(deltaE(red, green) / 2);
+  it('collapses the old green/red Ghost pair for deuteranopia, though it is far apart with normal vision and tritanopia', () => {
+    const green = 0x6fcf4f;
+    const red = 0xe0533d;
+    expect(deltaE(green, red)).toBeGreaterThan(100);
+    expect(deltaE(simulate(green, 'deuteranopia'), simulate(red, 'deuteranopia'))).toBeLessThan(20);
+    expect(deltaE(simulate(green, 'tritanopia'), simulate(red, 'tritanopia'))).toBeGreaterThan(100);
   });
 });

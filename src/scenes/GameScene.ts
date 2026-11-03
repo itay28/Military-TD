@@ -32,6 +32,7 @@ import {
   drawHpBar,
   drawLevelPips,
   drawRangeRing,
+  drawSelection,
   drawShells,
   drawTower,
   drawEffects,
@@ -646,7 +647,7 @@ export class GameScene extends Phaser.Scene {
     drawEffects(this.effectGraphics, this.effects.active());
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);
-    this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected);
+    this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected, true);
     this.shellGraphics.clear();
     const { shells, timeMs } = this.sim.state;
     drawShells(
@@ -676,12 +677,14 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Draws the range ring of `tower` on `ring`, or hides it when there is none. `drawnKey` is the `ringKey` of the
-   * ring shown now, so an unchanged ring isn't redrawn. Returns the key it shows after.
+   * ring shown now, so an unchanged ring isn't redrawn. A `selected` tower also gets the selection brackets. Returns
+   * the key it shows after.
    */
   private showRing(
     ring: Phaser.GameObjects.Graphics,
     drawnKey: string | undefined,
     tower: Tower | undefined,
+    selected = false,
   ): string | undefined {
     const key = tower && ringKey(tower);
     if (key === drawnKey) return drawnKey;
@@ -689,6 +692,7 @@ export class GameScene extends Phaser.Scene {
     if (!tower) return undefined;
     const { x, y } = towerCenter(tower);
     drawRangeRing(ring.setPosition(x, y), tower);
+    if (selected) drawSelection(ring);
     return key;
   }
 

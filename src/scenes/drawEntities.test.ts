@@ -227,11 +227,11 @@ describe('drawHpBar', () => {
   });
 
   it('fills a low bar in the low-HP colour, so the change is a second cue next to its length', () => {
-    const max = ENEMY_STATS.infantry.hp;
+    const max = ENEMY_STATS.infantry.maxHp;
     const { painter, calls } = recordingPainter();
-    drawHpBar(painter, infantry(max * 0.2));
+    drawHpBar(painter, infantry(max / 4));
     expect(calls[2]).toEqual(['fillStyle', HP_BAR.low]);
-    expect(calls[3]).toEqual(['fillRect', -HP_BAR.width / 2, expect.any(Number), HP_BAR.width * 0.2, HP_BAR.height]);
+    expect(calls[3]).toEqual(['fillRect', -HP_BAR.width / 2, expect.any(Number), HP_BAR.width / 4, HP_BAR.height]);
   });
 });
 
