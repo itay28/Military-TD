@@ -422,6 +422,24 @@ describe('Build bar tooltips', () => {
     expect(shown()).toEqual([]);
   });
 
+  it('ignores the focus a click or tap gives, so clearing the kind hides its tooltip', () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    button('rifle').dispatchEvent(new Event('pointerdown'));
+    button('rifle').dispatchEvent(new FocusEvent('focus'));
+    button('rifle').click();
+    expect(shown()).toEqual(['build-tip-rifle']);
+    button('rifle').click();
+    expect(shown()).toEqual([]);
+  });
+
+  it('a finger does not hover: a tap shows the tooltip only through the selection', () => {
+    mountBuildBar(root, wallet(500), TIPPED);
+    const touch = new Event('pointerenter');
+    Object.defineProperty(touch, 'pointerType', { value: 'touch' });
+    button('cannon').dispatchEvent(touch);
+    expect(shown()).toEqual([]);
+  });
+
   it('shows while a kind is selected (touch has no hover) and hides on clear or Escape', () => {
     const bar = mountBuildBar(root, wallet(500), TIPPED);
     pressKey('1');

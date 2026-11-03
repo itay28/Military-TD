@@ -178,6 +178,7 @@ export function mountBuildBar<K extends string>(
   setCollapsed(false);
 
   const largest = Math.max(...options.map((option) => option.icon.size));
+  let pointerFocus = false;
   const entries = options.map((option, i) => {
     const hotkey = String(i + 1);
     const button = doc.createElement('button');
@@ -213,9 +214,15 @@ export function mountBuildBar<K extends string>(
     key.textContent = hotkey;
     button.append(icon, cost, key);
     button.addEventListener('click', () => (option === selected ? clear() : select(option)));
-    button.addEventListener('pointerenter', () => setHovered(option));
+    // A finger has no hover: touch shows the tooltip through the selection instead, so a tap that clears it hides it.
+    button.addEventListener('pointerenter', (event) => event.pointerType !== 'touch' && setHovered(option));
     button.addEventListener('pointerleave', () => hovered === option && setHovered(undefined));
-    button.addEventListener('focus', () => setFocused(option));
+    // Only keyboard focus: a click or tap focuses the button too, and must not keep its tooltip up once cleared.
+    button.addEventListener('pointerdown', () => (pointerFocus = true));
+    button.addEventListener('focus', () => {
+      if (!pointerFocus) setFocused(option);
+      pointerFocus = false;
+    });
     button.addEventListener('blur', () => focused === option && setFocused(undefined));
     grid.append(button);
     if (tip) root.append(tip);
