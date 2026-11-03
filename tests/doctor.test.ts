@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { cloudGhStateFrom, diagnose, type Facts } from '../scripts/doctor';
+import { chooseE2eBrowser, cloudGhStateFrom, diagnose, type Facts } from '../scripts/doctor';
 
 // The SessionStart doctor tells the agent what this environment is missing (#162).
 const healthy: Facts = {
@@ -96,5 +96,41 @@ describe('.claude/settings.json', () => {
 
   it('has no client-side board hook: the board moves in GitHub Actions', () => {
     expect(JSON.stringify(settings)).not.toContain('board-status');
+  });
+});
+
+// Cloud sessions ship an older Chromium than the pinned Playwright wants (#327).
+describe('e2e browser', () => {
+  const none = { envPath: undefined, pinnedExists: false, fallbackExists: false };
+
+  it('uses PW_CHROMIUM_PATH when set', () => {
+    expect(chooseE2eBrowser({ ...none, envPath: '/x/chrome', pinnedExists: true })).toEqual({
+      kind: 'env',
+      path: '/x/chrome',
+    });
+  });
+
+  it('uses the pinned build when installed (CI)', () => {
+    expect(chooseE2eBrowser({ ...none, pinnedExists: true, fallbackExists: true })).toEqual({ kind: 'pinned' });
+  });
+
+  it('falls back to the cloud image Chromium when the pinned build is missing', () => {
+    expect(chooseE2eBrowser({ ...none, fallbackExists: true })).toEqual({
+      kind: 'fallback',
+      path: '/opt/pw-browsers/chromium',
+    });
+  });
+
+  it('reports no browser when neither exists', () => {
+    expect(chooseE2eBrowser(none)).toEqual({ kind: 'none' });
+  });
+
+  it('the doctor names the browser e2e will use', () => {
+    expect(diagnose({ ...healthy, e2e: { kind: 'pinned' } }).summary).toBe(
+      'doctor (local): ready. e2e uses the pinned Playwright Chromium',
+    );
+    expect(diagnose({ ...healthy, e2e: { kind: 'fallback', path: '/opt/pw-browsers/chromium' } }).summary).toContain(
+      'PW_CHROMIUM_PATH',
+    );
   });
 });

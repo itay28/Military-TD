@@ -40,8 +40,11 @@ const titles = new Map([
   [3, 'v0.3.0 — Economy'],
   [4, 'v0.4.0 — Polish'],
 ]);
-const reasons = (issues: IdleIssue[], prs: IdlePr[] = [], options: { stack?: boolean; exclude?: number } = {}) =>
-  idleReasons(issues, prs, order, titles, { defaultBranch: 'main', stack: false, ...options });
+const reasons = (
+  issues: IdleIssue[],
+  prs: IdlePr[] = [],
+  options: { stack?: boolean; freeze?: boolean; exclude?: number } = {},
+) => idleReasons(issues, prs, order, titles, { defaultBranch: 'main', stack: false, ...options });
 const keys = (rs: Reason[]) => rs.map((r) => r.key);
 const texts = (rs: Reason[], group: Reason['group']) => rs.filter((r) => r.group === group).map((r) => r.text);
 
@@ -144,6 +147,18 @@ describe('idleReasons: not startable', () => {
       [pr(60, [51])],
     );
     expect(rs.filter((r) => r.group === 'not-startable')).toEqual([]);
+  });
+
+  // The feature freeze (#84): feature issues auto-start skips are listed as frozen.
+  it('lists enhancement issues as frozen while the freeze is on', () => {
+    const issues = [
+      issue(70, { labels: ['ready-for-agent', 'enhancement'] }),
+      issue(71, { labels: ['ready-for-agent', 'enhancement', 'bug'] }),
+      issue(72, { labels: ['ready-for-agent', 'enhancement', 'area:infra'], infra: true, milestone: null }),
+    ];
+    expect(texts(reasons(issues, [], { freeze: true }), 'not-startable')).toEqual(['#70: frozen (feature freeze)']);
+    expect(keys(reasons(issues, [], { freeze: true }))).toEqual(['frozen:#70']);
+    expect(reasons(issues)).toEqual([]);
   });
 
   it('accepts infra with no milestone', () => {

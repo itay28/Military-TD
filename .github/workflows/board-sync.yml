@@ -72,6 +72,7 @@ jobs:
           AUTO_SPAWN: ${{ vars.AUTO_SPAWN }}
           AUTO_STACK: ${{ vars.AUTO_STACK }}
           AUTO_MAX_AGENTS: ${{ vars.AUTO_MAX_AGENTS }}
+          FEATURE_FREEZE: ${{ vars.FEATURE_FREEZE }}
           ROUTINE_SONNET_URL: ${{ secrets.ROUTINE_SONNET_URL }}
           ROUTINE_SONNET_TOKEN: ${{ secrets.ROUTINE_SONNET_TOKEN }}
           ROUTINE_OPUS_URL: ${{ secrets.ROUTINE_OPUS_URL }}
