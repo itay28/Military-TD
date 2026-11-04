@@ -45,7 +45,7 @@ describe('runScenario', () => {
     });
     expect(events.map((e) => e.type)).toEqual(['command', 'waveStarted', 'enemyLeaked', 'waveCleared', 'victory']);
     expect(events[0]).toEqual({ tick: 10, type: 'command', command: { type: 'startWave' }, result: { ok: true } });
-    expect(events[1]).toEqual({ tick: 10, type: 'waveStarted', waveNumber: 1 });
+    expect(events[1]).toEqual({ tick: 10, type: 'waveStarted', waveNumber: 1, holdovers: 0 });
     // 6 tiles at 1.5 tiles/s: the leak lands 4 s (240 ticks) after the wave starts.
     const leak = events[2];
     expect(leak).toMatchObject({ type: 'enemyLeaked', lives: START_LIVES - 1 });
@@ -72,6 +72,7 @@ describe('runScenario', () => {
       tick: Math.round(AUTO_START_DELAY_MS / TICK_MS),
       type: 'waveStarted',
       waveNumber: 1,
+      holdovers: 0,
     });
   });
 
