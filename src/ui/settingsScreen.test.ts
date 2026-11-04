@@ -69,10 +69,52 @@ describe('mountSettingsScreen', () => {
     expect(settings.get().showAllRanges).toBe(false);
   });
 
-  it('has no volume controls (#67)', () => {
-    mount();
-    expect(root.querySelector('input[type="range"]')).toBeNull();
-    expect(root.textContent).not.toMatch(/volume/i);
+  describe('volume sliders (#67)', () => {
+    const sliders = () => [...root.querySelectorAll<HTMLInputElement>('input[type="range"]')];
+    const nameOf = (input: HTMLInputElement) => root.querySelector(`label[for="${input.id}"]`)?.textContent;
+    const slider = (name: string) => sliders().find((input) => nameOf(input) === name)!;
+    const slide = (input: HTMLInputElement, value: number) => {
+      input.value = String(value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const shown = (input: HTMLInputElement) => root.querySelector(`output[for="${input.id}"]`)?.textContent;
+
+    it('has a labelled 0–100 slider each for master, music and sound effects, at the current values', () => {
+      settings.set({ masterVolume: 70, musicVolume: 35, sfxVolume: 100 });
+      mount();
+      expect(sliders().map(nameOf)).toEqual(['Master volume', 'Music volume', 'Sound effects volume']);
+      for (const input of sliders()) {
+        expect([input.min, input.max, input.step]).toEqual(['0', '100', '5']);
+      }
+      expect(sliders().map((input) => input.value)).toEqual(['70', '35', '100']);
+    });
+
+    it('shows and announces each value as a percentage', () => {
+      mount();
+      expect(sliders().map((input) => input.getAttribute('aria-valuetext'))).toEqual(['80%', '60%', '80%']);
+      expect(sliders().map(shown)).toEqual(['80%', '60%', '80%']);
+    });
+
+    it.each([
+      ['Master volume', 'masterVolume'],
+      ['Music volume', 'musicVolume'],
+      ['Sound effects volume', 'sfxVolume'],
+    ] as const)('%s changes its setting as it slides, and its shown value with it', (name, field) => {
+      mount();
+      const input = slider(name);
+      slide(input, 25);
+      expect(settings.get()[field]).toBe(25);
+      expect(input.getAttribute('aria-valuetext')).toBe('25%');
+      expect(shown(input)).toBe('25%');
+      slide(input, 0);
+      expect(settings.get()[field]).toBe(0);
+    });
+
+    it('leaves the other settings alone', () => {
+      mount();
+      slide(slider('Music volume'), 10);
+      expect(settings.get()).toMatchObject({ masterVolume: 80, sfxVolume: 80, defaultSpeed: 1, showAllRanges: false });
+    });
   });
 
   it('focuses the checked speed when it opens', () => {
