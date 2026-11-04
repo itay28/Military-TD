@@ -478,7 +478,8 @@ export class GameScene extends Phaser.Scene {
     events.on('shellFired', ({ towerId }) => shot('shellFired', towerId));
     events.on('shellLanded', ({ position }) => play({ type: 'shellLanded' }, position));
     events.on('enemyKilled', ({ enemy }) => play({ type: 'enemyKilled', enemy: enemy.kind }, enemy.position));
-    for (const type of ['enemyLeaked', 'waveStarted', 'victory', 'defeat'] as const) {
+    events.on('waveStarted', ({ holdovers }) => play({ type: 'waveStarted', holdovers }));
+    for (const type of ['enemyLeaked', 'victory', 'defeat'] as const) {
       events.on(type, () => play({ type }));
     }
     // The mortar's incoming whistle, half a second before each shell lands, on the sim's clock.

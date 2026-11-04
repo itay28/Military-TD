@@ -389,15 +389,6 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/yd-war-on-water/**`
 
-## Voiceover Pack (40 lines)
-
-- Author: Kenney
-- Source: <https://opengameart.org/content/voiceover-pack-40-lines>
-- License: CC0-1.0
-- Attribution: Voiceover Pack by Kenney (kenney.nl), CC0
-- Downloaded: 2026-11-03
-- Files: `assets/kenney-voiceover/**`
-
 ## Radio Noise 1
 
 - Author: Kresiek The Furry
@@ -418,9 +409,9 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 
 ## Radio comms cues
 
-- Author: Military-TD, from Kenney's Voiceover Pack and Kresiek The Furry's Radio Noise 1
+- Author: Military-TD, from its radio voice takes, Kresiek The Furry's Radio Noise 1, The Free Firearm Sound Library and EZduzziteh's Explosions
 - Source: <https://opengameart.org/content/voiceover-pack-40-lines>
 - License: CC0-1.0
-- Attribution: Built by scripts/radio-fx.ts from Voiceover Pack by Kenney (kenney.nl) and Radio Noise 1 by Kresiek The Furry, both CC0
-- Downloaded: 2026-11-03
+- Attribution: Built by scripts/radio-fx.ts from the radio voice takes (voiced from Voiceover Pack by Kenney), Radio Noise 1 by Kresiek The Furry, The Free Firearm Sound Library (Ben Jaszczak et al.) and Explosions by EZduzziteh, all CC0
+- Downloaded: 2026-11-04
 - Files: `assets/radio-cues/**`

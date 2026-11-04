@@ -436,16 +436,6 @@
       "files": ["assets/yd-war-on-water/**"]
     },
     {
-      "id": "kenney-voiceover",
-      "name": "Voiceover Pack (40 lines)",
-      "author": "Kenney",
-      "source": "https://opengameart.org/content/voiceover-pack-40-lines",
-      "license": "CC0-1.0",
-      "attribution": "Voiceover Pack by Kenney (kenney.nl), CC0",
-      "downloaded": "2026-11-03",
-      "files": ["assets/kenney-voiceover/**"]
-    },
-    {
       "id": "kresiek-radio-noise",
       "name": "Radio Noise 1",
       "author": "Kresiek The Furry",
@@ -468,11 +458,11 @@
     {
       "id": "radio-cues",
       "name": "Radio comms cues",
-      "author": "Military-TD, from Kenney's Voiceover Pack and Kresiek The Furry's Radio Noise 1",
+      "author": "Military-TD, from its radio voice takes, Kresiek The Furry's Radio Noise 1, The Free Firearm Sound Library and EZduzziteh's Explosions",
       "source": "https://opengameart.org/content/voiceover-pack-40-lines",
       "license": "CC0-1.0",
-      "attribution": "Built by scripts/radio-fx.ts from Voiceover Pack by Kenney (kenney.nl) and Radio Noise 1 by Kresiek The Furry, both CC0",
-      "downloaded": "2026-11-03",
+      "attribution": "Built by scripts/radio-fx.ts from the radio voice takes (voiced from Voiceover Pack by Kenney), Radio Noise 1 by Kresiek The Furry, The Free Firearm Sound Library (Ben Jaszczak et al.) and Explosions by EZduzziteh, all CC0",
+      "downloaded": "2026-11-04",
       "files": ["assets/radio-cues/**"]
     }
   ]

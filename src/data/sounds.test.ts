@@ -41,8 +41,8 @@ describe('sound tuning', () => {
 });
 
 describe('RADIO_CUE_MS (#396)', () => {
-  it('makes wave start, victory and defeat radio cues', () => {
-    expect(Object.keys(RADIO_CUE_MS).sort()).toEqual(['defeat', 'victory', 'waveStart']);
+  it('makes wave start, reinforcements, victory and defeat radio cues', () => {
+    expect(Object.keys(RADIO_CUE_MS).sort()).toEqual(['defeat', 'victory', 'waveReinforcements', 'waveStart']);
   });
 
   it("gives each cue its file's length, 1–3.5 s", () => {

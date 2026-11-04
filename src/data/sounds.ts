@@ -10,6 +10,7 @@ import vehicleExplosionUrl from '../../assets/weapon-sounds/vehicleExplosion.ogg
 import infantryHitUrl from '../../assets/weapon-sounds/infantryHit.ogg?url';
 import leakUrl from '../../assets/rubberduck-100-sfx/bell_02.ogg?url';
 import waveStartUrl from '../../assets/radio-cues/waveStart.ogg?url';
+import waveReinforcementsUrl from '../../assets/radio-cues/waveReinforcements.ogg?url';
 import victoryUrl from '../../assets/radio-cues/victory.ogg?url';
 import defeatUrl from '../../assets/radio-cues/defeat.ogg?url';
 import type { ThrottleConfig } from '../audio/audioOut';
@@ -33,6 +34,7 @@ export const SOUND_URLS: Record<SoundId, string> = {
   infantryHit: infantryHitUrl,
   leak: leakUrl,
   waveStart: waveStartUrl,
+  waveReinforcements: waveReinforcementsUrl,
   victory: victoryUrl,
   defeat: defeatUrl,
 };
@@ -45,9 +47,10 @@ export const SOUND_THROTTLE: ThrottleConfig = { maxPlays: 3, windowMs: 150 };
  * `scripts/radio-fx.ts`, which prints the lengths; a test checks them against the files.
  */
 export const RADIO_CUE_MS: Partial<Record<SoundId, number>> = {
-  waveStart: 1283,
-  victory: 1880,
-  defeat: 2850,
+  waveStart: 2750,
+  waveReinforcements: 3500,
+  victory: 2180,
+  defeat: 2450,
 };
 
 /** How long before a mortar shell lands its incoming whistle starts: the whistle's length. */
