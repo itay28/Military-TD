@@ -326,23 +326,50 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-helicopter/**`
 
-## War on Water tracks
+## The Free Firearm Sound Library
 
-- Author: yd
-- Source: <https://opengameart.org/content/war-on-water-tracks>
+- Author: Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney
+- Source: <https://opengameart.org/content/the-free-firearm-sound-library>
 - License: CC0-1.0
-- Attribution: War on Water tracks by yd (opengameart.org), CC0
-- Downloaded: 2026-11-02
-- Files: `assets/yd-war-on-water/**`
+- Attribution: The Free Firearm Sound Library by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0, three excerpts
+- Downloaded: 2026-11-03
+- Files: `assets/free-firearm-sfx/**`
 
-## 25 CC0 bang / firework SFX
+## Missile Sound
 
-- Author: rubberduck
-- Source: <https://opengameart.org/content/25-cc0-bang-firework-sfx>
+- Author: mikeask
+- Source: <https://opengameart.org/content/missile-sound>
 - License: CC0-1.0
-- Attribution: 25 CC0 bang / firework SFX by rubberduck (OpenGameArt.org), CC0
-- Downloaded: 2026-11-02
-- Files: `assets/rubberduck-bang-sfx/**`
+- Attribution: Missile Sound by mikeask (OpenGameArt.org), CC0
+- Downloaded: 2026-11-03
+- Files: `assets/mikeask-missile/**`
+
+## Cannon Fire
+
+- Author: Thimras
+- Source: <https://opengameart.org/content/cannon-fire>
+- License: CC0-1.0
+- Attribution: Cannon Fire by Thimras (OpenGameArt.org), CC0
+- Downloaded: 2026-11-03
+- Files: `assets/thimras-cannon/**`
+
+## Explosions
+
+- Author: EZduzziteh
+- Source: <https://opengameart.org/content/explosions-4>
+- License: CC0-1.0
+- Attribution: Explosions by EZduzziteh (OpenGameArt.org), CC0
+- Downloaded: 2026-11-03
+- Files: `assets/ezduzziteh-explosions/**`
+
+## Weapon sounds
+
+- Author: Military-TD, from the four items above
+- Source: <https://opengameart.org/content/the-free-firearm-sound-library>
+- License: CC0-1.0
+- Attribution: Built by scripts/weapon-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Missile Sound by mikeask, Cannon Fire by Thimras and Explosions by EZduzziteh, all CC0
+- Downloaded: 2026-11-03
+- Files: `assets/weapon-sounds/**`
 
 ## 100 CC0 SFX
 
@@ -361,3 +388,12 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: 85 Short music jingles by Kenney (kenney.nl), CC0
 - Downloaded: 2026-11-02
 - Files: `assets/kenney-jingles/**`
+
+## War on Water tracks
+
+- Author: yd
+- Source: <https://opengameart.org/content/war-on-water-tracks>
+- License: CC0-1.0
+- Attribution: War on Water tracks by yd (opengameart.org), CC0
+- Downloaded: 2026-11-02
+- Files: `assets/yd-war-on-water/**`

@@ -35,7 +35,7 @@ describe('PR steward workflow', () => {
   });
 
   it('runs the steward with the project token, its switches and its secrets', () => {
-    expect(runsOf(yaml)).toEqual(['sleep 60', 'node scripts/pr-steward.ts']);
+    expect(runsOf(yaml)).toContain('node scripts/pr-steward.ts');
     for (const line of [
       'PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}',
       'AUTO_STEWARD: ${{ vars.AUTO_STEWARD }}',
@@ -47,23 +47,29 @@ describe('PR steward workflow', () => {
   });
 });
 
-// A burst of events (a relabel, an agent's comments, CI finishing) ends in one sweep (#293).
+// A burst of events ends in one sweep (#293), with no cancelled run (a red ✗ on the PR) and no
+// fixed wait (#417): scripts/debounce.ts lets the newest run sweep and the others pass green.
 describe('PR steward workflow: debounce', () => {
-  it('makes each event run wait in a group where a newer event cancels it', () => {
-    expect(yaml).toMatch(
-      /^ {2}debounce:\n(?: {4}.*\n)*? {4}concurrency:\n {6}group: pr-steward-debounce\n {6}cancel-in-progress: true\n/m,
-    );
-    expect(yaml).toMatch(/^ {2}debounce:\n(?: {4,}.*\n)*? {8}run: sleep 60\n/m);
+  const debounce = yaml.slice(yaml.indexOf('\n  debounce:\n'), yaml.indexOf('\n  pr-steward:\n'));
+
+  it('gates every run, scheduled and manual ones too, with the debounce script', () => {
+    expect(debounce).toContain('run: node scripts/debounce.ts');
+    expect(debounce).not.toContain("github.event_name != 'schedule'");
   });
 
-  it('lets scheduled and manual runs skip the wait', () => {
-    expect(yaml).toContain("github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'");
+  it('never cancels a run and never sleeps', () => {
+    expect(yaml).not.toContain('cancel-in-progress: true');
+    expect(yaml).not.toMatch(/run: sleep/);
+    expect(debounce).not.toContain('concurrency:');
   });
 
-  it('sweeps only after the wait finished, or for a scheduled or manual run', () => {
-    expect(yaml).toMatch(/^ {4}needs: debounce\n/m);
-    expect(yaml).toContain(
-      "always() && (needs.debounce.result == 'success' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')",
-    );
+  it('reads the workflow runs with the built-in token', () => {
+    expect(debounce).toMatch(/permissions:\n {6}actions: read\n/);
+    expect(debounce).toContain('GITHUB_TOKEN: ${{ github.token }}');
+    expect(debounce).toMatch(/outputs:\n {6}go: \$\{\{ steps\.gate\.outputs\.go \}\}\n/);
+  });
+
+  it('sweeps only when the gate says go', () => {
+    expect(yaml).toMatch(/^ {4}needs: debounce\n {4}if: needs\.debounce\.outputs\.go == 'true'\n/m);
   });
 });

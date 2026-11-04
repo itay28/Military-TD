@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createMusicController,
   trackFor,
+  TRACK_VOLUME,
   VOLUME_RAMP_MS,
   type MusicBackend,
   type MusicVoice,
@@ -61,6 +62,11 @@ describe('trackFor', () => {
 });
 
 describe('createMusicController', () => {
+  it('plays the menu track quieter than full volume (maintainer feedback on #334)', () => {
+    expect(TRACK_VOLUME.menu).toBeLessThan(1);
+    expect(TRACK_VOLUME.menu).toBeGreaterThan(0);
+  });
+
   it('plays nothing before the first input, then fades the current track in', () => {
     const { backend, voices } = fakeBackend();
     const music = createMusicController(backend, { muted: false });
@@ -69,7 +75,7 @@ describe('createMusicController', () => {
 
     music.unlock();
     expect(voices.map((v) => v.track)).toEqual(['menu']);
-    expect(voices[0]?.fades).toEqual([{ volume: 1, ms: 1000 }]);
+    expect(voices[0]?.fades).toEqual([{ volume: TRACK_VOLUME.menu, ms: 1000 }]);
   });
 
   it('keeps the track playing when the next scene has the same one', () => {
@@ -103,7 +109,7 @@ describe('createMusicController', () => {
     const [menu, game] = voices;
     expect(game?.track).toBe('game');
     expect(menu?.fades.at(-1)).toEqual({ volume: 0, ms: 1000 });
-    expect(game?.fades).toEqual([{ volume: 1, ms: 1000 }]);
+    expect(game?.fades).toEqual([{ volume: TRACK_VOLUME.game, ms: 1000 }]);
     expect(menu?.stopped).toBe(false);
     menu?.finishFade();
     expect(menu?.stopped).toBe(true);
@@ -130,7 +136,7 @@ describe('createMusicController', () => {
     expect(voices.map((v) => v.track)).toEqual(['menu', 'game', 'menu']);
     const [oldMenu, game, newMenu] = voices;
     expect(game?.fades.at(-1)).toEqual({ volume: 0, ms: 1000 });
-    expect(newMenu?.fades).toEqual([{ volume: 1, ms: 1000 }]);
+    expect(newMenu?.fades).toEqual([{ volume: TRACK_VOLUME.menu, ms: 1000 }]);
     oldMenu?.finishFade();
     game?.finishFade();
     expect(oldMenu?.stopped).toBe(true);
@@ -170,7 +176,7 @@ describe('createMusicController', () => {
     const music = createMusicController(backend, { muted: false, crossfadeMs: 250 });
     music.unlock();
     music.enterScene('Game');
-    expect(voices[0]?.fades).toEqual([{ volume: 1, ms: 250 }]);
+    expect(voices[0]?.fades).toEqual([{ volume: TRACK_VOLUME.game, ms: 250 }]);
   });
 
   it('unlocks only once', () => {
@@ -182,12 +188,12 @@ describe('createMusicController', () => {
     expect(voices).toHaveLength(1);
   });
 
-  it('fades a new track in to the volume it is given, not full volume', () => {
+  it('fades a new track in to the channel volume times the own level of the track', () => {
     const { backend, voices } = fakeBackend();
     const music = createMusicController(backend, { muted: false, volume: () => 0.48 });
     music.enterScene('Menu');
     music.unlock();
-    expect(voices[0]!.fades).toEqual([{ volume: 0.48, ms: 1000 }]);
+    expect(voices[0]!.fades).toEqual([{ volume: 0.48 * TRACK_VOLUME.menu, ms: 1000 }]);
   });
 
   it('ramps the playing track to the new volume on refreshVolume', () => {
@@ -201,7 +207,7 @@ describe('createMusicController', () => {
     expect(voices[0]!.fades.at(-1)).toEqual({ volume: 0, ms: VOLUME_RAMP_MS });
     volume = 0.3;
     music.refreshVolume();
-    expect(voices[0]!.fades.at(-1)).toEqual({ volume: 0.3, ms: VOLUME_RAMP_MS });
+    expect(voices[0]!.fades.at(-1)).toEqual({ volume: 0.3 * TRACK_VOLUME.menu, ms: VOLUME_RAMP_MS });
     expect(voices).toHaveLength(1);
   });
 
@@ -213,10 +219,10 @@ describe('createMusicController', () => {
     music.enterScene('Game');
     music.refreshVolume();
     expect(voices[0]!.fades).toEqual([
-      { volume: 0.5, ms: 1000 },
+      { volume: 0.5 * TRACK_VOLUME.menu, ms: 1000 },
       { volume: 0, ms: 1000 },
     ]);
-    expect(voices[1]!.fades.at(-1)).toEqual({ volume: 0.5, ms: VOLUME_RAMP_MS });
+    expect(voices[1]!.fades.at(-1)).toEqual({ volume: 0.5 * TRACK_VOLUME.game, ms: VOLUME_RAMP_MS });
   });
 
   it('does nothing on refreshVolume before the first input, when muted, or with nothing playing', () => {
