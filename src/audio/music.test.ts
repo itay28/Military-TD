@@ -5,6 +5,7 @@ import {
   DUCK_VOLUME,
   trackFor,
   TRACK_VOLUME,
+  VOLUME_RAMP_MS,
   type MusicBackend,
   type MusicVoice,
   type TrackId,
@@ -187,6 +188,59 @@ describe('createMusicController', () => {
     music.unlock();
     music.unlock();
     expect(voices).toHaveLength(1);
+  });
+
+  it('fades a new track in to the channel volume times the own level of the track', () => {
+    const { backend, voices } = fakeBackend();
+    const music = createMusicController(backend, { muted: false, volume: () => 0.48 });
+    music.enterScene('Menu');
+    music.unlock();
+    expect(voices[0]!.fades).toEqual([{ volume: 0.48 * TRACK_VOLUME.menu, ms: 1000 }]);
+  });
+
+  it('ramps the playing track to the new volume on refreshVolume', () => {
+    const { backend, voices } = fakeBackend();
+    let volume = 0.5;
+    const music = createMusicController(backend, { muted: false, volume: () => volume });
+    music.enterScene('Menu');
+    music.unlock();
+    volume = 0;
+    music.refreshVolume();
+    expect(voices[0]!.fades.at(-1)).toEqual({ volume: 0, ms: VOLUME_RAMP_MS });
+    volume = 0.3;
+    music.refreshVolume();
+    expect(voices[0]!.fades.at(-1)).toEqual({ volume: 0.3 * TRACK_VOLUME.menu, ms: VOLUME_RAMP_MS });
+    expect(voices).toHaveLength(1);
+  });
+
+  it('leaves a track that is fading out alone on refreshVolume', () => {
+    const { backend, voices } = fakeBackend();
+    const music = createMusicController(backend, { muted: false, volume: () => 0.5 });
+    music.enterScene('Menu');
+    music.unlock();
+    music.enterScene('Game');
+    music.refreshVolume();
+    expect(voices[0]!.fades).toEqual([
+      { volume: 0.5 * TRACK_VOLUME.menu, ms: 1000 },
+      { volume: 0, ms: 1000 },
+    ]);
+    expect(voices[1]!.fades.at(-1)).toEqual({ volume: 0.5 * TRACK_VOLUME.game, ms: VOLUME_RAMP_MS });
+  });
+
+  it('does nothing on refreshVolume before the first input, when muted, or with nothing playing', () => {
+    const { backend, voices } = fakeBackend();
+    const locked = createMusicController(backend, { muted: false, volume: () => 0.5 });
+    locked.enterScene('Menu');
+    locked.refreshVolume();
+    const muted = createMusicController(backend, { muted: true, volume: () => 0.5 });
+    muted.enterScene('Menu');
+    muted.unlock();
+    muted.refreshVolume();
+    const silent = createMusicController(backend, { muted: false });
+    silent.enterScene('Boot');
+    silent.unlock();
+    expect(() => silent.refreshVolume()).not.toThrow();
+    expect(voices).toEqual([]);
   });
 });
 

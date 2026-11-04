@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { createMusicController } from './audio/music';
 import { createPhaserMusicBackend, type LoopingSound } from './audio/phaserMusic';
 import { MUSIC_REGISTRY_KEY } from './audio/radio';
+import { createAudioMix } from './audio/volume';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
@@ -43,6 +44,8 @@ const storage = flags.test && !flags.persist ? createMemoryStorage() : browserSt
 const settings = createPersistedSettings(storage);
 // Saved progress (maps won, best stars) lives under its own key: the Game records wins, the Level select unlocks from it.
 const progress = createPersistedProgress(storage);
+// Volume (#67): master × channel from the settings, silent while the tab is hidden. Music and sound effects both read it.
+const audioMix = createAudioMix(settings, document);
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
@@ -55,6 +58,7 @@ const gameScene = new GameScene({
   pauseMenuRoot,
   flags,
   settings,
+  audioMix,
   openSettings,
   progress,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
@@ -98,10 +102,11 @@ const music = createMusicController(
       return () => window.clearInterval(id);
     },
   }),
-  { muted: flags.test },
+  { muted: flags.test, volume: () => audioMix.volume('music') },
 );
 // The Game scene ducks the music under its radio cues (#396).
 game.registry.set(MUSIC_REGISTRY_KEY, music);
+audioMix.subscribe(() => music.refreshVolume());
 game.events.once(Phaser.Core.Events.READY, () => {
   for (const scene of game.scene.getScenes(false)) {
     scene.events.on(Phaser.Scenes.Events.START, () => music.enterScene(scene.scene.key));
