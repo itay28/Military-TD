@@ -109,3 +109,29 @@ test('test mode keeps settings in memory by default, so runs do not leak into ea
   await openSettingsFromPause(page);
   await expect(page.getByRole('radio', { name: '×1' })).toBeChecked();
 });
+
+// From #67: master, music and sound-effects volume, keyboard operable and saved with the other settings.
+
+test('the volume sliders move with the keyboard, announce their value, and are kept after a reload', async ({
+  page,
+}) => {
+  await openGame(page, { persist: true });
+  await openSettingsFromPause(page);
+  const music = page.getByRole('slider', { name: 'Music volume' });
+  await expect(music).toHaveValue('60');
+  await expect(music).toHaveAttribute('aria-valuetext', '60%');
+
+  await music.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(music).toHaveValue('55');
+  await expect(music).toHaveAttribute('aria-valuetext', '55%');
+  await page.getByRole('slider', { name: 'Master volume' }).focus();
+  await page.keyboard.press('Home');
+  await expect(page.getByRole('slider', { name: 'Master volume' })).toHaveAttribute('aria-valuetext', '0%');
+
+  await openGame(page, { persist: true });
+  await openSettingsFromPause(page);
+  await expect(page.getByRole('slider', { name: 'Master volume' })).toHaveValue('0');
+  await expect(page.getByRole('slider', { name: 'Music volume' })).toHaveValue('55');
+  await expect(page.getByRole('slider', { name: 'Sound effects volume' })).toHaveValue('80');
+});
