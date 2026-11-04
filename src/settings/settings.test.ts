@@ -1,24 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createSettings, DEFAULT_SETTINGS } from './settings';
 
 describe('createSettings', () => {
-  it('starts at the defaults: ×1 and only the selected or hovered tower’s range', () => {
-    expect(DEFAULT_SETTINGS).toEqual({ defaultSpeed: 1, showAllRanges: false });
+  it('starts at the defaults: ×1, only the selected or hovered tower’s range, and 80/60/80 volumes', () => {
+    expect(DEFAULT_SETTINGS).toEqual({
+      defaultSpeed: 1,
+      showAllRanges: false,
+      masterVolume: 80,
+      musicVolume: 60,
+      sfxVolume: 80,
+    });
     expect(createSettings().get()).toEqual(DEFAULT_SETTINGS);
   });
 
   it('starts at the values it is given', () => {
-    expect(createSettings({ defaultSpeed: 3, showAllRanges: true }).get()).toEqual({
-      defaultSpeed: 3,
-      showAllRanges: true,
-    });
+    const given = { defaultSpeed: 3, showAllRanges: true, masterVolume: 10, musicVolume: 20, sfxVolume: 30 } as const;
+    expect(createSettings(given).get()).toEqual(given);
   });
 
   it('merges a change into the current settings', () => {
     const settings = createSettings();
     settings.set({ defaultSpeed: 2 });
     settings.set({ showAllRanges: true });
-    expect(settings.get()).toEqual({ defaultSpeed: 2, showAllRanges: true });
+    settings.set({ musicVolume: 0 });
+    expect(settings.get()).toEqual({ ...DEFAULT_SETTINGS, defaultSpeed: 2, showAllRanges: true, musicVolume: 0 });
   });
 
   it('rejects a default speed that is not ×1, ×2 or ×3', () => {
@@ -27,10 +32,46 @@ describe('createSettings', () => {
     expect(settings.get().defaultSpeed).toBe(1);
   });
 
+  it.each([
+    ['masterVolume', -1],
+    ['musicVolume', 101],
+    ['sfxVolume', 2.5],
+    ['masterVolume', Number.NaN],
+  ] as const)('rejects %s = %s: a volume is a whole number from 0 to 100', (field, value) => {
+    const settings = createSettings();
+    expect(() => settings.set({ [field]: value })).toThrow(RangeError);
+    expect(settings.get()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('accepts the ends of the volume range', () => {
+    const settings = createSettings();
+    settings.set({ masterVolume: 0, sfxVolume: 100 });
+    expect(settings.get()).toMatchObject({ masterVolume: 0, sfxVolume: 100 });
+  });
+
   it('hands out snapshots, so a caller cannot change the settings by mutating one', () => {
     const settings = createSettings();
     const before = settings.get();
     settings.set({ showAllRanges: true });
     expect(before.showAllRanges).toBe(false);
+  });
+
+  it('tells subscribers about each change, until they unsubscribe', () => {
+    const settings = createSettings();
+    const listener = vi.fn();
+    const unsubscribe = settings.subscribe(listener);
+    settings.set({ sfxVolume: 40 });
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+    settings.set({ sfxVolume: 50 });
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not tell subscribers about a change it rejects', () => {
+    const settings = createSettings();
+    const listener = vi.fn();
+    settings.subscribe(listener);
+    expect(() => settings.set({ masterVolume: 200 })).toThrow(RangeError);
+    expect(listener).not.toHaveBeenCalled();
   });
 });
