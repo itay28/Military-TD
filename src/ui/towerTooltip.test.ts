@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LAYER_NAME, TOWER_NAMES, TOWER_ROLES } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
-import { placeTip, TIP_GAP, tooltipText, towerTooltip } from './towerTooltip';
+import { placeTip, TIP_GAP, towerTooltip } from './towerTooltip';
 
 const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
 
@@ -21,9 +21,17 @@ describe('towerTooltip', () => {
   });
 
   it('spells out the Rifle Nest', () => {
-    expect(tooltipText(towerTooltip('rifleNest'))).toBe(
-      `Rifle Nest\n${TOWER_ROLES.rifleNest}\nCost: 50\nDamage: 10\nRange: 2.5 tiles\nFire rate: 2/s\nHits: Ground, Air`,
-    );
+    expect(towerTooltip('rifleNest')).toEqual({
+      name: 'Rifle Nest',
+      role: TOWER_ROLES.rifleNest,
+      rows: [
+        { label: 'Cost', value: '50' },
+        { label: 'Damage', value: '10' },
+        { label: 'Range', value: '2.5 tiles' },
+        { label: 'Fire rate', value: '2/s' },
+        { label: 'Hits', value: 'Ground, Air' },
+      ],
+    });
   });
 
   it('lists Ground first whatever the stats order, and shows only what a kind can hit', () => {

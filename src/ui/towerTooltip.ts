@@ -35,11 +35,6 @@ export function towerTooltip(kind: TowerKind): TowerTooltip {
   };
 }
 
-/** The tooltip as plain lines: the name, the role line, then `Label: value` rows. */
-export function tooltipText({ name, role, rows }: TowerTooltip): string {
-  return [name, role, ...rows.map(({ label, value }) => `${label}: ${value}`)].join('\n');
-}
-
 export interface Rect {
   readonly left: number;
   readonly top: number;
