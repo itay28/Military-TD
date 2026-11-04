@@ -16,6 +16,7 @@ export const SOUND_IDS = [
   'infantryHit',
   'leak',
   'waveStart',
+  'waveReinforcements',
   'victory',
   'defeat',
 ] as const;
@@ -44,9 +45,9 @@ export const SHOT_SOUND: Record<TowerKind, Record<Faction, SoundId>> = {
 export type SoundEvent =
   | { readonly type: 'towerFired' | 'shellFired'; readonly kind: TowerKind | undefined }
   | { readonly type: 'enemyKilled'; readonly enemy: EnemyKind }
-  | {
-      readonly type: 'shellIncoming' | 'shellLanded' | 'enemyLeaked' | 'waveStarted' | 'victory' | 'defeat';
-    };
+  /** `holdovers`: enemies already on the field when the wave started. Any at all calls in reinforcements. */
+  | { readonly type: 'waveStarted'; readonly holdovers: number }
+  | { readonly type: 'shellIncoming' | 'shellLanded' | 'enemyLeaked' | 'victory' | 'defeat' };
 
 /** The sound a sim event makes on a map whose towers are `defender`'s, or `null` for none. */
 export function soundFor(event: SoundEvent, defender: Faction): SoundId | null {
@@ -63,7 +64,7 @@ export function soundFor(event: SoundEvent, defender: Faction): SoundId | null {
     case 'enemyLeaked':
       return 'leak';
     case 'waveStarted':
-      return 'waveStart';
+      return event.holdovers > 0 ? 'waveReinforcements' : 'waveStart';
     case 'victory':
       return 'victory';
     case 'defeat':

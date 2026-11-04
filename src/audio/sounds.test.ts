@@ -57,9 +57,14 @@ describe('soundFor', () => {
 
   it('maps leaks, wave start and the end of the game', () => {
     expect(soundFor({ type: 'enemyLeaked' }, 'us')).toBe('leak');
-    expect(soundFor({ type: 'waveStarted' }, 'us')).toBe('waveStart');
+    expect(soundFor({ type: 'waveStarted', holdovers: 0 }, 'us')).toBe('waveStart');
     expect(soundFor({ type: 'victory' }, 'us')).toBe('victory');
     expect(soundFor({ type: 'defeat' }, 'us')).toBe('defeat');
+  });
+
+  it('calls in reinforcements when enemies from the last wave are still alive at wave start (#396)', () => {
+    expect(soundFor({ type: 'waveStarted', holdovers: 1 }, 'us')).toBe('waveReinforcements');
+    expect(soundFor({ type: 'waveStarted', holdovers: 7 }, 'russia')).toBe('waveReinforcements');
   });
 
   it('is silent for a shot whose tower is gone', () => {
