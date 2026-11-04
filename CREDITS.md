@@ -388,3 +388,12 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: 85 Short music jingles by Kenney (kenney.nl), CC0
 - Downloaded: 2026-11-02
 - Files: `assets/kenney-jingles/**`
+
+## War on Water tracks
+
+- Author: yd
+- Source: <https://opengameart.org/content/war-on-water-tracks>
+- License: CC0-1.0
+- Attribution: War on Water tracks by yd (opengameart.org), CC0
+- Downloaded: 2026-11-02
+- Files: `assets/yd-war-on-water/**`
