@@ -5,6 +5,7 @@ import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
 import { distanceVolume, viewCenter } from '../audio/distance';
 import { createPhaserAudio } from '../audio/phaserAudio';
+import type { AudioMix } from '../audio/volume';
 import { createWhistleTracker } from '../audio/whistle';
 import { SOUND_FALLOFF, SOUND_THROTTLE, WHISTLE_LEAD_MS } from '../data/sounds';
 import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
@@ -152,6 +153,8 @@ export interface GameSceneOptions {
   readonly flags: TestFlags;
   /** The player's settings, read live: each game starts at the default speed, and range rings follow every frame. */
   readonly settings: SettingsStore;
+  /** The audio mix (#67): sound effects play at its SFX volume, silent while the tab is hidden. */
+  readonly audioMix: AudioMix;
   /** Opens the Settings screen, from the pause menu. */
   readonly openSettings: OpenSettings;
   /** Saved progress: each Victory records its Stars here. */
@@ -169,6 +172,7 @@ export class GameScene extends Phaser.Scene {
   private readonly pauseMenuRoot: HTMLElement;
   private readonly flags: TestFlags;
   private readonly settings: SettingsStore;
+  private readonly audioMix: AudioMix;
   private readonly openSettings: OpenSettings;
   private readonly progress: ProgressStore;
   private readonly onCreate: (() => void) | undefined;
@@ -237,6 +241,7 @@ export class GameScene extends Phaser.Scene {
     pauseMenuRoot,
     flags,
     settings,
+    audioMix,
     openSettings,
     progress,
     onCreate,
@@ -249,6 +254,7 @@ export class GameScene extends Phaser.Scene {
     this.pauseMenuRoot = pauseMenuRoot;
     this.flags = flags;
     this.settings = settings;
+    this.audioMix = audioMix;
     this.openSettings = openSettings;
     this.progress = progress;
     this.onCreate = onCreate;
@@ -434,14 +440,19 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Plays the sim's events as sounds (#45). Test mode is silent, so e2e runs don't change. Otherwise each sound is
-   * throttled, waits for the browser's first input, and stays silent if its file didn't load. A shot sounds like the map
-   * defender's weapon, and a sound with a place on the map is quieter the further it is from the camera's centre (#404).
+   * throttled, waits for the browser's first input, plays at the mix's SFX volume (#67) and stays silent if its file didn't
+   * load. A shot sounds like the map defender's weapon, and a sound with a place on the map is quieter the further it is
+   * from the camera's centre (#404).
    */
   private wireSounds(): void {
     const audio = this.flags.test
       ? silentAudio
       : throttleAudio(
-          createPhaserAudio(this.sound, (key) => this.cache.audio.exists(key)),
+          createPhaserAudio(
+            this.sound,
+            (key) => this.cache.audio.exists(key),
+            () => this.audioMix.volume('sfx'),
+          ),
           SOUND_THROTTLE,
           () => this.time.now,
         );
