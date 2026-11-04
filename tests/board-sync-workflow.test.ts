@@ -36,7 +36,7 @@ describe('board sync workflow', () => {
   });
 
   it('runs the sync with the project token from secrets', () => {
-    expect(runsOf(yaml)).toEqual(['sleep 60', 'node scripts/board-sync.ts']);
+    expect(runsOf(yaml)).toContain('node scripts/board-sync.ts');
     expect(yaml).toContain('PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}');
   });
 });
@@ -47,29 +47,60 @@ describe('board sync workflow: auto-start', () => {
     expect(yaml).toContain('AUTO_STACK: ${{ vars.AUTO_STACK }}');
   });
 
+  it('passes the feature freeze switch from its repo variable (#84)', () => {
+    expect(yaml).toContain('FEATURE_FREEZE: ${{ vars.FEATURE_FREEZE }}');
+  });
+
   it('passes both routine triggers from secrets', () => {
     for (const name of ['ROUTINE_SONNET_URL', 'ROUTINE_SONNET_TOKEN', 'ROUTINE_OPUS_URL', 'ROUTINE_OPUS_TOKEN'])
       expect(yaml).toContain(`${name}: \${{ secrets.${name} }}`);
   });
 });
 
-// A burst of events (a relabel, an agent's comments, CI finishing) ends in one sweep (#293).
+// A burst of events ends in one sweep (#293), with no cancelled run (a red ✗ on the PR) and no
+// fixed wait (#417): scripts/debounce.ts lets the newest run sweep and the others pass green.
 describe('board sync workflow: debounce', () => {
-  it('makes each event run wait in a group where a newer event cancels it', () => {
-    expect(yaml).toMatch(
-      /^ {2}debounce:\n(?: {4}.*\n)*? {4}concurrency:\n {6}group: board-sync-debounce\n {6}cancel-in-progress: true\n/m,
-    );
-    expect(yaml).toMatch(/^ {2}debounce:\n(?: {4,}.*\n)*? {8}run: sleep 60\n/m);
+  const debounce = yaml.slice(yaml.indexOf('\n  debounce:\n'), yaml.indexOf('\n  board-sync:\n'));
+
+  it('gates every run, scheduled and manual ones too, with the debounce script', () => {
+    expect(debounce).toContain('run: node scripts/debounce.ts');
+    expect(debounce).not.toContain("github.event_name != 'schedule'");
   });
 
-  it('lets scheduled and manual runs skip the wait', () => {
-    expect(yaml).toContain("github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'");
+  it('never cancels a run and never sleeps', () => {
+    expect(yaml).not.toContain('cancel-in-progress: true');
+    expect(yaml).not.toMatch(/run: sleep/);
+    expect(debounce).not.toContain('concurrency:');
   });
 
-  it('sweeps only after the wait finished, or for a scheduled or manual run', () => {
-    expect(yaml).toMatch(/^ {4}needs: debounce\n/m);
-    expect(yaml).toContain(
-      "always() && (needs.debounce.result == 'success' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')",
-    );
+  it('reads the workflow runs with the built-in token', () => {
+    expect(debounce).toMatch(/permissions:\n {6}actions: read\n/);
+    expect(debounce).toContain('GITHUB_TOKEN: ${{ github.token }}');
+    expect(debounce).toMatch(/outputs:\n {6}go: \$\{\{ steps\.gate\.outputs\.go \}\}\n/);
+  });
+
+  it('sweeps only when the gate says go', () => {
+    expect(yaml).toMatch(/^ {4}needs: debounce\n {4}if: needs\.debounce\.outputs\.go == 'true'\n/m);
+  });
+});
+
+// A hand-off label on a closed PR or issue is stale: nobody needs to act on it any more (#417).
+describe('board sync workflow: clear hand-off labels on close', () => {
+  const job = yaml.slice(yaml.indexOf('\n  clear-hand-off:\n'));
+
+  it('runs only when a PR or an issue is closed, and not for fork PRs', () => {
+    expect(job).toContain("if: github.event.action == 'closed'");
+    expect(job).toContain('!github.event.pull_request.head.repo.fork');
+  });
+
+  it('may write labels with the built-in token', () => {
+    expect(job).toMatch(/permissions:\n {6}issues: write\n {6}pull-requests: write\n/);
+    expect(job).toContain('GH_TOKEN: ${{ github.token }}');
+  });
+
+  it('removes only the hand-off labels the item has, needs-you and needs-approval', () => {
+    expect(job).toContain('(.pull_request // .issue).labels[].name');
+    expect(job).toContain("grep -xE 'needs-you|needs-approval'");
+    expect(job).toContain('gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels/$label"');
   });
 });

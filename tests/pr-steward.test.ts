@@ -14,6 +14,7 @@ import {
   codeCommittedAt,
   criticalFiles,
   renamedFiles,
+  renameSources,
   currentChecks,
   decide,
   mainCiRed,
@@ -21,6 +22,7 @@ import {
   milestoneDone,
   PR_QUERY,
   settingsFromEnv,
+  switchedOn,
   toStewardPr,
   type Decision,
   type PrComment,
@@ -57,6 +59,7 @@ const maintainer = (minutesAgo: number): PrComment => ({
 
 // A PR that is ready to merge: green, reviewed, and the review answered.
 const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
+  id: 'PR_7',
   number: 7,
   title: 'feat: mortar tower',
   body: 'Closes #3',
@@ -79,6 +82,7 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
   files: ['src/sim/towers.ts', 'tests/sim/towers.test.ts'],
   renamed: [],
   codeCommittedAt: at(40),
+  lastCommitAt: at(40),
   comments: [review(60), agent(DONE_MARKER, 30)],
   ...over,
 });
@@ -87,6 +91,70 @@ const reasons = (p: StewardPr) => {
   const d = decide(p, now);
   return d.kind === 'steward' || d.kind === 'stuck' ? d.reasons : [];
 };
+
+describe('decide: draft PRs (#326)', () => {
+  const red = [
+    { name: 'ci', state: 'failure' as const },
+    { name: 'e2e', state: 'success' as const },
+  ];
+  const idleRed = (over: Partial<StewardPr> = {}) =>
+    pr({
+      isDraft: true,
+      checks: red,
+      lastCommitAt: at(90),
+      codeCommittedAt: at(90),
+      comments: [agent('x', 120)],
+      ...over,
+    });
+
+  it('still skips an active draft', () => {
+    expect(kind(pr({ isDraft: true }))).toBe('skip');
+  });
+
+  it('fires a ci round for a draft that is red and idle for an hour', () => {
+    const d = decide(idleRed(), now);
+    expect(d).toMatchObject({ kind: 'steward', reasons: ['ci'], round: 1 });
+  });
+
+  it('skips a red draft with a recent commit or comment', () => {
+    expect(kind(idleRed({ lastCommitAt: at(30) }))).toBe('skip');
+    expect(kind(idleRed({ comments: [maintainer(30)] }))).toBe('skip');
+  });
+
+  it('skips a green idle draft, and waits while a red draft still has checks running', () => {
+    expect(kind(idleRed({ checks: [{ name: 'ci', state: 'success' }] }))).toBe('skip');
+    expect(kind(idleRed({ checks: [...red, { name: 'lint', state: 'pending' }] }))).toBe('wait');
+  });
+
+  it('only ever fires a ci round: a conflict or review finding does not start one on a draft', () => {
+    expect(reasons(idleRed({ mergeable: 'CONFLICTING', comments: [review(100)] }))).toEqual(['ci']);
+  });
+
+  it('marks a draft ready when its round ended green', () => {
+    const done = pr({
+      isDraft: true,
+      lastCommitAt: at(5),
+      comments: [action(ROUND_MARKER, 30), agent(DONE_MARKER, 5)],
+    });
+    expect(kind(done)).toBe('ready');
+  });
+
+  it('never merges, reviews or updates a draft', () => {
+    expect(kind(pr({ isDraft: true, behind: true, comments: [] }))).toBe('skip');
+  });
+
+  it('does not mark a draft ready while its checks are red or running, or with a conflict', () => {
+    const base = { isDraft: true, comments: [action(ROUND_MARKER, 30), agent(DONE_MARKER, 5)] };
+    expect(kind(pr({ ...base, checks: red }))).not.toBe('ready');
+    expect(kind(pr({ ...base, checks: [{ name: 'ci', state: 'pending' }] }))).not.toBe('ready');
+    expect(kind(pr({ ...base, mergeable: 'CONFLICTING' }))).not.toBe('ready');
+  });
+
+  it('marks ready only when the steward switch is on', () => {
+    expect(switchedOn('ready', { merge: true })).toBe(false);
+    expect(switchedOn('ready', { merge: false, steward: { url: 'u', token: 't' } })).toBe(true);
+  });
+});
 
 describe('decide: skip', () => {
   it('skips drafts, forks and held PRs', () => {
@@ -102,8 +170,28 @@ describe('decide: skip', () => {
     expect(decide(answered, now)).toMatchObject({
       kind: 'steward',
       reasons: ['review', 'comment'],
-      clearNeedsYou: true,
+      clearHandOff: ['needs-you'],
     });
+  });
+
+  it('treats needs-approval as a hand-off too, and clears it once the maintainer comments (#417)', () => {
+    const asked = pr({ labels: ['needs-approval'], comments: [review(90), action(STUCK_MARKER, 20)] });
+    expect(kind(asked)).toBe('skip');
+    expect(decide({ ...asked, comments: [...asked.comments, maintainer(5)] }, now)).toMatchObject({
+      kind: 'steward',
+      clearHandOff: ['needs-approval'],
+    });
+  });
+
+  it('leaves a stranded draft alone while it waits for an approval (#417)', () => {
+    const draft = pr({
+      isDraft: true,
+      labels: ['needs-approval'],
+      checks: [{ name: 'ci', state: 'failure' }],
+      lastCommitAt: at(600),
+      comments: [action(STUCK_MARKER, 600)],
+    });
+    expect(decide(draft, now)).toEqual({ kind: 'skip', why: 'draft' });
   });
 });
 
@@ -410,7 +498,7 @@ describe('decide: steward rounds', () => {
         reasons: ['ci'],
         round: 1,
         retry: true,
-        clearNeedsYou: false,
+        clearHandOff: [],
       });
     });
 
@@ -725,11 +813,22 @@ describe('decide: approval gate (#206)', () => {
     expect(decide(pr({ files: null }), now)).toMatchObject({ kind: 'approval' });
   });
 
-  it('asks for approval when a file was renamed, since its old path may be critical', () => {
-    expect(decide(pr({ renamed: ['docs/notes.md'] }), now)).toEqual({
+  it("asks for approval when a file was renamed and its old path isn't known", () => {
+    expect(decide(pr({ renamed: [{ path: 'docs/notes.md', from: null }] }), now)).toEqual({
       kind: 'approval',
-      paths: ['docs/notes.md (renamed: its old path may be critical)'],
+      paths: ['docs/notes.md (renamed: its old path is unknown)'],
     });
+  });
+
+  it('asks for approval when a file was renamed away from a critical path', () => {
+    expect(decide(pr({ renamed: [{ path: 'tools/notes.md', from: 'docs/adr/0009-x.md' }] }), now)).toEqual({
+      kind: 'approval',
+      paths: ['tools/notes.md (renamed from docs/adr/0009-x.md)'],
+    });
+  });
+
+  it('merges a rename whose old path is game code, like #351 (#417)', () => {
+    expect(kind(pr({ renamed: [{ path: 'src/sim/aim.ts', from: 'src/sim/turn.ts' }] }))).toBe('merge');
   });
 
   it('asks again when code was committed after the approval', () => {
@@ -768,7 +867,7 @@ describe('decide: approval gate (#206)', () => {
 
   it('waits on the maintainer after asking, then merges on /approve', () => {
     const asked = { ...action(`${STUCK_MARKER}\n${APPROVAL_MARKER}`, 20) };
-    const waiting = critical({ labels: ['needs-you'], comments: [review(60), agent(DONE_MARKER, 30), asked] });
+    const waiting = critical({ labels: ['needs-approval'], comments: [review(60), agent(DONE_MARKER, 30), asked] });
     expect(kind(waiting)).toBe('skip');
     expect(kind({ ...waiting, comments: [...waiting.comments, approve(5)] })).toBe('merge');
   });
@@ -783,9 +882,20 @@ describe('changedFiles', () => {
     expect(changedFiles(null)).toBeNull();
   });
 
-  it('lists renamed files by their new path', () => {
-    expect(renamedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts', 'RENAMED')] })).toEqual(['b.ts']);
+  it('lists renamed files by their new path, old path not known yet', () => {
+    expect(renamedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts', 'RENAMED')] })).toEqual([
+      { path: 'b.ts', from: null },
+    ]);
     expect(renamedFiles(null)).toEqual([]);
+  });
+
+  it("fills in each rename's old path from the REST file list", () => {
+    const rest = [
+      { filename: 'a.ts', status: 'modified' },
+      { filename: 'b.ts', status: 'renamed', previous_filename: 'scripts/b.ts' },
+    ];
+    expect(renameSources([{ path: 'b.ts', from: null }], rest)).toEqual([{ path: 'b.ts', from: 'scripts/b.ts' }]);
+    expect(renameSources([{ path: 'c.ts', from: null }], rest)).toEqual([{ path: 'c.ts', from: null }]);
   });
 });
 
@@ -824,6 +934,7 @@ const fireOk = vi.fn<Fetch>(async (url: string) =>
 // like the conflict a round had already resolved (#296).
 describe('toStewardPr: base SHA', () => {
   const node = (over: Partial<Parameters<typeof toStewardPr>[0]> = {}): Parameters<typeof toStewardPr>[0] => ({
+    id: 'PR_1',
     number: 1,
     title: 't',
     body: '',
@@ -865,7 +976,7 @@ describe('act', () => {
     reasons: ['ci', 'review'],
     round: 2,
     retry: false,
-    clearNeedsYou: false,
+    clearHandOff: [],
   };
 
   it('fires a steward round with the PR, reasons and round, then posts the round marker with the session link', async () => {
@@ -882,10 +993,11 @@ describe('act', () => {
     expect(body).toContain(roundMeta(['ci', 'review'], 'base-1'));
   });
 
-  it('removes needs-you when a maintainer comment restarted the PR', async () => {
+  it('removes the hand-off labels when a maintainer comment restarted the PR', async () => {
     fireOk.mockClear();
-    await act(pr(), { ...steward, clearNeedsYou: true }, 'gh-token', settings, fireOk);
+    await act(pr(), { ...steward, clearHandOff: ['needs-you', 'needs-approval'] }, 'gh-token', settings, fireOk);
     expect(calls(fireOk)).toContain(`DELETE ${api}/issues/7/labels/needs-you`);
+    expect(calls(fireOk)).toContain(`DELETE ${api}/issues/7/labels/needs-approval`);
   });
 
   it('says a retried round is a retry', async () => {
@@ -957,9 +1069,10 @@ describe('act', () => {
     expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
     const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
     expect(body).toContain(STUCK_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: ['needs-you'] });
   });
 
-  it('asks for approval: a summary naming the paths with both markers, then needs-you', async () => {
+  it('asks for approval: a summary naming the paths with both markers, then needs-approval (#417)', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await act(pr(), { kind: 'approval', paths: ['docs/adr/0009-new.md'] }, 'gh-token', settings, fetchFn);
     expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
@@ -968,6 +1081,7 @@ describe('act', () => {
     expect(body).toContain('/approve');
     expect(body).toContain(STUCK_MARKER);
     expect(body).toContain(APPROVAL_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: ['needs-approval'] });
   });
 
   it('asks for approval only when merging is on', async () => {
@@ -996,6 +1110,23 @@ describe('act', () => {
       commit_message: 'Closes #3',
       sha: 'abc123',
     });
+  });
+
+  it('marks a green draft ready with the GraphQL mutation, then says so (#326)', async () => {
+    const gql = vi.fn(async () => new Response(JSON.stringify({ data: { markPullRequestReadyForReview: {} } })));
+    vi.stubGlobal('fetch', gql);
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    try {
+      await act({ ...pr(), id: 'PR_node' }, { kind: 'ready' }, 'gh-token', settings, fetchFn);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    const [url, init] = gql.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.github.com/graphql');
+    const sent = JSON.parse(init.body as string) as { query: string; variables: { id: string } };
+    expect(sent.query).toContain('markPullRequestReadyForReview');
+    expect(sent.variables).toEqual({ id: 'PR_node' });
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`]);
   });
 
   it('hands off when GitHub refuses the merge', async () => {

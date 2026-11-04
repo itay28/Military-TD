@@ -3,6 +3,7 @@ import {
   HANDOFF_MARKER,
   HOLD_LABEL,
   INFRA_LABEL,
+  isFeatureWork,
   NEEDS_INFO_LABEL,
   NEEDS_YOU_LABEL,
   READY_LABEL,
@@ -22,6 +23,8 @@ export const IDLE_TITLE = 'Pipeline is idle';
 const INFRA_EPIC = 24;
 const TRIAGE_LABEL = 'needs-triage';
 const HUMAN_LABEL = 'ready-for-human';
+/** The PR steward's approval hand-off (#206, #417). */
+const NEEDS_APPROVAL_LABEL = 'needs-approval';
 const REASONS = /<!-- pipeline-starved:reasons ?(.*?) -->/;
 
 /**
@@ -70,6 +73,8 @@ export interface ReasonOptions {
   readonly defaultBranch: string;
   /** AUTO_STACK is on. */
   readonly stack: boolean;
+  /** FEATURE_FREEZE is on: feature work is listed as frozen (#84). */
+  readonly freeze?: boolean;
   /** The idle issue itself, left out. */
   readonly exclude?: number | undefined;
 }
@@ -78,9 +83,9 @@ const labelList = (labels: readonly string[]) => labels.map((l) => `\`${l}\``).j
 
 /**
  * Why nothing is startable, grouped by what would unblock it: waiting on you (`needs-you`/`needs-info` issues
- * and PRs, `ready-for-human` in the current milestone), needs triage (counts in the current and next
+ * and PRs, `needs-approval` PRs, `ready-for-human` in the current milestone), needs triage (counts in the current and next
  * milestone), not startable (`ready-for-agent` issues in those milestones, or with none, that lack a Size, are
- * XL, are game work with no milestone, or are blocked), and nothing left (neither milestone has an open
+ * XL, are game work with no milestone, are blocked, or are frozen by the feature freeze), and nothing left (neither milestone has an open
  * `ready-for-agent` issue).
  */
 export function idleReasons(
@@ -88,7 +93,7 @@ export function idleReasons(
   prs: readonly IdlePr[],
   order: readonly number[],
   titles: ReadonlyMap<number, string>,
-  { defaultBranch, stack, exclude }: ReasonOptions,
+  { defaultBranch, stack, freeze = false, exclude }: ReasonOptions,
 ): Reason[] {
   const [current, next] = order;
   const open = issues.filter((i) => i.number !== exclude).sort((a, b) => a.number - b.number);
@@ -107,7 +112,7 @@ export function idleReasons(
     });
   }
   for (const pr of [...prs].sort((a, b) => a.number - b.number)) {
-    const asks = pr.labels.filter((l) => l === NEEDS_YOU_LABEL || l === NEEDS_INFO_LABEL);
+    const asks = pr.labels.filter((l) => l === NEEDS_YOU_LABEL || l === NEEDS_APPROVAL_LABEL || l === NEEDS_INFO_LABEL);
     if (asks.length)
       reasons.push({ group: 'waiting', key: `waiting:PR#${pr.number}`, text: `PR #${pr.number} ${labelList(asks)}` });
   }
@@ -136,6 +141,7 @@ export function idleReasons(
   for (const i of candidates) {
     const n = `#${i.number}`;
     const add = (key: string, text: string) => reasons.push({ group: 'not-startable', key: `${key}:${n}`, text });
+    if (freeze && isFeatureWork(i.labels, i.infra)) add('frozen', `${n}: frozen (feature freeze)`);
     if (i.milestone === null && !i.infra) add('no-milestone', `${n}: game work with no milestone (#225)`);
     if (i.size === undefined) add('no-size', `${n}: no Size`);
     else if (i.size === 'XL') add('xl', `${n}: Size XL, split it`);

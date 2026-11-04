@@ -325,3 +325,66 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Russian Transport Heli" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-helicopter/**`
+
+## The Free Firearm Sound Library
+
+- Author: Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney
+- Source: <https://opengameart.org/content/the-free-firearm-sound-library>
+- License: CC0-1.0
+- Attribution: The Free Firearm Sound Library by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0, three excerpts
+- Downloaded: 2026-11-03
+- Files: `assets/free-firearm-sfx/**`
+
+## Missile Sound
+
+- Author: mikeask
+- Source: <https://opengameart.org/content/missile-sound>
+- License: CC0-1.0
+- Attribution: Missile Sound by mikeask (OpenGameArt.org), CC0
+- Downloaded: 2026-11-03
+- Files: `assets/mikeask-missile/**`
+
+## Cannon Fire
+
+- Author: Thimras
+- Source: <https://opengameart.org/content/cannon-fire>
+- License: CC0-1.0
+- Attribution: Cannon Fire by Thimras (OpenGameArt.org), CC0
+- Downloaded: 2026-11-03
+- Files: `assets/thimras-cannon/**`
+
+## Explosions
+
+- Author: EZduzziteh
+- Source: <https://opengameart.org/content/explosions-4>
+- License: CC0-1.0
+- Attribution: Explosions by EZduzziteh (OpenGameArt.org), CC0
+- Downloaded: 2026-11-03
+- Files: `assets/ezduzziteh-explosions/**`
+
+## Weapon sounds
+
+- Author: Military-TD, from the four items above
+- Source: <https://opengameart.org/content/the-free-firearm-sound-library>
+- License: CC0-1.0
+- Attribution: Built by scripts/weapon-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Missile Sound by mikeask, Cannon Fire by Thimras and Explosions by EZduzziteh, all CC0
+- Downloaded: 2026-11-03
+- Files: `assets/weapon-sounds/**`
+
+## 100 CC0 SFX
+
+- Author: rubberduck
+- Source: <https://opengameart.org/content/100-cc0-sfx>
+- License: CC0-1.0
+- Attribution: 100 CC0 SFX by rubberduck (OpenGameArt.org), CC0
+- Downloaded: 2026-11-02
+- Files: `assets/rubberduck-100-sfx/**`
+
+## 85 Short music jingles
+
+- Author: Kenney
+- Source: <https://opengameart.org/content/85-short-music-jingles>
+- License: CC0-1.0
+- Attribution: 85 Short music jingles by Kenney (kenney.nl), CC0
+- Downloaded: 2026-11-02
+- Files: `assets/kenney-jingles/**`

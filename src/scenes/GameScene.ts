@@ -12,11 +12,18 @@ import {
   TILE_PX,
   TRACER,
 } from '../data/display';
+import { soundFor, type SoundEvent } from '../audio/sounds';
+import { silentAudio, throttleAudio } from '../audio/audioOut';
+import { distanceVolume, viewCenter } from '../audio/distance';
+import { createPhaserAudio } from '../audio/phaserAudio';
+import { createWhistleTracker } from '../audio/whistle';
+import { SOUND_FALLOFF, SOUND_THROTTLE, WHISTLE_LEAD_MS } from '../data/sounds';
 import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import { groundTextureKey, MAPS, mapById } from '../data/maps';
+import type { Faction } from '../sim/factions';
 import type { Enemy } from '../sim/enemies';
 import { TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
@@ -186,6 +193,8 @@ export class GameScene extends Phaser.Scene {
   /** The map picked on the Level select, kept across restarts. A loaded scenario's own map overrides it. */
   private mapId: string = MAPS[0]!.id;
   private sim!: Game;
+  /** Starts the incoming whistle of each shell about to land; set up by `wireSounds`. */
+  private playWhistles: () => void = () => {};
   private loop!: FixedStep;
   /** How the map was drawn, for the test view. */
   private mapTiles: TestView['mapTiles'] = 'shapes';
@@ -405,11 +414,6 @@ export class GameScene extends Phaser.Scene {
     return { base, sprite, graphics, rendered: true, spriteScale: scale, facing: RENDER_FACING };
   }
 
-  /**
-   * The map: its painted ground image and the grid over it (#312). Without the image, the tileset: ground and road
-   * tiles, the grid, then decorations over it. Flat shapes instead when the atlas lacks any tileset frame. Returns
-   * which it drew.
-   */
   /** The enemy card open now, for the test view. */
   private enemyCardView(): TestView['enemyCard'] {
     const enemy = this.sim.state.enemies.find((e) => e.id === this.enemyCard.shownId);
@@ -422,6 +426,11 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  /**
+   * The map: its painted ground image and the grid over it (#312). Without the image, the tileset: ground and road
+   * tiles, the grid, then decorations over it. Flat shapes instead when the atlas lacks any tileset frame. Returns
+   * which it drew.
+   */
   private drawMapView(): TestView['mapTiles'] {
     const { map } = this.sim.state;
     const groundKey = groundTextureKey(this.mapId);
@@ -455,6 +464,51 @@ export class GameScene extends Phaser.Scene {
       if (decoration !== null) onLayer(this.add.existing(stamp(tile, decoration)), 'map');
     }
     return 'sprites';
+  }
+
+  /**
+   * Plays the sim's events as sounds (#45). Test mode is silent, so e2e runs don't change. Otherwise each sound is
+   * throttled, waits for the browser's first input, and stays silent if its file didn't load. A shot sounds like the map
+   * defender's weapon, and a sound with a place on the map is quieter the further it is from the camera's centre (#404).
+   */
+  private wireSounds(): void {
+    const audio = this.flags.test
+      ? silentAudio
+      : throttleAudio(
+          createPhaserAudio(this.sound, (key) => this.cache.audio.exists(key)),
+          SOUND_THROTTLE,
+          () => this.time.now,
+        );
+    // The map actually played (a loaded scenario's own map included); one outside the registry falls back to the selected map.
+    const defenderOf = (): Faction =>
+      (MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId)).defender;
+    const play = (event: SoundEvent, at?: Position): void => {
+      const id = soundFor(event, defenderOf());
+      if (id === null) return;
+      if (at === undefined) return audio.play(id);
+      const camera = this.cameras.main;
+      const center = viewCenter(camera, TILE_PX);
+      audio.play(id, distanceVolume(Math.hypot(at.x - center.x, at.y - center.y), SOUND_FALLOFF));
+    };
+    const towerOf = (towerId: number): Tower | undefined => this.sim.state.towers.find((t) => t.id === towerId);
+    const shot = (type: 'towerFired' | 'shellFired', towerId: number): void => {
+      const tower = towerOf(towerId);
+      play({ type, kind: tower?.kind }, tower && tileCenter(tower.tile));
+    };
+    const { events } = this.sim;
+    events.on('towerFired', ({ towerId }) => shot('towerFired', towerId));
+    events.on('shellFired', ({ towerId }) => shot('shellFired', towerId));
+    events.on('shellLanded', ({ position }) => play({ type: 'shellLanded' }, position));
+    events.on('enemyKilled', ({ enemy }) => play({ type: 'enemyKilled', enemy: enemy.kind }, enemy.position));
+    for (const type of ['enemyLeaked', 'waveStarted', 'victory', 'defeat'] as const) {
+      events.on(type, () => play({ type }));
+    }
+    // The mortar's incoming whistle, half a second before each shell lands, on the sim's clock.
+    const whistles = createWhistleTracker(WHISTLE_LEAD_MS);
+    this.playWhistles = () => {
+      const { shells, timeMs } = this.sim.state;
+      for (const shell of whistles.due(shells, timeMs)) play({ type: 'shellIncoming' }, shell.target);
+    };
   }
 
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
@@ -592,6 +646,8 @@ export class GameScene extends Phaser.Scene {
         this.effects.add('muzzleFlash', at);
       }
     });
+
+    this.wireSounds();
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
     this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
@@ -841,6 +897,7 @@ export class GameScene extends Phaser.Scene {
     this.floatingTexts.advance(deltaMs);
     if (this.flags.anim) this.animMs += deltaMs;
     this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
+    this.playWhistles();
     this.hud.update();
     this.buildBar.avoid(this.pointerTile && this.tilePageRect(this.pointerTile));
     this.buildBar.update();

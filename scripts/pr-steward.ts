@@ -130,10 +130,16 @@ const RELEASE_TITLE = /^chore\(main\): release (\d+\.\d+\.\d+)$/;
 /** The milestone report PR's branch (scripts/milestone-report.ts): `chore/release-0.2.0`. */
 const REPORT_BRANCH = /^chore\/release-(\d+\.\d+\.\d+)$/;
 const NEEDS_YOU_LABEL = 'needs-you';
+/** The approval hand-off's own label (#417), so "approve this" and "the steward gave up" read apart. */
+const NEEDS_APPROVAL_LABEL = 'needs-approval';
+/** The labels a hand-off leaves: the PR waits on the maintainer while it has one. */
+const HAND_OFF_LABELS = [NEEDS_YOU_LABEL, NEEDS_APPROVAL_LABEL] as const;
 /** Rounds a PR gets before it's handed off; a maintainer comment gives it fresh ones (#165). */
 export const MAX_ROUNDS = 2;
 /** A round with no done marker after this long has died (e.g. its session hit a usage limit) and is retried, not counted (#200). Real rounds take minutes (#196). */
 const ROUND_TIMEOUT_MS = 60 * 60 * 1000;
+/** A draft that is red and has had no commit or comment for this long is stranded, and gets a round (#326). */
+export const DRAFT_IDLE_MS = 60 * 60 * 1000;
 /** Checks that report on bookkeeping, not on the PR's code; the CI review is judged by its comment. */
 const IGNORED_CHECKS = ['board-sync', 'release-issue', 'claude-review', 'pr-steward'];
 const MAINTAINER_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'];
@@ -184,6 +190,8 @@ export function currentChecks(checks: readonly Check[]): { name: string; state: 
 
 /** An open PR, with what the steward reads. */
 export interface StewardPr {
+  /** GraphQL node id, for marking a draft ready. */
+  readonly id: string;
   readonly number: number;
   readonly title: string;
   readonly body: string;
@@ -210,10 +218,12 @@ export interface StewardPr {
   }[];
   /** Changed paths; null when the PR has more files than were read. */
   readonly files: readonly string[] | null;
-  /** Renamed files, by their new path: the old one isn't known, so they're gated (#206). */
-  readonly renamed: readonly string[];
+  /** Renamed files: the new path, and the old one (null when it couldn't be read, so it's gated: #206, #417). */
+  readonly renamed: readonly Rename[];
   /** When the latest commit that isn't a merge was made: an approval must come after it. */
   readonly codeCommittedAt: string | null;
+  /** When the latest commit of any kind was made (a draft's activity, #326). */
+  readonly lastCommitAt: string | null;
   /** Conversation comments, oldest first. */
   readonly comments: readonly PrComment[];
 }
@@ -225,6 +235,8 @@ export type Decision =
   | { readonly kind: 'skip'; readonly why: string }
   | { readonly kind: 'wait'; readonly why: string }
   | { readonly kind: 'update' }
+  /** A draft whose steward round ended green (#326): mark it ready for review. */
+  | { readonly kind: 'ready' }
   /** No CI review ever ran on this PR: add `review-again` to start one (#209). */
   | { readonly kind: 'review' }
   | {
@@ -233,8 +245,8 @@ export type Decision =
       readonly round: number;
       /** The latest round died without its done marker; this one fires it again (#200). */
       readonly retry: boolean;
-      /** A maintainer comment restarted a handed-off PR. */
-      readonly clearNeedsYou: boolean;
+      /** A maintainer comment restarted a handed-off PR: the hand-off labels to remove. */
+      readonly clearHandOff: readonly string[];
     }
   | {
       readonly kind: 'stuck';
@@ -300,23 +312,63 @@ export function decide(
   return heldByRedMain(pr, decideIgnoringMain(pr, now, defaultBranch, current), mainRed);
 }
 
+/** The checks that count toward a PR's state: the latest run of each, minus the ones that never gate it. */
+const relevantChecks = (pr: StewardPr) => currentChecks(pr.checks).filter((c) => !IGNORED_CHECKS.includes(c.name));
+
+/** The time of the latest comment matching `test`, or 0. */
+const lastCommentAt = (pr: StewardPr, test: (c: PrComment) => boolean) =>
+  Math.max(0, ...pr.comments.filter(test).map((c) => Date.parse(c.createdAt)));
+
+/** Every check that counts passed, none is still running, and the PR merges cleanly. */
+const checksGreen = (pr: StewardPr) => {
+  const relevant = relevantChecks(pr);
+  return (
+    relevant.length > 0 &&
+    relevant.every((c) => c.state === 'success') &&
+    !currentChecks(pr.checks).some((c) => c.state === 'pending') &&
+    pr.mergeable === 'MERGEABLE'
+  );
+};
+
+/**
+ * The whole draft rule (#326), in one place: a draft never reaches review, update or merge. It is
+ * left alone while someone may be working on it. It is `stranded` when a check fails and nothing
+ * was committed or commented for DRAFT_IDLE_MS: the normal flow then fires a `ci` round, and only
+ * `ci` (decideIgnoringMain keeps no other reason for a draft). A draft whose steward round ended
+ * with everything green is marked ready.
+ */
+function draftStage(pr: StewardPr, now: Date): Decision | 'stranded' {
+  const skip: Decision = { kind: 'skip', why: 'draft' };
+  if (HAND_OFF_LABELS.some((l) => pr.labels.includes(l))) return skip;
+  const lastRound = lastCommentAt(pr, (c) => c.body.includes(ROUND_MARKER));
+  const lastDone = lastCommentAt(pr, (c) => c.body.includes(DONE_MARKER));
+  if (lastRound > 0 && lastDone >= lastRound && checksGreen(pr)) return { kind: 'ready' };
+  const lastActivity = Math.max(
+    lastCommentAt(pr, () => true),
+    pr.lastCommitAt ? Date.parse(pr.lastCommitAt) : 0,
+  );
+  const red = relevantChecks(pr).some((c) => c.state === 'failure');
+  return red && now.getTime() - lastActivity >= DRAFT_IDLE_MS ? 'stranded' : skip;
+}
+
 function decideIgnoringMain(
   pr: StewardPr,
   now: Date,
   defaultBranch: string,
   current: CurrentMilestone | null,
 ): Decision {
-  if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.fork) return { kind: 'skip', why: 'fork' };
   if (pr.labels.includes(HOLD_LABEL)) return { kind: 'skip', why: HOLD_LABEL };
+  if (pr.isDraft) {
+    const stage = draftStage(pr, now);
+    if (stage !== 'stranded') return stage;
+  }
   if (pr.head.startsWith(RELEASE_BRANCH)) return decideRelease(pr, current);
   const report = REPORT_BRANCH.exec(pr.head)?.[1];
   if (report) return decideReport(pr, current, report);
   const checks = currentChecks(pr.checks);
 
-  // The time of the latest comment matching `test`, or 0.
-  const last = (test: (c: PrComment) => boolean) =>
-    Math.max(0, ...pr.comments.filter(test).map((c) => Date.parse(c.createdAt)));
+  const last = (test: (c: PrComment) => boolean) => lastCommentAt(pr, test);
   const lastMaintainer = last(isMaintainer);
   const lastDone = last((c) => c.body.includes(DONE_MARKER));
   const lastRound = last((c) => c.body.includes(ROUND_MARKER));
@@ -324,8 +376,8 @@ function decideIgnoringMain(
   // A review with no findings needs no answer, so it starts no round (#303).
   const lastFindings = last((c) => c.body.startsWith(REVIEW_HEADING) && !c.body.includes(CLEAN_REVIEW_MARKER));
 
-  const clearNeedsYou = pr.labels.includes(NEEDS_YOU_LABEL);
-  if (clearNeedsYou) {
+  const clearHandOff = HAND_OFF_LABELS.filter((l) => pr.labels.includes(l));
+  if (clearHandOff.length) {
     const lastStuck = last((c) => c.body.includes(STUCK_MARKER));
     if (!lastStuck || lastMaintainer <= lastStuck)
       return { kind: 'skip', why: 'handed off, waiting on the maintainer' };
@@ -334,7 +386,7 @@ function decideIgnoringMain(
   if (lastRound > lastDone && now.getTime() - lastRound < ROUND_TIMEOUT_MS)
     return { kind: 'wait', why: 'a steward round is in flight' };
 
-  const relevant = checks.filter((c) => !IGNORED_CHECKS.includes(c.name));
+  const relevant = relevantChecks(pr);
   const conflict = pr.mergeable === 'CONFLICTING';
   const pending =
     relevant.some((c) => c.state === 'pending') ||
@@ -349,6 +401,8 @@ function decideIgnoringMain(
   if (lastFindings > lastDone && lastFindings === lastReview) reasons.push('review');
   if (last((c) => isMaintainer(c) && !isApproval(c)) > lastDone) reasons.push('comment');
   if (pr.unresolvedThreads > 0) reasons.push('threads');
+  // A draft only ever gets a `ci` round (see draftStage).
+  if (pr.isDraft) reasons.splice(0, reasons.length, ...reasons.filter((r) => r === 'ci'));
   if (reasons.length) {
     const since = pr.comments.filter((c) => c.body.includes(ROUND_MARKER) && Date.parse(c.createdAt) > lastMaintainer);
     const finished = finishedRound(pr.comments);
@@ -358,8 +412,9 @@ function decideIgnoringMain(
     const latest = since.at(-1);
     return used >= MAX_ROUNDS
       ? { kind: 'stuck', reasons }
-      : { kind: 'steward', reasons, round: used + 1, retry: !!latest && !finished(latest), clearNeedsYou };
+      : { kind: 'steward', reasons, round: used + 1, retry: !!latest && !finished(latest), clearHandOff };
   }
+  if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.behind) return { kind: 'update' };
   if (!lastReview)
     return pr.comments.some((c) => c.body.includes(reviewRequestMarker(pr.headSha)))
@@ -383,7 +438,7 @@ function decideIgnoringMain(
     };
   const paths = [
     ...(pr.files ? criticalFiles(pr.files) : ['(more files than were read)']),
-    ...pr.renamed.map((p) => `${p} (renamed: its old path may be critical)`),
+    ...renamedCritical(pr.renamed),
   ];
   const approvedAfter = Math.max(lastRound, pr.codeCommittedAt ? Date.parse(pr.codeCommittedAt) : 0);
   if (paths.length && last(isApproval) <= approvedAfter) return { kind: 'approval', paths };
@@ -409,7 +464,7 @@ function wrongVersion(name: string, version: string, current: CurrentMilestone |
 
 /** A generated PR merges once its checks are green (some must have run), and is brought up to date when behind. */
 function whenGreen(pr: StewardPr, name: string, unmergeable: string): Decision {
-  const relevant = currentChecks(pr.checks).filter((c) => !IGNORED_CHECKS.includes(c.name));
+  const relevant = relevantChecks(pr);
   if (pr.mergeable !== 'MERGEABLE') return { kind: 'wait', why: `${name}: ${unmergeable}` };
   if (!relevant.length) return { kind: 'wait', why: `${name}: no checks ran on it` };
   if (relevant.some((c) => c.state !== 'success')) return { kind: 'wait', why: `${name}: checks running or failing` };
@@ -470,10 +525,16 @@ export const stewardText = (pr: StewardPr, reasons: readonly Reason[], round: nu
 const stuckBody = (summary: string) =>
   `**PR steward: handing this PR to you.** ${summary}\n\nComment on the PR to give it ${MAX_ROUNDS} more steward rounds, or fix it yourself.\n\n${STUCK_MARKER}`;
 
-async function handOff(pr: StewardPr, body: string, token: string, fetchFn: Fetch): Promise<void> {
-  // Summary first: the needs-you push (scripts/notify.ts) reads it when the label lands.
+async function handOff(
+  pr: StewardPr,
+  body: string,
+  token: string,
+  fetchFn: Fetch,
+  label: (typeof HAND_OFF_LABELS)[number] = NEEDS_YOU_LABEL,
+): Promise<void> {
+  // Summary first: the hand-off push (scripts/notify.ts) reads it when the label lands.
   await github(fetchFn, token, 'POST', `issues/${pr.number}/comments`, { body });
-  await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [NEEDS_YOU_LABEL] });
+  await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [label] });
 }
 
 /** Whether a decision's switch is on: AUTO_MERGE for merging and asking to merge, AUTO_STEWARD for the rest. */
@@ -513,7 +574,7 @@ export async function act(
         );
         throw new Error(`#${n}: firing the PR steward failed, handed off: ${String(error)}`, { cause: error });
       }
-      if (decision.clearNeedsYou) await github(fetchFn, token, 'DELETE', `issues/${n}/labels/${NEEDS_YOU_LABEL}`);
+      for (const label of decision.clearHandOff) await github(fetchFn, token, 'DELETE', `issues/${n}/labels/${label}`);
       const retry = decision.retry
         ? ' (a retry: the last round ended without reporting, most likely out of tokens)'
         : '';
@@ -546,6 +607,7 @@ ${STUCK_MARKER}
 ${APPROVAL_MARKER}`,
         token,
         fetchFn,
+        NEEDS_APPROVAL_LABEL,
       );
       return;
     }
@@ -554,6 +616,18 @@ ${APPROVAL_MARKER}`,
         body: `PR steward: no CI review ran on this PR, so I added \`${REVIEW_AGAIN_LABEL}\` to start one. GitHub runs no PR workflow while a PR has a merge conflict, so marking it ready then doesn't start the review.\n\n${reviewRequestMarker(pr.headSha)}`,
       });
       await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [REVIEW_AGAIN_LABEL] });
+      return;
+    case 'ready':
+      await graphql(
+        token,
+        'mutation($id: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $id }) { clientMutationId } }',
+        {
+          id: pr.id,
+        },
+      );
+      await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+        body: `PR steward: the round ended green, so I marked this draft ready for review. That starts the CI review.`,
+      });
       return;
     case 'update':
       await github(fetchFn, token, 'PUT', `pulls/${n}/update-branch`, { expected_head_sha: pr.headSha });
@@ -614,7 +688,7 @@ export const PR_QUERY = `query($owner: String!, $name: String!) {
     pullRequests(states: OPEN, first: 50) {
       totalCount
       nodes {
-        number title body isDraft isCrossRepository baseRefName baseRefOid headRefName headRefOid mergeable mergeStateStatus
+        id number title body isDraft isCrossRepository baseRefName baseRefOid headRefName headRefOid mergeable mergeStateStatus
         baseRef { target { oid } }
         labels(first: 20) { nodes { name } }
         reviewThreads(first: 100) { nodes { isResolved } }
@@ -655,6 +729,7 @@ interface ContextNode {
 }
 
 interface PrNode {
+  id: string;
   number: number;
   title: string;
   body: string;
@@ -704,9 +779,51 @@ interface RecentCommit {
 export const changedFiles = (files: ChangedFiles | null): string[] | null =>
   files && files.totalCount <= files.nodes.length ? files.nodes.map((f) => f.path) : null;
 
-/** The new paths of the files a PR renames. */
-export const renamedFiles = (files: ChangedFiles | null): string[] =>
-  (files?.nodes ?? []).filter((f) => f.changeType === 'RENAMED').map((f) => f.path);
+/** A renamed file. GraphQL gives only its new path; `from` comes from the REST file list (#417). */
+export interface Rename {
+  readonly path: string;
+  readonly from: string | null;
+}
+
+/** The files a PR renames, by their new path; their old paths aren't known yet. */
+export const renamedFiles = (files: ChangedFiles | null): Rename[] =>
+  (files?.nodes ?? []).filter((f) => f.changeType === 'RENAMED').map((f) => ({ path: f.path, from: null }));
+
+/** One entry of REST `GET pulls/{n}/files`. */
+export interface RestFile {
+  readonly filename: string;
+  readonly status: string;
+  readonly previous_filename?: string;
+}
+
+/** Fills in each rename's old path from the REST file list; one it doesn't list stays unknown. */
+export const renameSources = (renamed: readonly Rename[], rest: readonly RestFile[]): Rename[] =>
+  renamed.map((r) => ({
+    path: r.path,
+    from: rest.find((f) => f.filename === r.path && f.status === 'renamed')?.previous_filename ?? r.from,
+  }));
+
+/** The renames that need an approval: away from a critical path, or from a path that isn't known. */
+const renamedCritical = (renamed: readonly Rename[]): string[] =>
+  renamed.flatMap((r) =>
+    r.from === null
+      ? [`${r.path} (renamed: its old path is unknown)`]
+      : criticalFiles([r.from]).length
+        ? [`${r.path} (renamed from ${r.from})`]
+        : [],
+  );
+
+/** Reads the old paths of a PR's renames (one request, only for a PR that renames something). */
+async function withRenameSources(pr: StewardPr, token: string): Promise<StewardPr> {
+  if (!pr.renamed.length) return pr;
+  try {
+    const res = await github(fetch, token, 'GET', `pulls/${pr.number}/files?per_page=100`);
+    return { ...pr, renamed: renameSources(pr.renamed, (await res.json()) as RestFile[]) };
+  } catch (error) {
+    console.log(`#${pr.number}: couldn't read the renamed files' old paths, so they stay gated: ${String(error)}`);
+    return pr;
+  }
+}
 
 /**
  * When the latest commit (oldest first) that isn't a merge was made, or the latest commit's time if
@@ -752,6 +869,7 @@ function toCheck(node: ContextNode): Check {
 
 export function toStewardPr(node: PrNode): StewardPr {
   return {
+    id: node.id,
     number: node.number,
     title: node.title,
     body: node.body,
@@ -777,6 +895,7 @@ export function toStewardPr(node: PrNode): StewardPr {
     files: changedFiles(node.files),
     renamed: renamedFiles(node.files),
     codeCommittedAt: codeCommittedAt(node.recentCommits.nodes),
+    lastCommitAt: node.recentCommits.nodes.at(-1)?.commit.committedDate ?? null,
     comments: node.comments.nodes.map((c) => ({
       author: c.author?.login ?? '',
       bot: c.author?.__typename === 'Bot',
@@ -803,7 +922,7 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
   const mainChecks = (repository.defaultBranchRef.target?.statusCheckRollup?.contexts.nodes ?? []).map(toCheck);
   const mainRed = mainRedFrom(currentChecks(mainChecks), repository.issues.nodes);
   if (mainRed) console.log(`${repository.defaultBranchRef.name} CI is failing: only its fix merges (#220).`);
-  for (const pr of nodes.map(toStewardPr)) {
+  for (const pr of await Promise.all(nodes.map((node) => withRenameSources(toStewardPr(node), token)))) {
     const decision = decide(
       pr,
       now,
