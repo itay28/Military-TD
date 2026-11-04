@@ -140,6 +140,17 @@ Each source ships no license file, so its `License.txt` copies the source page's
 
 Volume falls off with distance from the camera's centre: full within 5 tiles, down to 35 % at 16 tiles (`SOUND_FALLOFF` in `src/data/sounds.ts`). Wave start, a leak and the end of the game play at full volume.
 
+## Music (#66)
+
+Downloaded 2026-11-02 from [War on Water tracks](https://opengameart.org/content/war-on-water-tracks) by yd, CC0-1.0 (`assets/yd-war-on-water/`, `License.txt` copies the page's notice). Two tracks, each as OGG Vorbis (played first) and an MP3 fallback for browsers without Vorbis:
+
+| File | Source file | Plays on |
+| --- | --- | --- |
+| `menu.{ogg,mp3}` | `wowmenu.ogg` | Main menu, Level select, Settings, Credits |
+| `game.{ogg,mp3}` | `wowchapter1.ogg` | the Game, End screen included |
+
+Each had its trailing silence (~0.1 s) trimmed and a 10 ms fade at both ends (ffmpeg), so the loop has no gap or click. `trackFor` in `src/audio/music.ts` maps scenes to tracks; a change of track crossfades over 1 s. Music starts on the first input, is muted in test mode, and a file that fails to load stays silent.
+
 ## Candidate sources
 
 - **Kenney** (kenney.nl): CC0. Tower Defense (Top-Down), Top-down Tanks Remastered (formerly Redux), UI Pack, Impact/Interface sounds, Music Jingles.
