@@ -4,6 +4,7 @@ import {
   DUCK_FADE_MS,
   DUCK_VOLUME,
   trackFor,
+  TRACK_VOLUME,
   type MusicBackend,
   type MusicVoice,
   type TrackId,
@@ -62,6 +63,11 @@ describe('trackFor', () => {
 });
 
 describe('createMusicController', () => {
+  it('plays the menu track quieter than full volume (maintainer feedback on #334)', () => {
+    expect(TRACK_VOLUME.menu).toBeLessThan(1);
+    expect(TRACK_VOLUME.menu).toBeGreaterThan(0);
+  });
+
   it('plays nothing before the first input, then fades the current track in', () => {
     const { backend, voices } = fakeBackend();
     const music = createMusicController(backend, { muted: false });
@@ -70,7 +76,7 @@ describe('createMusicController', () => {
 
     music.unlock();
     expect(voices.map((v) => v.track)).toEqual(['menu']);
-    expect(voices[0]?.fades).toEqual([{ volume: 1, ms: 1000 }]);
+    expect(voices[0]?.fades).toEqual([{ volume: TRACK_VOLUME.menu, ms: 1000 }]);
   });
 
   it('keeps the track playing when the next scene has the same one', () => {
@@ -104,7 +110,7 @@ describe('createMusicController', () => {
     const [menu, game] = voices;
     expect(game?.track).toBe('game');
     expect(menu?.fades.at(-1)).toEqual({ volume: 0, ms: 1000 });
-    expect(game?.fades).toEqual([{ volume: 1, ms: 1000 }]);
+    expect(game?.fades).toEqual([{ volume: TRACK_VOLUME.game, ms: 1000 }]);
     expect(menu?.stopped).toBe(false);
     menu?.finishFade();
     expect(menu?.stopped).toBe(true);
@@ -131,7 +137,7 @@ describe('createMusicController', () => {
     expect(voices.map((v) => v.track)).toEqual(['menu', 'game', 'menu']);
     const [oldMenu, game, newMenu] = voices;
     expect(game?.fades.at(-1)).toEqual({ volume: 0, ms: 1000 });
-    expect(newMenu?.fades).toEqual([{ volume: 1, ms: 1000 }]);
+    expect(newMenu?.fades).toEqual([{ volume: TRACK_VOLUME.menu, ms: 1000 }]);
     oldMenu?.finishFade();
     game?.finishFade();
     expect(oldMenu?.stopped).toBe(true);
@@ -171,7 +177,7 @@ describe('createMusicController', () => {
     const music = createMusicController(backend, { muted: false, crossfadeMs: 250 });
     music.unlock();
     music.enterScene('Game');
-    expect(voices[0]?.fades).toEqual([{ volume: 1, ms: 250 }]);
+    expect(voices[0]?.fades).toEqual([{ volume: TRACK_VOLUME.game, ms: 250 }]);
   });
 
   it('unlocks only once', () => {

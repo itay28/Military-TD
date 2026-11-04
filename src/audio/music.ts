@@ -9,6 +9,9 @@ export type TrackId = 'menu' | 'game';
 
 export const TRACK_IDS: readonly TrackId[] = ['menu', 'game'];
 
+/** The volume each track fades in to (0–1). The menu track is mixed lower: it sat too loud. Master volume is #67. */
+export const TRACK_VOLUME: Readonly<Record<TrackId, number>> = { menu: 0.6, game: 1 };
+
 /** How long the old track fades out and the new one fades in when the track changes. */
 export const CROSSFADE_MS = 1000;
 
@@ -66,7 +69,7 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
   const fadeMs = options.crossfadeMs ?? CROSSFADE_MS;
   let unlocked = false;
   let ducked = false;
-  const fullVolume = (): number => (ducked ? DUCK_VOLUME : 1);
+  const fullVolume = (track: TrackId): number => TRACK_VOLUME[track] * (ducked ? DUCK_VOLUME : 1);
   /** The track the current scene wants, whether or not it's playing yet. */
   let wanted: TrackId | null = null;
   /** The track playing (or failed to load, with no voice) since the last change. */
@@ -87,7 +90,7 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
     } catch {
       voice = null;
     }
-    voice?.fadeTo(fullVolume(), fadeMs);
+    voice?.fadeTo(fullVolume(wanted), fadeMs);
     playing = { track: wanted, voice };
   };
 
@@ -104,7 +107,7 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
     setDucked(on) {
       if (on === ducked) return;
       ducked = on;
-      playing?.voice?.fadeTo(fullVolume(), DUCK_FADE_MS);
+      if (playing) playing.voice?.fadeTo(fullVolume(playing.track), DUCK_FADE_MS);
     },
   };
 }

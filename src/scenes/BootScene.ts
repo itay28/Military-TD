@@ -15,10 +15,10 @@ import { ATLAS_KEY } from '../data/sprites';
 import { firstScene, type TestFlags } from '../testing/flags';
 
 /**
- * First scene. Preloads the sprite atlas, the rendered sprites, each map's ground image, the sounds (#45) and the music
- * (#66), then goes to the Main menu, or the Game in test mode, which is silent and loads no audio. A failed load doesn't
- * stop the game: the Game scene draws the tileset for a missing ground image, shapes for any sprite it can't find, and a
- * sound or track that didn't load stays silent.
+ * First scene. Preloads the sprite atlas, the rendered sprites, each map's ground image and the sounds, then goes to the
+ * Main menu, or the Game in test mode. A failed load doesn't stop the game: the Game scene draws the tileset for a missing
+ * ground image, shapes for any sprite it can't find, and stays silent for a sound that didn't load. Music (#66) loads too;
+ * a track that fails to load stays silent.
  */
 export class BootScene extends Phaser.Scene {
   private readonly flags: TestFlags;
