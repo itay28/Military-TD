@@ -15,6 +15,12 @@ export const TRACK_VOLUME: Readonly<Record<TrackId, number>> = { menu: 0.6, game
 /** How long the old track fades out and the new one fades in when the track changes. */
 export const CROSSFADE_MS = 1000;
 
+/** The music's volume while a radio cue plays (#396), so the voice is clear. */
+export const DUCK_VOLUME = 0.4;
+
+/** How long the music takes to drop to the duck volume, and to come back up. */
+export const DUCK_FADE_MS = 200;
+
 /** How long the playing track takes to reach a new volume (a slider moved, the tab hidden or shown). */
 export const VOLUME_RAMP_MS = 100;
 
@@ -52,6 +58,8 @@ export interface MusicController {
   enterScene(scene: string): void;
   /** Call on the first input: browsers block audio until then, so nothing plays before it. */
   unlock(): void;
+  /** Drops the music to `DUCK_VOLUME` while a radio cue plays (true), and brings it back up afterwards (false). */
+  setDucked(on: boolean): void;
   /** Call when the volume may have changed: the playing track ramps to `volume()`. */
   refreshVolume(): void;
 }
@@ -66,9 +74,10 @@ export interface MusicOptions {
 
 export function createMusicController(backend: MusicBackend, options: MusicOptions): MusicController {
   const fadeMs = options.crossfadeMs ?? CROSSFADE_MS;
+  let ducked = false;
   const volume = options.volume ?? (() => 1);
   /** A track's volume: the music channel's, scaled by the track's own mix level. */
-  const level = (track: TrackId): number => volume() * TRACK_VOLUME[track];
+  const level = (track: TrackId): number => volume() * TRACK_VOLUME[track] * (ducked ? DUCK_VOLUME : 1);
   let unlocked = false;
   /** The track the current scene wants, whether or not it's playing yet. */
   let wanted: TrackId | null = null;
@@ -103,6 +112,11 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
       if (unlocked) return;
       unlocked = true;
       sync();
+    },
+    setDucked(on) {
+      if (on === ducked) return;
+      ducked = on;
+      if (playing) playing.voice?.fadeTo(level(playing.track), DUCK_FADE_MS);
     },
     refreshVolume() {
       if (playing) playing.voice?.fadeTo(level(playing.track), VOLUME_RAMP_MS);
