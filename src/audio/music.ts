@@ -9,11 +9,14 @@ export type TrackId = 'menu' | 'game';
 
 export const TRACK_IDS: readonly TrackId[] = ['menu', 'game'];
 
-/** The volume each track fades in to (0–1). The menu track is mixed lower: it sat too loud. Master volume is #67. */
+/** The volume each track fades in to (0–1). The menu track is mixed lower: it sat too loud. The music channel's volume (#67) scales it. */
 export const TRACK_VOLUME: Readonly<Record<TrackId, number>> = { menu: 0.6, game: 1 };
 
 /** How long the old track fades out and the new one fades in when the track changes. */
 export const CROSSFADE_MS = 1000;
+
+/** How long the playing track takes to reach a new volume (a slider moved, the tab hidden or shown). */
+export const VOLUME_RAMP_MS = 100;
 
 /**
  * The track a scene plays: the menu track on the Main menu and Level select (Settings and Credits are overlays on the
@@ -49,16 +52,23 @@ export interface MusicController {
   enterScene(scene: string): void;
   /** Call on the first input: browsers block audio until then, so nothing plays before it. */
   unlock(): void;
+  /** Call when the volume may have changed: the playing track ramps to `volume()`. */
+  refreshVolume(): void;
 }
 
 export interface MusicOptions {
   /** Test mode: the controller never touches the backend, so e2e runs and scenarios stay silent. */
   readonly muted: boolean;
   readonly crossfadeMs?: number;
+  /** The music channel's volume, 0–1, read at each fade-in and `refreshVolume` (#67). Full volume when not given. */
+  readonly volume?: () => number;
 }
 
 export function createMusicController(backend: MusicBackend, options: MusicOptions): MusicController {
   const fadeMs = options.crossfadeMs ?? CROSSFADE_MS;
+  const volume = options.volume ?? (() => 1);
+  /** A track's volume: the music channel's, scaled by the track's own mix level. */
+  const level = (track: TrackId): number => volume() * TRACK_VOLUME[track];
   let unlocked = false;
   /** The track the current scene wants, whether or not it's playing yet. */
   let wanted: TrackId | null = null;
@@ -80,7 +90,7 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
     } catch {
       voice = null;
     }
-    voice?.fadeTo(TRACK_VOLUME[wanted], fadeMs);
+    voice?.fadeTo(level(wanted), fadeMs);
     playing = { track: wanted, voice };
   };
 
@@ -93,6 +103,9 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
       if (unlocked) return;
       unlocked = true;
       sync();
+    },
+    refreshVolume() {
+      if (playing) playing.voice?.fadeTo(level(playing.track), VOLUME_RAMP_MS);
     },
   };
 }
