@@ -192,7 +192,17 @@ describe('waves and phases', () => {
     expect(game.callNextWave()).toEqual({ ok: true });
     expect(game.state).toMatchObject({ phase: 'wave', waveNumber: 1 });
     expect(game.state.enemies).toEqual([expect.objectContaining({ kind: 'infantry', distance: 0 })]);
-    expect(started).toEqual([{ waveNumber: 1 }]);
+    expect(started).toEqual([{ waveNumber: 1, holdovers: 0 }]);
+  });
+
+  it('waveStarted counts the enemies already on the field before the wave spawns (#396)', () => {
+    const game = newGame();
+    game.spawnEnemy('infantry');
+    game.spawnEnemy('jeep');
+    const started: unknown[] = [];
+    game.events.on('waveStarted', (e) => started.push(e));
+    game.callNextWave();
+    expect(started).toEqual([{ waveNumber: 1, holdovers: 2 }]);
   });
 
   it("a wave's enemies spawn one every spacing ms on fixed ticks", () => {

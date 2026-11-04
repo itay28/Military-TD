@@ -91,7 +91,8 @@ export interface GameEvents {
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
   /** A tower finished dismantling and left `tile`. `refund` is the Money it gave back, already in `state.money`. */
   towerSold: { readonly towerId: number; readonly tile: Tile; readonly refund: number };
-  waveStarted: { readonly waveNumber: number };
+  /** A wave began. `holdovers` is how many enemies were already on the field before its first spawn. */
+  waveStarted: { readonly waveNumber: number; readonly holdovers: number };
   /** Every enemy of the wave has spawned and none is left alive. */
   waveCleared: { readonly waveNumber: number };
   /** The last wave was cleared with Lives left. The game is over. */
@@ -219,12 +220,13 @@ export function createGame(config: GameConfig): Game {
     if (state.tacticalMode && state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
     state.waveNumber++;
     const wave = { number: state.waveNumber, schedule: createSpawnSchedule(next), startMs: state.timeMs };
+    const holdovers = state.enemies.length;
     waves = [...waves, wave];
     syncActiveWaves();
     state.stats = startWaveStats(state.stats, wave.number);
     state.enemies.push(...wave.schedule.take(0).map((spawn) => createEnemy(spawn.kind, wave.number)));
     scheduleNextWave(state.timeMs);
-    emitter.emit('waveStarted', { waveNumber: wave.number });
+    emitter.emit('waveStarted', { waveNumber: wave.number, holdovers });
     return { ok: true };
   };
 

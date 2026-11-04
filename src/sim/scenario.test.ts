@@ -45,7 +45,7 @@ describe('runScenario', () => {
     });
     expect(events.map((e) => e.type)).toEqual(['command', 'waveStarted', 'enemyLeaked', 'waveCleared', 'victory']);
     expect(events[0]).toEqual({ tick: 10, type: 'command', command: { type: 'callNextWave' }, result: { ok: true } });
-    expect(events[1]).toEqual({ tick: 10, type: 'waveStarted', waveNumber: 1 });
+    expect(events[1]).toEqual({ tick: 10, type: 'waveStarted', waveNumber: 1, holdovers: 0 });
     // 6 tiles at 1.5 tiles/s: the leak lands 4 s (240 ticks) after the wave starts.
     const leak = events[2];
     expect(leak).toMatchObject({ type: 'enemyLeaked', lives: START_LIVES - 1 });
@@ -60,7 +60,12 @@ describe('runScenario', () => {
       waves: [{ ...ONE_INFANTRY[0]!, afterMs: 1000 }],
       until: { event: 'waveStarted' },
     });
-    expect(events.at(-1)).toEqual({ tick: Math.round(1000 / TICK_MS), type: 'waveStarted', waveNumber: 1 });
+    expect(events.at(-1)).toEqual({
+      tick: Math.round(1000 / TICK_MS),
+      type: 'waveStarted',
+      waveNumber: 1,
+      holdovers: 0,
+    });
   });
 
   it('in Tactical mode, no wave arrives by itself', () => {

@@ -5,9 +5,10 @@ import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
 import { distanceVolume, viewCenter } from '../audio/distance';
 import { createPhaserAudio } from '../audio/phaserAudio';
+import { duckForRadio, MUSIC_REGISTRY_KEY, type MusicDuck } from '../audio/radio';
 import type { AudioMix } from '../audio/volume';
 import { createWhistleTracker } from '../audio/whistle';
-import { SOUND_FALLOFF, SOUND_THROTTLE, WHISTLE_LEAD_MS } from '../data/sounds';
+import { RADIO_CUE_MS, SOUND_FALLOFF, SOUND_THROTTLE, WHISTLE_LEAD_MS } from '../data/sounds';
 import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
@@ -441,20 +442,32 @@ export class GameScene extends Phaser.Scene {
    * Plays the sim's events as sounds (#45). Test mode is silent, so e2e runs don't change. Otherwise each sound is
    * throttled, waits for the browser's first input, plays at the mix's SFX volume (#67) and stays silent if its file didn't
    * load. A shot sounds like the map defender's weapon, and a sound with a place on the map is quieter the further it is
-   * from the camera's centre (#404).
+   * from the camera's centre (#404). The music ducks under a radio cue (#396), on a real-time timer, since the cue plays
+   * on after a restart or a speed change.
    */
   private wireSounds(): void {
-    const audio = this.flags.test
-      ? silentAudio
-      : throttleAudio(
-          createPhaserAudio(
-            this.sound,
-            (key) => this.cache.audio.exists(key),
-            () => this.audioMix.volume('sfx'),
+    const music = this.registry.get(MUSIC_REGISTRY_KEY) as MusicDuck | undefined;
+    const radio = this.flags.test
+      ? undefined
+      : duckForRadio(
+          throttleAudio(
+            createPhaserAudio(
+              this.sound,
+              (key) => this.cache.audio.exists(key),
+              () => this.audioMix.volume('sfx'),
+            ),
+            SOUND_THROTTLE,
+            () => this.time.now,
           ),
-          SOUND_THROTTLE,
-          () => this.time.now,
+          music ?? { setDucked: () => {} },
+          RADIO_CUE_MS,
+          (ms, run) => {
+            const id = window.setTimeout(run, ms);
+            return () => window.clearTimeout(id);
+          },
         );
+    const audio = radio ?? silentAudio;
+    if (radio) this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => radio.dispose());
     // The map actually played (a loaded scenario's own map included); one outside the registry falls back to the selected map.
     const defenderOf = (): Faction =>
       (MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId)).defender;
@@ -476,7 +489,8 @@ export class GameScene extends Phaser.Scene {
     events.on('shellFired', ({ towerId }) => shot('shellFired', towerId));
     events.on('shellLanded', ({ position }) => play({ type: 'shellLanded' }, position));
     events.on('enemyKilled', ({ enemy }) => play({ type: 'enemyKilled', enemy: enemy.kind }, enemy.position));
-    for (const type of ['enemyLeaked', 'waveStarted', 'victory', 'defeat'] as const) {
+    events.on('waveStarted', ({ holdovers }) => play({ type: 'waveStarted', holdovers }));
+    for (const type of ['enemyLeaked', 'victory', 'defeat'] as const) {
       events.on(type, () => play({ type }));
     }
     // The mortar's incoming whistle, half a second before each shell lands, on the sim's clock.
