@@ -1,25 +1,48 @@
 import { GAME_SPEEDS } from '../scenes/gameSpeed';
 import { browserStorage, createMemoryStorage, isRecord, type KeyValueStorage } from '../storage';
-import { createSettings, DEFAULT_SETTINGS, type Settings, type SettingsStore } from './settings';
+import {
+  createSettings,
+  DEFAULT_SETTINGS,
+  MAX_VOLUME,
+  VOLUME_FIELDS,
+  type Settings,
+  type SettingsStore,
+  type VolumeField,
+} from './settings';
 
 export const SETTINGS_KEY = 'military-td.settings';
 /** Bump when the saved shape changes, and teach `migrate` the step from the old version. */
-export const SETTINGS_VERSION = 1;
+export const SETTINGS_VERSION = 2;
 
 /** Brings settings saved at `version` up to the current shape. `null` for a version this build can't read. */
 export function migrate(version: number, data: unknown): unknown {
   if (!Number.isInteger(version) || version < 0 || version > SETTINGS_VERSION) return null;
-  // v1 is the first shape: nothing to change yet. Later versions add a step per version here.
-  return data;
+  let migrated = data;
+  // v1 → v2 (#67): the volumes arrive, at their defaults; the speed and ranges stay. v0 had v1's shape.
+  if (version < 2 && isRecord(migrated)) migrated = { ...migrated, ...defaultVolumes() };
+  return migrated;
+}
+
+function defaultVolumes(): Pick<Settings, VolumeField> {
+  const { masterVolume, musicVolume, sfxVolume } = DEFAULT_SETTINGS;
+  return { masterVolume, musicVolume, sfxVolume };
+}
+
+/** A saved volume clamped to 0–100 and rounded, or the default for anything that isn't a finite number. */
+function sanitizeVolume(value: unknown, field: VolumeField): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_SETTINGS[field];
+  return Math.min(MAX_VOLUME, Math.max(0, Math.round(value)));
 }
 
 /** Keeps each known field that holds a valid value; every other field takes its default. Unknown fields are dropped. */
 function sanitize(data: unknown): Settings {
   const raw = isRecord(data) ? data : {};
   const { defaultSpeed, showAllRanges } = raw;
+  const volumes = Object.fromEntries(VOLUME_FIELDS.map((field) => [field, sanitizeVolume(raw[field], field)]));
   return {
     defaultSpeed: GAME_SPEEDS.find((speed) => speed === defaultSpeed) ?? DEFAULT_SETTINGS.defaultSpeed,
     showAllRanges: typeof showAllRanges === 'boolean' ? showAllRanges : DEFAULT_SETTINGS.showAllRanges,
+    ...(volumes as Pick<Settings, VolumeField>),
   };
 }
 
@@ -42,6 +65,7 @@ export function createPersistedSettings(storage: KeyValueStorage): SettingsStore
   const store = createSettings(loadSettings(storage));
   return {
     get: store.get,
+    subscribe: store.subscribe,
     set(patch) {
       store.set(patch);
       try {

@@ -44,7 +44,9 @@ test('the Main menu shows the title, Deploy, Settings, and Credits', async ({ pa
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
 });
 
-test('the Settings screen shows the default game speed choices, the range setting and Back', async ({ page }) => {
+test('the Settings screen shows the default game speed choices, the range setting, the volume sliders and Back', async ({
+  page,
+}) => {
   await openMenu(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await expectAria(page.locator('#settings'), 'settings-screen.aria.yml');
