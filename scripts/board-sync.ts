@@ -490,6 +490,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         ...issues.at(-1)!,
         hold: labels.includes(HOLD_LABEL),
         needsYou: labels.includes(NEEDS_YOU_LABEL),
+        needsInfo: labels.includes(NEEDS_INFO_LABEL),
         autoAgent: labels.includes(AUTO_AGENT_LABEL),
         feature: isFeatureWork(labels, issues.at(-1)!.infra),
         size: node.size?.name,

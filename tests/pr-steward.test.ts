@@ -14,6 +14,7 @@ import {
   codeCommittedAt,
   criticalFiles,
   renamedFiles,
+  renameSources,
   currentChecks,
   decide,
   mainCiRed,
@@ -23,10 +24,17 @@ import {
   settingsFromEnv,
   switchedOn,
   toStewardPr,
+  applyStatusLabel,
+  ensureStatusLabels,
+  labelChanges,
+  STATUS_LABELS,
+  statusLabel,
   type Decision,
   type PrComment,
   type StewardPr,
+  type StatusLabel,
   type StewardSettings,
+  type WaitCause,
 } from '../scripts/pr-steward';
 
 // The PR steward reconciles every open PR (#168): fire a steward round, merge the base, hand off, or merge.
@@ -169,8 +177,28 @@ describe('decide: skip', () => {
     expect(decide(answered, now)).toMatchObject({
       kind: 'steward',
       reasons: ['review', 'comment'],
-      clearNeedsYou: true,
+      clearHandOff: ['needs-you'],
     });
+  });
+
+  it('treats needs-approval as a hand-off too, and clears it once the maintainer comments (#417)', () => {
+    const asked = pr({ labels: ['needs-approval'], comments: [review(90), action(STUCK_MARKER, 20)] });
+    expect(kind(asked)).toBe('skip');
+    expect(decide({ ...asked, comments: [...asked.comments, maintainer(5)] }, now)).toMatchObject({
+      kind: 'steward',
+      clearHandOff: ['needs-approval'],
+    });
+  });
+
+  it('leaves a stranded draft alone while it waits for an approval (#417)', () => {
+    const draft = pr({
+      isDraft: true,
+      labels: ['needs-approval'],
+      checks: [{ name: 'ci', state: 'failure' }],
+      lastCommitAt: at(600),
+      comments: [action(STUCK_MARKER, 600)],
+    });
+    expect(decide(draft, now)).toEqual({ kind: 'skip', why: 'draft' });
   });
 });
 
@@ -198,6 +226,7 @@ describe('decide: releases', () => {
   it('holds a patch release PR, naming the milestone it ships with', () => {
     expect(decide(release('0.1.2'), now, 'main', v02)).toEqual({
       kind: 'wait',
+      cause: 'release',
       why: 'release PR 0.1.2: ships with v0.2.0 — Combat depth; merge it by hand to release now',
     });
   });
@@ -227,6 +256,7 @@ describe('decide: releases', () => {
   it('holds the report PR while its milestone has open issues', () => {
     expect(decide(report('0.2.0'), now, 'main', v02)).toEqual({
       kind: 'wait',
+      cause: 'milestone',
       why: 'report PR 0.2.0: v0.2.0 — Combat depth still has open issues',
     });
   });
@@ -477,7 +507,7 @@ describe('decide: steward rounds', () => {
         reasons: ['ci'],
         round: 1,
         retry: true,
-        clearNeedsYou: false,
+        clearHandOff: [],
       });
     });
 
@@ -590,6 +620,7 @@ describe('decide: milestone hold', () => {
   it('holds a PR whose issue is in a later milestone, naming both', () => {
     expect(decide(pr({ closes: closing(v03) }), now, 'main', v02)).toEqual({
       kind: 'wait',
+      cause: 'milestone',
       why: '#3 is in v0.3.0 — Game shell: merges after v0.2.0 — Combat depth ships',
     });
   });
@@ -653,10 +684,12 @@ describe('decide: main is red (#220)', () => {
   it('holds a finished PR while CI on main is failing, naming its issue', () => {
     expect(decide(pr(), now, 'main', null, red)).toEqual({
       kind: 'wait',
+      cause: 'main-ci',
       why: 'main CI is failing (#216): merges once main is green',
     });
     expect(decide(pr(), now, 'main', null, { issue: null })).toEqual({
       kind: 'wait',
+      cause: 'main-ci',
       why: 'main CI is failing: merges once main is green',
     });
   });
@@ -792,11 +825,22 @@ describe('decide: approval gate (#206)', () => {
     expect(decide(pr({ files: null }), now)).toMatchObject({ kind: 'approval' });
   });
 
-  it('asks for approval when a file was renamed, since its old path may be critical', () => {
-    expect(decide(pr({ renamed: ['docs/notes.md'] }), now)).toEqual({
+  it("asks for approval when a file was renamed and its old path isn't known", () => {
+    expect(decide(pr({ renamed: [{ path: 'docs/notes.md', from: null }] }), now)).toEqual({
       kind: 'approval',
-      paths: ['docs/notes.md (renamed: its old path may be critical)'],
+      paths: ['docs/notes.md (renamed: its old path is unknown)'],
     });
+  });
+
+  it('asks for approval when a file was renamed away from a critical path', () => {
+    expect(decide(pr({ renamed: [{ path: 'tools/notes.md', from: 'docs/adr/0009-x.md' }] }), now)).toEqual({
+      kind: 'approval',
+      paths: ['tools/notes.md (renamed from docs/adr/0009-x.md)'],
+    });
+  });
+
+  it('merges a rename whose old path is game code, like #351 (#417)', () => {
+    expect(kind(pr({ renamed: [{ path: 'src/sim/aim.ts', from: 'src/sim/turn.ts' }] }))).toBe('merge');
   });
 
   it('asks again when code was committed after the approval', () => {
@@ -835,7 +879,7 @@ describe('decide: approval gate (#206)', () => {
 
   it('waits on the maintainer after asking, then merges on /approve', () => {
     const asked = { ...action(`${STUCK_MARKER}\n${APPROVAL_MARKER}`, 20) };
-    const waiting = critical({ labels: ['needs-you'], comments: [review(60), agent(DONE_MARKER, 30), asked] });
+    const waiting = critical({ labels: ['needs-approval'], comments: [review(60), agent(DONE_MARKER, 30), asked] });
     expect(kind(waiting)).toBe('skip');
     expect(kind({ ...waiting, comments: [...waiting.comments, approve(5)] })).toBe('merge');
   });
@@ -850,9 +894,20 @@ describe('changedFiles', () => {
     expect(changedFiles(null)).toBeNull();
   });
 
-  it('lists renamed files by their new path', () => {
-    expect(renamedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts', 'RENAMED')] })).toEqual(['b.ts']);
+  it('lists renamed files by their new path, old path not known yet', () => {
+    expect(renamedFiles({ totalCount: 2, nodes: [file('a.ts'), file('b.ts', 'RENAMED')] })).toEqual([
+      { path: 'b.ts', from: null },
+    ]);
     expect(renamedFiles(null)).toEqual([]);
+  });
+
+  it("fills in each rename's old path from the REST file list", () => {
+    const rest = [
+      { filename: 'a.ts', status: 'modified' },
+      { filename: 'b.ts', status: 'renamed', previous_filename: 'scripts/b.ts' },
+    ];
+    expect(renameSources([{ path: 'b.ts', from: null }], rest)).toEqual([{ path: 'b.ts', from: 'scripts/b.ts' }]);
+    expect(renameSources([{ path: 'c.ts', from: null }], rest)).toEqual([{ path: 'c.ts', from: null }]);
   });
 });
 
@@ -933,7 +988,7 @@ describe('act', () => {
     reasons: ['ci', 'review'],
     round: 2,
     retry: false,
-    clearNeedsYou: false,
+    clearHandOff: [],
   };
 
   it('fires a steward round with the PR, reasons and round, then posts the round marker with the session link', async () => {
@@ -950,10 +1005,11 @@ describe('act', () => {
     expect(body).toContain(roundMeta(['ci', 'review'], 'base-1'));
   });
 
-  it('removes needs-you when a maintainer comment restarted the PR', async () => {
+  it('removes the hand-off labels when a maintainer comment restarted the PR', async () => {
     fireOk.mockClear();
-    await act(pr(), { ...steward, clearNeedsYou: true }, 'gh-token', settings, fireOk);
+    await act(pr(), { ...steward, clearHandOff: ['needs-you', 'needs-approval'] }, 'gh-token', settings, fireOk);
     expect(calls(fireOk)).toContain(`DELETE ${api}/issues/7/labels/needs-you`);
+    expect(calls(fireOk)).toContain(`DELETE ${api}/issues/7/labels/needs-approval`);
   });
 
   it('says a retried round is a retry', async () => {
@@ -1025,9 +1081,10 @@ describe('act', () => {
     expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
     const { body } = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
     expect(body).toContain(STUCK_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: ['needs-you'] });
   });
 
-  it('asks for approval: a summary naming the paths with both markers, then needs-you', async () => {
+  it('asks for approval: a summary naming the paths with both markers, then needs-approval (#417)', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await act(pr(), { kind: 'approval', paths: ['docs/adr/0009-new.md'] }, 'gh-token', settings, fetchFn);
     expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
@@ -1036,6 +1093,7 @@ describe('act', () => {
     expect(body).toContain('/approve');
     expect(body).toContain(STUCK_MARKER);
     expect(body).toContain(APPROVAL_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: ['needs-approval'] });
   });
 
   it('asks for approval only when merging is on', async () => {
@@ -1122,5 +1180,186 @@ describe('settingsFromEnv', () => {
 
   it('fails loudly when AUTO_STEWARD is on without its secrets', () => {
     expect(() => settingsFromEnv({ AUTO_STEWARD: 'on' })).toThrow(/ROUTINE_STEWARD_URL/);
+  });
+});
+
+// Every open PR shows why it's waiting (#419): one status label, mapped from the steward's decision.
+describe('statusLabel', () => {
+  const wait = (cause: WaitCause): Decision => ({ kind: 'wait', cause, why: 'x' });
+  const round: Decision = { kind: 'steward', reasons: ['ci'], round: 1, retry: false, clearHandOff: [] };
+
+  it.each<[Decision, StatusLabel]>([
+    [{ kind: 'skip', why: 'handed off, waiting on the maintainer' }, 'waiting: you'],
+    [{ kind: 'stuck', reasons: ['ci'] }, 'waiting: you'],
+    [{ kind: 'approval', paths: ['scripts/x.ts'] }, 'waiting: you'],
+    [round, 'waiting: agent'],
+    [{ kind: 'update' }, 'waiting: agent'],
+    [{ kind: 'review' }, 'waiting: agent'],
+    [{ kind: 'ready' }, 'waiting: agent'],
+    [{ kind: 'merge' }, 'ready to merge'],
+  ])('maps a %o decision to %s', (decision, label) => {
+    expect(statusLabel(decision, pr())).toBe(label);
+  });
+
+  it.each<[WaitCause, StatusLabel]>([
+    ['needs-info', 'waiting: you'],
+    ['release', 'waiting: you'],
+    ['main-ci', 'waiting: main CI'],
+    ['mergeability', 'waiting: agent'],
+    ['round', 'waiting: agent'],
+    ['checks', 'waiting: agent'],
+    ['review', 'waiting: agent'],
+    ['milestone', 'waiting: milestone'],
+    ['stacked', 'waiting: parent PR'],
+    ['blocked', 'waiting: blocker'],
+  ])('maps a wait for %s to %s', (cause, label) => {
+    expect(statusLabel(wait(cause), pr())).toBe(label);
+  });
+
+  it('gives drafts, forks and held PRs no label, whatever the decision', () => {
+    for (const p of [pr({ isDraft: true }), pr({ fork: true }), pr({ labels: ['hold'] })]) {
+      for (const d of [{ kind: 'skip', why: 'draft' } as Decision, round, { kind: 'ready' } as Decision])
+        expect(statusLabel(d, p)).toBeNull();
+    }
+  });
+
+  it('defines every label it can return, with a colour and a description', () => {
+    expect(Object.keys(STATUS_LABELS).sort()).toEqual(
+      [
+        'ready to merge',
+        'waiting: agent',
+        'waiting: blocker',
+        'waiting: main CI',
+        'waiting: milestone',
+        'waiting: parent PR',
+        'waiting: you',
+      ].sort(),
+    );
+    for (const { color, description } of Object.values(STATUS_LABELS)) {
+      expect(color).toMatch(/^[0-9a-f]{6}$/);
+      expect(description.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('decide: the cause of each wait (#419)', () => {
+  const cause = (d: Decision) => (d.kind === 'wait' ? d.cause : null);
+  const v02 = { number: 2, title: 'v0.2.0', after: [4], done: false };
+
+  it('names what a PR waits on', () => {
+    expect(cause(decide(pr({ mergeable: 'UNKNOWN' }), now))).toBe('mergeability');
+    expect(cause(decide(pr({ comments: [action(ROUND_MARKER, 10)] }), now))).toBe('round');
+    expect(cause(decide(pr({ checks: [{ name: 'ci', state: 'pending' }] }), now))).toBe('checks');
+    expect(cause(decide(pr({ comments: [reviewRequest('abc123', 10)] }), now))).toBe('review');
+    expect(cause(decide(pr({ base: 'feat/5-parent' }), now))).toBe('stacked');
+    expect(cause(decide(pr({ closes: [{ number: 3, blocked: true, needsInfo: false }] }), now))).toBe('blocked');
+    expect(cause(decide(pr({ closes: [{ number: 3, blocked: false, needsInfo: true }] }), now))).toBe('needs-info');
+    expect(
+      cause(
+        decide(
+          pr({ closes: [{ number: 3, blocked: false, needsInfo: false, milestone: { number: 4, title: 'v0.3.0' } }] }),
+          now,
+          'main',
+          v02,
+        ),
+      ),
+    ).toBe('milestone');
+    expect(cause(decide(pr(), now, 'main', null, { issue: null }))).toBe('main-ci');
+  });
+
+  it('waits on the maintainer for a release PR to merge by hand, and on CI for one that is running', () => {
+    const release = (over: Partial<StewardPr> = {}) =>
+      pr({
+        title: 'chore(main): release 0.1.2',
+        head: 'release-please--branches--main',
+        closes: [],
+        comments: [],
+        ...over,
+      });
+    expect(cause(decide(release(), now, 'main', v02))).toBe('release');
+    expect(
+      cause(
+        decide(
+          release({ title: 'chore(main): release 0.2.0', checks: [{ name: 'ci', state: 'pending' }] }),
+          now,
+          'main',
+          v02,
+        ),
+      ),
+    ).toBe('checks');
+    const report = pr({
+      title: 'chore: release 0.2.0',
+      head: 'chore/release-0.2.0',
+      body: 'Refs #160',
+      closes: [],
+      comments: [],
+    });
+    expect(cause(decide(report, now, 'main', { ...v02, done: true }))).toBe('release');
+  });
+});
+
+describe('labelChanges', () => {
+  it('adds the new label and removes any other status label, leaving the rest', () => {
+    expect(labelChanges(['bug', 'waiting: agent'], 'waiting: you')).toEqual({
+      add: 'waiting: you',
+      remove: ['waiting: agent'],
+    });
+  });
+
+  it('changes nothing when the label is already right', () => {
+    expect(labelChanges(['needs-you', 'waiting: you'], 'waiting: you')).toEqual({ add: null, remove: [] });
+  });
+
+  it('removes every status label when the PR should have none', () => {
+    expect(labelChanges(['waiting: agent', 'ready to merge', 'hold'], null)).toEqual({
+      add: null,
+      remove: ['waiting: agent', 'ready to merge'],
+    });
+  });
+});
+
+describe('applyStatusLabel', () => {
+  it('adds the new label and removes the stale one', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    expect(await applyStatusLabel(pr({ labels: ['waiting: agent'] }), 'ready to merge', 'gh-token', fetchFn)).toBe(
+      true,
+    );
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/labels`, `DELETE ${api}/issues/7/labels/waiting%3A%20agent`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string)).toEqual({ labels: ['ready to merge'] });
+  });
+
+  it('makes no call when the label is already right', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    expect(await applyStatusLabel(pr({ labels: ['waiting: you'] }), 'waiting: you', 'gh-token', fetchFn)).toBe(false);
+    expect(await applyStatusLabel(pr(), null, 'gh-token', fetchFn)).toBe(false);
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale label someone already removed', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => new Response('{}', { status: 404 }));
+    await expect(applyStatusLabel(pr({ labels: ['waiting: agent'] }), null, 'gh-token', fetchFn)).resolves.toBe(true);
+  });
+});
+
+describe('ensureStatusLabels', () => {
+  it('creates only the status labels the repo lacks, with their colour and description', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    const existing = Object.keys(STATUS_LABELS).filter((l) => l !== 'waiting: blocker');
+    await ensureStatusLabels(existing, 'gh-token', fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/labels`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string)).toEqual({
+      name: 'waiting: blocker',
+      ...STATUS_LABELS['waiting: blocker'],
+    });
+  });
+
+  it('treats a label that already exists (HTTP 422) as created', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => new Response('{}', { status: 422 }));
+    await expect(ensureStatusLabels([], 'gh-token', fetchFn)).resolves.toBeUndefined();
+    expect(fetchFn).toHaveBeenCalledTimes(Object.keys(STATUS_LABELS).length);
+  });
+
+  it('reads the repo labels in the PR query, so checking costs no request', () => {
+    expect(PR_QUERY).toMatch(/labels\(first: 100\) \{ nodes \{ name \} \}/);
   });
 });
