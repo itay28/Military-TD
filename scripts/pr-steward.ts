@@ -761,6 +761,11 @@ export function labelChanges(
   };
 }
 
+/** Rethrows `error` unless it is a GitHub API error with this HTTP status. */
+function ignoreStatus(error: unknown, status: number): void {
+  if ((error as { status?: number }).status !== status) throw error;
+}
+
 /**
  * Gives a PR its status label and removes the stale one. No request when it's already right, so a
  * run with no changes makes no label calls (#293). Two separate writes rather than one `PUT` of the
@@ -779,7 +784,7 @@ export async function applyStatusLabel(
       await github(fetchFn, token, 'DELETE', `issues/${pr.number}/labels/${encodeURIComponent(stale)}`);
     } catch (error) {
       // Someone removed it since the PR was read.
-      if ((error as { status?: number }).status !== 404) throw error;
+      ignoreStatus(error, 404);
     }
   }
   return add !== null || remove.length > 0;
@@ -796,7 +801,7 @@ export async function ensureStatusLabels(
       await github(fetchFn, token, 'POST', 'labels', { name, ...STATUS_LABELS[name] });
     } catch (error) {
       // 422: it exists (a list cut short at 100 labels, or another run made it).
-      if ((error as { status?: number }).status !== 422) throw error;
+      ignoreStatus(error, 422);
     }
   }
 }
@@ -1069,12 +1074,18 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
   const mainRed = mainRedFrom(currentChecks(mainChecks), repository.issues.nodes);
   if (mainRed) console.log(`${repository.defaultBranchRef.name} CI is failing: only its fix merges (#220).`);
   // Labelling is reporting, not acting: it runs with AUTO_STEWARD and AUTO_MERGE off too (#419).
-  if (!dryRun)
-    await ensureStatusLabels(
-      repository.labels.nodes.map((l) => l.name),
-      token,
-    );
-  let labelled = 0;
+  // A failure here is recorded, never allowed to stop the PRs from being acted on.
+  if (!dryRun) {
+    try {
+      await ensureStatusLabels(
+        repository.labels.nodes.map((l) => l.name),
+        token,
+      );
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  let relabelled = 0;
   for (const pr of await Promise.all(nodes.map((node) => withRenameSources(toStewardPr(node), token)))) {
     const decision = decide(
       pr,
@@ -1106,15 +1117,21 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
       add || remove.length ? `; label ${add ?? 'none'}${remove.length ? `, was ${remove.join(', ')}` : ''}` : '';
     console.log(`#${pr.number}: ${decision.kind}${detail ? ` (${detail})` : ''}${note}${relabel}`);
     if (dryRun) continue;
+    // A merge about to happen closes the PR, so its label would be a wasted write.
+    if (!(decision.kind === 'merge' && settings.merge)) {
+      try {
+        if (await applyStatusLabel(pr, label, token)) relabelled++;
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : String(error));
+      }
+    }
     try {
-      // A merge about to happen closes the PR, so its label would be a wasted write.
-      if (!(decision.kind === 'merge' && settings.merge) && (await applyStatusLabel(pr, label, token))) labelled++;
       await act(pr, decision, token, settings);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));
     }
   }
-  console.log(`Status labels: ${labelled} PR${labelled === 1 ? '' : 's'} relabelled.`);
+  console.log(`Status labels: ${relabelled} PR${relabelled === 1 ? '' : 's'} relabelled.`);
   if (failures.length) throw new Error(failures.join('\n'));
 }
 
