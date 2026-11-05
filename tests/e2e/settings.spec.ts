@@ -20,6 +20,7 @@ test('Settings on the Main menu opens the Settings screen, and Back returns to t
   await expect(settingsDialog(page)).toBeVisible();
   await expect(page.getByRole('radio', { name: '×1' })).toBeChecked();
   await expect(page.getByRole('checkbox', { name: 'Always show tower ranges' })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Show map grid' })).toBeChecked();
 
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(settingsDialog(page)).toBeHidden();

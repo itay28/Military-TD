@@ -64,6 +64,11 @@ export function mountSettingsScreen(
   showAllRanges.checked = current.showAllRanges;
   showAllRanges.addEventListener('change', () => settings.set({ showAllRanges: showAllRanges.checked }));
 
+  const showMapGrid = doc.createElement('input');
+  showMapGrid.type = 'checkbox';
+  showMapGrid.checked = current.showMapGrid;
+  showMapGrid.addEventListener('change', () => settings.set({ showMapGrid: showMapGrid.checked }));
+
   const volumes = VOLUME_SLIDERS.map(({ field, label, id }) => {
     const row = doc.createElement('div');
     row.className = 'volume';
@@ -107,7 +112,9 @@ export function mountSettingsScreen(
   const heading = doc.createElement('h2');
   heading.id = TITLE_ID;
   heading.textContent = 'Settings';
-  dialog.append(heading, speeds, labelled(showAllRanges, 'Always show tower ranges'), ...volumes, backButton);
+  dialog.append(heading, speeds, labelled(showAllRanges, 'Always show tower ranges'),
+    labelled(showMapGrid, 'Show map grid'),
+    ...volumes, backButton);
   root.append(dialog);
   root.hidden = false;
   speeds.querySelector<HTMLInputElement>('input:checked')?.focus();

@@ -6,6 +6,7 @@ describe('createSettings', () => {
     expect(DEFAULT_SETTINGS).toEqual({
       defaultSpeed: 1,
       showAllRanges: false,
+      showMapGrid: true,
       masterVolume: 80,
       musicVolume: 60,
       sfxVolume: 80,
@@ -14,7 +15,7 @@ describe('createSettings', () => {
   });
 
   it('starts at the values it is given', () => {
-    const given = { defaultSpeed: 3, showAllRanges: true, masterVolume: 10, musicVolume: 20, sfxVolume: 30 } as const;
+    const given = { defaultSpeed: 3, showAllRanges: true, showMapGrid: false, masterVolume: 10, musicVolume: 20, sfxVolume: 30 } as const;
     expect(createSettings(given).get()).toEqual(given);
   });
 

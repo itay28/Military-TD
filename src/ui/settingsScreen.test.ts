@@ -69,6 +69,18 @@ describe('mountSettingsScreen', () => {
     expect(settings.get().showAllRanges).toBe(false);
   });
 
+  it('has a labelled Show map grid checkbox, on at first, that switches the setting at once (#400)', () => {
+    mount();
+    const box = [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find(
+      (input) => labelOf(input) === 'Show map grid',
+    )!;
+    expect(box.checked).toBe(true);
+    box.click();
+    expect(settings.get().showMapGrid).toBe(false);
+    box.click();
+    expect(settings.get().showMapGrid).toBe(true);
+  });
+
   describe('volume sliders (#67)', () => {
     const sliders = () => [...root.querySelectorAll<HTMLInputElement>('input[type="range"]')];
     const nameOf = (input: HTMLInputElement) => root.querySelector(`label[for="${input.id}"]`)?.textContent;

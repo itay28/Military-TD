@@ -23,6 +23,20 @@ export const MAP_STYLE = {
   grid: { color: 0x000000, alpha: 0.15, width: 1 },
 } as const;
 
+/** The tactical map grid (#400): cells of `cellTiles` square tiles, thin low-alpha lines, and edge labels. */
+export const MAP_GRID = {
+  cellTiles: 4,
+  line: { color: 0xffffff, alpha: 0.18, width: 1 },
+  label: {
+    style: { fontFamily: 'monospace', fontSize: '12px', color: '#f1ecd2', stroke: '#1d2410', strokeThickness: 3 },
+    alpha: 0.85,
+    /** Screen pixels between a label and the canvas edge. */
+    insetPx: 3,
+    /** A cell showing fewer screen pixels than this on an axis gets no label. */
+    minVisiblePx: 16,
+  },
+} as const;
+
 /** Enemies as filled shapes, by kind (before the v0.4 sprites). Radius in pixels: a circle's radius, or half a square's side. */
 export const ENEMY_STYLE = {
   infantry: { shape: 'circle', radius: 9, color: 0x9e3b2c }, // brick red

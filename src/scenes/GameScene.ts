@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
-import { CAMERA, DISMANTLE, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
+import { CAMERA, DISMANTLE, MAP_GRID, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
 import { distanceVolume, viewCenter } from '../audio/distance';
@@ -50,6 +50,7 @@ import {
   drawTracers,
 } from './drawEntities';
 import { drawGrid, drawMap } from './drawMap';
+import { edgeLabels } from './mapGrid';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, type GameSpeed, type GameSpeedControl } from './gameSpeed';
@@ -83,6 +84,7 @@ const ringKeyTowerId = (key: string): number => Number(key.split('@')[0]);
 /** Draw order, back to front. */
 const DEPTH = {
   map: 0,
+  mapGrid: 0.5,
   towers: 1,
   enemies: 2,
   air: 3,
@@ -205,6 +207,9 @@ export class GameScene extends Phaser.Scene {
   private tracerGraphics!: Phaser.GameObjects.Graphics;
   private blasts!: Blasts;
   private shellGraphics!: Phaser.GameObjects.Graphics;
+  /** The tactical grid's lines (world space) and its edge labels, pooled (#400). */
+  private mapGridLines!: Phaser.GameObjects.Graphics;
+  private mapGridLabels: Phaser.GameObjects.Text[] = [];
   private rangeRing!: Phaser.GameObjects.Graphics;
   private selectedRing!: Phaser.GameObjects.Graphics;
   /** With Always show tower ranges: every tower's range ring but the selected one's, which `selectedRing` draws. */
@@ -659,6 +664,7 @@ export class GameScene extends Phaser.Scene {
       destroy: (view) => view.destroy(),
     });
     this.setUpCamera();
+    this.setUpMapGrid();
 
     this.sim.events.on('towerSold', ({ tile, refund }) =>
       this.floatingTexts.add(`+${refund}`, toPixels(tileCenter(tile))),
@@ -880,6 +886,7 @@ export class GameScene extends Phaser.Scene {
       ),
     );
     drawBlasts(this.shellGraphics, this.blasts.active());
+    this.updateMapGrid();
     // Every frame too, so a setting switched on the Settings screen shows at once.
     const { showAllRanges } = this.settings.get();
     this.showAllRings(showAllRanges ? towers.filter((tower) => tower !== selected) : []);
@@ -914,6 +921,51 @@ export class GameScene extends Phaser.Scene {
     const { x, y } = towerCenter(tower);
     drawRangeRing(ring.setPosition(x, y), tower);
     return key;
+  }
+
+  /** The grid lines, drawn once; the labels are placed by `updateMapGrid`. */
+  private setUpMapGrid(): void {
+    const { map } = this.sim.state;
+    const cellPx = MAP_GRID.cellTiles * TILE_PX;
+    const { color, alpha, width } = MAP_GRID.line;
+    const lines = onLayer(this.add.graphics(), 'mapGrid').lineStyle(width, color, alpha);
+    const worldW = map.cols * TILE_PX;
+    const worldH = map.rows * TILE_PX;
+    for (let x = 0; x <= worldW; x += cellPx) lines.lineBetween(x, 0, x, worldH);
+    for (let y = 0; y <= worldH; y += cellPx) lines.lineBetween(0, y, worldW, y);
+    this.mapGridLines = lines;
+  }
+
+  /**
+   * Shows or hides the grid by the setting, and keeps its labels on the visible top and left edges at a constant
+   * on-screen size: they live in world space, so each is placed at its screen pixel and scaled by 1 / zoom.
+   */
+  private updateMapGrid(): void {
+    const show = this.settings.get().showMapGrid;
+    this.mapGridLines.setVisible(show);
+    const { columns, rows } = show
+      ? edgeLabels(this.view, this.cameraBounds())
+      : { columns: [], rows: [] };
+    const { insetPx } = MAP_GRID.label;
+    const labels = [
+      ...columns.map(({ text, x }) => ({ text, x, y: insetPx, origin: [0.5, 0] as const })),
+      ...rows.map(({ text, y }) => ({ text, x: insetPx, y, origin: [0, 0.5] as const })),
+    ];
+    while (this.mapGridLabels.length < labels.length) {
+      const text = this.add.text(0, 0, '', MAP_GRID.label.style).setAlpha(MAP_GRID.label.alpha);
+      this.mapGridLabels.push(onLayer(text, 'mapGrid'));
+    }
+    this.mapGridLabels.forEach((object, i) => {
+      const label = labels[i];
+      object.setVisible(label !== undefined);
+      if (!label) return;
+      const at = screenToWorld(this.view, label);
+      object
+        .setText(label.text)
+        .setOrigin(...label.origin)
+        .setScale(1 / this.view.zoom)
+        .setPosition(at.x, at.y);
+    });
   }
 
   /** Draws the range rings of `towers` on `allRings`, redrawing only when the towers or their ranges change. */

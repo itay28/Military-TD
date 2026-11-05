@@ -37,11 +37,12 @@ function sanitizeVolume(value: unknown, field: VolumeField): number {
 /** Keeps each known field that holds a valid value; every other field takes its default. Unknown fields are dropped. */
 function sanitize(data: unknown): Settings {
   const raw = isRecord(data) ? data : {};
-  const { defaultSpeed, showAllRanges } = raw;
+  const { defaultSpeed, showAllRanges, showMapGrid } = raw;
   const volumes = Object.fromEntries(VOLUME_FIELDS.map((field) => [field, sanitizeVolume(raw[field], field)]));
   return {
     defaultSpeed: GAME_SPEEDS.find((speed) => speed === defaultSpeed) ?? DEFAULT_SETTINGS.defaultSpeed,
     showAllRanges: typeof showAllRanges === 'boolean' ? showAllRanges : DEFAULT_SETTINGS.showAllRanges,
+    showMapGrid: typeof showMapGrid === 'boolean' ? showMapGrid : DEFAULT_SETTINGS.showMapGrid,
     ...(volumes as Pick<Settings, VolumeField>),
   };
 }

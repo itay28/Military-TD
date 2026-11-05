@@ -42,7 +42,7 @@ describe('createPersistedSettings', () => {
 
   it('loads the saved settings at boot', () => {
     const storage = createMemoryStorage();
-    const chosen = { defaultSpeed: 3, showAllRanges: true, masterVolume: 50, musicVolume: 0, sfxVolume: 100 } as const;
+    const chosen = { defaultSpeed: 3, showAllRanges: true, showMapGrid: false, masterVolume: 50, musicVolume: 0, sfxVolume: 100 } as const;
     createPersistedSettings(storage).set(chosen);
     expect(createPersistedSettings(storage).get()).toEqual(chosen);
   });
@@ -96,6 +96,12 @@ describe('loadSettings', () => {
       ...DEFAULT_SETTINGS,
       defaultSpeed: 3,
     });
+  });
+
+  it('keeps a saved Show map grid choice, and defaults to on for a missing or invalid one (#400)', () => {
+    expect(loadSettings(v2({ showMapGrid: false })).showMapGrid).toBe(false);
+    expect(loadSettings(v2({})).showMapGrid).toBe(true);
+    expect(loadSettings(v2({ showMapGrid: 'no' })).showMapGrid).toBe(true);
   });
 
   it('clamps an out-of-range volume to 0–100 and rounds it to a whole number', () => {
