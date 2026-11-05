@@ -31,12 +31,19 @@ export interface ThrottleConfig {
 
 /**
  * Wraps `sink` so a burst of one sound (a row of Rifle Nests firing together) doesn't stack: at most `maxPlays` of each
- * sound in any `windowMs`, the rest dropped. Different sounds don't limit each other.
+ * sound in any `windowMs`, the rest dropped. Different sounds don't limit each other. `byId` gives a sound its own limit
+ * (a burst of leaks calls the radio once, #405).
  */
-export function throttleAudio(sink: AudioOut, { maxPlays, windowMs }: ThrottleConfig, now: () => number): AudioOut {
+export function throttleAudio(
+  sink: AudioOut,
+  config: ThrottleConfig,
+  now: () => number,
+  byId: Partial<Record<SoundId, ThrottleConfig>> = {},
+): AudioOut {
   const recent = new Map<SoundId, number[]>();
   return {
     play(id, volume) {
+      const { maxPlays, windowMs } = byId[id] ?? config;
       const t = now();
       const times = (recent.get(id) ?? []).filter((at) => t - at < windowMs);
       recent.set(id, times);
