@@ -36,6 +36,7 @@ export const SHOT_SOUND: Record<TowerKind, Record<Faction, SoundId>> = {
   aaGun: everyFaction('aaGunBurst'),
   cannon: { us: 'missileLaunch', china: 'missileLaunch', russia: 'gunReport', insurgents: 'recoillessBlast' },
   mortar: everyFaction('mortarLaunch'),
+  sniper: everyFaction('rifleShot'),
 };
 
 /**

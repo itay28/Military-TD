@@ -10,7 +10,7 @@ import { fireTowers, selectTarget, towerAt, type Tower } from './towers';
 // turning to aim (#341) is in aiming.test.ts.
 vi.mock('../data/towers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../data/towers')>()),
-  TURN_RATES: { rifleNest: null, aaGun: null, cannon: null, mortar: null },
+  TURN_RATES: { rifleNest: null, aaGun: null, cannon: null, mortar: null, sniper: null },
 }));
 
 // Path line through tile centers: right along y = 1.5 from x = 0.5 to 3.5, then down x = 3.5 to y = 4.5.
@@ -73,6 +73,23 @@ describe('placeTower', () => {
         damage: 40,
         targets: ['ground'],
         shell: { flightMs: 1000, innerRadius: 0.6, outerRadius: 1.25 },
+      }),
+    ]);
+  });
+
+  it('a placed Sniper has its stats from data: long range, slow, heavy, a little pierce, ground only, strongest', () => {
+    const game = createGame({ map: SMALL, lives: 20, money: 200, waves: [] });
+    expect(game.placeTower('sniper', { col: 5, row: 4 }).ok).toBe(true);
+    expect(game.state.money).toBe(90);
+    expect(game.state.towers).toEqual([
+      expect.objectContaining({
+        kind: 'sniper',
+        range: 6,
+        fireRate: 0.4,
+        damage: 70,
+        armorPierce: 4,
+        targets: ['ground'],
+        targeting: 'strongest',
       }),
     ]);
   });
@@ -166,6 +183,55 @@ describe('targeting', () => {
     const tower = place(game, { col: 0, row: 3 }); // e1 is about 3.0 away, e2 about 2.15
     game.tick(0);
     expect(shots).toEqual([[tower, second]]);
+  });
+});
+
+describe('strongest targeting', () => {
+  const towerOf = (kind: keyof typeof TOWER_STATS): Tower => ({
+    ...TOWER_STATS[kind],
+    id: 1,
+    kind,
+    tile: { col: 2, row: 2 }, // center (2.5, 2.5)
+    cooldownMs: 0,
+    level: 1,
+    spent: TOWER_STATS[kind].cost,
+    heading: START_HEADING,
+  });
+  const sniper = () => towerOf('sniper');
+  const enemy = (id: number, kind: keyof typeof ENEMY_STATS, distance: number, hp?: number): Enemy => ({
+    ...ENEMY_STATS[kind],
+    id,
+    kind,
+    hp: hp ?? ENEMY_STATS[kind].maxHp,
+    distance,
+    position: { x: 0.5 + distance, y: 1.5 },
+  });
+
+  it('picks the enemy with the most HP left in range, over one further along', () => {
+    expect(selectTarget(sniper(), [enemy(1, 'infantry', 3), enemy(2, 'tank', 1), enemy(3, 'jeep', 2)])?.id).toBe(2);
+  });
+
+  it('goes by HP left, not max HP: a Tank down to 20 loses to a fresh 30-HP Infantry', () => {
+    expect(selectTarget(sniper(), [enemy(1, 'tank', 1, 20), enemy(2, 'infantry', 0.5)])?.id).toBe(2);
+  });
+
+  it('a tie in HP goes to the one furthest along the Path, then to the one spawned first', () => {
+    expect(
+      selectTarget(sniper(), [enemy(1, 'infantry', 1), enemy(2, 'infantry', 2.5), enemy(3, 'infantry', 2)])?.id,
+    ).toBe(2);
+    expect(selectTarget(sniper(), [enemy(1, 'infantry', 2), enemy(2, 'infantry', 2)])?.id).toBe(1);
+  });
+
+  it('ignores the strongest enemy when it is out of range or on a layer the tower does not hit', () => {
+    const far = enemy(1, 'tank', 9); // (9.5, 1.5): 7.07 tiles off, past range 6
+    const heli = enemy(2, 'helicopter', 1);
+    expect(selectTarget(sniper(), [far, heli, enemy(3, 'infantry', 1)])?.id).toBe(3);
+  });
+
+  it('a kind without a targeting rule still targets "first"', () => {
+    const rifle = towerOf('rifleNest');
+    expect('targeting' in TOWER_STATS.rifleNest).toBe(false);
+    expect(selectTarget(rifle, [enemy(1, 'infantry', 2), enemy(2, 'tank', 1)])?.id).toBe(1);
   });
 });
 
