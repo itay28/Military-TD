@@ -1,3 +1,4 @@
+import type { TowerKind } from '../data/towers';
 import type { EnemyKind } from '../data/enemies';
 import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
@@ -37,6 +38,8 @@ export interface TestView {
     readonly at: Pixel;
     readonly progress: number;
   }[];
+  /** The DPS meter's highlight (#244): the kind clicked there, and the id of every tower of it that is outlined. */
+  readonly highlight: { readonly kind: TowerKind | null; readonly towerIds: readonly number[] };
   /**
    * The Ghost under the pointer: shown only while a mouse hovers, or a finger drags over, a tile with a build kind
    * selected. `tile` is null when it is hidden.

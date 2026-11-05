@@ -239,6 +239,45 @@
       #hud .dps-kind + .dps-kind {
         margin-top: 4px;
       }
+      /* The kind's row highlights its towers on the map; a small button beside it expands the tower list. */
+      #hud .dps-kind-head {
+        display: flex;
+        gap: 2px;
+      }
+      #hud .dps-meter button.dps-kind-row {
+        flex: 1;
+        min-width: 0;
+      }
+      #hud .dps-meter button.dps-kind-row[aria-pressed='true'] {
+        box-shadow: inset 0 0 0 2px #4fd1ff;
+      }
+      #hud .dps-meter button.dps-kind-expand {
+        flex: none;
+        padding: 3px 8px;
+        font: 12px monospace;
+        color: #e4e0c8;
+        background: rgb(228 224 200 / 0.06);
+        border-radius: 2px;
+      }
+      #hud .dps-meter button.dps-kind-expand::before {
+        content: '▸';
+      }
+      #hud .dps-meter button.dps-kind-expand[aria-expanded='true']::before {
+        content: '▾';
+      }
+      #hud .dps-meter button.dps-tower-button {
+        display: block;
+        width: 100%;
+        padding: 1px 4px 1px 22px;
+        font: inherit;
+        text-align: left;
+        color: inherit;
+        background: transparent;
+        white-space: nowrap;
+      }
+      #hud .dps-meter button.dps-tower-button:disabled {
+        cursor: default;
+      }
       /* One kind: swatch, name, DPS, kills and share on a line, the share bar under it. */
       #hud .dps-meter button.dps-kind-row {
         display: grid;
@@ -284,7 +323,7 @@
         display: none;
       }
       #hud .dps-tower {
-        padding: 1px 4px 1px 22px;
+        padding: 0;
         color: #c9c5ad;
         white-space: nowrap;
       }
