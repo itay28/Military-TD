@@ -15,7 +15,14 @@ describe('createSettings', () => {
   });
 
   it('starts at the values it is given', () => {
-    const given = { defaultSpeed: 3, showAllRanges: true, showMapGrid: false, masterVolume: 10, musicVolume: 20, sfxVolume: 30 } as const;
+    const given = {
+      defaultSpeed: 3,
+      showAllRanges: true,
+      showMapGrid: false,
+      masterVolume: 10,
+      musicVolume: 20,
+      sfxVolume: 30,
+    } as const;
     expect(createSettings(given).get()).toEqual(given);
   });
 

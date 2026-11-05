@@ -112,9 +112,14 @@ export function mountSettingsScreen(
   const heading = doc.createElement('h2');
   heading.id = TITLE_ID;
   heading.textContent = 'Settings';
-  dialog.append(heading, speeds, labelled(showAllRanges, 'Always show tower ranges'),
+  dialog.append(
+    heading,
+    speeds,
+    labelled(showAllRanges, 'Always show tower ranges'),
     labelled(showMapGrid, 'Show map grid'),
-    ...volumes, backButton);
+    ...volumes,
+    backButton,
+  );
   root.append(dialog);
   root.hidden = false;
   speeds.querySelector<HTMLInputElement>('input:checked')?.focus();

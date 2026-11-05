@@ -1,6 +1,16 @@
 import Phaser from 'phaser';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
-import { CAMERA, DISMANTLE, MAP_GRID, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
+import {
+  CAMERA,
+  DISMANTLE,
+  MAP_GRID,
+  EFFECT,
+  FLOATING_TEXT,
+  SHELL,
+  SPRITE_SCALE,
+  TILE_PX,
+  TRACER,
+} from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
 import { distanceVolume, viewCenter } from '../audio/distance';
@@ -943,9 +953,7 @@ export class GameScene extends Phaser.Scene {
   private updateMapGrid(): void {
     const show = this.settings.get().showMapGrid;
     this.mapGridLines.setVisible(show);
-    const { columns, rows } = show
-      ? edgeLabels(this.view, this.cameraBounds())
-      : { columns: [], rows: [] };
+    const { columns, rows } = show ? edgeLabels(this.view, this.cameraBounds()) : { columns: [], rows: [] };
     const { insetPx } = MAP_GRID.label;
     const labels = [
       ...columns.map(({ text, x }) => ({ text, x, y: insetPx, origin: [0.5, 0] as const })),

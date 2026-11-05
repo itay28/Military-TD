@@ -42,7 +42,14 @@ describe('createPersistedSettings', () => {
 
   it('loads the saved settings at boot', () => {
     const storage = createMemoryStorage();
-    const chosen = { defaultSpeed: 3, showAllRanges: true, showMapGrid: false, masterVolume: 50, musicVolume: 0, sfxVolume: 100 } as const;
+    const chosen = {
+      defaultSpeed: 3,
+      showAllRanges: true,
+      showMapGrid: false,
+      masterVolume: 50,
+      musicVolume: 0,
+      sfxVolume: 100,
+    } as const;
     createPersistedSettings(storage).set(chosen);
     expect(createPersistedSettings(storage).get()).toEqual(chosen);
   });
