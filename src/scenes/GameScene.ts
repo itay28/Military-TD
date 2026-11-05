@@ -956,8 +956,8 @@ export class GameScene extends Phaser.Scene {
     const { columns, rows } = show ? edgeLabels(this.view, this.cameraBounds()) : { columns: [], rows: [] };
     const { insetPx } = MAP_GRID.label;
     const labels = [
-      ...columns.map(({ text, x }) => ({ text, x, y: insetPx, origin: [0.5, 0] as const })),
-      ...rows.map(({ text, y }) => ({ text, x: insetPx, y, origin: [0, 0.5] as const })),
+      ...columns.map(({ text, x, y }) => ({ text, x, y: y + insetPx, origin: [0.5, 0] as const })),
+      ...rows.map(({ text, x, y }) => ({ text, x: x + insetPx, y, origin: [0, 0.5] as const })),
     ];
     while (this.mapGridLabels.length < labels.length) {
       const text = this.add.text(0, 0, '', MAP_GRID.label.style).setAlpha(MAP_GRID.label.alpha);

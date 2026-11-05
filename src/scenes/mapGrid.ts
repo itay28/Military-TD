@@ -25,8 +25,8 @@ export interface EdgeLabel {
 }
 
 /**
- * The labels for the visible edges: `columns` along the top (their `x`, with `y` 0) and `rows` down the left (their
- * `y`, with `x` 0). Each is centred on the part of its cell that is on screen, so it follows a pan and zoom, and a cell
+ * The labels for the visible edges: `columns` along the top (their `x`, with `y` the map's top edge on screen, or 0 if it is scrolled off) and `rows` down the left (their
+ * `y`, with `x` the map's left edge likewise). Each is centred on the part of its cell that is on screen, so it follows a pan and zoom, and a cell
  * with less than `minVisiblePx` on screen gets none.
  */
 export function edgeLabels(
@@ -42,15 +42,18 @@ export function edgeLabels(
     const hi = Math.min(end, screenSize);
     return hi - lo >= MAP_GRID.label.minVisiblePx ? (lo + hi) / 2 : undefined;
   };
+  // A map smaller than the screen sits centred in a margin, so the labels hug the map's edge, not the canvas's.
+  const top = Math.max(0, -view.scrollY * view.zoom);
+  const left = Math.max(0, -view.scrollX * view.zoom);
   const columns: EdgeLabel[] = [];
   for (let c = 0; c * cellPx < world.width; c++) {
     const x = span(c, world.width, view.scrollX, viewport.width);
-    if (x !== undefined) columns.push({ text: columnLetters(c), x, y: 0 });
+    if (x !== undefined) columns.push({ text: columnLetters(c), x, y: top });
   }
   const rows: EdgeLabel[] = [];
   for (let r = 0; r * cellPx < world.height; r++) {
     const y = span(r, world.height, view.scrollY, viewport.height);
-    if (y !== undefined) rows.push({ text: String(r + 1), x: 0, y });
+    if (y !== undefined) rows.push({ text: String(r + 1), x: left, y });
   }
   return { columns, rows };
 }

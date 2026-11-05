@@ -46,6 +46,14 @@ describe('edgeLabels', () => {
     expect(columns.map((label) => label.text)).toEqual(['A', 'B', 'C']);
   });
 
+  it("puts the labels on the map's own top and left edges when it sits centred in a margin", () => {
+    const wide: CameraBounds = { ...bounds, viewport: { width: 32 * T, height: 20 * T } };
+    const view: CameraView = { scrollX: -8 * T, scrollY: -5 * T, zoom: 1 };
+    const { columns, rows } = edgeLabels(view, wide, 4);
+    expect(columns.every((label) => label.y === 5 * T)).toBe(true);
+    expect(rows.every((label) => label.x === 8 * T)).toBe(true);
+  });
+
   it('drops a cell with almost none of it on screen', () => {
     const view: CameraView = { scrollX: 4 * T - 1, scrollY: 0, zoom: 1 };
     expect(edgeLabels(view, bounds, 4).columns[0]!.text).toBe('B');
