@@ -407,6 +407,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-04
 - Files: `assets/radio-cues/**`
 
+## Battlefield ambience
+
+- Author: Military-TD, from The Free Firearm Sound Library, EZduzziteh's Explosions, Kresiek The Furry's Radio Noise 1 and its radio voice takes
+- Source: <https://opengameart.org/content/the-free-firearm-sound-library>
+- License: CC0-1.0
+- Attribution: Built by scripts/ambience-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Explosions by EZduzziteh, Radio Noise 1 by Kresiek The Furry and the radio voice takes (voiced from Voiceover Pack by Kenney), with synthesized wind, all CC0
+- Downloaded: 2026-11-05
+- Files: `assets/battlefield-ambience/**`
+
 ## Allerta Stencil
 
 - Author: Matt McInerney
@@ -424,12 +433,3 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: IBM Plex Mono by IBM Corp., SIL Open Font License 1.1 (Regular and Bold)
 - Downloaded: 2026-11-05
 - Files: `assets/ibm-plex-mono/**`
-
-## Battlefield ambience
-
-- Author: Military-TD, from The Free Firearm Sound Library, EZduzziteh's Explosions, Kresiek The Furry's Radio Noise 1 and its radio voice takes
-- Source: <https://opengameart.org/content/the-free-firearm-sound-library>
-- License: CC0-1.0
-- Attribution: Built by scripts/ambience-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Explosions by EZduzziteh, Radio Noise 1 by Kresiek The Furry and the radio voice takes (voiced from Voiceover Pack by Kenney), with synthesized wind, all CC0
-- Downloaded: 2026-11-05
-- Files: `assets/battlefield-ambience/**`
