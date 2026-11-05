@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
+import { TOWER_NAMES, TOWER_ROLES } from '../data/display';
 import { TOWER_STATS } from '../data/towers';
 import { createGame, TICK_MS, type GameState } from '../sim/game';
 import type { MapData } from '../sim/map';
@@ -61,6 +62,16 @@ beforeEach(() => {
 });
 
 describe('Tower panel', () => {
+  it("leads with the kind's name and its role line", () => {
+    const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]));
+    panel.select(1);
+    expect(root.querySelector('h2')?.textContent).toBe(TOWER_NAMES.rifleNest);
+    expect(value('tower-role')).toBe(TOWER_ROLES.rifleNest);
+    expect(root.querySelector('h2')?.nextElementSibling?.nextElementSibling).toBe(
+      root.querySelector('[data-testid="tower-role"]'),
+    );
+  });
+
   it('is hidden until a tower is selected', () => {
     const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]));
     expect(root.hidden).toBe(true);
