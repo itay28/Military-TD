@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.6.0](https://github.com/itay28/Military-TD/compare/v0.5.0...v0.6.0) (2026-11-05)
+
+
+### Features
+
+* battlefield ambience in battle, radio leak call, music in menus only ([#430](https://github.com/itay28/Military-TD/issues/430)) ([c08b46c](https://github.com/itay28/Military-TD/commit/c08b46c4976a11f6ea22222996831d68c0e4ab4d))
+* master, music and SFX volume settings, muted while the tab is hidden ([#412](https://github.com/itay28/Military-TD/issues/412)) ([f476429](https://github.com/itay28/Military-TD/commit/f47642918f9245525bd94a77366249a2dcfc2aae))
+* menu and game music with a crossfade between scenes ([#334](https://github.com/itay28/Military-TD/issues/334)) ([c527e54](https://github.com/itay28/Military-TD/commit/c527e54e62350ca66adfef297bb4c651d774d5b2))
+* PR steward fires a ci round for a stranded draft and marks it ready when green ([#391](https://github.com/itay28/Military-TD/issues/391)) ([58eaf0d](https://github.com/itay28/Military-TD/commit/58eaf0d4ff39d7985c0e2b78a36869cb08732e19))
+* radio comms cues for wave start, victory and defeat ([#410](https://github.com/itay28/Military-TD/issues/410)) ([a2b9d40](https://github.com/itay28/Military-TD/commit/a2b9d402af06cb322284e151975565401ef644d3))
+* realistic weapon sounds per tower and defender faction ([#411](https://github.com/itay28/Military-TD/issues/411)) ([edfedd3](https://github.com/itay28/Military-TD/commit/edfedd305a368857187e64340916ceb5b0382a75))
+* sound effects for shots, explosions, leaks, waves and the end of the game ([#332](https://github.com/itay28/Military-TD/issues/332)) ([ee96768](https://github.com/itay28/Military-TD/commit/ee96768a57ec6899d7e48aba850429ba0ed22815))
+* status labels on PRs show why each one is waiting ([#428](https://github.com/itay28/Military-TD/issues/428)) ([5939fed](https://github.com/itay28/Military-TD/commit/5939fed0523752b5f84d50be94e9dfd149afade9))
+
+
+### Bug Fixes
+
+* build-bar icon uses a kind's render ([#378](https://github.com/itay28/Military-TD/issues/378)) ([c8356fa](https://github.com/itay28/Military-TD/commit/c8356fadd36393ccea6acab6599864bfb534c6fd))
+* End screen and pause menu lead back to Level select ([#377](https://github.com/itay28/Military-TD/issues/377)) ([306966f](https://github.com/itay28/Military-TD/commit/306966f02b806f3c5b977eaddd2e004fe6203a6f))
+* let cloud sessions run e2e with the image's Chromium ([#386](https://github.com/itay28/Military-TD/issues/386)) ([bc4825c](https://github.com/itay28/Military-TD/commit/bc4825c8d07a6f1ee0e3c38101c4d51e4542ba46))
+* let the Level select and Main menu scroll on small screens ([#375](https://github.com/itay28/Military-TD/issues/375)) ([6ce5a2e](https://github.com/itay28/Military-TD/commit/6ce5a2e4d429802d6d497d99544046b283cad72d))
+* parked issues don't hold agent slots; look-ahead leaves one slot free ([#426](https://github.com/itay28/Military-TD/issues/426)) ([a4aff0a](https://github.com/itay28/Military-TD/commit/a4aff0a1146785401e5bb19651367b17f06b9693))
+
+
+### Miscellaneous Chores
+
+* release 0.6.0 ([#436](https://github.com/itay28/Military-TD/issues/436)) ([67bf3d0](https://github.com/itay28/Military-TD/commit/67bf3d089ab370757a1e965172c40eda4384e3d1))
+
 ## [0.5.0](https://github.com/itay28/Military-TD/compare/v0.4.0...v0.5.0) (2026-11-03)
 
 
