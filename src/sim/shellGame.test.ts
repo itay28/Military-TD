@@ -16,6 +16,8 @@ vi.mock('../data/towers', () => ({
   TURN_RATES: { rifleNest: null, testMortar: null },
   AIM_TOLERANCE: 0.1,
   START_HEADING: -Math.PI / 2,
+  RETARGET_MARGIN_S: 0.25,
+  trackHorizon: () => null,
 }));
 
 const { createGame, TICK_MS } = await import('./game');

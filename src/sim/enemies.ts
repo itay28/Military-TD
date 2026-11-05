@@ -29,6 +29,8 @@ export interface Enemy extends EnemyStats {
 export interface PathLine {
   /** In tiles. */
   readonly length: number;
+  /** The points it runs through, in walking order. */
+  readonly points: readonly Position[];
   /** The point `distance` tiles along the line, clamped to its ends; exact at waypoints. */
   positionAt(distance: number): Position;
 }
@@ -47,6 +49,7 @@ export function createPathLine(points: readonly Position[]): PathLine {
 
   return {
     length,
+    points,
     positionAt(distance) {
       if (distance <= 0) return first;
       if (distance >= length) return last;
