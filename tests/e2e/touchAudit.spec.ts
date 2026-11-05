@@ -27,6 +27,15 @@ for (const viewport of [
           .filter((b) => b.width < min || b.height < min);
       }, MIN_TAP);
 
+    /** Place a Rifle Nest beside the path, then tap it so its panel opens. */
+    const selectPlacedTower = async (page: Page) => {
+      await page.getByTestId('build-rifleNest').tap();
+      const { x, y } = await tileToScreen(page, BESIDE_PATH);
+      await page.touchscreen.tap(x, y);
+      await page.getByTestId('build-rifleNest').tap(); // deselect, so the next tap selects the tower
+      await page.touchscreen.tap(x, y);
+    };
+
     test('the HUD and build bar buttons are at least 32 px both ways', async ({ page }) => {
       await openGame(page);
       expect(await tooSmall(page, '#hud button')).toEqual([]);
@@ -35,11 +44,7 @@ for (const viewport of [
 
     test('the tower panel buttons are at least 32 px both ways', async ({ page }) => {
       await openGame(page);
-      await page.getByTestId('build-rifleNest').tap();
-      const { x, y } = await tileToScreen(page, BESIDE_PATH);
-      await page.touchscreen.tap(x, y);
-      await page.getByTestId('build-rifleNest').tap(); // deselect, so the next tap selects the tower
-      await page.touchscreen.tap(x, y);
+      await selectPlacedTower(page);
       await expect(page.getByTestId('tower-upgrade')).toBeVisible();
       expect(await tooSmall(page, '#tower-panel button')).toEqual([]);
     });
@@ -65,6 +70,7 @@ for (const viewport of [
 
       await page.getByTestId('start-wave').tap();
       await page.evaluate(() => window.__TD__!.step(180));
+      await expect.poll(async () => (await state(page)).enemies.some((e) => e.kind === 'infantry')).toBe(true);
       const infantry = (await state(page)).enemies.find((e) => e.kind === 'infantry')!;
       const { x, y } = await enemyToScreen(page, infantry.id);
       await page.touchscreen.tap(x, y);
@@ -73,15 +79,14 @@ for (const viewport of [
 
     test('a refused upgrade says why on the screen, not only in a tooltip', async ({ page }) => {
       await openGame(page);
-      await page.getByTestId('build-rifleNest').tap();
-      const { x, y } = await tileToScreen(page, BESIDE_PATH);
-      await page.touchscreen.tap(x, y);
-      await page.getByTestId('build-rifleNest').tap();
-      await page.touchscreen.tap(x, y);
-      // Spend the rest of the money, so the upgrade cannot be afforded.
-      await page.evaluate(() =>
-        window.__TD__!.command({ type: 'placeTower', kind: 'rifleNest', tile: { col: 1, row: 1 } }),
-      );
+      await selectPlacedTower(page);
+      // Spend the rest of the money (a second tower per $ it takes), so the upgrade cannot be afforded.
+      await page.evaluate(() => {
+        const td = window.__TD__!;
+        for (let col = 1; td.state().towers.length < 20 && col < 20; col++) {
+          td.command({ type: 'placeTower', kind: 'rifleNest', tile: { col, row: 1 } });
+        }
+      });
       await expect(page.getByTestId('tower-upgrade')).toBeDisabled();
       await expect(page.getByTestId('tower-upgrade-reason')).toBeVisible();
     });

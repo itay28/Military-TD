@@ -67,6 +67,8 @@ export function mountTowerPanel(
   const upgradeReason = doc.createElement('p');
   upgradeReason.dataset.testid = 'tower-upgrade-reason';
   upgradeReason.hidden = true;
+  upgradeReason.id = 'tower-upgrade-reason';
+  upgrade.setAttribute('aria-describedby', upgradeReason.id);
   const sell = doc.createElement('button');
   sell.type = 'button';
   sell.dataset.testid = 'tower-sell';
