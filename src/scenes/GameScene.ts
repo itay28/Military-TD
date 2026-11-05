@@ -3,9 +3,9 @@ import atlasPngUrl from '../../assets/atlas/sprites.png';
 import {
   CAMERA,
   DISMANTLE,
-  MAP_GRID,
   EFFECT,
   FLOATING_TEXT,
+  MAP_GRID,
   SHELL,
   SPRITE_SCALE,
   TILE_PX,

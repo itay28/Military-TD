@@ -2,7 +2,7 @@ import type { Tile } from '../sim/map';
 import { MAP_GRID, TILE_PX } from '../data/display';
 import type { CameraBounds, CameraView } from './camera';
 
-// The tactical map grid (#400): cells of N×N tiles, lettered along the top and numbered down the left, Arma-style,
+// The tactical map grid (#400): grid squares of N×N tiles, lettered along the top and numbered down the left, Arma-style,
 // so a place can be named ("Grid C4"). Pure, so the briefing and the keyboard cursor use the same names.
 
 /** The letters for column `index` (0-based): A…Z, then AA, AB… */
@@ -17,7 +17,7 @@ export function gridLabel({ col, row }: Tile, cellTiles: number = MAP_GRID.cellT
   return `${columnLetters(Math.floor(col / cellTiles))}${Math.floor(row / cellTiles) + 1}`;
 }
 
-/** A label to draw at a screen pixel, centred there. */
+/** A label to draw anchored at a screen pixel (the scene sets the origin per axis). */
 export interface EdgeLabel {
   readonly text: string;
   readonly x: number;
@@ -26,7 +26,7 @@ export interface EdgeLabel {
 
 /**
  * The labels for the visible edges: `columns` along the top (their `x`, with `y` the map's top edge on screen, or 0 if it is scrolled off) and `rows` down the left (their
- * `y`, with `x` the map's left edge likewise). Each is centred on the part of its cell that is on screen, so it follows a pan and zoom, and a cell
+ * `y`, with `x` the map's left edge likewise). Each is anchored at the middle of the part of its cell that is on screen, so it follows a pan and zoom, and a cell
  * with less than `minVisiblePx` on screen gets none.
  */
 export function edgeLabels(

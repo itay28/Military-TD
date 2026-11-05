@@ -23,7 +23,7 @@ export const MAP_STYLE = {
   grid: { color: 0x000000, alpha: 0.15, width: 1 },
 } as const;
 
-/** The tactical map grid (#400): cells of `cellTiles` square tiles, thin low-alpha lines, and edge labels. */
+/** The tactical map grid (#400): grid squares of `cellTiles` × `cellTiles` tiles, thin low-alpha lines, and edge labels. Not `MAP_STYLE.grid`, the per-tile grid. */
 export const MAP_GRID = {
   cellTiles: 4,
   line: { color: 0xffffff, alpha: 0.18, width: 1 },
