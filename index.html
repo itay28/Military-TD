@@ -214,6 +214,127 @@
         background: transparent;
         box-shadow: inset 0 0 0 2px var(--olive-500);
       }
+      /* The DPS figure is a button that opens the DPS meter (#243): it reads as the figure, underlined. */
+      #hud {
+        position: relative;
+      }
+      #hud .hud-stats > button.hud-dps {
+        min-width: 9ch;
+        padding: 0;
+        font: inherit;
+        text-align: left;
+        white-space: nowrap;
+        color: inherit;
+        background: none;
+        text-decoration: underline dotted;
+        text-underline-offset: 3px;
+      }
+      #hud .hud-stats > button.hud-dps[aria-expanded='true'] {
+        color: var(--amber);
+      }
+      /* The DPS meter hangs under the HUD at the map's top-left corner, clear of its centre and of the tower panel
+         (top-right); it scrolls when it is taller than its cap. Under the End screen and Pause overlays. */
+      #hud .dps-meter {
+        position: absolute;
+        top: calc(100% + 14px);
+        left: 8px;
+        z-index: 1;
+        box-sizing: border-box;
+        width: 280px;
+        max-width: calc(100vw - 32px);
+        max-height: 55vh;
+        overflow-y: auto;
+        padding: 6px;
+        font: 0.75rem var(--font-mono);
+        background: color-mix(in srgb, var(--olive-900) 88%, transparent);
+        border: 1px solid var(--bone-muted);
+        border-radius: 3px;
+      }
+      #hud .dps-meter[hidden] {
+        display: none;
+      }
+      #hud .dps-scope {
+        display: flex;
+        gap: 3px;
+        margin-bottom: 6px;
+      }
+      #hud .dps-scope button {
+        flex: 1;
+        padding: 2px 4px;
+        font: bold 0.75rem var(--font-mono);
+        color: var(--tan);
+        background: transparent;
+        box-shadow: inset 0 0 0 2px var(--tan);
+      }
+      #hud .dps-scope button[aria-pressed='true'] {
+        color: var(--olive-900);
+        background: var(--tan);
+      }
+      #hud .dps-empty {
+        margin: 4px 2px;
+        color: var(--bone-dim);
+      }
+      #hud .dps-kinds,
+      #hud .dps-towers {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      #hud .dps-kind + .dps-kind {
+        margin-top: 4px;
+      }
+      /* One kind: swatch, name, DPS, kills and share on a line, the share bar under it. */
+      #hud .dps-meter button.dps-kind-row {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr) auto auto 4ch;
+        align-items: center;
+        gap: 2px 6px;
+        width: 100%;
+        padding: 3px 4px;
+        font: 0.75rem var(--font-mono);
+        text-align: left;
+        color: var(--bone);
+        background: color-mix(in srgb, var(--bone) 6%, transparent);
+        border-radius: 2px;
+      }
+      #hud .dps-swatch {
+        box-sizing: border-box;
+        width: 12px;
+        height: 12px;
+        border: 2px solid;
+      }
+      #hud .dps-swatch[data-shape='circle'] {
+        border-radius: 50%;
+      }
+      #hud .dps-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #hud .dps-share {
+        text-align: right;
+      }
+      #hud .dps-bar {
+        grid-column: 1 / -1;
+        height: 3px;
+        background: color-mix(in srgb, var(--bone) 12%, transparent);
+      }
+      #hud .dps-bar-fill {
+        display: block;
+        height: 100%;
+        background: var(--tan);
+      }
+      #hud .dps-towers[hidden] {
+        display: none;
+      }
+      #hud .dps-tower {
+        padding: 1px 4px 1px 22px;
+        color: var(--bone-dim);
+        white-space: nowrap;
+      }
+      #hud .dps-tower[data-sold='true'] {
+        color: var(--bone-muted);
+      }
       /* A phone: smaller type. After the base rules, so it wins. */
       @media (max-width: 640px), (max-height: 480px) {
         #hud {
@@ -245,6 +366,17 @@
         }
         #hud .hud-message {
           order: 2;
+        }
+        /* As wide as the map's column, clear of the build bar beside it. */
+        #hud .dps-meter {
+          width: calc(100vw - 132px);
+          max-height: 45vh;
+        }
+        #hud .dps-meter button.dps-kind-row {
+          grid-template-columns: 12px minmax(0, 1fr) auto 4ch;
+        }
+        #hud .dps-kills {
+          display: none;
         }
       }
       /* The End screen covers the canvas, so the map takes no clicks while it's open. */
@@ -342,6 +474,7 @@
       #pause-menu {
         position: absolute;
         inset: 0;
+        z-index: 2;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -469,8 +602,9 @@
         background: var(--olive-500);
         cursor: default;
       }
-      /* The tower panel sits over the top-right of the map; the End screen, after it, covers it. */
-      #tower-panel {
+      /* The tower panel (or the enemy card: one at a time) sits over the top-right of the map; the End screen, after it, covers it. */
+      #tower-panel,
+      #enemy-card {
         position: absolute;
         top: 8px;
         right: 8px;
@@ -482,36 +616,43 @@
         overflow-wrap: anywhere;
         color: var(--bone);
       }
-      #tower-panel [role='dialog'] {
+      #tower-panel [role='dialog'],
+      #enemy-card [role='dialog'] {
         position: relative;
         box-sizing: border-box;
         padding: 10px 12px;
         background: color-mix(in srgb, var(--olive-800) 92%, transparent);
         border: 2px solid var(--tan);
       }
-      #tower-panel h2 {
+      #tower-panel h2,
+      #enemy-card h2 {
         margin: 0 24px 2px 0;
         font-size: 0.9375rem;
         color: var(--amber);
       }
-      #tower-panel p {
+      #tower-panel p,
+      #enemy-card p {
         margin: 0 0 8px;
         color: var(--bone-dim);
       }
-      #tower-panel dl {
+      #tower-panel dl,
+      #enemy-card dl {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         gap: 2px 10px;
         margin: 0;
       }
-      #tower-panel dt {
+      #tower-panel dt,
+      #enemy-card dt {
         color: var(--bone-dim);
       }
-      #tower-panel dd {
+      #tower-panel dd,
+      #enemy-card dd {
         margin: 0;
         text-align: right;
       }
-      #tower-panel button[aria-label='Close'] {
+      #tower-panel button[aria-label='Close'],
+      #enemy-card button[aria-label='Close'] {
         position: absolute;
         top: 4px;
         right: 4px;
@@ -525,12 +666,21 @@
         cursor: pointer;
       }
       @media (max-width: 640px), (max-height: 480px) {
-        #tower-panel {
+        #tower-panel,
+        #enemy-card {
           width: 190px;
           font-size: 0.75rem;
         }
       }
-      #tower-panel button:focus-visible {
+      #tower-panel p.role,
+      #enemy-card p.role {
+        color: var(--bone);
+      }
+      #enemy-card p.role {
+        margin: 8px 0 0;
+      }
+      #tower-panel button:focus-visible,
+      #enemy-card button:focus-visible {
         outline: 2px solid var(--amber);
       }
       #tower-panel [data-testid='tower-upgrade'] {
@@ -564,7 +714,7 @@
         cursor: pointer;
       }
       /* The Main menu and Level select cover the whole page; the game's UI is hidden behind them, out of the accessibility tree too. */
-      #app[data-screen] :is(#hud, #build-bar, #tower-panel) {
+      #app[data-screen] :is(#hud, #build-bar, #tower-panel, #enemy-card) {
         display: none;
       }
       #menu,
@@ -707,6 +857,7 @@
       #settings {
         position: fixed;
         inset: 0;
+        z-index: 3; /* over the Pause overlay (2), which is over the DPS meter (1) */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -881,6 +1032,7 @@
       <div id="stage">
         <div id="game"></div>
         <div id="tower-panel" hidden></div>
+        <div id="enemy-card" hidden></div>
         <div id="end-screen" hidden></div>
         <div id="pause-menu" hidden></div>
       </div>
