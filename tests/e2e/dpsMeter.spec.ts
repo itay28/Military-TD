@@ -9,7 +9,7 @@ test('the DPS meter lists both kinds with their towers after a wave', async ({ p
   const rifleNest = towers.find((t) => t.kind === 'rifleNest')!;
   const cannon = towers.find((t) => t.kind === 'cannon')!;
 
-  await page.getByRole('button', { name: 'Start Wave' }).click();
+  await page.getByRole('button', { name: 'Call next wave' }).click();
   let now = await page.evaluate(() => window.__TD__!.step(1));
   while (now.phase === 'wave') now = await page.evaluate(() => window.__TD__!.step(60));
   expect(now.waveNumber).toBe(1);
