@@ -80,6 +80,7 @@ import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScr
 import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import { mountShortcuts } from '../ui/shortcuts';
+import type { OpenHowToPlay } from '../ui/howToPlay';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
@@ -172,6 +173,7 @@ export interface GameSceneOptions {
   readonly audioMix: AudioMix;
   /** Opens the Settings screen, from the pause menu. */
   readonly openSettings: OpenSettings;
+  readonly openHowToPlay: OpenHowToPlay;
   /** Saved progress: each Victory records its Stars here. */
   readonly progress: ProgressStore;
   /** Called at the end of every create(), the first game's and each restart's. */
@@ -190,6 +192,7 @@ export class GameScene extends Phaser.Scene {
   private readonly settings: SettingsStore;
   private readonly audioMix: AudioMix;
   private readonly openSettings: OpenSettings;
+  private readonly openHowToPlay: OpenHowToPlay;
   private readonly progress: ProgressStore;
   private readonly onCreate: (() => void) | undefined;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
@@ -263,6 +266,7 @@ export class GameScene extends Phaser.Scene {
     settings,
     audioMix,
     openSettings,
+    openHowToPlay,
     progress,
     onCreate,
   }: GameSceneOptions) {
@@ -277,6 +281,7 @@ export class GameScene extends Phaser.Scene {
     this.settings = settings;
     this.audioMix = audioMix;
     this.openSettings = openSettings;
+    this.openHowToPlay = openHowToPlay;
     this.progress = progress;
     this.onCreate = onCreate;
   }
@@ -740,6 +745,7 @@ export class GameScene extends Phaser.Scene {
       onRestart: () => this.scene.restart(),
       onQuit: () => this.scene.start('LevelSelect'),
       openSettings: this.openSettings,
+      openHowToPlay: this.openHowToPlay,
       speed,
     });
     // U, S, Space, F and ?/H (src/ui/keymap.ts), each through the same call as its button. 1–9 are the build bar's.
