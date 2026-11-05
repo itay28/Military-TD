@@ -2,6 +2,7 @@ import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type GameState } from '../sim/game';
 import { mountHelpOverlay, type HelpOverlay } from './helpOverlay';
 import { shortcutFor } from './keymap';
+import type { OpenHowToPlay, HowToPlayScreen } from './howToPlay';
 import type { OpenSettings, SettingsScreen } from './settingsScreen';
 
 /** The parts of the Game the pause menu reads. */
@@ -20,6 +21,8 @@ export interface PauseMenuOptions {
   readonly onQuit?: () => void;
   /** Opens the Settings screen in place of the Paused dialog. Without it, Settings is disabled. */
   readonly openSettings?: OpenSettings;
+  /** Opens the How to play screen in place of the Paused dialog. Without it, How to play is disabled. */
+  readonly openHowToPlay?: OpenHowToPlay;
   /** The game speed. With it, the Paused dialog can change the speed, so the player resumes at the one they pick. */
   readonly speed?: GameSpeedControl;
 }
@@ -49,7 +52,7 @@ const TITLE_ID = 'pause-menu-title';
 export function mountPauseMenu(
   root: HTMLElement,
   game: PauseMenuGame,
-  { buttonRoot, blocked, onRestart, onQuit, openSettings, speed }: PauseMenuOptions,
+  { buttonRoot, blocked, onRestart, onQuit, openSettings, openHowToPlay, speed }: PauseMenuOptions,
 ): PauseMenu {
   const doc = root.ownerDocument;
   const makeButton = (testId: string, text: string, onClick?: () => void) => {
@@ -69,6 +72,7 @@ export function mountPauseMenu(
     paused = value;
     if (!paused) {
       closeSettings();
+      closeHowToPlay();
       closeHelp();
     }
     root.hidden = !paused;
@@ -100,10 +104,17 @@ export function mountPauseMenu(
   };
   const openHelp = () => {
     if (destroyed || isGameOver(game.state.phase) || helpOverlay) return;
-    if (paused) closeSettings();
-    else setPaused(true);
+    if (paused) {
+      closeSettings();
+      closeHowToPlay();
+    } else setPaused(true);
     // Opened from the game, Back returns to it.
     showHelp(close);
+  };
+  const closeHowToPlay = () => {
+    howToPlayScreen?.close();
+    howToPlayScreen = undefined;
+    dialog.hidden = false;
   };
   const closeSettings = () => {
     settingsScreen?.close();
@@ -137,6 +148,21 @@ export function mountPauseMenu(
         });
       }),
   );
+  // Like Settings: it takes the Paused dialog's place and Back brings the dialog back.
+  let howToPlayScreen: HowToPlayScreen | undefined;
+  const howToPlay = makeButton(
+    'how-to-play',
+    'How to play',
+    openHowToPlay &&
+      (() => {
+        dialog.hidden = true;
+        howToPlayScreen = openHowToPlay(() => {
+          howToPlayScreen = undefined;
+          dialog.hidden = false;
+          howToPlay.focus();
+        });
+      }),
+  );
   // Opened from the Paused dialog, Back returns to it.
   let helpOverlay: HelpOverlay | undefined;
   const keys = makeButton('keys', 'Keys', () => showHelp(() => keys.focus()));
@@ -145,6 +171,7 @@ export function mountPauseMenu(
     resume,
     makeButton('pause-restart', 'Restart', () => onRestart()),
     settings,
+    howToPlay,
     keys,
     makeButton('quit', 'Quit to menu', onQuit && (() => onQuit())),
   );
@@ -164,6 +191,7 @@ export function mountPauseMenu(
     if (shortcutFor(event) !== 'pause' || event.repeat) return;
     // From Settings or the help overlay, it goes back the way the player came rather than resuming.
     if (settingsScreen) settingsScreen.back();
+    else if (howToPlayScreen) howToPlayScreen.back();
     else if (helpOverlay) helpOverlay.back();
     else close();
   };
