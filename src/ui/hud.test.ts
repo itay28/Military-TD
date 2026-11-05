@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WAVE_BANNER_MS } from '../data/display';
 import { AUTO_START_DELAY_MS } from '../data/waves';
 import { createGame, type Game } from '../sim/game';
@@ -140,6 +140,24 @@ describe('HUD', () => {
       mountHud(root, game, fakeSpeed());
       button()!.click();
       expect(game.state.phase).toBe('wave');
+      expect(game.state.waveNumber).toBe(1);
+    });
+
+    it('startWave() does what a click does, for the Space key', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      hud.startWave();
+      expect(game.state.phase).toBe('wave');
+      expect(button()!.disabled).toBe(true);
+    });
+
+    it('startWave() does nothing while the button is disabled', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      const startWave = vi.spyOn(game, 'startWave');
+      hud.startWave();
+      hud.startWave();
+      expect(startWave).toHaveBeenCalledOnce();
       expect(game.state.waveNumber).toBe(1);
     });
 

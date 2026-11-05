@@ -64,7 +64,7 @@ import {
 import { drawGrid, drawMap } from './drawMap';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
-import { MAX_GAME_SPEED, type GameSpeed, type GameSpeedControl } from './gameSpeed';
+import { MAX_GAME_SPEED, nextSpeed, type GameSpeed, type GameSpeedControl } from './gameSpeed';
 import { createGestures, hoverFrom, type Gesture, type Gestures } from './gestures';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
@@ -82,6 +82,7 @@ import type { Rect } from '../ui/towerTooltip';
 import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
+import { mountShortcuts } from '../ui/shortcuts';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
@@ -751,7 +752,16 @@ export class GameScene extends Phaser.Scene {
       openSettings: this.openSettings,
       speed,
     });
+    // U, S, Space, F and ?/H (src/ui/keymap.ts), each through the same call as its button. 1–9 are the build bar's.
+    const shortcuts = mountShortcuts(this.hudRoot.ownerDocument, this.sim, {
+      upgrade: () => this.towerPanel.upgrade(),
+      sell: () => this.towerPanel.sell(),
+      startWave: () => this.hud.startWave(),
+      cycleSpeed: () => (this.gameSpeed = nextSpeed(this.gameSpeed)),
+      openHelp: () => this.pauseMenu.openHelp(),
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      shortcuts.destroy();
       this.hud.destroy();
       this.buildBar.destroy();
       this.endScreen.destroy();
