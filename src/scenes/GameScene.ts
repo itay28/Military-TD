@@ -913,7 +913,8 @@ export class GameScene extends Phaser.Scene {
   override update(_time: number, frameDeltaMs: number): void {
     // Paused, no time passes: the sim doesn't tick and the cosmetics hold still (ADR-0002: the sim is untouched).
     // The demo's still frame (reduced motion) is paused for good.
-    const deltaMs = this.demo ? (this.demo === 'still' ? 0 : frameDeltaMs) : this.pauseMenu.paused ? 0 : frameDeltaMs;
+    const held = this.demo ? this.demo === 'still' : this.pauseMenu.paused;
+    const deltaMs = held ? 0 : frameDeltaMs;
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
