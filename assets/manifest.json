@@ -167,11 +167,11 @@
     },
     {
       "id": "render-russia-aa-gun",
-      "name": "ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)",
+      "name": "ZU - 23, \u0437\u0435\u043d\u0438\u0442\u043d\u0430\u044f \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430, \u0417\u0423-23, \u0437\u0435\u043d\u0438\u0442\u043a\u0430 (top-down render)",
       "author": "LuckySkink9661",
       "source": "https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3",
       "license": "CC-BY-4.0",
-      "attribution": "\"ZU - 23, зенитная установка, ЗУ-23, зенитка\" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own, turret split from the carriage",
+      "attribution": "\"ZU - 23, \u0437\u0435\u043d\u0438\u0442\u043d\u0430\u044f \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430, \u0417\u0423-23, \u0437\u0435\u043d\u0438\u0442\u043a\u0430\" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own, turret split from the carriage",
       "downloaded": "2026-11-02",
       "files": ["assets/render-russia-aa-gun/**"]
     },
@@ -257,11 +257,11 @@
     },
     {
       "id": "render-china-jeep",
-      "name": "Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render)",
+      "name": "Military Jeep Low Poly \u2013 Game Ready 3D Vehicle (top-down render)",
       "author": "KidBi-Gaming",
       "source": "https://sketchfab.com/3d-models/935856d763bf49aca45a48fae3a6846c",
       "license": "CC-BY-4.0",
-      "attribution": "\"Military Jeep Low Poly – Game Ready 3D Vehicle\" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive",
+      "attribution": "\"Military Jeep Low Poly \u2013 Game Ready 3D Vehicle\" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive",
       "downloaded": "2026-11-02",
       "files": ["assets/render-china-jeep/**"]
     },
@@ -307,11 +307,11 @@
     },
     {
       "id": "render-insurgents-aa-gun",
-      "name": "ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)",
+      "name": "ZU - 23, \u0437\u0435\u043d\u0438\u0442\u043d\u0430\u044f \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430, \u0417\u0423-23, \u0437\u0435\u043d\u0438\u0442\u043a\u0430 (top-down render)",
       "author": "LuckySkink9661",
       "source": "https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3",
       "license": "CC-BY-4.0",
-      "attribution": "\"ZU - 23, зенитная установка, ЗУ-23, зенитка\" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, repainted sand, set on a sandbagged pad of our own, turret split from the carriage",
+      "attribution": "\"ZU - 23, \u0437\u0435\u043d\u0438\u0442\u043d\u0430\u044f \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430, \u0417\u0423-23, \u0437\u0435\u043d\u0438\u0442\u043a\u0430\" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, repainted sand, set on a sandbagged pad of our own, turret split from the carriage",
       "downloaded": "2026-11-02",
       "files": ["assets/render-insurgents-aa-gun/**"]
     },
@@ -337,11 +337,11 @@
     },
     {
       "id": "render-insurgents-jeep",
-      "name": "TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render)",
+      "name": "TOYOTA DO AFEGANIST\u00c3O (LOW POLY) (top-down render)",
       "author": "lm9241221",
       "source": "https://sketchfab.com/3d-models/9dccb441c7064a11bf87446ab4f4e09b",
       "license": "CC-BY-4.0",
-      "attribution": "\"TOYOTA DO AFEGANISTÃO (LOW POLY)\" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, brightened",
+      "attribution": "\"TOYOTA DO AFEGANIST\u00c3O (LOW POLY)\" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, brightened",
       "downloaded": "2026-11-02",
       "files": ["assets/render-insurgents-jeep/**"]
     },
@@ -464,6 +464,26 @@
       "attribution": "Built by scripts/radio-fx.ts from the radio voice takes (voiced from Voiceover Pack by Kenney), Radio Noise 1 by Kresiek The Furry, The Free Firearm Sound Library (Ben Jaszczak et al.) and Explosions by EZduzziteh, all CC0",
       "downloaded": "2026-11-04",
       "files": ["assets/radio-cues/**"]
+    },
+    {
+      "id": "allerta-stencil",
+      "name": "Allerta Stencil",
+      "author": "Matt McInerney",
+      "source": "https://github.com/google/fonts/tree/main/ofl/allertastencil",
+      "license": "OFL-1.1",
+      "attribution": "Allerta Stencil by Matt McInerney, SIL Open Font License 1.1",
+      "downloaded": "2026-11-05",
+      "files": ["assets/allerta-stencil/**"]
+    },
+    {
+      "id": "ibm-plex-mono",
+      "name": "IBM Plex Mono",
+      "author": "IBM Corp.",
+      "source": "https://github.com/google/fonts/tree/main/ofl/ibmplexmono",
+      "license": "OFL-1.1",
+      "attribution": "IBM Plex Mono by IBM Corp., SIL Open Font License 1.1 (Regular and Bold)",
+      "downloaded": "2026-11-05",
+      "files": ["assets/ibm-plex-mono/**"]
     }
   ]
 }

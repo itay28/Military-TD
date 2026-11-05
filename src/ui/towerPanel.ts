@@ -1,4 +1,5 @@
 import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, UPGRADE_REFUSAL_TEXT, formatFunds } from '../data/display';
+import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
@@ -20,6 +21,14 @@ export interface TowerPanel {
 const TITLE_ID = 'tower-panel-title';
 
 /**
+ * A tower's unit designator, as on a field order: its kind's number on the build bar (the hotkey), a dash, and the
+ * tower's id. The id stays the tower's whole life, so selling another tower never renumbers it.
+ */
+export function designator(kind: TowerKind, id: number): string {
+  return `${(Object.keys(TOWER_STATS) as TowerKind[]).indexOf(kind) + 1}-${id}`;
+}
+
+/**
  * Builds the tower panel inside `root`, an overlay over the canvas. It owns the selection, which is UI state,
  * not a game rule. It's DOM, so tests can query it (ADR-0003).
  */
@@ -35,6 +44,8 @@ export function mountTowerPanel(
   dialog.setAttribute('aria-labelledby', TITLE_ID);
   const heading = doc.createElement('h2');
   heading.id = TITLE_ID;
+  const badge = doc.createElement('span');
+  badge.className = 'designator';
   const close = doc.createElement('button');
   close.type = 'button';
   close.setAttribute('aria-label', 'Close');
@@ -86,7 +97,11 @@ export function mountTowerPanel(
     setHidden(root, !tower);
     if (!tower) return;
     const figures = stats.towers[tower.id];
-    setText(heading, TOWER_NAMES[tower.kind]);
+    const mark = designator(tower.kind, tower.id);
+    if (badge.textContent !== mark || heading.lastChild?.textContent !== ` ${TOWER_NAMES[tower.kind]}`) {
+      badge.textContent = mark;
+      heading.replaceChildren(badge, ` ${TOWER_NAMES[tower.kind]}`);
+    }
     setText(level, `Level ${tower.level}`);
     setText(damage, String(tower.damage));
     setText(fireRate, `${Number(tower.fireRate.toFixed(2))}/s`);

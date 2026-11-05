@@ -2,6 +2,7 @@ import type { Layer } from '../sim/combat';
 import type { PlaceTowerRefusal, UpgradeTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
+import { FONT_STACK } from './theme';
 import type { TowerKind } from './towers';
 
 /** Size of one tile in pixels. Only Scenes convert tiles to pixels. */
@@ -144,7 +145,7 @@ export const GHOST = {
 export const FLOATING_TEXT = {
   durationMs: 900,
   risePx: 24,
-  style: { fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 },
+  style: { fontFamily: FONT_STACK.mono, fontSize: '14px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 },
 } as const;
 
 /** What a refused placement says. */

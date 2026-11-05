@@ -415,3 +415,21 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: Built by scripts/radio-fx.ts from the radio voice takes (voiced from Voiceover Pack by Kenney), Radio Noise 1 by Kresiek The Furry, The Free Firearm Sound Library (Ben Jaszczak et al.) and Explosions by EZduzziteh, all CC0
 - Downloaded: 2026-11-04
 - Files: `assets/radio-cues/**`
+
+## Allerta Stencil
+
+- Author: Matt McInerney
+- Source: <https://github.com/google/fonts/tree/main/ofl/allertastencil>
+- License: OFL-1.1
+- Attribution: Allerta Stencil by Matt McInerney, SIL Open Font License 1.1
+- Downloaded: 2026-11-05
+- Files: `assets/allerta-stencil/**`
+
+## IBM Plex Mono
+
+- Author: IBM Corp.
+- Source: <https://github.com/google/fonts/tree/main/ofl/ibmplexmono>
+- License: OFL-1.1
+- Attribution: IBM Plex Mono by IBM Corp., SIL Open Font License 1.1 (Regular and Bold)
+- Downloaded: 2026-11-05
+- Files: `assets/ibm-plex-mono/**`

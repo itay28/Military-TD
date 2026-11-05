@@ -1,0 +1,57 @@
+/*
+ * The game's two faces (#399), self-hosted and unmodified (OFL Reserved Font Names) so an itch.io build needs
+ * no font service. Each loads with
+ * `font-display: swap` and has a metric-matched fallback, so the swap moves nothing: the fallback is a local Arial
+ * (or its metric twin Liberation Sans) or Courier New (Liberation Mono), scaled and re-spaced to the real face's
+ * advance widths, ascent and descent. The overrides come from the font files' hhea tables and the advance widths of
+ * the game's text; Plex Mono and Courier New share a 0.6 em advance, so only its vertical metrics need matching.
+ * The stacks themselves are `FONT_STACK` in src/data/theme.ts.
+ */
+@font-face {
+  font-family: 'Allerta Stencil';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../assets/allerta-stencil/AllertaStencil-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../assets/ibm-plex-mono/IBMPlexMono-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../../assets/ibm-plex-mono/IBMPlexMono-Bold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Allerta Stencil Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  size-adjust: 107.86%;
+  ascent-override: 95.7%;
+  descent-override: 22.82%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'IBM Plex Mono Fallback';
+  font-weight: 400;
+  src: local('Courier New'), local('CourierNewPSMT'), local('Liberation Mono'), local('LiberationMono');
+  size-adjust: 100%;
+  ascent-override: 102.5%;
+  descent-override: 27.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'IBM Plex Mono Fallback';
+  font-weight: 700;
+  src:
+    local('Courier New Bold'), local('CourierNewPS-BoldMT'), local('Liberation Mono Bold'), local('LiberationMono-Bold');
+  size-adjust: 100%;
+  ascent-override: 102.5%;
+  descent-override: 27.5%;
+  line-gap-override: 0%;
+}
