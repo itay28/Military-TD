@@ -2,6 +2,7 @@ import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE, formatFunds } from '../dat
 import { renderFor, type RenderedSprite } from '../data/renders';
 import { towerIcon, type TowerIcon } from '../data/sprites';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
+import { placeTip, towerTooltip, type Rect, type TowerTooltip } from './towerTooltip';
 
 /** One button on the build bar. */
 export interface BuildOption<K extends string = TowerKind> {
@@ -19,6 +20,8 @@ export interface BuildOption<K extends string = TowerKind> {
   readonly sprite?: TowerIcon;
   /** The tower's render (hull and turret images, turret facing north): wins over `sprite`, as it does on the map. */
   readonly render?: RenderIcon;
+  /** What the button's tooltip says: shown on hover, on focus and while the kind is selected. */
+  readonly tooltip?: TowerTooltip;
 }
 
 /** What the build bar needs of a render: the two image URLs and the square canvas they share, in pixels. */
@@ -44,6 +47,8 @@ export interface BuildBar<K extends string = TowerKind> {
   clear(): void;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
+  /** The page rect of the map tile under the pointer or finger, which a tooltip must not cover; undefined for none. */
+  avoid(rect: Rect | undefined): void;
   /** Removes the bar's elements and stops listening for hotkeys. */
   destroy(): void;
 }
@@ -72,6 +77,7 @@ export function buildOptions(renderLoaded: (render: RenderedSprite) => boolean =
       name: TOWER_NAMES[kind],
       cost: TOWER_STATS[kind].cost,
       icon: { fill, outline, shape, size },
+      tooltip: towerTooltip(kind),
       ...(render
         ? { render: { hullUrl: render.hullUrl, turretUrl: render.turretUrl, canvasPx: render.canvasPx } }
         : {}),
@@ -118,6 +124,30 @@ function renderLayers(doc: Document, render: RenderIcon, box: number): HTMLEleme
   });
 }
 
+/** A hidden `role="tooltip"` for one button: the name and hotkey, the role line, then the stat rows. */
+function tooltipElement(doc: Document, kind: string, hotkey: string, tooltip: TowerTooltip): HTMLElement {
+  const tip = doc.createElement('div');
+  tip.id = `build-tip-${kind}`;
+  tip.dataset.testid = `build-tip-${kind}`;
+  tip.className = 'build-tip';
+  tip.setAttribute('role', 'tooltip');
+  tip.hidden = true;
+  const title = doc.createElement('strong');
+  title.textContent = `${tooltip.name} [${hotkey}]`;
+  const role = doc.createElement('p');
+  role.textContent = tooltip.role;
+  const list = doc.createElement('dl');
+  for (const { label, value } of tooltip.rows) {
+    const dt = doc.createElement('dt');
+    dt.textContent = label;
+    const dd = doc.createElement('dd');
+    dd.textContent = value;
+    list.append(dt, dd);
+  }
+  tip.append(title, role, list);
+  return tip;
+}
+
 /**
  * Builds the build bar inside `root`: a collapse toggle, then one button per option, none selected. A click or the
  * option's number key (`1`…`n`) selects it, unless the player can't afford it; a click on the selected one, or
@@ -144,9 +174,11 @@ export function mountBuildBar<K extends string>(
   root.append(toggle, grid);
 
   let collapsed = false;
+  let mounted = false;
   const setCollapsed = (value: boolean) => {
     collapsed = value;
     grid.hidden = value;
+    if (mounted) update(); // hides the tooltip with the buttons
     root.dataset.collapsed = String(value);
     toggle.setAttribute('aria-expanded', String(!value));
     toggle.textContent = value ? '◀' : '▶';
@@ -155,6 +187,7 @@ export function mountBuildBar<K extends string>(
   setCollapsed(false);
 
   const largest = Math.max(...options.map((option) => option.icon.size));
+  let pointerFocus = false;
   const entries = options.map((option, i) => {
     const hotkey = String(i + 1);
     const button = doc.createElement('button');
@@ -162,7 +195,9 @@ export function mountBuildBar<K extends string>(
     button.dataset.testid = `build-${option.kind}`;
     // Name and cost, as the tower panel names its buttons ("Optics ($40)"), so a screen reader hears the price.
     button.setAttribute('aria-label', `${option.name} (${formatFunds(option.cost)})`);
-    button.title = `${option.name} (${hotkey}): ${formatFunds(option.cost)}`;
+    const tip = option.tooltip && tooltipElement(doc, option.kind, hotkey, option.tooltip);
+    if (tip) button.setAttribute('aria-describedby', tip.id);
+    else button.title = `${option.name} (${hotkey}): ${formatFunds(option.cost)}`;
     const icon = doc.createElement('span');
     icon.className = 'build-icon';
     const box = (ICON_BOX * option.icon.size) / largest;
@@ -188,9 +223,50 @@ export function mountBuildBar<K extends string>(
     key.textContent = hotkey;
     button.append(icon, cost, key);
     button.addEventListener('click', () => (option === selected ? clear() : select(option)));
+    // A finger has no hover: touch shows the tooltip through the selection instead, so a tap that clears it hides it.
+    button.addEventListener('pointerenter', (event) => event.pointerType !== 'touch' && setHovered(option));
+    button.addEventListener('pointerleave', () => hovered === option && setHovered(undefined));
+    // Only keyboard focus: a click or tap focuses the button too, and must not keep its tooltip up once cleared.
+    button.addEventListener('pointerdown', () => (pointerFocus = true));
+    button.addEventListener('focus', () => {
+      if (!pointerFocus) setFocused(option);
+      pointerFocus = false;
+    });
+    button.addEventListener('blur', () => focused === option && setFocused(undefined));
     grid.append(button);
-    return { option, button };
+    if (tip) root.append(tip);
+    return { option, button, tip };
   });
+
+  // Hover wins over focus, and focus over the selected kind: touch has no hover, so a selected kind shows its own.
+  let hovered: BuildOption<K> | undefined;
+  let focused: BuildOption<K> | undefined;
+  let avoid: Rect | undefined;
+  const setHovered = (option: BuildOption<K> | undefined) => {
+    hovered = option;
+    update();
+  };
+  const setFocused = (option: BuildOption<K> | undefined) => {
+    focused = option;
+    update();
+  };
+  const showTip = (entry: (typeof entries)[number] | undefined) => {
+    for (const { tip } of entries) if (tip && tip !== entry?.tip && !tip.hidden) tip.hidden = true;
+    const tip = entry?.tip;
+    if (!tip) return;
+    if (tip.hidden) tip.hidden = false;
+    const view = doc.defaultView;
+    const at = placeTip(
+      entry.button.getBoundingClientRect(),
+      { width: tip.offsetWidth, height: tip.offsetHeight },
+      { width: view?.innerWidth ?? 0, height: view?.innerHeight ?? 0 },
+      avoid,
+    );
+    const left = `${at.left}px`;
+    const top = `${at.top}px`;
+    if (tip.style.left !== left) tip.style.left = left;
+    if (tip.style.top !== top) tip.style.top = top;
+  };
 
   let selected: BuildOption<K> | undefined;
   const affordable = (option: BuildOption<K>) => game.state.money >= option.cost;
@@ -219,6 +295,8 @@ export function mountBuildBar<K extends string>(
       const pressed = String(option === selected);
       if (button.getAttribute('aria-pressed') !== pressed) button.setAttribute('aria-pressed', pressed);
     }
+    const shown = collapsed ? undefined : (hovered ?? focused ?? selected);
+    showTip(entries.find((entry) => entry.option === shown));
   };
 
   const onKey = (event: KeyboardEvent) => {
@@ -233,6 +311,7 @@ export function mountBuildBar<K extends string>(
   };
   doc.addEventListener('keydown', onKey);
 
+  mounted = true;
   update();
   return {
     get selected() {
@@ -243,6 +322,9 @@ export function mountBuildBar<K extends string>(
     },
     clear,
     update,
+    avoid(rect) {
+      avoid = rect;
+    },
     destroy() {
       doc.removeEventListener('keydown', onKey);
       root.replaceChildren();

@@ -39,6 +39,22 @@
           linear-gradient(var(--tan), var(--tan)) right bottom / 10px 2px no-repeat,
           linear-gradient(var(--tan), var(--tan)) right bottom / 2px 10px no-repeat;
       }
+      /* Text size (#354): the Settings screen sets --text-scale on <html> (1, 1.25 or 1.5); the root font size follows
+         it, so every rem size below scales with it. */
+      :root {
+        --text-scale: 1;
+      }
+      html {
+        font-size: calc(16px * var(--text-scale));
+      }
+      /* Reduced motion (#354): no CSS transition or animation while the setting is on (src/settings/display.ts). */
+      :root[data-reduced-motion] *,
+      :root[data-reduced-motion] *::before,
+      :root[data-reduced-motion] *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
       html,
       body {
         margin: 0;
@@ -64,12 +80,15 @@
         padding: 6px;
       }
       /* Three fixed groups (#274): the stats, a message slot and the controls. The slot takes the leftover space and
-         clips its text, so nothing the HUD says can move a button or make the HUD taller. */
+         clips its text, so nothing the HUD says can move a button or make the HUD taller. Only bigger text (#354) that
+         leaves no room on one line wraps the controls onto a second; the stats and controls have fixed widths, so that
+         depends on the text size, not on what the HUD says. */
       #hud {
         grid-area: hud;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 14px;
+        gap: 4px 14px;
         box-sizing: border-box;
         min-height: 36px;
         padding: 0 8px;
@@ -357,12 +376,15 @@
           grid-template-columns: minmax(0, 1fr);
           align-items: start;
         }
+        /* Stats and controls wrap onto a second line only when bigger text (#354) leaves no room on one. Each stat
+           keeps its fixed width, so a wrap depends on the text size, not on what the HUD says. */
         #hud .hud-stats {
-          flex-wrap: nowrap;
-          gap: 8px;
+          flex-wrap: wrap;
+          gap: 2px 8px;
         }
         #hud .hud-controls {
           order: 1;
+          flex-wrap: wrap;
         }
         #hud .hud-message {
           order: 2;
@@ -462,6 +484,46 @@
         width: 24px;
         height: 24px;
         border: 2px solid;
+      }
+      /* A tower's stats, left of its button over the map; placed by buildBar.ts, which keeps the tile under the
+         pointer or finger clear. Taps go through it. */
+      #build-bar .build-tip {
+        position: fixed;
+        z-index: 5;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: 180px;
+        padding: 6px 8px;
+        font: 0.6875rem/1.35 var(--font-mono);
+        color: var(--bone);
+        background: rgb(27 30 22 / 0.94);
+        border: 1px solid var(--olive-600);
+        border-radius: 3px;
+        pointer-events: none;
+      }
+      #build-bar .build-tip[hidden] {
+        display: none;
+      }
+      #build-bar .build-tip strong {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--amber);
+      }
+      #build-bar .build-tip p {
+        margin: 2px 0 4px;
+        color: var(--bone-dim);
+      }
+      #build-bar .build-tip dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0 8px;
+        margin: 0;
+      }
+      #build-bar .build-tip dt {
+        color: var(--bone-dim);
+      }
+      #build-bar .build-tip dd {
+        margin: 0;
       }
       #build-bar kbd {
         position: absolute;
