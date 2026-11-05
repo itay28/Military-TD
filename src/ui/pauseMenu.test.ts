@@ -125,12 +125,17 @@ describe('mountPauseMenu', () => {
     expect(button('quit')!.disabled).toBe(true);
   });
 
-  it('disables Settings when it is given no Settings screen to open', () => {
+  it('disables Settings and Field manual when it is given no screen to open', () => {
     mount().open();
     expect(button('settings')!.disabled).toBe(true);
+    expect(button('field-manual')!.disabled).toBe(true);
+    expect(button('field-manual')!.textContent).toBe('Field manual');
   });
 
-  describe('Settings', () => {
+  describe.each([
+    ['Settings', 'settings', 'openSettings'],
+    ['Field manual', 'field-manual', 'openFieldManual'],
+  ] as const)('%s', (_name, testId, option) => {
     let onBack: () => void;
     let screen: { close: Mock<() => void>; back: Mock<() => void> };
     const openSettings = vi.fn((back: () => void) => {
@@ -144,9 +149,9 @@ describe('mountPauseMenu', () => {
     });
 
     it('opens the Settings screen in place of the Paused dialog, still paused', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       expect(openSettings).toHaveBeenCalledOnce();
       expect(dialog()!.hidden).toBe(true);
       expect(menu.paused).toBe(true);
@@ -154,19 +159,19 @@ describe('mountPauseMenu', () => {
     });
 
     it('comes back to the Paused dialog with Settings focused', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       onBack();
       expect(dialog()!.hidden).toBe(false);
       expect(menu.paused).toBe(true);
-      expect(document.activeElement).toBe(button('settings'));
+      expect(document.activeElement).toBe(button(testId));
     });
 
     it('makes Esc go back from Settings rather than resume', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       pressKey('Escape');
       expect(screen.back).toHaveBeenCalledOnce();
       expect(menu.paused).toBe(true);
@@ -176,9 +181,9 @@ describe('mountPauseMenu', () => {
     });
 
     it('closes an open Settings screen when destroyed', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       menu.destroy();
       expect(screen.close).toHaveBeenCalledOnce();
     });
