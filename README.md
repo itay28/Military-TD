@@ -1,6 +1,6 @@
 # Hold the Perimeter
 
-A basic military-themed tower defense game for the browser, built with TypeScript, Phaser 4 and Vite. The repository and package keep the working name `military-td`.
+A basic military-themed tower defense game for the browser, built with TypeScript, Phaser 4 and Vite.
 
 ## Requirements
 
