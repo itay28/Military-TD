@@ -5,14 +5,11 @@ import {
   AFTERMATH_OF,
   CAMERA,
   DISMANTLE,
-  EFFECT,
   ENEMY_HIT_PX,
   ENEMY_NAMES,
   FLOATING_TEXT,
-  SHELL,
   SPRITE_SCALE,
   TILE_PX,
-  TRACER,
 } from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
@@ -68,7 +65,7 @@ import {
 import { drawGrid, drawMap } from './drawMap';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
-import { MAX_GAME_SPEED, type GameSpeed, type GameSpeedControl } from './gameSpeed';
+import { MAX_GAME_SPEED, nextSpeed, type GameSpeed, type GameSpeedControl } from './gameSpeed';
 import { createGestures, hoverFrom, type Gesture, type Gestures } from './gestures';
 import { aftermathTimings, createAftermath, type Aftermath } from './aftermath';
 import { drawAftermath } from './drawAftermath';
@@ -81,12 +78,14 @@ import { ghostAt, placeAt, type Ghost } from './placement';
 import { enemyAt, resolveClick } from './selection';
 import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
+import { motionTimings, type MotionTimings } from './motion';
 import { TILESET_FRAMES, tileArt } from './tileset';
 import { buildOptions, mountBuildBar, type BuildBar, type IconAtlas } from '../ui/buildBar';
 import type { Rect } from '../ui/towerTooltip';
 import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
+import { mountShortcuts } from '../ui/shortcuts';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
@@ -418,10 +417,10 @@ export class GameScene extends Phaser.Scene {
   /**
    * What fights leave on the ground (#403): a wreck, crash mark or fallen soldier where an enemy died, turned the way it
    * was heading, and a crater where a shell landed. Cosmetic, so off with `?anim=0`; reduced motion follows the
-   * system's `prefers-reduced-motion` (no fire, no fall, faster fades).
+   * player's setting (#354) at the start of the run (no fire, no fall, faster fades).
    */
   private setUpAftermath(): void {
-    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const { reducedMotion } = this.settings.get();
     this.aftermath = createAftermath({
       cap: AFTERMATH.cap,
       timings: aftermathTimings({ anim: this.flags.anim, reducedMotion }),
@@ -623,8 +622,9 @@ export class GameScene extends Phaser.Scene {
         };
       },
       update: (view, enemy) => {
-        // ?anim=0 never advances the clock, but the per-id phase would still spread frames, so pin them to 0.
-        const frame = this.flags.anim ? animFrame(this.animMs, enemy.id) : 0;
+        // With ?anim=0 or reduced motion the walk cycle stands still: the per-id phase would still spread frames, so pin
+        // them to 0.
+        const frame = this.motion().enemyWalk ? animFrame(this.animMs, enemy.id) : 0;
         // Only the shape's rotor moves with the frame; a sprite's HP bar doesn't.
         const redrawShape = !view.sprite && view.frame !== frame;
         if (view.hp !== enemy.hp || redrawShape) {
@@ -690,8 +690,8 @@ export class GameScene extends Phaser.Scene {
       },
     });
 
-    // ?anim=0: zero lifetimes, so effects, tracers and floating texts never show.
-    this.effects = createEffects(this.flags.anim ? EFFECT.lifeMs : 0);
+    // Lifetimes read live from the reduced-motion setting (#354); ?anim=0 zeroes them, so the cosmetics never show.
+    this.effects = createEffects(() => this.motion().effectLifeMs);
     this.effectGraphics = onLayer(this.add.graphics(), 'effects');
     this.sim.events.on('shellFired', ({ towerId }) => {
       const tower = this.sim.state.towers.find((t) => t.id === towerId);
@@ -700,7 +700,7 @@ export class GameScene extends Phaser.Scene {
     this.sim.events.on('shellLanded', ({ position }) => this.effects.add('explosion', toPixels(position)));
     this.sim.events.on('enemyKilled', ({ enemy }) => this.effects.add('puff', toPixels(enemy.position)));
     this.setUpAftermath();
-    this.tracers = createTracers(this.flags.anim ? TRACER.fadeMs : 0);
+    this.tracers = createTracers(() => this.motion().tracerFadeMs);
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
@@ -714,7 +714,7 @@ export class GameScene extends Phaser.Scene {
     this.wireSounds();
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
-    this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
+    this.blasts = createBlasts(() => this.motion().blastFadeMs);
     this.shellGraphics = onLayer(this.add.graphics(), 'shells');
     this.sim.events.on('shellLanded', ({ position, outerRadius }) =>
       this.blasts.add(toPixels(position), outerRadius * TILE_PX),
@@ -729,7 +729,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
-    this.floatingTexts = createFloatingTexts(this.flags.anim ? FLOATING_TEXT : { ...FLOATING_TEXT, durationMs: 0 });
+    this.floatingTexts = createFloatingTexts(() => this.motion().floatingText);
     this.floatingTextViews = createViewSync<FloatingTextView, Phaser.GameObjects.Text>({
       create: ({ text }) => onLayer(this.add.text(0, 0, text, FLOATING_TEXT.style).setOrigin(0.5, 1), 'floatingText'),
       update: (view, { x, y, alpha }) => view.setPosition(x, y).setAlpha(alpha),
@@ -782,7 +782,16 @@ export class GameScene extends Phaser.Scene {
       openSettings: this.openSettings,
       speed,
     });
+    // U, S, Space, F and ?/H (src/ui/keymap.ts), each through the same call as its button. 1–9 are the build bar's.
+    const shortcuts = mountShortcuts(this.hudRoot.ownerDocument, this.sim, {
+      upgrade: () => this.towerPanel.upgrade(),
+      sell: () => this.towerPanel.sell(),
+      startWave: () => this.hud.startWave(),
+      cycleSpeed: () => (this.gameSpeed = nextSpeed(this.gameSpeed)),
+      openHelp: () => this.pauseMenu.openHelp(),
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      shortcuts.destroy();
       this.hud.destroy();
       this.buildBar.destroy();
       this.endScreen.destroy();
@@ -951,6 +960,11 @@ export class GameScene extends Phaser.Scene {
     this.sim.tick(TICK_MS);
   }
 
+  /** The cosmetic timings for this frame: the reduced-motion setting is read live, so a change applies at once. */
+  private motion(): MotionTimings {
+    return motionTimings({ reducedMotion: this.settings.get().reducedMotion, anim: this.flags.anim });
+  }
+
   override update(_time: number, frameDeltaMs: number): void {
     // Paused, no time passes: the sim doesn't tick and the cosmetics hold still (ADR-0002: the sim is untouched).
     const deltaMs = this.pauseMenu.paused ? 0 : frameDeltaMs;
@@ -960,7 +974,7 @@ export class GameScene extends Phaser.Scene {
     this.effects.advance(deltaMs);
     this.aftermath.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
-    if (this.flags.anim) this.animMs += deltaMs;
+    if (this.motion().enemyWalk) this.animMs += deltaMs;
     this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
     this.playWhistles();
     // The battlefield ambience (#405): the combat layer during a wave, the game track on the End screen. Both calls do

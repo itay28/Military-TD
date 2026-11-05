@@ -2,6 +2,7 @@ import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
 import { renderFor, type RenderedSprite } from '../data/renders';
 import { towerIcon, type TowerIcon } from '../data/sprites';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
+import { shortcutFor } from './keymap';
 import { placeTip, towerTooltip, type Rect, type TowerTooltip } from './towerTooltip';
 
 /** One button on the build bar. */
@@ -297,7 +298,7 @@ export function mountBuildBar<K extends string>(
       event.preventDefault(); // handled: it doesn't also pause (pauseMenu.ts)
       return clear();
     }
-    const option = /^[1-9]$/.test(event.key) ? options[Number(event.key) - 1] : undefined;
+    const option = shortcutFor(event) === 'build' ? options[Number(event.key) - 1] : undefined;
     if (option) select(option);
   };
   doc.addEventListener('keydown', onKey);

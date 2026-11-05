@@ -1,4 +1,5 @@
 import type { Pixel } from './coords';
+import { readLive, type Live } from './motion';
 
 export type EffectKind = 'muzzleFlash' | 'explosion' | 'puff';
 
@@ -18,20 +19,23 @@ export interface Effects {
 }
 
 /** Short-lived combat effects (muzzle flash, explosion, death puff). Cosmetic only, so they run on frame time, not sim ticks. */
-export function createEffects(lifeMs: number): Effects {
+export function createEffects(life: Live<number>): Effects {
   let effects: { kind: EffectKind; at: Pixel; ageMs: number }[] = [];
   return {
     add(kind, at) {
       effects.push({ kind, at, ageMs: 0 });
     },
     advance(dtMs) {
+      const lifeMs = readLive(life);
       for (const effect of effects) effect.ageMs += dtMs;
       effects = effects.filter((effect) => effect.ageMs < lifeMs);
     },
     // Filtered here too, so a life of 0 (?anim=0) never shows an effect added since the last advance.
-    active: () =>
-      effects
+    active: () => {
+      const lifeMs = readLive(life);
+      return effects
         .filter((effect) => effect.ageMs < lifeMs)
-        .map(({ kind, at, ageMs }) => ({ kind, at, progress: ageMs / lifeMs })),
+        .map(({ kind, at, ageMs }) => ({ kind, at, progress: ageMs / lifeMs }));
+    },
   };
 }
