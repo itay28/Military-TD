@@ -203,7 +203,7 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | `render-russia-cannon/` | "ZiS-2 57mm anti-tank gun" by sergey.s.filin, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
-| `render-russia-jeep/` | "uaz 469" by Okopchi, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-jeep/` | "UAZ-469 Low Poly" by lebedeventerprise, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-helicopter/` | "Mi-8" by tiunov.se, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
