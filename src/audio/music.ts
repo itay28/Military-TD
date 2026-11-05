@@ -1,0 +1,125 @@
+/**
+ * Music: which track each scene plays, and the controller that crossfades between them (#66). Presentation only, so it
+ * lives outside `src/sim`; the sound itself is behind the `MusicBackend` seam (Phaser's in `phaserMusic.ts`, a fake in
+ * tests).
+ */
+
+/** A looping music track. Its files are `assets/yd-war-on-water/<id>.{ogg,mp3}`. */
+export type TrackId = 'menu' | 'game';
+
+export const TRACK_IDS: readonly TrackId[] = ['menu', 'game'];
+
+/** The volume each track fades in to (0–1). The menu track is mixed lower: it sat too loud. The music channel's volume (#67) scales it. */
+export const TRACK_VOLUME: Readonly<Record<TrackId, number>> = { menu: 0.6, game: 1 };
+
+/** How long the old track fades out and the new one fades in when the track changes. */
+export const CROSSFADE_MS = 1000;
+
+/** The music's volume while a radio cue plays (#396), so the voice is clear. */
+export const DUCK_VOLUME = 0.4;
+
+/** How long the music takes to drop to the duck volume, and to come back up. */
+export const DUCK_FADE_MS = 200;
+
+/** How long the playing track takes to reach a new volume (a slider moved, the tab hidden or shown). */
+export const VOLUME_RAMP_MS = 100;
+
+/**
+ * The track a scene plays: the menu track on the Main menu and Level select (Settings and Credits are overlays on the
+ * Main menu, so they keep it), the game track in the Game (the End screen is an overlay on it). Boot, or any scene this
+ * doesn't know, is silent.
+ */
+export function trackFor(scene: string): TrackId | null {
+  switch (scene) {
+    case 'Menu':
+    case 'LevelSelect':
+      return 'menu';
+    case 'Game':
+      return 'game';
+    default:
+      return null;
+  }
+}
+
+/** One playing copy of a track, looping, started at volume 0. */
+export interface MusicVoice {
+  /** Ramps the volume to `volume` (0–1) over `ms`, then calls `onDone`. A new fade replaces the one in progress. */
+  fadeTo(volume: number, ms: number, onDone?: () => void): void;
+  stop(): void;
+}
+
+export interface MusicBackend {
+  /** Starts `track` looping at volume 0, or returns null when it can't (its file didn't load): that track stays silent. */
+  start(track: TrackId): MusicVoice | null;
+}
+
+export interface MusicController {
+  /** Call when a scene starts: keeps the track if it's the same, crossfades otherwise. */
+  enterScene(scene: string): void;
+  /** Call on the first input: browsers block audio until then, so nothing plays before it. */
+  unlock(): void;
+  /** Drops the music to `DUCK_VOLUME` while a radio cue plays (true), and brings it back up afterwards (false). */
+  setDucked(on: boolean): void;
+  /** Call when the volume may have changed: the playing track ramps to `volume()`. */
+  refreshVolume(): void;
+}
+
+export interface MusicOptions {
+  /** Test mode: the controller never touches the backend, so e2e runs and scenarios stay silent. */
+  readonly muted: boolean;
+  readonly crossfadeMs?: number;
+  /** The music channel's volume, 0–1, read at each fade-in and `refreshVolume` (#67). Full volume when not given. */
+  readonly volume?: () => number;
+}
+
+export function createMusicController(backend: MusicBackend, options: MusicOptions): MusicController {
+  const fadeMs = options.crossfadeMs ?? CROSSFADE_MS;
+  let ducked = false;
+  const volume = options.volume ?? (() => 1);
+  /** A track's volume: the music channel's, scaled by the track's own mix level. */
+  const level = (track: TrackId): number => volume() * TRACK_VOLUME[track] * (ducked ? DUCK_VOLUME : 1);
+  let unlocked = false;
+  /** The track the current scene wants, whether or not it's playing yet. */
+  let wanted: TrackId | null = null;
+  /** The track playing (or failed to load, with no voice) since the last change. */
+  let playing: { track: TrackId; voice: MusicVoice | null } | null = null;
+
+  const fadeOut = (voice: MusicVoice | null): void => {
+    voice?.fadeTo(0, fadeMs, () => voice.stop());
+  };
+
+  const sync = (): void => {
+    if (options.muted || !unlocked || playing?.track === wanted) return;
+    if (playing) fadeOut(playing.voice);
+    playing = null;
+    if (wanted === null) return;
+    let voice: MusicVoice | null;
+    try {
+      voice = backend.start(wanted);
+    } catch {
+      voice = null;
+    }
+    voice?.fadeTo(level(wanted), fadeMs);
+    playing = { track: wanted, voice };
+  };
+
+  return {
+    enterScene(scene) {
+      wanted = trackFor(scene);
+      sync();
+    },
+    unlock() {
+      if (unlocked) return;
+      unlocked = true;
+      sync();
+    },
+    setDucked(on) {
+      if (on === ducked) return;
+      ducked = on;
+      if (playing) playing.voice?.fadeTo(level(playing.track), DUCK_FADE_MS);
+    },
+    refreshVolume() {
+      if (playing) playing.voice?.fadeTo(level(playing.track), VOLUME_RAMP_MS);
+    },
+  };
+}
