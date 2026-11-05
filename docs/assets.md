@@ -177,6 +177,8 @@ Each had its trailing silence (~0.1 s) trimmed and a 10 ms fade at both ends (ff
 
 Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab models and one NAIP ground patch (`docs/art/render-spike-compare.png`). The game draws the AA Gun and Tank renders in place of their Kenney sprites (#310): the hull with its shadow, then the turret turning around its pivot. After `render-sprite.py`, run `npm run render:pivot`: it measures each turret's pivot (the centre of its body, without the barrel) from `<id>-turret.png` into `<id>.json`, which `src/data/renders.ts` reads. A test fails while that JSON is stale. A kind whose render doesn't load keeps its Kenney frame. Source models are never committed: `scripts/render-sprite.py` downloads them into the ignored `.cache/models/` with `SKETCHFAB_API_TOKEN`.
 
+**Turntables** (#407): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: the Field manual loads one when it opens (`loadTurntable`, `src/data/turntables.ts`). It needs Pillow in `.venv-art` too.
+
 | Folder | Source | Made by |
 | --- | --- | --- |
 | `render-china-aa-gun/` | "Oerlikon Gdf-006 35mm" by lm9241221, CC-BY-4.0 | `scripts/render-sprite.py` (`render-sprite.json`) |

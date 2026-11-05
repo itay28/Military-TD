@@ -53,6 +53,7 @@
 | **Reference bot** | The bot every Map file must beat: `bot-balanced`'s build order fitted to the map (`fitOrder`), each tower on the free buildable tile that covers the most Path. | |
 | **Faction** | A visual side: **US**, **Russia**, **China** or **Insurgents** (ADR-0009). It changes sprites only: a kind has the same stats in every Faction. | army, team, side |
 | **Render** | A kind's sprite rendered top-down from a 3D model (ADR-0009, `scripts/render-sprite.py`): a hull layer with its shadow and a turret layer that turns around its **pivot**, the centre of the turret body. Kinds without one keep the Kenney sprite. | model, 3D sprite |
+| **Turntable** | One model's sheet of 24 views orbiting it from 30° up, 15° apart, frame 0 its front (`render-sprite.py --turntable`, `src/data/turntables.ts`): the whole model with its ground shadow, in the render's materials and light. For the Field manual's rotating model view, which loads it when it opens; never preloaded. | 3D viewer, spin |
 | **Attacker** | The Faction whose enemies walk a map's Path. Each map names one. | |
 | **Defender** | The Faction whose towers the player builds on a map. Each map names one. | |
 | **Wave time** | The time a wave ran, from its start until it was cleared or lost. A tower's wave time is the part of it the tower stood on the map (while dismantling too). | |
