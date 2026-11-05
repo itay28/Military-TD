@@ -18,3 +18,20 @@ export function scheduleLateness(
   const late = nowMs - lastScheduleStartMs;
   return late > maxMs ? Math.round(late / 360_000) / 10 : undefined;
 }
+
+/** A run of the workflow with whether its sweep job did (or does) run, as opposed to being skipped by a gate. */
+export interface SweepCandidate {
+  readonly startMs: number;
+  readonly swept: boolean;
+}
+
+/** Start time of the newest run that actually swept; a run whose gate stopped it doesn't count. */
+export function lastSweepStart(runs: readonly SweepCandidate[]): number | undefined {
+  const starts = runs.filter((r) => r.swept).map((r) => r.startMs);
+  return starts.length ? Math.max(...starts) : undefined;
+}
+
+/** Whether a job list shows a sweep: any job besides the gate that wasn't skipped. */
+export function didSweep(jobs: readonly { name: string; conclusion: string | null }[]): boolean {
+  return jobs.some((j) => j.name !== 'debounce' && j.conclusion !== 'skipped');
+}
