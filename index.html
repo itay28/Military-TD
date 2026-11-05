@@ -154,6 +154,127 @@
         background: transparent;
         box-shadow: inset 0 0 0 2px #5e6350;
       }
+      /* The DPS figure is a button that opens the DPS meter (#243): it reads as the figure, underlined. */
+      #hud {
+        position: relative;
+      }
+      #hud .hud-stats > button.hud-dps {
+        min-width: 9ch;
+        padding: 0;
+        font: inherit;
+        text-align: left;
+        white-space: nowrap;
+        color: inherit;
+        background: none;
+        text-decoration: underline dotted;
+        text-underline-offset: 3px;
+      }
+      #hud .hud-stats > button.hud-dps[aria-expanded='true'] {
+        color: #f0c95a;
+      }
+      /* The DPS meter hangs under the HUD at the map's top-left corner, clear of its centre and of the tower panel
+         (top-right); it scrolls when it is taller than its cap. Under the End screen and Pause overlays. */
+      #hud .dps-meter {
+        position: absolute;
+        top: calc(100% + 14px);
+        left: 8px;
+        z-index: 1;
+        box-sizing: border-box;
+        width: 280px;
+        max-width: calc(100vw - 32px);
+        max-height: 55vh;
+        overflow-y: auto;
+        padding: 6px;
+        font: 12px monospace;
+        background: rgb(27 30 22 / 0.88);
+        border: 1px solid #8a8670;
+        border-radius: 3px;
+      }
+      #hud .dps-meter[hidden] {
+        display: none;
+      }
+      #hud .dps-scope {
+        display: flex;
+        gap: 3px;
+        margin-bottom: 6px;
+      }
+      #hud .dps-scope button {
+        flex: 1;
+        padding: 2px 4px;
+        font: bold 12px monospace;
+        color: #c2a46b;
+        background: transparent;
+        box-shadow: inset 0 0 0 2px #c2a46b;
+      }
+      #hud .dps-scope button[aria-pressed='true'] {
+        color: #1b1e16;
+        background: #c2a46b;
+      }
+      #hud .dps-empty {
+        margin: 4px 2px;
+        color: #a2a58f;
+      }
+      #hud .dps-kinds,
+      #hud .dps-towers {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      #hud .dps-kind + .dps-kind {
+        margin-top: 4px;
+      }
+      /* One kind: swatch, name, DPS, kills and share on a line, the share bar under it. */
+      #hud .dps-meter button.dps-kind-row {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr) auto auto 4ch;
+        align-items: center;
+        gap: 2px 6px;
+        width: 100%;
+        padding: 3px 4px;
+        font: 12px monospace;
+        text-align: left;
+        color: #e4e0c8;
+        background: rgb(228 224 200 / 0.06);
+        border-radius: 2px;
+      }
+      #hud .dps-swatch {
+        box-sizing: border-box;
+        width: 12px;
+        height: 12px;
+        border: 2px solid;
+      }
+      #hud .dps-swatch[data-shape='circle'] {
+        border-radius: 50%;
+      }
+      #hud .dps-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #hud .dps-share {
+        text-align: right;
+      }
+      #hud .dps-bar {
+        grid-column: 1 / -1;
+        height: 3px;
+        background: rgb(228 224 200 / 0.12);
+      }
+      #hud .dps-bar-fill {
+        display: block;
+        height: 100%;
+        background: #c2a46b;
+      }
+      #hud .dps-towers[hidden] {
+        display: none;
+      }
+      #hud .dps-tower {
+        padding: 1px 4px 1px 22px;
+        color: #c9c5ad;
+        white-space: nowrap;
+      }
+      #hud .dps-tower[data-sold='true'] {
+        color: #8a8670;
+      }
       /* A phone: smaller type. After the base rules, so it wins. */
       @media (max-width: 640px), (max-height: 480px) {
         #hud {
@@ -185,6 +306,17 @@
         }
         #hud .hud-message {
           order: 2;
+        }
+        /* As wide as the map's column, clear of the build bar beside it. */
+        #hud .dps-meter {
+          width: calc(100vw - 132px);
+          max-height: 45vh;
+        }
+        #hud .dps-meter button.dps-kind-row {
+          grid-template-columns: 12px minmax(0, 1fr) auto 4ch;
+        }
+        #hud .dps-kills {
+          display: none;
         }
       }
       /* The End screen covers the canvas, so the map takes no clicks while it's open. */
@@ -283,6 +415,7 @@
       #pause-menu {
         position: absolute;
         inset: 0;
+        z-index: 2;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -665,6 +798,7 @@
       #settings {
         position: fixed;
         inset: 0;
+        z-index: 3; /* over the Pause overlay (2), which is over the DPS meter (1) */
         display: flex;
         align-items: center;
         justify-content: center;
