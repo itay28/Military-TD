@@ -75,9 +75,23 @@ describe('mountPauseMenu', () => {
     expect(menu.paused).toBe(false);
   });
 
-  it('ignores other keys', () => {
+  it('toggles with the P key too, either case', () => {
     const menu = mount();
     pressKey('p');
+    expect(menu.paused).toBe(true);
+    pressKey('P');
+    expect(menu.paused).toBe(false);
+  });
+
+  it('does not pause on P typed with Ctrl held', () => {
+    const menu = mount();
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true }));
+    expect(menu.paused).toBe(false);
+  });
+
+  it('ignores other keys', () => {
+    const menu = mount();
+    pressKey('x');
     expect(menu.paused).toBe(false);
   });
 
@@ -181,6 +195,85 @@ describe('mountPauseMenu', () => {
       button('settings')!.click();
       menu.destroy();
       expect(screen.close).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('Keys (help overlay)', () => {
+    const help = () => root.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="help-title"]');
+
+    it('has a Keys button after Settings', () => {
+      mount({ openSettings: vi.fn() });
+      const labels = [...dialog()!.querySelectorAll(':scope > button')].map((b) => b.textContent);
+      expect(labels.indexOf('Keys')).toBe(labels.indexOf('Settings') + 1);
+    });
+
+    it('opens the help overlay in place of the Paused dialog, still paused', () => {
+      const menu = mount();
+      menu.open();
+      button('keys')!.click();
+      expect(help()).not.toBeNull();
+      expect(dialog()!.hidden).toBe(true);
+      expect(menu.paused).toBe(true);
+    });
+
+    it('Esc from it goes back to the Paused dialog with Keys focused', () => {
+      const menu = mount();
+      menu.open();
+      button('keys')!.click();
+      pressKey('Escape');
+      expect(help()).toBeNull();
+      expect(dialog()!.hidden).toBe(false);
+      expect(menu.paused).toBe(true);
+      expect(document.activeElement).toBe(button('keys'));
+    });
+
+    it('openHelp() pauses and shows it directly; Esc then resumes the game', () => {
+      const menu = mount();
+      menu.openHelp();
+      expect(menu.paused).toBe(true);
+      expect(help()).not.toBeNull();
+      expect(dialog()!.hidden).toBe(true);
+      expect(buildBar.inert).toBe(true);
+      pressKey('Escape');
+      expect(menu.paused).toBe(false);
+      expect(help()).toBeNull();
+    });
+
+    it('its Back button resumes too after openHelp()', () => {
+      const menu = mount();
+      menu.openHelp();
+      help()!.querySelector('button')!.click();
+      expect(menu.paused).toBe(false);
+    });
+
+    it('keeps keys from the page while it is open', () => {
+      const menu = mount();
+      const seen: string[] = [];
+      const onKey = (event: KeyboardEvent) => seen.push(event.key);
+      document.addEventListener('keydown', onKey);
+      menu.openHelp();
+      pressKey('u');
+      pressKey(' ');
+      document.removeEventListener('keydown', onKey);
+      expect(seen).toEqual([]);
+      expect(menu.paused).toBe(true);
+    });
+
+    it('openHelp() does nothing once the game is over', () => {
+      game.state.phase = 'defeat';
+      const menu = mount();
+      menu.openHelp();
+      expect(menu.paused).toBe(false);
+      expect(help()).toBeNull();
+    });
+
+    it('Resume or close() takes it away', () => {
+      const menu = mount();
+      menu.openHelp();
+      menu.close();
+      expect(help()).toBeNull();
+      menu.open();
+      expect(dialog()!.hidden).toBe(false);
     });
   });
 
