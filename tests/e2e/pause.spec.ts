@@ -11,7 +11,7 @@ const pauseMenu = (page: Page) => page.getByRole('dialog', { name: 'Paused' });
 /** Starts the first wave on the real-time loop and waits until the sim is running. */
 async function midWave(page: Page) {
   await openGame(page, { manualStep: false });
-  await page.getByRole('button', { name: 'Start Wave' }).click();
+  await page.getByRole('button', { name: 'Start wave' }).click();
   await expect.poll(() => timeMs(page)).toBeGreaterThan(0);
 }
 
@@ -71,7 +71,7 @@ test('Restart from the pause menu starts a new Build phase', async ({ page }) =>
   await page.getByRole('button', { name: 'Restart' }).click();
 
   await expect(pauseMenu(page)).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Start Wave' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Start wave' })).toBeEnabled();
   expect(await state(page)).toMatchObject({ phase: 'build', waveNumber: 0, money: START_MONEY });
 });
 
@@ -81,26 +81,26 @@ test('Quit to menu goes to the Level select; Settings is enabled (#48)', async (
   await expect(page.getByRole('button', { name: 'Settings' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Quit to menu' })).toBeEnabled();
   await page.getByRole('button', { name: 'Quit to menu' }).click();
-  await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
   await expect(pauseMenu(page)).toBeHidden();
 });
 
 test('pausing is unavailable once the game is over', async ({ page }) => {
   await openGame(page);
-  await page.getByRole('button', { name: 'Start Wave' }).click();
+  await page.getByRole('button', { name: 'Start wave' }).click();
   await playToEnd(page);
-  await expect(page.getByRole('dialog', { name: /Victory|Defeat/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /MISSION COMPLETE|MISSION FAILED/ })).toBeVisible();
   await expect(pauseButton(page)).toBeDisabled();
   await page.keyboard.press('Escape');
   await expect(pauseMenu(page)).toBeHidden();
 });
 
-test('the End screen has a Level select button that leaves the map', async ({ page }) => {
+test('the End screen has an Operations button that leaves the map', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
   await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
   await stepToEnd(page);
-  await page.getByRole('button', { name: 'Level select' }).click();
-  await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();
-  await expect(page.getByRole('dialog', { name: /Victory|Defeat/ })).toBeHidden();
+  await page.getByRole('button', { name: 'Operations' }).click();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /MISSION COMPLETE|MISSION FAILED/ })).toBeHidden();
 });

@@ -1,3 +1,4 @@
+import { TERMS } from '../data/display';
 import type { OpenSettings, SettingsScreen } from './settingsScreen';
 
 export interface MainMenuOptions {
@@ -28,7 +29,7 @@ export function mountMainMenu(
   title.textContent = 'Military TD';
   const play = doc.createElement('button');
   play.type = 'button';
-  play.textContent = 'Play';
+  play.textContent = TERMS.play;
   const onClick = () => onPlay();
   play.addEventListener('click', onClick);
   const settings = doc.createElement('button');

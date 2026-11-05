@@ -13,7 +13,7 @@ async function expectAria(locator: Locator, name: string) {
   expect(`${await locator.ariaSnapshot()}\n`).toMatchSnapshot([name]);
 }
 
-test('the HUD at the start shows Money, Lives, Wave, DPS and a Start Wave button that is not disabled', async ({
+test('the HUD at the start shows Funds, the HQ meter, Wave, DPS and a Start wave button that is not disabled', async ({
   page,
 }) => {
   await openGame(page);
@@ -45,7 +45,7 @@ test('the Keys help overlay lists every shortcut, then Back', async ({ page }) =
   await expectAria(page.locator('#pause-menu'), 'help-overlay.aria.yml');
 });
 
-test('the Main menu shows the title, Play, Settings, and Credits', async ({ page }) => {
+test('the Main menu shows the title, Deploy, Settings, and Credits', async ({ page }) => {
   await openMenu(page);
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
 });

@@ -1,7 +1,9 @@
-- text: Money 100 Lives 20 Wave 0 / 10
+- text: Funds $100
+- meter "HQ": HQ 20/20
+- text: Wave 0 / 10
 - button "DPS –"
 - status
-- button "Start Wave"
+- button "Start wave"
 - button "Auto-start"
 - group "Game speed":
   - button "×1" [pressed]

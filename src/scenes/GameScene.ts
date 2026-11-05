@@ -10,6 +10,7 @@ import {
   SPRITE_SCALE,
   TILE_PX,
   TOWER_STYLE,
+  formatFunds,
 } from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
@@ -721,7 +722,7 @@ export class GameScene extends Phaser.Scene {
     this.setUpCamera();
 
     this.sim.events.on('towerSold', ({ tile, refund }) =>
-      this.floatingTexts.add(`+${refund}`, toPixels(tileCenter(tile))),
+      this.floatingTexts.add(`+${formatFunds(refund)}`, toPixels(tileCenter(tile))),
     );
 
     const speed: GameSpeedControl = {

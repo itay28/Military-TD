@@ -10,7 +10,7 @@ test('with Auto-start on, wave 2 starts by itself AUTO_START_DELAY_MS after wave
   await openGame(page);
   const toggle = page.getByRole('button', { name: 'Auto-start' });
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  await page.getByRole('button', { name: 'Start Wave' }).click();
+  await page.getByRole('button', { name: 'Start wave' }).click();
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
 
