@@ -3,6 +3,10 @@ import { validateWaves } from '../sim/waves';
 import { ENEMY_STATS, type EnemyKind } from './enemies';
 import { WAVES } from './waves';
 
+/** Kinds not in any map yet: the Jet waits for its renders and rollout (#361, #366; ADR-0009). */
+const NOT_PLAYABLE: readonly string[] = ['jet'];
+const playableKinds = Object.keys(ENEMY_STATS).filter((k) => !NOT_PLAYABLE.includes(k));
+
 const kindsIn = (wave: (typeof WAVES)[number]) => new Set(wave.groups.map((g) => g.kind));
 
 describe('the wave schedule', () => {
@@ -17,10 +21,10 @@ describe('the wave schedule', () => {
 
   it('every enemy kind appears', () => {
     const seen = new Set(WAVES.flatMap((wave) => [...kindsIn(wave)]));
-    expect([...seen].sort()).toEqual(Object.keys(ENEMY_STATS).sort());
+    expect([...seen].sort()).toEqual(playableKinds.sort());
   });
 
-  it.each(Object.keys(ENEMY_STATS).filter((k) => k !== 'infantry') as EnemyKind[])(
+  it.each(playableKinds.filter((k) => k !== 'infantry') as EnemyKind[])(
     '%s first appears alone, at most 3 of it',
     (kind) => {
       const first = WAVES.find((wave) => kindsIn(wave).has(kind));
