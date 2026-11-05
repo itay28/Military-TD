@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Hold the Perimeter</title>
     <style>
+      /* Text size (#354): the Settings screen sets --text-scale on <html> (1, 1.25 or 1.5), and every DOM font size
+         below is a multiple of it, so one variable scales all UI text. */
+      :root {
+        --text-scale: 1;
+      }
+      /* Reduced motion (#354): no CSS transition or animation while the setting is on (src/settings/display.ts). */
+      :root[data-reduced-motion] *,
+      :root[data-reduced-motion] *::before,
+      :root[data-reduced-motion] *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
       html,
       body {
         margin: 0;
@@ -29,16 +42,19 @@
         padding: 6px;
       }
       /* Three fixed groups (#274): the stats, a message slot and the controls. The slot takes the leftover space and
-         clips its text, so nothing the HUD says can move a button or make the HUD taller. */
+         clips its text, so nothing the HUD says can move a button or make the HUD taller. Only bigger text (#354) that
+         leaves no room on one line wraps the controls onto a second; the stats and controls have fixed widths, so that
+         depends on the text size, not on what the HUD says. */
       #hud {
         grid-area: hud;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 20px;
+        gap: 4px 20px;
         box-sizing: border-box;
         min-height: 36px;
         padding: 0 8px;
-        font: 16px monospace;
+        font: calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
       }
       #hud .hud-stats {
@@ -89,7 +105,7 @@
       }
       #hud button {
         padding: 4px 14px;
-        font: bold 15px monospace;
+        font: bold calc(15px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -223,6 +239,45 @@
       #hud .dps-kind + .dps-kind {
         margin-top: 4px;
       }
+      /* The kind's row highlights its towers on the map; a small button beside it expands the tower list. */
+      #hud .dps-kind-head {
+        display: flex;
+        gap: 2px;
+      }
+      #hud .dps-meter button.dps-kind-row {
+        flex: 1;
+        min-width: 0;
+      }
+      #hud .dps-meter button.dps-kind-row[aria-pressed='true'] {
+        box-shadow: inset 0 0 0 2px #4fd1ff;
+      }
+      #hud .dps-meter button.dps-kind-expand {
+        flex: none;
+        padding: 3px 8px;
+        font: 12px monospace;
+        color: #e4e0c8;
+        background: rgb(228 224 200 / 0.06);
+        border-radius: 2px;
+      }
+      #hud .dps-meter button.dps-kind-expand::before {
+        content: '▸';
+      }
+      #hud .dps-meter button.dps-kind-expand[aria-expanded='true']::before {
+        content: '▾';
+      }
+      #hud .dps-meter button.dps-tower-button {
+        display: block;
+        width: 100%;
+        padding: 1px 4px 1px 22px;
+        font: inherit;
+        text-align: left;
+        color: inherit;
+        background: transparent;
+        white-space: nowrap;
+      }
+      #hud .dps-meter button.dps-tower-button:disabled {
+        cursor: default;
+      }
       /* One kind: swatch, name, DPS, kills and share on a line, the share bar under it. */
       #hud .dps-meter button.dps-kind-row {
         display: grid;
@@ -268,7 +323,7 @@
         display: none;
       }
       #hud .dps-tower {
-        padding: 1px 4px 1px 22px;
+        padding: 0;
         color: #c9c5ad;
         white-space: nowrap;
       }
@@ -280,14 +335,14 @@
         #hud {
           gap: 4px 12px;
           min-height: 28px;
-          font-size: 13px;
+          font-size: calc(13px * var(--text-scale));
         }
         #hud .hud-stats {
           gap: 12px;
         }
         #hud button {
           padding: 3px 10px;
-          font-size: 13px;
+          font-size: calc(13px * var(--text-scale));
         }
       }
       /* A narrow screen: three fixed rows, stats / controls / message. The message row is kept when empty. */
@@ -297,12 +352,15 @@
           grid-template-columns: minmax(0, 1fr);
           align-items: start;
         }
+        /* Stats and controls wrap onto a second line only when bigger text (#354) leaves no room on one. Each stat
+           keeps its fixed width, so a wrap depends on the text size, not on what the HUD says. */
         #hud .hud-stats {
-          flex-wrap: nowrap;
-          gap: 8px;
+          flex-wrap: wrap;
+          gap: 2px 8px;
         }
         #hud .hud-controls {
           order: 1;
+          flex-wrap: wrap;
         }
         #hud .hud-message {
           order: 2;
@@ -355,7 +413,7 @@
         width: 28px;
         height: 28px;
         padding: 0;
-        font: 12px monospace;
+        font: calc(12px * var(--text-scale)) monospace;
         border-width: 1px;
       }
       #build-bar .build-grid {
@@ -372,7 +430,7 @@
         align-items: center;
         gap: 4px;
         padding: 8px 0 5px;
-        font: bold 13px monospace;
+        font: bold calc(13px * var(--text-scale)) monospace;
         color: #e4e0c8;
         background: #262a1f;
         border: 2px solid #4a4f3c;
@@ -448,7 +506,7 @@
         position: absolute;
         top: 1px;
         left: 3px;
-        font: 10px monospace;
+        font: calc(10px * var(--text-scale)) monospace;
         color: #a2a58f;
       }
       #end-screen,
@@ -460,7 +518,7 @@
         align-items: center;
         justify-content: center;
         background: rgb(27 30 22 / 0.72);
-        font: 16px monospace;
+        font: calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
       }
       /* `display: flex` above would otherwise override the hidden attribute. The pause menu is styled like the End screen. */
@@ -501,7 +559,7 @@
       #end-screen h2,
       #pause-menu h2 {
         margin: 0;
-        font-size: 32px;
+        font-size: calc(32px * var(--text-scale));
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #f0c95a;
@@ -512,10 +570,33 @@
       }
       /* A win's Stars, big enough to read at a glance; the words after them say the same for screen readers. */
       #end-screen .star-glyphs {
-        font-size: 28px;
+        font-size: calc(28px * var(--text-scale));
         letter-spacing: 0.1em;
         color: #f0c95a;
         vertical-align: middle;
+      }
+      /* The Keys help overlay: its wrapper adds no box, so the dialog sizes against the pause menu like the Paused one. */
+      #pause-menu .help:not([hidden]) {
+        display: contents;
+      }
+      #pause-menu .help table {
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      #pause-menu .help th,
+      #pause-menu .help td {
+        padding: 3px 10px;
+        text-align: left;
+        font-weight: normal;
+      }
+      #pause-menu .help thead th {
+        border-bottom: 1px solid #5b6b3a;
+        color: #a2a58f;
+      }
+      #pause-menu .help kbd {
+        font: bold 14px monospace;
+        color: #f0c95a;
+        white-space: nowrap;
       }
       /* The damage report: small tables side by side, wrapping as the dialog narrows. */
       #end-screen .report {
@@ -524,7 +605,7 @@
         justify-content: center;
         align-items: flex-start;
         gap: 10px 20px;
-        font-size: 12px;
+        font-size: calc(12px * var(--text-scale));
       }
       #end-screen table {
         border-collapse: collapse;
@@ -558,7 +639,7 @@
       #end-screen button,
       #pause-menu button {
         padding: 6px 22px;
-        font: bold 16px monospace;
+        font: bold calc(16px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -588,7 +669,7 @@
         max-width: calc(100% - 16px);
         max-height: calc(100% - 16px);
         overflow-y: auto;
-        font: 13px monospace;
+        font: calc(13px * var(--text-scale)) monospace;
         overflow-wrap: anywhere;
         color: #e4e0c8;
       }
@@ -604,7 +685,7 @@
       #tower-panel h2,
       #enemy-card h2 {
         margin: 0 24px 2px 0;
-        font-size: 15px;
+        font-size: calc(15px * var(--text-scale));
         color: #f0c95a;
       }
       #tower-panel p,
@@ -636,7 +717,7 @@
         width: 24px;
         height: 24px;
         padding: 0;
-        font: bold 16px monospace;
+        font: bold calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
         background: transparent;
         border: 0;
@@ -646,7 +727,7 @@
         #tower-panel,
         #enemy-card {
           width: 190px;
-          font-size: 12px;
+          font-size: calc(12px * var(--text-scale));
         }
       }
       #tower-panel p.role,
@@ -665,7 +746,7 @@
         width: 100%;
         margin-top: 10px;
         padding: 4px 8px;
-        font: bold 13px monospace;
+        font: bold calc(13px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -685,7 +766,7 @@
         width: 100%;
         margin-top: 6px;
         padding: 4px 8px;
-        font: bold 13px monospace;
+        font: bold calc(13px * var(--text-scale)) monospace;
         color: #e8d9b0;
         background: transparent;
         border: 1px solid #8a8670;
@@ -706,7 +787,7 @@
         gap: 14px;
         overflow-y: auto;
         background: #1b1e16;
-        font: 16px monospace;
+        font: calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
       }
       /* Centred when it fits; a taller screen scrolls from its top (plain `justify-content: center` would clip both ends). */
@@ -730,7 +811,7 @@
       #menu h1,
       #level-select h1 {
         margin: 0 0 18px;
-        font-size: 40px;
+        font-size: calc(40px * var(--text-scale));
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #f0c95a;
@@ -739,7 +820,7 @@
       #level-select > button {
         width: 200px;
         padding: 8px 0;
-        font: bold 18px monospace;
+        font: bold calc(18px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -770,7 +851,7 @@
       }
       #menu .credits-list h2 {
         margin: 0 0 4px;
-        font-size: 16px;
+        font-size: calc(16px * var(--text-scale));
         color: #f0c95a;
       }
       #menu .credits-list p {
@@ -801,7 +882,7 @@
         align-items: center;
         gap: 8px;
         padding: 8px;
-        font: bold 16px monospace;
+        font: bold calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
         background: #262a1f;
         border: 2px solid #5e6350;
@@ -813,12 +894,12 @@
       }
       /* Best Stars, or the lock mark and "Locked", under the name. */
       #level-select .stars {
-        font-size: 20px;
+        font-size: calc(20px * var(--text-scale));
         letter-spacing: 0.1em;
         color: #f0c95a;
       }
       #level-select .locked {
-        font-size: 14px;
+        font-size: calc(14px * var(--text-scale));
         color: #a2a58f;
       }
       /* A locked map stays focusable (aria-disabled), but looks and acts disabled. */
@@ -843,7 +924,7 @@
         align-items: center;
         justify-content: center;
         background: rgb(27 30 22 / 0.88);
-        font: 16px monospace;
+        font: calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
       }
       /* `display: flex` above would otherwise override the hidden attribute. */
@@ -865,7 +946,7 @@
       }
       #settings h2 {
         margin: 0;
-        font-size: 22px;
+        font-size: calc(22px * var(--text-scale));
         text-align: center;
         color: #f0c95a;
       }
@@ -921,7 +1002,7 @@
         align-self: center;
         width: 160px;
         padding: 6px 0;
-        font: bold 16px monospace;
+        font: bold calc(16px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -936,7 +1017,7 @@
         position: fixed;
         right: 6px;
         bottom: 4px;
-        font: 12px monospace;
+        font: calc(12px * var(--text-scale)) monospace;
         color: #8a8670;
         pointer-events: none;
       }

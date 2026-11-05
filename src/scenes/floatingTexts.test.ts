@@ -43,4 +43,14 @@ describe('createFloatingTexts', () => {
     texts.add('hidden', AT);
     expect(texts.active()).toEqual([]);
   });
+
+  it('reads a live config each time: with no rise it fades in place', () => {
+    let config = { durationMs: 1000, risePx: 40 };
+    const texts = createFloatingTexts(() => config);
+    texts.add('Tile occupied', AT);
+    texts.advance(250);
+    expect(texts.active()[0]).toMatchObject({ y: 190 });
+    config = { durationMs: 1000, risePx: 0 };
+    expect(texts.active()[0]).toMatchObject({ x: 100, y: 200, alpha: 0.75 });
+  });
 });
