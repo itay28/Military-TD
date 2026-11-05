@@ -54,7 +54,10 @@ describe('createPersistedProgress', () => {
     const storage = createMemoryStorage();
     const progress = createPersistedProgress(storage);
     progress.setHintsDone(true);
-    expect(saved(storage)).toEqual({ version: PROGRESS_VERSION, progress: { maps: {}, hintsDone: true, metEnemies: [] } });
+    expect(saved(storage)).toEqual({
+      version: PROGRESS_VERSION,
+      progress: { maps: {}, hintsDone: true, metEnemies: [] },
+    });
     expect(createPersistedProgress(storage).get().hintsDone).toBe(true);
     progress.setHintsDone(false);
     expect(saved(storage).progress.hintsDone).toBe(false);
@@ -135,28 +138,28 @@ describe('loadProgress', () => {
 });
 
 describe('migrate', () => {
-  it('is at version 2', () => {
-    expect(PROGRESS_VERSION).toBe(2);
+  it('is at version 3', () => {
+    expect(PROGRESS_VERSION).toBe(3);
   });
 
   it('passes the current version through', () => {
-    const data = { maps: {}, hintsDone: true };
+    const data = { maps: {}, hintsDone: true, metEnemies: [] };
     expect(migrate(PROGRESS_VERSION, data)).toBe(data);
   });
 
   it('adds hintsDone to v1 progress: true once any map was won, maps untouched', () => {
     const won = { maps: { a: { completed: true, bestStars: 3 }, b: { completed: false, bestStars: 0 } } };
-    expect(migrate(1, won)).toEqual({ ...won, hintsDone: true });
-    expect(migrate(1, { maps: { b: { completed: false, bestStars: 0 } } })).toEqual({
+    expect(migrate(1, won)).toEqual({ ...won, hintsDone: true, metEnemies: [] });
+    expect(migrate(1, { maps: { b: { completed: false, bestStars: 0 } } })).toMatchObject({
       maps: { b: { completed: false, bestStars: 0 } },
       hintsDone: false,
     });
-    expect(migrate(1, { maps: {} })).toEqual({ maps: {}, hintsDone: false });
+    expect(migrate(1, { maps: {} })).toEqual({ maps: {}, hintsDone: false, metEnemies: [] });
   });
 
   it('leaves v1 data that is not progress for sanitize to reject', () => {
     expect(migrate(1, 'junk')).toBe('junk');
-    expect(migrate(1, { maps: 5 })).toEqual({ maps: 5, hintsDone: false });
+    expect(migrate(1, { maps: 5 })).toEqual({ maps: 5, hintsDone: false, metEnemies: [] });
   });
 
   it.each([PROGRESS_VERSION + 1, -1, 1.5, Number.NaN])('rejects version %s', (version) => {

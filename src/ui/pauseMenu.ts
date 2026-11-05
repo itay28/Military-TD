@@ -1,6 +1,7 @@
 import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type GameState } from '../sim/game';
-import type { OpenSettings, SettingsScreen } from './settingsScreen';
+import type { OpenFieldManual } from './fieldManual';
+import type { OpenSettings } from './settingsScreen';
 
 /** The parts of the Game the pause menu reads. */
 export interface PauseMenuGame {
@@ -18,6 +19,8 @@ export interface PauseMenuOptions {
   readonly onQuit?: () => void;
   /** Opens the Settings screen in place of the Paused dialog. Without it, Settings is disabled. */
   readonly openSettings?: OpenSettings;
+  /** Opens the Field manual in place of the Paused dialog (#408); the game stays paused. Without it, it is disabled. */
+  readonly openFieldManual?: OpenFieldManual | undefined;
   /** The game speed. With it, the Paused dialog can change the speed, so the player resumes at the one they pick. */
   readonly speed?: GameSpeedControl;
 }
@@ -45,7 +48,7 @@ const TITLE_ID = 'pause-menu-title';
 export function mountPauseMenu(
   root: HTMLElement,
   game: PauseMenuGame,
-  { buttonRoot, blocked, onRestart, onQuit, openSettings, speed }: PauseMenuOptions,
+  { buttonRoot, blocked, onRestart, onQuit, openSettings, openFieldManual, speed }: PauseMenuOptions,
 ): PauseMenu {
   const doc = root.ownerDocument;
   const makeButton = (testId: string, text: string, onClick?: () => void) => {
@@ -76,8 +79,8 @@ export function mountPauseMenu(
   };
   const close = () => setPaused(false);
   const closeSettings = () => {
-    settingsScreen?.close();
-    settingsScreen = undefined;
+    subScreen?.close();
+    subScreen = undefined;
     dialog.hidden = false;
   };
 
@@ -92,26 +95,37 @@ export function mountPauseMenu(
   heading.id = TITLE_ID;
   heading.textContent = 'Paused';
   const resume = makeButton('resume', 'Resume', close);
-  // Open, the Settings screen takes the Paused dialog's place; the game stays paused, and Back brings the dialog back.
-  let settingsScreen: SettingsScreen | undefined;
-  const settings = makeButton(
-    'settings',
-    'Settings',
-    openSettings &&
-      (() => {
-        dialog.hidden = true;
-        settingsScreen = openSettings(() => {
-          settingsScreen = undefined;
-          dialog.hidden = false;
-          settings.focus();
-        });
-      }),
-  );
+  // Open, Settings or the Field manual takes the Paused dialog's place; the game stays paused, and Back brings the
+  // dialog back.
+  let subScreen: { back(): void; close(): void } | undefined;
+  const subScreenButton = (
+    testId: string,
+    text: string,
+    openScreen: ((onBack: () => void) => { back(): void; close(): void }) | undefined,
+  ) => {
+    const button: HTMLButtonElement = makeButton(
+      testId,
+      text,
+      openScreen &&
+        (() => {
+          dialog.hidden = true;
+          subScreen = openScreen(() => {
+            subScreen = undefined;
+            dialog.hidden = false;
+            button.focus();
+          });
+        }),
+    );
+    return button;
+  };
+  const settings = subScreenButton('settings', 'Settings', openSettings);
+  const fieldManual = subScreenButton('field-manual', 'Field manual', openFieldManual);
   dialog.append(
     heading,
     resume,
     makeButton('pause-restart', 'Restart', () => onRestart()),
     settings,
+    fieldManual,
     makeButton('quit', 'Quit to menu', onQuit && (() => onQuit())),
   );
   root.append(dialog);
@@ -125,8 +139,8 @@ export function mountPauseMenu(
     if (!paused) return;
     event.stopPropagation();
     if (event.key !== 'Escape' || event.repeat) return;
-    // From Settings, Esc goes back to the Paused dialog rather than resuming.
-    if (settingsScreen) settingsScreen.back();
+    // From Settings or the Field manual, Esc goes back to the Paused dialog rather than resuming.
+    if (subScreen) subScreen.back();
     else close();
   };
   // Esc pauses last, so one that cancelled something first (a tower selection, a build kind) doesn't also pause.

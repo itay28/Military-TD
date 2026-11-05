@@ -23,7 +23,11 @@ describe('createProgress', () => {
     progress.setHintsDone(true);
     progress.recordResult('a', 2);
     progress.setHintsDone(true);
-    expect(progress.get()).toEqual({ maps: { a: { completed: true, bestStars: 2 } }, hintsDone: true });
+    expect(progress.get()).toEqual({
+      maps: { a: { completed: true, bestStars: 2 } },
+      hintsDone: true,
+      metEnemies: [],
+    });
   });
 
   it('records a win as completed with its stars', () => {

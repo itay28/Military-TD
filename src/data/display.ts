@@ -1,4 +1,5 @@
 import type { Layer } from '../sim/combat';
+import type { Faction } from '../sim/factions';
 import type { PlaceTowerRefusal, UpgradeTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
@@ -227,3 +228,17 @@ export const DPS_METER_REFRESH_MS = 250;
 
 /** Below this width, in CSS pixels, the DPS meter starts with its kinds collapsed (the HUD's phone layout). */
 export const DPS_METER_NARROW_PX = 640;
+
+/** What the player calls each Faction (ADR-0009), as on the Field manual's faction switcher. */
+export const FACTION_NAMES = {
+  us: 'US',
+  russia: 'Russia',
+  china: 'China',
+  insurgents: 'Insurgents',
+} as const satisfies Record<Faction, string>;
+
+/**
+ * The Field manual's model view: it spins `spinDegPerS` on its own (not with reduced motion); each arrow key or Rotate
+ * button turns it `keyStepDeg`, and a drag `dragDegPerPx` per pixel across.
+ */
+export const FIELD_MANUAL = { spinDegPerS: 30, keyStepDeg: 15, dragDegPerPx: 0.5 } as const;
