@@ -75,6 +75,36 @@ export const TOWER_NAMES = {
   mortar: 'Mortar',
 } as const satisfies Record<TowerKind, string>;
 
+/** What each tower kind is for, in one line: the tower panel leads with it. Every kind needs one; keep it true to the stats. */
+export const TOWER_ROLES = {
+  rifleNest: 'Cheap all-rounder: hits ground and air. Light rounds that armor soaks.',
+  aaGun: 'Built for aircraft: fast, light rounds. Hits ground too.',
+  cannon: 'Slow, heavy shells that punch through armor. Ground only.',
+  mortar: 'Long-range shells that hit everything in the blast. Ground only, not up close.',
+} as const satisfies Record<TowerKind, string>;
+
+/** What the player calls each enemy kind. Every kind needs one. */
+export const ENEMY_NAMES = {
+  infantry: 'Infantry',
+  jeep: 'Jeep',
+  helicopter: 'Helicopter',
+  tank: 'Tank',
+} as const satisfies Record<EnemyKind, string>;
+
+/**
+ * What hurts each enemy kind, in one plain line on its enemy card. Every kind needs one; keep it true to the stats
+ * (armor, layer, and each tower's damage, pierce and targets).
+ */
+export const ENEMY_WEAKNESS = {
+  infantry: 'No armor: every tower hurts it. Mortar blasts catch whole squads.',
+  jeep: 'Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it.',
+  helicopter: 'Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best.',
+  tank: 'Armor: Rifle Nests barely scratch it. Cannons and Mortars work.',
+} as const satisfies Record<EnemyKind, string>;
+
+/** The smallest tap area of an enemy, as a diameter in screen pixels, so a small one is easy to hit on a phone. */
+export const ENEMY_HIT_PX = 32;
+
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
 
