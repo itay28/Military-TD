@@ -91,6 +91,7 @@ import {
   type Hints,
   type HintState,
 } from '../ui/hints';
+import type { OpenFieldManual } from '../ui/fieldManual';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
@@ -186,6 +187,8 @@ export interface GameSceneOptions {
   readonly audioMix: AudioMix;
   /** Opens the Settings screen, from the pause menu. */
   readonly openSettings: OpenSettings;
+  /** Opens the Field manual from the pause menu (#408). */
+  readonly openFieldManual?: OpenFieldManual;
   /** Saved progress: each Victory records its Stars here. */
   readonly progress: ProgressStore;
   /** Called at the end of every create(), the first game's and each restart's. */
@@ -205,6 +208,7 @@ export class GameScene extends Phaser.Scene {
   private readonly settings: SettingsStore;
   private readonly audioMix: AudioMix;
   private readonly openSettings: OpenSettings;
+  private readonly openFieldManual: OpenFieldManual | undefined;
   private readonly progress: ProgressStore;
   private readonly onCreate: (() => void) | undefined;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
@@ -293,6 +297,7 @@ export class GameScene extends Phaser.Scene {
     settings,
     audioMix,
     openSettings,
+    openFieldManual,
     progress,
     onCreate,
   }: GameSceneOptions) {
@@ -309,6 +314,7 @@ export class GameScene extends Phaser.Scene {
     this.settings = settings;
     this.audioMix = audioMix;
     this.openSettings = openSettings;
+    this.openFieldManual = openFieldManual;
     this.progress = progress;
     this.onCreate = onCreate;
   }
@@ -785,6 +791,7 @@ export class GameScene extends Phaser.Scene {
       onRestart: () => this.scene.restart(),
       onQuit: () => this.scene.start('LevelSelect'),
       openSettings: this.openSettings,
+      openFieldManual: this.openFieldManual,
       speed,
     });
     this.hintState = INITIAL_HINTS;
@@ -1001,6 +1008,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** One fixed tick of the game, from the real-time loop or test mode's step(). */
+  /** Unlocks each enemy kind in the Field manual the first time one is on the map (#408). */
+  private recordMetEnemies(): void {
+    const met = this.progress.get().metEnemies;
+    for (const enemy of this.sim.state.enemies) if (!met.includes(enemy.kind)) this.progress.recordMet(enemy.kind);
+  }
+
   private tickOnce(): void {
     this.previousPositions = snapshotPositions(this.sim.state.enemies);
     this.sim.tick(TICK_MS);
@@ -1034,6 +1047,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyCard.update();
     this.pauseMenu.update();
     this.updateHints();
+    this.recordMetEnemies();
 
     const { enemies, towers } = this.sim.state;
     this.towerViews.sync(towers);

@@ -111,4 +111,29 @@ describe('Main menu', () => {
     expect(root.hidden).toBe(true);
     expect(root.childElementCount).toBe(0);
   });
+
+  it('opens the Field manual with the menu inert behind it, and comes back to the button', () => {
+    let back: () => void = () => {};
+    const close = vi.fn();
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
+    expect(button('Field manual')?.disabled).toBe(true);
+    root.replaceChildren();
+    const menu = mountMainMenu(root, {
+      app,
+      onPlay: () => {},
+      onCredits: () => {},
+      openFieldManual: (onBack) => {
+        back = onBack;
+        return { close, back: () => {} };
+      },
+    });
+    button('Field manual')!.click();
+    expect(root.inert).toBe(true);
+    back();
+    expect(root.inert).toBe(false);
+    expect(document.activeElement).toBe(button('Field manual'));
+    button('Field manual')!.click();
+    menu.destroy();
+    expect(close).toHaveBeenCalledOnce();
+  });
 });

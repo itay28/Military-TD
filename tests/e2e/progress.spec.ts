@@ -13,7 +13,7 @@ test('a win with one Life lost shows 2 of 3 stars and saves them as the map’s 
   await expect(page.getByTestId('stars')).toHaveText('★★☆ 2 of 3 stars');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('military-td.progress') ?? 'null'));
   expect(saved).toEqual({
-    version: 2,
-    progress: { maps: { mvp: { completed: true, bestStars: 2 } }, hintsDone: false },
+    version: 3,
+    progress: { maps: { mvp: { completed: true, bestStars: 2 } }, hintsDone: false, metEnemies: ['infantry'] },
   });
 });
