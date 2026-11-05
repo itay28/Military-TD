@@ -48,12 +48,21 @@ export interface BuildBar<K extends string = TowerKind> {
   destroy(): void;
 }
 
+function buildKinds(): TowerKind[] {
+  return Object.keys(TOWER_STATS) as TowerKind[];
+}
+
+/** A kind's 1-based place on the build bar, which is also its hotkey. */
+export function buildBarNumber(kind: TowerKind): number {
+  return buildKinds().indexOf(kind) + 1;
+}
+
 /**
  * One option per tower kind, in `TOWER_STATS` order, so a kind added there shows up on the bar. A kind with a render
  * gets its icon from it, unless `renderLoaded` says its textures didn't (then Kenney, as the map does).
  */
 export function buildOptions(renderLoaded: (render: RenderedSprite) => boolean = () => true): BuildOption[] {
-  return (Object.keys(TOWER_STATS) as TowerKind[]).map((kind) => {
+  return buildKinds().map((kind) => {
     const { fill, outline, shape, size } = TOWER_STYLE[kind];
     const rendered = renderFor(kind);
     const render = rendered !== null && renderLoaded(rendered) ? rendered : null;

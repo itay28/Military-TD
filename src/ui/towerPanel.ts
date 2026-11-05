@@ -1,6 +1,7 @@
 import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, UPGRADE_REFUSAL_TEXT, formatFunds } from '../data/display';
-import { TOWER_STATS, type TowerKind } from '../data/towers';
+import type { TowerKind } from '../data/towers';
 import type { Game } from '../sim/game';
+import { buildBarNumber } from './buildBar';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
 
@@ -25,7 +26,7 @@ const TITLE_ID = 'tower-panel-title';
  * tower's id. The id stays the tower's whole life, so selling another tower never renumbers it.
  */
 export function designator(kind: TowerKind, id: number): string {
-  return `${(Object.keys(TOWER_STATS) as TowerKind[]).indexOf(kind) + 1}-${id}`;
+  return `${buildBarNumber(kind)}-${id}`;
 }
 
 /**
@@ -98,7 +99,8 @@ export function mountTowerPanel(
     if (!tower) return;
     const figures = stats.towers[tower.id];
     const mark = designator(tower.kind, tower.id);
-    if (badge.textContent !== mark || heading.lastChild?.textContent !== ` ${TOWER_NAMES[tower.kind]}`) {
+    const title = `${mark} ${TOWER_NAMES[tower.kind]}`;
+    if (heading.textContent !== title) {
       badge.textContent = mark;
       heading.replaceChildren(badge, ` ${TOWER_NAMES[tower.kind]}`);
     }
