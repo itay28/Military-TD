@@ -244,6 +244,22 @@ describe('HUD', () => {
     const rounded = (game: Game) =>
       `DPS ${Math.round(waveDps(game.state.stats.wave.damage, game.state.stats.wave.elapsedMs))}`;
 
+    it('is a button that opens and closes the DPS meter', () => {
+      mountHud(root, armed(), fakeSpeed());
+      const button = byTestId('hud-dps') as HTMLButtonElement;
+      expect(button.tagName).toBe('BUTTON');
+      expect(button.getAttribute('aria-controls')).toBe('dps-meter');
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(byTestId('dps-meter')?.hidden).toBe(true);
+      button.click();
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(byTestId('dps-meter')?.hidden).toBe(false);
+      expect(byTestId('dps-kind-rifleNest')).not.toBeNull();
+      button.click();
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(byTestId('dps-meter')?.hidden).toBe(true);
+    });
+
     it('shows "DPS –" before any wave', () => {
       mountHud(root, armed(), fakeSpeed());
       expect(dps()).toBe('DPS –');

@@ -8,6 +8,7 @@ import {
   LEVEL_PIP,
   RANGE_RING,
   ROTOR,
+  SELECTION,
   SHELL,
   TILE_PX,
   TOWER_STYLE,
@@ -67,8 +68,31 @@ export function drawHpBar(painter: EntityPainter, enemy: Enemy): void {
   const top = -radius - HP_BAR.gap - HP_BAR.height;
   painter.fillStyle(HP_BAR.back, HP_BAR.backAlpha);
   painter.fillRect(left, top, HP_BAR.width, HP_BAR.height);
-  painter.fillStyle(HP_BAR.fill);
+  painter.fillStyle(hpBarFill(enemy.hp, enemy.maxHp));
   painter.fillRect(left, top, (HP_BAR.width * enemy.hp) / enemy.maxHp, HP_BAR.height);
+}
+
+/** The HP bar's fill colour: the low colour once HP is down to `HP_BAR.lowAt` of the max. */
+export function hpBarFill(hp: number, maxHp: number): number {
+  return hp <= maxHp * HP_BAR.lowAt ? HP_BAR.low : HP_BAR.fill;
+}
+
+/** Brackets at the corners of the selected tower's tile, over a dark edge so they read on any ground. */
+export function drawSelection(painter: EntityPainter): void {
+  const c = TILE_PX / 2 - SELECTION.inset;
+  const a = SELECTION.arm;
+  const brackets = () => {
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        painter.lineBetween(sx * c, sy * c, sx * (c - a), sy * c);
+        painter.lineBetween(sx * c, sy * c, sx * c, sy * (c - a));
+      }
+    }
+  };
+  painter.lineStyle(SELECTION.outline.width, SELECTION.outline.color, SELECTION.outline.alpha);
+  brackets();
+  painter.lineStyle(SELECTION.width, SELECTION.color);
+  brackets();
 }
 
 /** Fills, or with `stroke` outlines, a kind's shape centered on the origin, in the current style. */
@@ -121,7 +145,7 @@ export function drawRangeRing(painter: EntityPainter, tower: Tower): void {
   for (const radius of rangeRingRadii(tower)) painter.strokeCircle(0, 0, radius);
 }
 
-/** A see-through tower of `kind` and its range rings, green if it can be placed here, red if not. */
+/** A see-through tower of `kind` and its range rings, green if it can be placed here, red with a cross if not. */
 export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: boolean): void {
   const color = placeable ? GHOST.placeable : GHOST.blocked;
   const radii = rangeRingRadii(TOWER_STATS[kind]);
@@ -133,6 +157,19 @@ export function drawGhost(painter: EntityPainter, kind: TowerKind, placeable: bo
   for (const radius of radii) painter.strokeCircle(0, 0, radius);
   painter.lineStyle(GHOST.ringWidth, color, GHOST.ringAlpha);
   for (const radius of radii) painter.strokeCircle(0, 0, radius);
+  if (!placeable) drawCross(painter, (TOWER_STYLE[kind].size / 2) * GHOST.cross.reach);
+}
+
+/** An X through the origin reaching `arm` px along each axis, in the refused colour over the dark edge. */
+function drawCross(painter: EntityPainter, arm: number): void {
+  const lines = () => {
+    painter.lineBetween(-arm, -arm, arm, arm);
+    painter.lineBetween(-arm, arm, arm, -arm);
+  };
+  painter.lineStyle(GHOST.cross.width + 2, GHOST.outline.color, GHOST.outline.alpha);
+  lines();
+  painter.lineStyle(GHOST.cross.width, GHOST.blocked);
+  lines();
 }
 
 /** Each tracer as a line in canvas pixels, in its tower's style, at its current alpha. */
