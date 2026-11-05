@@ -209,8 +209,9 @@ export function planStarts(
 }
 
 /** An `auto-agent` issue with a live session: In progress and not parked on a question or the maintainer (#423). */
-const isRunning = (i: Pick<StartIssue, 'autoAgent' | 'status' | 'needsInfo' | 'needsYou' | 'hold'>) =>
-  i.autoAgent && i.status === 'In progress' && !i.needsInfo && !i.needsYou && !i.hold;
+export const isRunning = (
+  i: Pick<StartIssue, 'autoAgent' | 'status'> & Partial<Pick<StartIssue, 'needsInfo' | 'needsYou' | 'hold'>>,
+) => i.autoAgent && i.status === 'In progress' && !i.needsInfo && !i.needsYou && !i.hold;
 
 const rank = (priority: string | undefined) => {
   const i = PRIORITIES.indexOf(priority ?? '');
