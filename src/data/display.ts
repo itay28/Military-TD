@@ -162,3 +162,37 @@ export const EFFECT = {
   explosion: { color: 0xff8a3d, radius: 8, growth: 1.6 },
   puff: { color: 0xc9c9c9, radius: 6, growth: 1.5 },
 } as const;
+
+/** What a fight leaves on the ground (#403): a vehicle's wreck, an aircraft's crash mark, a shell crater, fallen infantry. */
+export type DecalKind = 'wreck' | 'crashMark' | 'crater' | 'fallen';
+
+/**
+ * The battlefield's aftermath (#403), on real time. Wrecks and crash marks burn for `burnMs`, then fade over `fadeMs`;
+ * craters only fade; fallen infantry tip over in `fallMs` and are gone by `fadeMs`. At most `cap` decals stay (the
+ * performance budget, #73): the oldest fades out over `evictFadeMs` to make room. Reduced motion has no fire, no fall,
+ * and fades `reducedFade` times as long.
+ */
+export const AFTERMATH = {
+  cap: 40,
+  burnMs: 3000,
+  wreckFadeMs: 5000,
+  craterFadeMs: 10000,
+  fallenFadeMs: 3000,
+  fallMs: 250,
+  evictFadeMs: 300,
+  reducedFade: 0.5,
+  hull: { color: 0x2b2722, turret: 0x1c1a17, alpha: 0.9 }, // burnt-out steel
+  scorch: { color: 0x14110e, alpha: 0.45 },
+  crater: { color: 0x3a2f24, rim: 0x5a4a38, alpha: 0.6 },
+  fallen: { color: 0x3b3a2a, head: 0x5a4f40, alpha: 0.85 }, // a dark uniform, no blood
+  fire: { colors: [0xff7a1a, 0xffc04d], radius: 3.5, flickerMs: 90 },
+  smoke: { color: 0x6b6660, alpha: 0.45, riseMs: 1200, risePx: 18, puffs: 3 },
+} as const;
+
+/** The decal an enemy leaves when it dies, and its size in pixels. Every new kind (APC, jet, bosses) picks one. */
+export const AFTERMATH_OF = {
+  infantry: { decal: 'fallen', size: 8 },
+  jeep: { decal: 'wreck', size: 8 },
+  tank: { decal: 'wreck', size: 14 },
+  helicopter: { decal: 'crashMark', size: 12 },
+} as const satisfies Record<EnemyKind, { decal: Exclude<DecalKind, 'crater'>; size: number }>;
