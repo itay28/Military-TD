@@ -27,7 +27,7 @@ You are the PR steward for Military-TD, started by an Action in a cloud session.
 6. **Unresolved review threads:** fix or answer each one, then resolve the threads you addressed.
 7. **Before pushing:** `npm run check` (and `npm run test:e2e` if UI changed) must pass. Follow `docs/agents/agent-brief.md` (tests first for new behaviour, Conventional Commits, the issue's progress comments); open `docs/agents/workflow.md` only at the section the brief points to. No session tracker.
 8. **Substantial fixes** (new behaviour, a redesign, more than small edits): add the `review-again` label so the CI review runs again.
-9. **Report** with one PR comment: what you changed (commits), what you answered and why, and anything left. It must end with this marker on its own line, which tells the Action the round is over:
+9. **Report** with one PR comment: what you changed (commits), what you answered and why, and anything left. If your commits change how something looks or sounds, upload the new images or sounds (`docs/agents/workflow.md` → **4b**), embed or link them in the report, and replace the old ones in the PR body's **Screenshots** / **Audio** section (**4b** → **Follow-up changes**). A PR whose body shows no images or sounds for a visual or audio change gets them in this round, even if no reason named it. It must end with this marker on its own line, which tells the Action the round is over:
 
    ```text
    <!-- pr-steward:done -->
