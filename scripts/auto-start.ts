@@ -68,6 +68,8 @@ export interface StartIssue {
   readonly hold: boolean;
   /** Labelled `needs-you`: handed to the maintainer, e.g. after a setup error (#200). */
   readonly needsYou: boolean;
+  /** Labelled `needs-info`: the agent stopped on a question (#423). */
+  readonly needsInfo: boolean;
   readonly autoAgent: boolean;
   /** Labelled `area:infra` (or Area `infra`): startable without a milestone (#225). */
   readonly infra: boolean;
@@ -147,8 +149,11 @@ export function stackBase(blockedBy: readonly number[], prs: readonly OpenPr[], 
  * milestone (`order[0]`) has nothing to start, the next one is used (one milestone of look-ahead).
  * Infra issues without a milestone are startable in every run, next to that milestone's (#225);
  * other issues without one never start. Ordered by Priority (P0 first, none last), then issue
- * number; capped so at most `cap` `auto-agent` issues are In progress. With `freeze` on (the feature
- * freeze, #84), feature work doesn't start.
+ * number; capped so at most `cap` `auto-agent` issues are In progress. Parked ones (`needs-info`,
+ * `needs-you`, `hold`) have no live session, so they keep their claim but use no slot (#423).
+ * Look-ahead may fill at most `cap − 1` slots (at least 1, so `cap` 1 isn't starved), counting
+ * look-ahead issues already running; the current milestone and infra can use every slot. With
+ * `freeze` on (the feature freeze, #84), feature work doesn't start.
  */
 export function planStarts(
   issues: readonly StartIssue[],
@@ -156,8 +161,10 @@ export function planStarts(
   order: readonly number[],
   { defaultBranch = 'main', stack = false, cap = MAX_AGENTS, freeze = false }: StartOptions = {},
 ): StartPlan {
-  const running = issues.filter((i) => i.autoAgent && i.status === 'In progress').length;
-  const slots = Math.max(0, cap - running);
+  const running = issues.filter((i) => isRunning(i));
+  const slots = Math.max(0, cap - running.length);
+  const lookRunning = running.filter((i) => order[1] !== undefined && i.milestone === order[1]).length;
+  let lookSlots = Math.max(0, Math.max(1, cap - 1) - lookRunning);
   const candidates = (inScope: (i: StartIssue) => boolean) => {
     const starts: { issue: StartIssue; start: Start }[] = [];
     const noSize: number[] = [];
@@ -186,15 +193,25 @@ export function planStarts(
     milestone !== undefined && i.milestone === milestone;
   const infra = candidates((i) => i.infra && i.milestone === null);
   const current = candidates(inMilestone(order[0]));
-  const plan = current.starts.length ? current : candidates(inMilestone(order[1]));
+  const lookingAhead = !current.starts.length;
+  const plan = lookingAhead ? candidates(inMilestone(order[1])) : current;
   const starts = [...infra.starts, ...plan.starts]
     .sort((a, b) => rank(a.issue.priority) - rank(b.issue.priority) || a.issue.number - b.issue.number)
+    .filter((s) => {
+      if (!lookingAhead || s.issue.milestone === null) return true;
+      return lookSlots-- > 0;
+    })
     .map((s) => s.start);
   return {
     starts: starts.slice(0, slots),
     noSize: [...new Set([...infra.noSize, ...current.noSize, ...plan.noSize])],
   };
 }
+
+/** An `auto-agent` issue with a live session: In progress and not parked on a question or the maintainer (#423). */
+export const isRunning = (
+  i: Pick<StartIssue, 'autoAgent' | 'status'> & Partial<Pick<StartIssue, 'needsInfo' | 'needsYou' | 'hold'>>,
+) => i.autoAgent && i.status === 'In progress' && !i.needsInfo && !i.needsYou && !i.hold;
 
 const rank = (priority: string | undefined) => {
   const i = PRIORITIES.indexOf(priority ?? '');
