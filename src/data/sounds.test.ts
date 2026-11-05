@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { FACTIONS } from '../sim/factions';
 import { TOWER_STATS, type TowerKind } from './towers';
 import { SHOT_SOUND, SOUND_IDS } from '../audio/sounds';
-import { RADIO_CUE_MS, SOUND_FALLOFF, SOUND_URLS, WHISTLE_LEAD_MS } from './sounds';
+import { RADIO_CUE_MS, SOUND_FALLOFF, SOUND_THROTTLE_BY_ID, SOUND_URLS, WHISTLE_LEAD_MS } from './sounds';
+import { TRACK_IDS } from '../audio/music';
+import { existsSync } from 'node:fs';
 
 /** An Ogg Vorbis file's length in ms: the last page's granule position over the sample rate in the id header. */
 function oggDurationMs(path: string): number {
@@ -41,8 +43,14 @@ describe('sound tuning', () => {
 });
 
 describe('RADIO_CUE_MS (#396)', () => {
-  it('makes wave start, reinforcements, victory and defeat radio cues', () => {
-    expect(Object.keys(RADIO_CUE_MS).sort()).toEqual(['defeat', 'victory', 'waveReinforcements', 'waveStart']);
+  it('makes wave start, reinforcements, a leak, victory and defeat radio cues', () => {
+    expect(Object.keys(RADIO_CUE_MS).sort()).toEqual(['defeat', 'leak', 'victory', 'waveReinforcements', 'waveStart']);
+  });
+
+  it('calls a leak over the radio instead of a bell, once for a burst (#405)', () => {
+    expect(SOUND_URLS.leak).toMatch(/radio-cues\/leak\.ogg$/);
+    expect(SOUND_THROTTLE_BY_ID.leak?.maxPlays).toBe(1);
+    expect(SOUND_THROTTLE_BY_ID.leak?.windowMs).toBeGreaterThan(RADIO_CUE_MS.leak!);
   });
 
   it("gives each cue its file's length, 1–3.5 s", () => {
@@ -51,6 +59,17 @@ describe('RADIO_CUE_MS (#396)', () => {
       expect(Math.abs(fileMs - ms), id).toBeLessThan(100);
       expect(ms, id).toBeGreaterThanOrEqual(1000);
       expect(ms, id).toBeLessThanOrEqual(3500);
+    }
+  });
+});
+
+describe('the ambient bed (#405)', () => {
+  it('has an OGG and an MP3 of each ambience loop, 20–60 s long', () => {
+    for (const id of TRACK_IDS.filter((t) => t === 'ambient' || t === 'combat')) {
+      const ogg = `assets/battlefield-ambience/${id}.ogg`;
+      expect(existsSync(`assets/battlefield-ambience/${id}.mp3`), id).toBe(true);
+      expect(oggDurationMs(ogg), id).toBeGreaterThanOrEqual(20000);
+      expect(oggDurationMs(ogg), id).toBeLessThanOrEqual(60000);
     }
   });
 });
