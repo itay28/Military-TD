@@ -1,6 +1,7 @@
 - text: Funds $100
 - meter "HQ": HQ 20/20
-- text: Wave 0 / 10 DPS –
+- text: Wave 0 / 10
+- button "DPS –"
 - status
 - button "Start wave"
 - button "Auto-start"

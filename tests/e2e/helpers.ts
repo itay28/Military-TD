@@ -68,6 +68,19 @@ export async function tileToScreen(page: Page, { col, row }: Tile): Promise<{ x:
   };
 }
 
+/** The page coordinates of enemy `id`, from its sim position through the camera, so a test taps it like a player. */
+export async function enemyToScreen(page: Page, id: number): Promise<{ x: number; y: number }> {
+  const box = await page.locator('#game canvas').boundingBox();
+  if (!box) throw new Error('The game canvas is not on the page');
+  const enemy = (await state(page)).enemies.find((e) => e.id === id);
+  if (!enemy) throw new Error(`Enemy ${id} is not on the map`);
+  const { scrollX, scrollY, zoom } = (await view(page)).camera;
+  return {
+    x: box.x + (enemy.position.x * TILE_PX - scrollX) * zoom,
+    y: box.y + (enemy.position.y * TILE_PX - scrollY) * zoom,
+  };
+}
+
 /** Selects `kind` on the build bar, unless it is selected already: no kind is at the start. */
 export async function selectKind(page: Page, kind: TowerKind = 'rifleNest'): Promise<void> {
   const button = page.getByTestId(`build-${kind}`);

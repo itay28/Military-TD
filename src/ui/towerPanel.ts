@@ -1,4 +1,4 @@
-import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, UPGRADE_REFUSAL_TEXT, formatFunds } from '../data/display';
+import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES, UPGRADE_REFUSAL_TEXT, formatFunds } from '../data/display';
 import type { Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
@@ -39,6 +39,9 @@ export function mountTowerPanel(
   close.type = 'button';
   close.setAttribute('aria-label', 'Close');
   close.textContent = '×';
+  const role = doc.createElement('p');
+  role.dataset.testid = 'tower-role';
+  role.className = 'role';
   const level = doc.createElement('p');
   level.dataset.testid = 'tower-level';
   const list = doc.createElement('dl');
@@ -63,7 +66,7 @@ export function mountTowerPanel(
   const sell = doc.createElement('button');
   sell.type = 'button';
   sell.dataset.testid = 'tower-sell';
-  dialog.append(heading, close, level, list, upgrade, sell);
+  dialog.append(heading, close, role, level, list, upgrade, sell);
   root.append(dialog);
   root.hidden = true;
   let selectedId: number | undefined;
@@ -87,6 +90,7 @@ export function mountTowerPanel(
     if (!tower) return;
     const figures = stats.towers[tower.id];
     setText(heading, TOWER_NAMES[tower.kind]);
+    setText(role, TOWER_ROLES[tower.kind]);
     setText(level, `Level ${tower.level}`);
     setText(damage, String(tower.damage));
     setText(fireRate, `${Number(tower.fireRate.toFixed(2))}/s`);
