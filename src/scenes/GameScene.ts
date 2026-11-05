@@ -90,7 +90,6 @@ import {
   type HintId,
   type Hints,
   type HintState,
-  type Rect,
 } from '../ui/hints';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import type { OpenSettings } from '../ui/settingsScreen';
