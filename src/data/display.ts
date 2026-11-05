@@ -183,7 +183,7 @@ export const AFTERMATH = {
   reducedFade: 0.5,
   hull: { color: 0x2b2722, turret: 0x1c1a17, alpha: 0.9 }, // burnt-out steel
   scorch: { color: 0x14110e, alpha: 0.45 },
-  crater: { color: 0x3a2f24, rim: 0x5a4a38, alpha: 0.6 },
+  crater: { color: 0x3a2f24, rim: 0x5a4a38, alpha: 0.6, size: 9 },
   fallen: { color: 0x3b3a2a, head: 0x5a4f40, alpha: 0.85 }, // a dark uniform, no blood
   fire: { colors: [0xff7a1a, 0xffc04d], radius: 3.5, flickerMs: 90 },
   smoke: { color: 0x6b6660, alpha: 0.45, riseMs: 1200, risePx: 18, puffs: 3 },
