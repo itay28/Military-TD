@@ -6,7 +6,7 @@ import { createGame, TICK_MS, type GameState } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { emptyStats, type CombatStats } from '../sim/stats';
 import type { Tower } from '../sim/towers';
-import { mountTowerPanel, type TowerPanelGame } from './towerPanel';
+import { designator, mountTowerPanel, type TowerPanelGame } from './towerPanel';
 
 const SMALL: MapData = {
   id: 'small',
@@ -65,7 +65,7 @@ describe('Tower panel', () => {
   it("leads with the kind's name and its role line", () => {
     const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]));
     panel.select(1);
-    expect(root.querySelector('h2')?.textContent).toBe(TOWER_NAMES.rifleNest);
+    expect(root.querySelector('h2')?.textContent).toBe(`1-1 ${TOWER_NAMES.rifleNest}`);
     expect(value('tower-role')).toBe(TOWER_ROLES.rifleNest);
     expect(root.querySelector('h2')?.nextElementSibling?.nextElementSibling).toBe(
       root.querySelector('[data-testid="tower-role"]'),
@@ -76,6 +76,16 @@ describe('Tower panel', () => {
     const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]));
     expect(root.hidden).toBe(true);
     expect(panel.selectedId).toBeUndefined();
+  });
+
+  it('titles the tower with its unit designator: its build-bar number, a dash and its id', () => {
+    expect(designator('rifleNest', 1)).toBe('1-1');
+    expect(designator('aaGun', 2)).toBe('2-2');
+    expect(designator('cannon', 7)).toBe('3-7');
+    expect(designator('mortar', 12)).toBe('4-12');
+    const panel = mountTowerPanel(root, fakeGame([rifleNest(3)]));
+    panel.select(3);
+    expect(root.querySelector('h2 .designator')?.textContent).toBe('1-3');
   });
 
   it('rounds a long fire rate to two decimals so it fits the panel', () => {
@@ -90,7 +100,7 @@ describe('Tower panel', () => {
     expect(root.hidden).toBe(false);
     expect(panel.selectedId).toBe(1);
     expect(dialog().getAttribute('aria-labelledby')).toBe(root.querySelector('h2')?.id);
-    expect(root.querySelector('h2')?.textContent).toBe('Rifle Nest');
+    expect(root.querySelector('h2')?.textContent).toBe('1-1 Rifle Nest');
     expect(value('tower-level')).toBe('Level 1');
     expect(value('tower-damage')).toBe('10');
     expect(value('tower-fire-rate')).toBe('2/s');
