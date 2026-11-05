@@ -65,6 +65,24 @@ describe('throttleAudio', () => {
   });
 });
 
+describe('throttleAudio per-sound limits (#405)', () => {
+  it('plays a burst of leak calls once, and leaves other sounds on the default limit', () => {
+    const sink = createRecordingAudio();
+    const time = clock();
+    const audio = throttleAudio(sink, { maxPlays: 3, windowMs: 100 }, time.now, {
+      leak: { maxPlays: 1, windowMs: 5000 },
+    });
+    for (let i = 0; i < 5; i++) audio.play('leak');
+    for (let i = 0; i < 5; i++) audio.play('rifleShot');
+    expect(sink.played).toEqual(['leak', 'rifleShot', 'rifleShot', 'rifleShot']);
+    time.advance(4999);
+    audio.play('leak');
+    time.advance(1);
+    audio.play('leak');
+    expect(sink.played.filter((id) => id === 'leak')).toHaveLength(2);
+  });
+});
+
 describe('volume (#404)', () => {
   it('records each play at full volume unless told otherwise', () => {
     const audio = createRecordingAudio();
