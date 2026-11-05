@@ -5,6 +5,7 @@ import {
   EFFECT,
   ENEMY_STYLE,
   GHOST,
+  HIGHLIGHT,
   HP_BAR,
   LEVEL_PIP,
   RANGE_RING,
@@ -25,6 +26,7 @@ import {
   drawGhost,
   drawHpBar,
   drawLevelPips,
+  drawHighlight,
   drawRangeRing,
   drawSelection,
   drawShells,
@@ -368,6 +370,33 @@ describe('drawRangeRing', () => {
       ['strokeCircle', 0, 0, 5 * TILE_PX],
       ['strokeCircle', 0, 0, 1.5 * TILE_PX],
     ]);
+  });
+});
+
+describe('drawHighlight', () => {
+  it('outlines a square tower a little outside its size, glow first', () => {
+    const { painter, calls } = recordingPainter();
+    drawHighlight(painter, TOWER_STYLE.rifleNest, 1);
+    const half = (TOWER_STYLE.rifleNest.size + 2 * HIGHLIGHT.pad) / 2;
+    expect(calls.map((c) => c[0])).toEqual(['lineStyle', 'strokeRect', 'lineStyle', 'strokeRect']);
+    expect(calls[1]).toEqual(['strokeRect', -half, -half, 2 * half, 2 * half]);
+    expect(calls[2]).toEqual(['lineStyle', HIGHLIGHT.width, HIGHLIGHT.color, 1]);
+  });
+
+  it('outlines a circular tower with circles', () => {
+    const { painter, calls } = recordingPainter();
+    drawHighlight(painter, TOWER_STYLE.aaGun, 0);
+    expect(calls.filter((c) => c[0] === 'strokeCircle')).toHaveLength(2);
+    expect(calls[1]).toEqual(['strokeCircle', 0, 0, TOWER_STYLE.aaGun.size / 2 + HIGHLIGHT.pad]);
+  });
+
+  it('swells the glow with the pulse', () => {
+    const glowAlpha = (pulse: number) => {
+      const { painter, calls } = recordingPainter();
+      drawHighlight(painter, TOWER_STYLE.cannon, pulse);
+      return calls[0]![3] as number;
+    };
+    expect(glowAlpha(1)).toBeGreaterThan(glowAlpha(0));
   });
 });
 
