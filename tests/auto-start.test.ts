@@ -42,6 +42,7 @@ const issue = (number: number, over: Partial<StartIssue> = {}): StartIssue => ({
   labelled: true,
   hold: false,
   needsYou: false,
+  needsInfo: false,
   autoAgent: false,
   infra: false,
   feature: false,
@@ -149,6 +150,47 @@ describe('planStarts: look-ahead', () => {
     expect(
       numbers([issue(7, { milestone: 4, status: 'Backlog' }), issue(8, { milestone: null, status: 'Backlog' })]),
     ).toEqual([]);
+  });
+});
+
+describe('planStarts: parked issues and look-ahead slots (#423)', () => {
+  const agent = (n: number, over: Partial<StartIssue> = {}) =>
+    issue(n, { status: 'In progress', assigned: true, autoAgent: true, ...over });
+
+  it('does not count parked auto-agent issues (needs-info, needs-you, hold) as running', () => {
+    const parked = [agent(1, { needsInfo: true }), agent(2, { needsYou: true }), agent(3, { hold: true })];
+    expect(numbers([...parked, issue(10), issue(11), issue(12), issue(13)], [], { cap: 3 })).toEqual([10, 11, 12]);
+  });
+
+  it('still counts a live agent', () => {
+    expect(numbers([agent(1), agent(2, { needsInfo: true }), issue(10), issue(11)], [], { cap: 2 })).toEqual([10]);
+  });
+
+  it('caps look-ahead at cap - 1 slots, counting look-ahead issues already running', () => {
+    const next = (n: number) => issue(n, { milestone: 3, status: 'Backlog' });
+    expect(numbers([next(7), next(8), next(9)], [], { cap: 3 })).toEqual([7, 8]);
+    expect(numbers([agent(1, { milestone: 3 }), next(7), next(8)], [], { cap: 3 })).toEqual([7]);
+    expect(numbers([agent(1, { milestone: 3 }), agent(2, { milestone: 3 }), next(7)], [], { cap: 3 })).toEqual([]);
+  });
+
+  it('lets look-ahead use the only slot when cap is 1', () => {
+    expect(numbers([issue(7, { milestone: 3, status: 'Backlog' })], [], { cap: 1 })).toEqual([7]);
+  });
+
+  it('lets current-milestone and infra issues use every slot', () => {
+    const infra = issue(20, { infra: true, milestone: null });
+    expect(numbers([issue(1), issue(2), infra], [], { cap: 3 })).toEqual([1, 2, 20]);
+  });
+
+  it('a look-ahead cap does not stop infra from using the last slot', () => {
+    const infra = issue(20, { infra: true, milestone: null });
+    const next = (n: number) => issue(n, { milestone: 3, status: 'Backlog' });
+    expect(numbers([next(7), next(8), infra], [], { cap: 2 })).toEqual([7, 20]);
+  });
+
+  it('Nov 5: two parked look-ahead issues do not block a Ready current-milestone issue', () => {
+    const parked = [agent(382, { milestone: 3, needsInfo: true }), agent(397, { milestone: 3, needsInfo: true })];
+    expect(numbers([...parked, issue(405)], [], { cap: 2 })).toEqual([405]);
   });
 });
 
