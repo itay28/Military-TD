@@ -4,7 +4,7 @@
  * `font-display: swap` and has a metric-matched fallback, so the swap moves nothing: the fallback is a local Arial
  * (or its metric twin Liberation Sans) or Courier New (Liberation Mono), scaled and re-spaced to the real face's
  * advance widths, ascent and descent. The overrides come from the font files' hhea tables and the advance widths of
- * the game's text; Plex Mono and Courier New share a 0.6 em advance, so only its vertical metrics need matching.
+ * the game's titles (always in capitals); Plex Mono and Courier New share a 0.6 em advance, so only its vertical metrics need matching.
  * The stacks themselves are `FONT_STACK` in src/data/theme.ts.
  */
 @font-face {
@@ -31,9 +31,9 @@
 @font-face {
   font-family: 'Allerta Stencil Fallback';
   src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
-  size-adjust: 107.86%;
-  ascent-override: 95.7%;
-  descent-override: 22.82%;
+  size-adjust: 98.06%;
+  ascent-override: 105.26%;
+  descent-override: 25.1%;
   line-gap-override: 0%;
 }
 @font-face {
