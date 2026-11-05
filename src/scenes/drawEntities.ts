@@ -4,6 +4,7 @@ import {
   DISMANTLE,
   ENEMY_STYLE,
   GHOST,
+  HIGHLIGHT,
   HP_BAR,
   LEVEL_PIP,
   RANGE_RING,
@@ -131,6 +132,18 @@ export function drawLevelPips(painter: EntityPainter, tower: Tower): void {
 /** The range rings' radii in pixels: the range, then the minimum range (the dead zone's edge) if there is one. */
 export function rangeRingRadii({ range, minRange }: TowerStats): number[] {
   return minRange === undefined ? [range * TILE_PX] : [range * TILE_PX, minRange * TILE_PX];
+}
+
+/**
+ * The glow of a highlighted tower (#244), centred on the origin: a wide faint outline under a bright one, just outside
+ * the tower's shape, so it reads on a square and a circle. `pulse` (0 to 1) swells the glow.
+ */
+export function drawHighlight(painter: EntityPainter, style: TowerStyle, pulse: number): void {
+  const outer = { ...style, size: style.size + 2 * HIGHLIGHT.pad };
+  painter.lineStyle(HIGHLIGHT.glowWidth, HIGHLIGHT.color, HIGHLIGHT.glowAlpha * (0.5 + 0.5 * pulse));
+  paintShape(painter, outer, true);
+  painter.lineStyle(HIGHLIGHT.width, HIGHLIGHT.color, 1);
+  paintShape(painter, outer, true);
 }
 
 /** The ring around a dismantling tower; `left` is the share of the dismantle time still to go (1 down to 0). */
