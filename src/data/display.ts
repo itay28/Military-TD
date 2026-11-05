@@ -192,3 +192,9 @@ export const EFFECT = {
   explosion: { color: 0xff8a3d, radius: 8, growth: 1.6 },
   puff: { color: 0xc9c9c9, radius: 6, growth: 1.5 },
 } as const;
+
+/** The DPS meter rewrites its figures at most this often, in ms of real time (a few times a second). */
+export const DPS_METER_REFRESH_MS = 250;
+
+/** Below this width, in CSS pixels, the DPS meter starts with its kinds collapsed (the HUD's phone layout). */
+export const DPS_METER_NARROW_PX = 640;
