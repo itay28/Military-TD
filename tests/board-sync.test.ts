@@ -279,6 +279,7 @@ describe('withFieldUpdates', () => {
     infra: false,
     feature: false,
     needsYou: false,
+    needsInfo: false,
     autoAgent: false,
     size: undefined,
     priority: undefined,
