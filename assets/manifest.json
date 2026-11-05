@@ -416,16 +416,6 @@
       "files": ["assets/weapon-sounds/**"]
     },
     {
-      "id": "rubberduck-100-sfx",
-      "name": "100 CC0 SFX",
-      "author": "rubberduck",
-      "source": "https://opengameart.org/content/100-cc0-sfx",
-      "license": "CC0-1.0",
-      "attribution": "100 CC0 SFX by rubberduck (OpenGameArt.org), CC0",
-      "downloaded": "2026-11-02",
-      "files": ["assets/rubberduck-100-sfx/**"]
-    },
-    {
       "id": "yd-war-on-water",
       "name": "War on Water tracks",
       "author": "yd",
@@ -464,6 +454,16 @@
       "attribution": "Built by scripts/radio-fx.ts from the radio voice takes (voiced from Voiceover Pack by Kenney), Radio Noise 1 by Kresiek The Furry, The Free Firearm Sound Library (Ben Jaszczak et al.) and Explosions by EZduzziteh, all CC0",
       "downloaded": "2026-11-04",
       "files": ["assets/radio-cues/**"]
+    },
+    {
+      "id": "battlefield-ambience",
+      "name": "Battlefield ambience",
+      "author": "Hold the Perimeter, from The Free Firearm Sound Library, EZduzziteh's Explosions, Kresiek The Furry's Radio Noise 1 and its radio voice takes",
+      "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+      "license": "CC0-1.0",
+      "attribution": "Built by scripts/ambience-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Explosions by EZduzziteh, Radio Noise 1 by Kresiek The Furry and the radio voice takes (voiced from Voiceover Pack by Kenney), with synthesized wind, all CC0",
+      "downloaded": "2026-11-05",
+      "files": ["assets/battlefield-ambience/**"]
     }
   ]
 }

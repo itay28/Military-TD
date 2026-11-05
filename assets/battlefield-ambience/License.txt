@@ -1,0 +1,18 @@
+Battlefield ambience (ambient.ogg/.mp3, combat.ogg/.mp3) for Hold the Perimeter
+
+Built by scripts/ambience-fx.ts (ffmpeg) from:
+- The Free Firearm Sound Library (Ben Jaszczak et al.), CC0 1.0: the distant gunfire
+  https://opengameart.org/content/the-free-firearm-sound-library
+  (assets/free-firearm-sfx/)
+- Explosions by EZduzziteh, CC0 1.0: the far-off blasts in the combat layer
+  https://opengameart.org/content/explosions-4
+  (assets/ezduzziteh-explosions/)
+- Radio Noise 1 by Kresiek The Furry, CC0 1.0: the chatter's squelches
+  https://opengameart.org/content/radio-noise-1
+  (assets/kresiek-radio-noise/)
+- Radio voice takes (assets/radio-voice/), voiced from Voiceover Pack by Kenney (kenney.nl), CC0 1.0:
+  played backwards and muffled as the faint chatter
+- Wind: seeded noise synthesized by the script.
+
+License: Creative Commons Zero (CC0 1.0), as its sources.
+https://creativecommons.org/publicdomain/zero/1.0/
