@@ -404,6 +404,46 @@
         height: 24px;
         border: 2px solid;
       }
+      /* A tower's stats, left of its button over the map; placed by buildBar.ts, which keeps the tile under the
+         pointer or finger clear. Taps go through it. */
+      #build-bar .build-tip {
+        position: fixed;
+        z-index: 5;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: 180px;
+        padding: 6px 8px;
+        font: 11px/1.35 monospace;
+        color: #e4e0c8;
+        background: rgb(27 30 22 / 0.94);
+        border: 1px solid #4a4f3c;
+        border-radius: 3px;
+        pointer-events: none;
+      }
+      #build-bar .build-tip[hidden] {
+        display: none;
+      }
+      #build-bar .build-tip strong {
+        display: block;
+        font-size: 12px;
+        color: #f0c95a;
+      }
+      #build-bar .build-tip p {
+        margin: 2px 0 4px;
+        color: #c8c4ac;
+      }
+      #build-bar .build-tip dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0 8px;
+        margin: 0;
+      }
+      #build-bar .build-tip dt {
+        color: #a2a58f;
+      }
+      #build-bar .build-tip dd {
+        margin: 0;
+      }
       #build-bar kbd {
         position: absolute;
         top: 1px;
