@@ -1,6 +1,6 @@
 Weapon sounds (rifleShot, aaGunBurst, missileLaunch, gunReport, recoillessBlast,
 mortarLaunch, mortarWhistle, mortarBlast, vehicleExplosion, infantryHit .ogg)
-for Military-TD
+for Hold the Perimeter
 
 Built by scripts/weapon-fx.ts (ffmpeg) from these CC0 1.0 items:
 - The Free Firearm Sound Library by Ben Jaszczak, Brian Nelson, Kevin Heras
