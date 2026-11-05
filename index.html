@@ -405,8 +405,9 @@
         background: #5e6350;
         cursor: default;
       }
-      /* The tower panel sits over the top-right of the map; the End screen, after it, covers it. */
-      #tower-panel {
+      /* The tower panel (or the enemy card: one at a time) sits over the top-right of the map; the End screen, after it, covers it. */
+      #tower-panel,
+      #enemy-card {
         position: absolute;
         top: 8px;
         right: 8px;
@@ -418,7 +419,8 @@
         overflow-wrap: anywhere;
         color: #e4e0c8;
       }
-      #tower-panel [role='dialog'] {
+      #tower-panel [role='dialog'],
+      #enemy-card [role='dialog'] {
         position: relative;
         box-sizing: border-box;
         padding: 10px 12px;
@@ -426,29 +428,35 @@
         border: 2px solid #c2a46b;
         border-radius: 4px;
       }
-      #tower-panel h2 {
+      #tower-panel h2,
+      #enemy-card h2 {
         margin: 0 24px 2px 0;
         font-size: 15px;
         color: #f0c95a;
       }
-      #tower-panel p {
+      #tower-panel p,
+      #enemy-card p {
         margin: 0 0 8px;
         color: #a2a58f;
       }
-      #tower-panel dl {
+      #tower-panel dl,
+      #enemy-card dl {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         gap: 2px 10px;
         margin: 0;
       }
-      #tower-panel dt {
+      #tower-panel dt,
+      #enemy-card dt {
         color: #a2a58f;
       }
-      #tower-panel dd {
+      #tower-panel dd,
+      #enemy-card dd {
         margin: 0;
         text-align: right;
       }
-      #tower-panel button[aria-label='Close'] {
+      #tower-panel button[aria-label='Close'],
+      #enemy-card button[aria-label='Close'] {
         position: absolute;
         top: 4px;
         right: 4px;
@@ -462,12 +470,21 @@
         cursor: pointer;
       }
       @media (max-width: 640px), (max-height: 480px) {
-        #tower-panel {
+        #tower-panel,
+        #enemy-card {
           width: 190px;
           font-size: 12px;
         }
       }
-      #tower-panel button:focus-visible {
+      #tower-panel p.role,
+      #enemy-card p.role {
+        color: #e4e0c8;
+      }
+      #enemy-card p.role {
+        margin: 8px 0 0;
+      }
+      #tower-panel button:focus-visible,
+      #enemy-card button:focus-visible {
         outline: 2px solid #f0c95a;
       }
       #tower-panel [data-testid='tower-upgrade'] {
@@ -503,7 +520,7 @@
         cursor: pointer;
       }
       /* The Main menu and Level select cover the whole page; the game's UI is hidden behind them, out of the accessibility tree too. */
-      #app[data-screen] :is(#hud, #build-bar, #tower-panel) {
+      #app[data-screen] :is(#hud, #build-bar, #tower-panel, #enemy-card) {
         display: none;
       }
       #menu,
@@ -757,6 +774,7 @@
       <div id="stage">
         <div id="game"></div>
         <div id="tower-panel" hidden></div>
+        <div id="enemy-card" hidden></div>
         <div id="end-screen" hidden></div>
         <div id="pause-menu" hidden></div>
       </div>
