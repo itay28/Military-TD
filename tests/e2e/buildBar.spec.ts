@@ -110,3 +110,30 @@ test('a blocked atlas leaves the build bar with coloured shapes, except for kind
     }
   }
 });
+
+test('hovering a button shows its tooltip, left of the bar, and the button is described by it', async ({ page }) => {
+  await openGame(page);
+  const button = page.getByTestId('build-cannon');
+  const tip = page.getByTestId('build-tip-cannon');
+  await expect(tip).toBeHidden();
+  await button.hover();
+  await expect(tip).toBeVisible();
+  await expect(tip).toContainText('Cannon');
+  await expect(tip).toContainText(`Cost${TOWER_STATS.cannon.cost}`);
+  await expect(tip).toContainText('HitsGround');
+  await expect(button).toHaveAttribute('aria-describedby', 'build-tip-cannon');
+  await expect(button).toHaveAccessibleDescription(/Slow, heavy shells/);
+  const bar = (await page.locator('#build-bar').boundingBox())!;
+  const box = (await tip.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(bar.x);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  await page.mouse.move(10, 10);
+  await expect(tip).toBeHidden();
+});
+
+test('keyboard focus shows the tooltip', async ({ page }) => {
+  await openGame(page);
+  await page.getByTestId('build-aaGun').focus();
+  await expect(page.getByTestId('build-tip-aaGun')).toBeVisible();
+});

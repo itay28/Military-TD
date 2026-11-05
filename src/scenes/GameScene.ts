@@ -3,15 +3,12 @@ import atlasPngUrl from '../../assets/atlas/sprites.png';
 import {
   CAMERA,
   DISMANTLE,
-  EFFECT,
   ENEMY_HIT_PX,
   ENEMY_NAMES,
   FLOATING_TEXT,
   MAP_CURSOR,
-  SHELL,
   SPRITE_SCALE,
   TILE_PX,
-  TRACER,
 } from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
@@ -45,6 +42,7 @@ import {
   panBy,
   revealTile,
   screenToWorld,
+  worldToScreen,
   zoomAt,
   type CameraBounds,
   type CameraView,
@@ -78,8 +76,10 @@ import { ghostAt, placeAt, type Ghost } from './placement';
 import { enemyAt, resolveClick } from './selection';
 import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
+import { motionTimings, type MotionTimings } from './motion';
 import { TILESET_FRAMES, tileArt } from './tileset';
 import { buildOptions, mountBuildBar, type BuildBar, type IconAtlas } from '../ui/buildBar';
+import type { Rect } from '../ui/towerTooltip';
 import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
@@ -600,8 +600,9 @@ export class GameScene extends Phaser.Scene {
         };
       },
       update: (view, enemy) => {
-        // ?anim=0 never advances the clock, but the per-id phase would still spread frames, so pin them to 0.
-        const frame = this.flags.anim ? animFrame(this.animMs, enemy.id) : 0;
+        // With ?anim=0 or reduced motion the walk cycle stands still: the per-id phase would still spread frames, so pin
+        // them to 0.
+        const frame = this.motion().enemyWalk ? animFrame(this.animMs, enemy.id) : 0;
         // Only the shape's rotor moves with the frame; a sprite's HP bar doesn't.
         const redrawShape = !view.sprite && view.frame !== frame;
         if (view.hp !== enemy.hp || redrawShape) {
@@ -667,8 +668,8 @@ export class GameScene extends Phaser.Scene {
       },
     });
 
-    // ?anim=0: zero lifetimes, so effects, tracers and floating texts never show.
-    this.effects = createEffects(this.flags.anim ? EFFECT.lifeMs : 0);
+    // Lifetimes read live from the reduced-motion setting (#354); ?anim=0 zeroes them, so the cosmetics never show.
+    this.effects = createEffects(() => this.motion().effectLifeMs);
     this.effectGraphics = onLayer(this.add.graphics(), 'effects');
     this.sim.events.on('shellFired', ({ towerId }) => {
       const tower = this.sim.state.towers.find((t) => t.id === towerId);
@@ -676,7 +677,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.sim.events.on('shellLanded', ({ position }) => this.effects.add('explosion', toPixels(position)));
     this.sim.events.on('enemyKilled', ({ enemy }) => this.effects.add('puff', toPixels(enemy.position)));
-    this.tracers = createTracers(this.flags.anim ? TRACER.fadeMs : 0);
+    this.tracers = createTracers(() => this.motion().tracerFadeMs);
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
@@ -690,7 +691,7 @@ export class GameScene extends Phaser.Scene {
     this.wireSounds();
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
-    this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
+    this.blasts = createBlasts(() => this.motion().blastFadeMs);
     this.shellGraphics = onLayer(this.add.graphics(), 'shells');
     this.sim.events.on('shellLanded', ({ position, outerRadius }) =>
       this.blasts.add(toPixels(position), outerRadius * TILE_PX),
@@ -707,7 +708,7 @@ export class GameScene extends Phaser.Scene {
     this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
     this.cursorGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
     this.cursorDrawn = undefined;
-    this.floatingTexts = createFloatingTexts(this.flags.anim ? FLOATING_TEXT : { ...FLOATING_TEXT, durationMs: 0 });
+    this.floatingTexts = createFloatingTexts(() => this.motion().floatingText);
     this.floatingTextViews = createViewSync<FloatingTextView, Phaser.GameObjects.Text>({
       create: ({ text }) => onLayer(this.add.text(0, 0, text, FLOATING_TEXT.style).setOrigin(0.5, 1), 'floatingText'),
       update: (view, { x, y, alpha }) => view.setPosition(x, y).setAlpha(alpha),
@@ -962,6 +963,11 @@ export class GameScene extends Phaser.Scene {
     this.sim.tick(TICK_MS);
   }
 
+  /** The cosmetic timings for this frame: the reduced-motion setting is read live, so a change applies at once. */
+  private motion(): MotionTimings {
+    return motionTimings({ reducedMotion: this.settings.get().reducedMotion, anim: this.flags.anim });
+  }
+
   override update(_time: number, frameDeltaMs: number): void {
     // Paused, no time passes: the sim doesn't tick and the cosmetics hold still (ADR-0002: the sim is untouched).
     const deltaMs = this.pauseMenu.paused ? 0 : frameDeltaMs;
@@ -970,7 +976,7 @@ export class GameScene extends Phaser.Scene {
     this.blasts.advance(deltaMs);
     this.effects.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
-    if (this.flags.anim) this.animMs += deltaMs;
+    if (this.motion().enemyWalk) this.animMs += deltaMs;
     this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
     this.playWhistles();
     // The battlefield ambience (#405): the combat layer during a wave, the game track on the End screen. Both calls do
@@ -979,6 +985,7 @@ export class GameScene extends Phaser.Scene {
     this.music()?.enterScene(scene);
     this.music()?.setCombat(combat);
     this.hud.update();
+    this.buildBar.avoid(this.pointerTile && this.tilePageRect(this.pointerTile));
     this.buildBar.update();
     this.endScreen.update();
     this.towerPanel.update();
@@ -1063,6 +1070,14 @@ export class GameScene extends Phaser.Scene {
       drawRangeRing(this.allRings, tower);
       this.allRings.translateCanvas(-x, -y);
     }
+  }
+
+  /** Where tile `tile` is on the page, in CSS pixels, through the camera: a build-bar tooltip keeps it clear. */
+  private tilePageRect(tile: Tile): Rect {
+    const canvas = this.game.canvas.getBoundingClientRect();
+    const { x, y } = worldToScreen(this.view, tileTopLeft(tile));
+    const size = TILE_PX * this.view.zoom;
+    return { left: canvas.left + x, top: canvas.top + y, width: size, height: size };
   }
 
   /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none or no kind is selected. */
