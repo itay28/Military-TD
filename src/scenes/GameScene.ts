@@ -1,6 +1,17 @@
 import Phaser from 'phaser';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
-import { CAMERA, DISMANTLE, EFFECT, FLOATING_TEXT, SHELL, SPRITE_SCALE, TILE_PX, TRACER } from '../data/display';
+import {
+  CAMERA,
+  DISMANTLE,
+  EFFECT,
+  ENEMY_HIT_PX,
+  ENEMY_NAMES,
+  FLOATING_TEXT,
+  SHELL,
+  SPRITE_SCALE,
+  TILE_PX,
+  TRACER,
+} from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
 import { distanceVolume, viewCenter } from '../audio/distance';
@@ -61,7 +72,7 @@ import { headingOf, spriteRotation } from './heading';
 import { muzzlePoints, renderPlacement } from './renderPlacement';
 import { interpolatePosition, snapshotPositions } from './interpolate';
 import { ghostAt, placeAt, type Ghost } from './placement';
-import { resolveClick } from './selection';
+import { enemyAt, resolveClick } from './selection';
 import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
 import { TILESET_FRAMES, tileArt } from './tileset';
@@ -71,6 +82,7 @@ import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
+import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
 import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
@@ -148,6 +160,8 @@ export interface GameSceneOptions {
   readonly endScreenRoot: HTMLElement;
   /** The DOM element over the canvas the tower panel is drawn in (`#tower-panel` in index.html). */
   readonly towerPanelRoot: HTMLElement;
+  /** The DOM element over the canvas the enemy card is drawn in (`#enemy-card` in index.html). */
+  readonly enemyCardRoot: HTMLElement;
   /** The DOM element over the canvas the pause menu is drawn in (`#pause-menu` in index.html). */
   readonly pauseMenuRoot: HTMLElement;
   /** Test mode's URL flags (ADR-0003). */
@@ -170,6 +184,7 @@ export class GameScene extends Phaser.Scene {
   private readonly buildBarRoot: HTMLElement;
   private readonly endScreenRoot: HTMLElement;
   private readonly towerPanelRoot: HTMLElement;
+  private readonly enemyCardRoot: HTMLElement;
   private readonly pauseMenuRoot: HTMLElement;
   private readonly flags: TestFlags;
   private readonly settings: SettingsStore;
@@ -195,6 +210,7 @@ export class GameScene extends Phaser.Scene {
   /** What this game's Victory earned, once it is won. */
   private result: VictoryResult | undefined;
   private towerPanel!: TowerPanel;
+  private enemyCard!: EnemyCard;
   private pauseMenu!: PauseMenu;
   private enemyViews!: ViewSync<Enemy, EnemyView>;
   private towerViews!: ViewSync<Tower>;
@@ -221,6 +237,8 @@ export class GameScene extends Phaser.Scene {
   private animMs = 0;
   /** The tile under the pointer, or undefined when it is off the canvas. */
   private pointerTile: Tile | undefined;
+  /** The world pixel under a hovering mouse, for the enemy card; undefined for a finger or off the canvas. */
+  private pointerPoint: Pixel | undefined;
   /** The tower under the pointer whose range ring is drawn, as its `ringKey`. */
   private hoveredRingKey: string | undefined;
   /** The selected tower whose range ring is drawn, as its `ringKey`. */
@@ -239,6 +257,7 @@ export class GameScene extends Phaser.Scene {
     buildBarRoot,
     endScreenRoot,
     towerPanelRoot,
+    enemyCardRoot,
     pauseMenuRoot,
     flags,
     settings,
@@ -252,6 +271,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBarRoot = buildBarRoot;
     this.endScreenRoot = endScreenRoot;
     this.towerPanelRoot = towerPanelRoot;
+    this.enemyCardRoot = enemyCardRoot;
     this.pauseMenuRoot = pauseMenuRoot;
     this.flags = flags;
     this.settings = settings;
@@ -307,6 +327,7 @@ export class GameScene extends Phaser.Scene {
       sprites: this.textures.exists(ATLAS_KEY),
       mapTiles: this.mapTiles,
       enemies: this.enemyViews.views().map(({ id, kind, heading, frame }) => ({ id, kind, facing: heading, frame })),
+      enemyCard: this.enemyCardView(),
       turrets: [...this.towerViewById].map(([towerId, { angle }]) => ({ towerId, angle })),
       rendered: [
         ...new Set(
@@ -397,6 +418,18 @@ export class GameScene extends Phaser.Scene {
       .setScale(scale);
     const graphics = onLayer(this.add.graphics(), 'towers').setPosition(at.x, at.y);
     return { base, sprite, graphics, rendered: true, spriteScale: scale, facing: RENDER_FACING };
+  }
+
+  /** The enemy card open now, for the test view. */
+  private enemyCardView(): TestView['enemyCard'] {
+    const enemy = this.sim.state.enemies.find((e) => e.id === this.enemyCard.shownId);
+    if (!enemy) return null;
+    return {
+      enemyId: enemy.id,
+      kind: enemy.kind,
+      name: ENEMY_NAMES[enemy.kind],
+      pinned: this.enemyCard.pinnedId === enemy.id,
+    };
   }
 
   /**
@@ -659,7 +692,10 @@ export class GameScene extends Phaser.Scene {
     this.rangeRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
     this.selectedRing = onLayer(this.add.graphics(), 'rangeRing').setVisible(false);
     this.allRings = onLayer(this.add.graphics(), 'rangeRing');
-    this.input.on('gameout', () => (this.pointerTile = undefined));
+    this.input.on('gameout', () => {
+      this.pointerTile = undefined;
+      this.pointerPoint = undefined;
+    });
 
     this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
     this.floatingTexts = createFloatingTexts(this.flags.anim ? FLOATING_TEXT : { ...FLOATING_TEXT, durationMs: 0 });
@@ -679,13 +715,16 @@ export class GameScene extends Phaser.Scene {
       set: (value) => (this.gameSpeed = value),
     };
     this.hud = mountHud(this.hudRoot, this.sim, speed);
-    // Placing a new tower and inspecting a placed one are exclusive: picking one closes the other.
+    // Placing a new tower, inspecting a placed one and inspecting an enemy are exclusive: picking one closes the others.
     this.buildBar = mountBuildBar(
       this.buildBarRoot,
       this.sim,
       buildOptions((render) => this.textures.exists(render.hullKey) && this.textures.exists(render.turretKey)),
       {
-        onSelect: () => this.towerPanel.select(undefined),
+        onSelect: () => {
+          this.towerPanel.select(undefined);
+          this.enemyCard.pin(undefined);
+        },
         atlas: this.iconAtlas(),
       },
     );
@@ -695,12 +734,18 @@ export class GameScene extends Phaser.Scene {
       onLevelSelect: () => this.scene.start('LevelSelect'),
       result: () => this.result,
     });
-    this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim, { onSelect: () => this.buildBar.clear() });
+    this.towerPanel = mountTowerPanel(this.towerPanelRoot, this.sim, {
+      onSelect: () => {
+        this.buildBar.clear();
+        this.enemyCard.pin(undefined);
+      },
+    });
+    this.enemyCard = mountEnemyCard(this.enemyCardRoot, this.sim, { onPin: () => this.towerPanel.select(undefined) });
     // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
-    // build bar's and tower panel's Esc (cancel a selection) runs before its own (pause).
+    // build bar's, tower panel's and enemy card's Esc (cancel a selection) runs before its own (pause).
     this.pauseMenu = mountPauseMenu(this.pauseMenuRoot, this.sim, {
       buttonRoot: this.hud.controls,
-      blocked: [this.hudRoot, this.buildBarRoot, this.towerPanelRoot],
+      blocked: [this.hudRoot, this.buildBarRoot, this.towerPanelRoot, this.enemyCardRoot],
       onRestart: () => this.scene.restart(),
       onQuit: () => this.scene.start('LevelSelect'),
       openSettings: this.openSettings,
@@ -711,6 +756,7 @@ export class GameScene extends Phaser.Scene {
       this.buildBar.destroy();
       this.endScreen.destroy();
       this.towerPanel.destroy();
+      this.enemyCard.destroy();
       this.pauseMenu.destroy();
     });
     this.onCreate?.();
@@ -761,11 +807,14 @@ export class GameScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, onResize));
 
-    // A touch drag places a tower when a tap would: a kind is selected and no tower is, so the tower panel, the one
-    // panel over the map, is closed.
+    // A touch drag places a tower when a tap would: a kind is selected and the panels over the map (the tower panel
+    // and the enemy card) are closed.
     this.gestures = createGestures({
       dragThresholdPx: CAMERA.dragThresholdPx,
-      placing: () => this.buildBar.selected !== undefined && this.towerPanel.selectedId === undefined,
+      placing: () =>
+        this.buildBar.selected !== undefined &&
+        this.towerPanel.selectedId === undefined &&
+        this.enemyCard.pinnedId === undefined,
     });
     const screen = (pointer: Phaser.Input.Pointer): Pixel => ({ x: pointer.x, y: pointer.y });
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -778,8 +827,13 @@ export class GameScene extends Phaser.Scene {
       this.onGesture(gesture);
       // A finger hovers only while it aims; a pinch or pan moves the camera and shows no Ghost.
       const hover = hoverFrom(gesture, pointer.wasTouch);
-      if (hover === 'follow') this.pointerTile = pixelToTile(screenToWorld(this.view, screen(pointer)));
-      else if (hover === 'clear') this.pointerTile = undefined;
+      if (hover === 'follow') {
+        this.pointerPoint = screenToWorld(this.view, screen(pointer));
+        this.pointerTile = pixelToTile(this.pointerPoint);
+      } else {
+        this.pointerPoint = undefined;
+        if (hover === 'clear') this.pointerTile = undefined;
+      }
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       this.onGesture(this.gestures.up(pointer.id, screen(pointer)));
@@ -816,9 +870,14 @@ export class GameScene extends Phaser.Scene {
     this.setView(gesture.type === 'pinch' ? zoomAt(panned, gesture.factor, gesture.center, bounds) : panned);
   }
 
+  /** The enemy under world pixel `at`: its hit area is at least `ENEMY_HIT_PX` across on screen, at any zoom. */
+  private enemyUnder(at: Pixel): Enemy | undefined {
+    return enemyAt(this.sim.state.enemies, at, ENEMY_HIT_PX / 2 / this.view.zoom);
+  }
+
   /**
-   * A tap on the map at world pixel `at`. A tap on a tower selects it. Otherwise the sim decides whether it places
-   * one, so this works in the Build and Wave phases alike.
+   * A tap on the map at world pixel `at`. A tap on a tower selects it, and one on an enemy opens its card. Otherwise
+   * the sim decides whether it places one, so this works in the Build and Wave phases alike.
    */
   private tapAt(at: Pixel, canPlace: boolean): void {
     const action = resolveClick(
@@ -826,10 +885,17 @@ export class GameScene extends Phaser.Scene {
       this.towerPanel.selectedId,
       pixelToTile(at),
       this.buildBar.selected,
+      {
+        enemyId: this.enemyUnder(at)?.id,
+        cardOpen: this.enemyCard.pinnedId !== undefined,
+      },
     );
     if (action.type === 'select') this.towerPanel.select(action.towerId);
-    else if (action.type === 'deselect') this.towerPanel.select(undefined);
-    else if (action.type === 'place' && canPlace) {
+    else if (action.type === 'inspect') this.enemyCard.pin(action.enemyId);
+    else if (action.type === 'deselect') {
+      this.towerPanel.select(undefined);
+      this.enemyCard.pin(undefined);
+    } else if (action.type === 'place' && canPlace) {
       const refusal = placeAt(this.sim, action.kind, action.tile);
       if (refusal) this.floatingTexts.add(refusal, at);
     }
@@ -874,6 +940,11 @@ export class GameScene extends Phaser.Scene {
     this.buildBar.update();
     this.endScreen.update();
     this.towerPanel.update();
+    // A mouse over an enemy shows its card, unless the tower panel holds that spot.
+    const hoveredEnemy =
+      this.pointerPoint && this.towerPanel.selectedId === undefined ? this.enemyUnder(this.pointerPoint) : undefined;
+    this.enemyCard.hover(hoveredEnemy?.id);
+    this.enemyCard.update();
     this.pauseMenu.update();
 
     const { enemies, towers } = this.sim.state;
