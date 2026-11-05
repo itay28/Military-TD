@@ -26,8 +26,8 @@ describe('PR steward workflow', () => {
       );
   });
 
-  it('runs hourly, so a round that died is retried soon after its 1 hour timeout (#196)', () => {
-    expect(yaml).toMatch(/^ {4}- cron: '\d+ \* \* \* \*'\n/m);
+  it('fires the cron three times an hour, so a round that died is retried soon after its 1 hour timeout (#196)', () => {
+    expect(yaml).toMatch(/^ {4}- cron: '\d+(,\d+){2} \* \* \* \*'\n/m);
   });
 
   it('never runs two at once', () => {
