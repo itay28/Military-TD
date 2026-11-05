@@ -239,6 +239,45 @@
       #hud .dps-kind + .dps-kind {
         margin-top: 4px;
       }
+      /* The kind's row highlights its towers on the map; a small button beside it expands the tower list. */
+      #hud .dps-kind-head {
+        display: flex;
+        gap: 2px;
+      }
+      #hud .dps-meter button.dps-kind-row {
+        flex: 1;
+        min-width: 0;
+      }
+      #hud .dps-meter button.dps-kind-row[aria-pressed='true'] {
+        box-shadow: inset 0 0 0 2px #4fd1ff;
+      }
+      #hud .dps-meter button.dps-kind-expand {
+        flex: none;
+        padding: 3px 8px;
+        font: 12px monospace;
+        color: #e4e0c8;
+        background: rgb(228 224 200 / 0.06);
+        border-radius: 2px;
+      }
+      #hud .dps-meter button.dps-kind-expand::before {
+        content: '▸';
+      }
+      #hud .dps-meter button.dps-kind-expand[aria-expanded='true']::before {
+        content: '▾';
+      }
+      #hud .dps-meter button.dps-tower-button {
+        display: block;
+        width: 100%;
+        padding: 1px 4px 1px 22px;
+        font: inherit;
+        text-align: left;
+        color: inherit;
+        background: transparent;
+        white-space: nowrap;
+      }
+      #hud .dps-meter button.dps-tower-button:disabled {
+        cursor: default;
+      }
       /* One kind: swatch, name, DPS, kills and share on a line, the share bar under it. */
       #hud .dps-meter button.dps-kind-row {
         display: grid;
@@ -284,7 +323,7 @@
         display: none;
       }
       #hud .dps-tower {
-        padding: 1px 4px 1px 22px;
+        padding: 0;
         color: #c9c5ad;
         white-space: nowrap;
       }
@@ -877,7 +916,8 @@
         max-width: 100%;
       }
       /* The Settings screen covers the whole page, over the Main menu or the paused game, whichever opened it. */
-      #settings {
+      #settings,
+      #how-to-play {
         position: fixed;
         inset: 0;
         z-index: 3; /* over the Pause overlay (2), which is over the DPS meter (1) */
@@ -889,10 +929,12 @@
         color: #e4e0c8;
       }
       /* `display: flex` above would otherwise override the hidden attribute. */
-      #settings[hidden] {
+      #settings[hidden],
+      #how-to-play[hidden] {
         display: none;
       }
-      #settings [role='dialog'] {
+      #settings [role='dialog'],
+      #how-to-play [role='dialog'] {
         display: flex;
         flex-direction: column;
         gap: 14px;
@@ -905,7 +947,8 @@
         border: 2px solid #c2a46b;
         border-radius: 4px;
       }
-      #settings h2 {
+      #settings h2,
+      #how-to-play h2 {
         margin: 0;
         font-size: calc(22px * var(--text-scale));
         text-align: center;
@@ -959,7 +1002,8 @@
         height: 24px;
         cursor: pointer;
       }
-      #settings button {
+      #settings button,
+      #how-to-play button {
         align-self: center;
         width: 160px;
         padding: 6px 0;
@@ -969,6 +1013,58 @@
         border: 0;
         border-radius: 3px;
         cursor: pointer;
+      }
+      /* How to play: the dialog is as tall as the page allows; its body scrolls on its own, Back stays in view. */
+      #how-to-play [role='dialog'] {
+        width: min(640px, calc(100% - 32px));
+        overflow-y: hidden;
+      }
+      #how-to-play .how-to-play-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 8px;
+      }
+      #how-to-play h3 {
+        margin: 12px 0 4px;
+        font-size: 16px;
+        color: #f0c95a;
+      }
+      #how-to-play section:first-child h3 {
+        margin-top: 0;
+      }
+      #how-to-play p {
+        margin: 2px 0;
+      }
+      #how-to-play ul {
+        margin: 2px 0;
+        padding-left: 20px;
+      }
+      #how-to-play li {
+        margin: 3px 0;
+      }
+      #how-to-play table {
+        border-collapse: collapse;
+      }
+      #how-to-play th,
+      #how-to-play td {
+        padding: 3px 12px 3px 0;
+        text-align: left;
+        font-weight: normal;
+      }
+      #how-to-play thead th {
+        color: #c2a46b;
+      }
+      #how-to-play kbd {
+        padding: 1px 6px;
+        font: 14px monospace;
+        color: #1b1e16;
+        background: #c2a46b;
+        border-radius: 3px;
+      }
+      #how-to-play :is(button, .how-to-play-body):focus-visible {
+        outline: 2px solid #f0c95a;
+        outline-offset: 2px;
       }
       #settings :is(button, input):focus-visible {
         outline: 2px solid #f0c95a;
@@ -999,6 +1095,7 @@
     <main id="menu" hidden></main>
     <main id="level-select" hidden></main>
     <div id="settings" hidden></div>
+    <div id="how-to-play" hidden></div>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
