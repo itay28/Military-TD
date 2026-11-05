@@ -32,10 +32,20 @@ const REASONS = /<!-- pipeline-starved:reasons ?(.*?) -->/;
  * working). Only asked with AUTO_SPAWN on: Board sync returns before auto-start otherwise.
  */
 export function isStarved(
-  issues: readonly { readonly autoAgent: boolean; readonly status: string | undefined }[],
+  issues: readonly {
+    readonly autoAgent: boolean;
+    readonly status: string | undefined;
+    readonly needsInfo?: boolean;
+    readonly needsYou?: boolean;
+    readonly hold?: boolean;
+  }[],
   planned: number,
 ): boolean {
-  return planned === 0 && !issues.some((i) => i.autoAgent && i.status === 'In progress');
+  // Parked issues (a question, the maintainer, a hold) have no live session (#423).
+  return (
+    planned === 0 &&
+    !issues.some((i) => i.autoAgent && i.status === 'In progress' && !i.needsInfo && !i.needsYou && !i.hold)
+  );
 }
 
 /** An open issue on the board, with the fields the reasons read. */

@@ -68,6 +68,20 @@ describe('isStarved', () => {
   it('is not starved when the run planned a start or a retry', () => {
     expect(isStarved([], 1)).toBe(false);
   });
+
+  it('ignores parked agents (needs-info, needs-you, hold)', () => {
+    const parked = { autoAgent: true, status: 'In progress' };
+    expect(
+      isStarved(
+        [
+          { ...parked, needsInfo: true },
+          { ...parked, needsYou: true },
+          { ...parked, hold: true },
+        ],
+        0,
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('idleReasons: waiting on you', () => {
