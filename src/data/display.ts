@@ -125,6 +125,9 @@ export const BUILD_BAR_COLUMNS = 2;
 export const LEVEL_NAME: Readonly<Record<number, string>> = { 2: 'Optics', 3: 'Heavier weapon' };
 
 /** The small squares along a tower's bottom edge, one per upgrade. Pixels, from the tower square's corner. */
+/** The map cursor's tile outline (#356): a bright amber that stands out on grass, dirt and the Path. */
+export const MAP_CURSOR = { color: 0xffc400, width: 3 } as const;
+
 export const LEVEL_PIP = { size: 4, gap: 3, inset: 4, color: 0xe5e1cf } as const; // bone, like the outline
 
 /** What the tower panel calls each layer a tower can hit. */

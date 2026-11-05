@@ -31,7 +31,9 @@ describe('mountHelpOverlay', () => {
   it('lists the map cursor keys after the shortcuts', () => {
     mountHelpOverlay(root, { onBack: () => {} });
     expect(rows().slice(KEY_MAP.length)).toEqual(MAP_KEY_HELP.map(({ label, description }) => [label, description]));
-    expect(rows().map(([label]) => label)).toEqual(expect.arrayContaining(['Arrows / WASD', 'Shift+Arrow', 'Enter', 'Tab']));
+    expect(rows().map(([label]) => label)).toEqual(
+      expect.arrayContaining(['Arrows / WASD', 'Shift+Arrow', 'Enter', 'Tab']),
+    );
   });
 
   it('focuses Back, and Back closes it and calls onBack', () => {
