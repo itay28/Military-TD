@@ -532,6 +532,24 @@
       #level-select > :last-child {
         margin-bottom: auto;
       }
+      /* While the live battlefield plays behind them (#402), the page is marked data-demo and the canvas shows through:
+         a dark scrim that is darkest behind the menu column, so its buttons stay readable over the battle. */
+      :root[data-demo] #menu {
+        background: radial-gradient(
+          ellipse 60% 75% at center,
+          rgb(27 30 22 / 0.9) 0%,
+          rgb(27 30 22 / 0.78) 45%,
+          rgb(27 30 22 / 0.35) 100%
+        );
+      }
+      :root[data-demo] #level-select {
+        background: rgb(27 30 22 / 0.78);
+      }
+      /* The battlefield fills the window, edge to edge, while the menu screens hide the HUD and build bar around it. */
+      :root[data-demo] #app[data-screen] {
+        gap: 0;
+        padding: 0;
+      }
       /* `display: flex` above would otherwise override the hidden attribute. */
       #menu[hidden],
       #level-select[hidden] {

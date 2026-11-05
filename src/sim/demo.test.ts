@@ -61,7 +61,8 @@ describe('createDemoGame', () => {
     const waveStarts: number[] = [];
     demo.events.on('waveStarted', ({ waveNumber }) => waveStarts.push(waveNumber));
     tickUntilLoops(demo, 1);
-    expect(waveStarts).toEqual([2]);
+    // Wave 2 by auto-start, then wave 1 again from the reset.
+    expect(waveStarts).toEqual([2, 1]);
   });
 
   it('never ends: after the last wave it resets to the same towers on an empty field, and plays on', () => {
@@ -114,13 +115,21 @@ describe('createDemoGame', () => {
 
   it('throws when a scripted tower cannot stand on its tile', () => {
     expect(() =>
-      createDemoGame({ map: STRIP, waves: TWO_WAVES, towers: [{ kind: 'rifleNest', tile: { col: 1, row: 1 }, level: 1 }] }),
+      createDemoGame({
+        map: STRIP,
+        waves: TWO_WAVES,
+        towers: [{ kind: 'rifleNest', tile: { col: 1, row: 1 }, level: 1 }],
+      }),
     ).toThrow(/rifleNest/);
   });
 
   it('throws for a level the tower kind does not have', () => {
     expect(() =>
-      createDemoGame({ map: STRIP, waves: TWO_WAVES, towers: [{ kind: 'rifleNest', tile: { col: 2, row: 2 }, level: 4 }] }),
+      createDemoGame({
+        map: STRIP,
+        waves: TWO_WAVES,
+        towers: [{ kind: 'rifleNest', tile: { col: 2, row: 2 }, level: 4 }],
+      }),
     ).toThrow(/level 4/);
   });
 });

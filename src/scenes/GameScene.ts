@@ -8,6 +8,7 @@ import { createPhaserAudio } from '../audio/phaserAudio';
 import { duckForRadio, MUSIC_REGISTRY_KEY, type MusicDuck } from '../audio/radio';
 import type { AudioMix } from '../audio/volume';
 import { createWhistleTracker } from '../audio/whistle';
+import { DEMO_SCRIPTS, type DemoScript } from '../data/demo';
 import { RADIO_CUE_MS, SOUND_FALLOFF, SOUND_THROTTLE, WHISTLE_LEAD_MS } from '../data/sounds';
 import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
@@ -22,12 +23,14 @@ import { starsFor, unlocksNext } from '../sim/progression';
 import { setUpGame, type GameSetup } from '../sim/scenario';
 import type { ProgressStore, WinStars } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
+import { createDemoGame, demoScriptAt, panAt } from '../sim/demo';
 import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import {
   canPlaceAt,
   clampView,
+  demoView,
   fitView,
   panBy,
   screenToWorld,
@@ -70,6 +73,7 @@ import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
+import { DEMO_SCENE_KEY, stopDemo, type DemoMode } from './demoMode';
 import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
@@ -161,6 +165,11 @@ export interface GameSceneOptions {
   readonly progress: ProgressStore;
   /** Called at the end of every create(), the first game's and each restart's. */
   readonly onCreate?: () => void;
+  /**
+   * Makes this instance the live battlefield behind the menu (#402), keyed `Demo`: a scripted, looping game with no
+   * HUD, input or sound, and a slow camera pan. Each start plays the next map's script.
+   */
+  readonly demo?: Exclude<DemoMode, 'off'>;
 }
 
 /** Owns the Simulation, draws it, and advances it on a fixed timestep. */
@@ -176,6 +185,12 @@ export class GameScene extends Phaser.Scene {
   private readonly openSettings: OpenSettings;
   private readonly progress: ProgressStore;
   private readonly onCreate: (() => void) | undefined;
+  private readonly demo: Exclude<DemoMode, 'off'> | undefined;
+  /** How many demos have started: picks the next script. */
+  private demoRotation = 0;
+  /** The demo playing, and how far into its pan (real ms; it holds at 0 for a still frame). */
+  private demoScript: DemoScript | undefined;
+  private demoPanMs = 0;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
   private setup: GameSetup = {};
   /** The map picked on the Level select, kept across restarts. A loaded scenario's own map overrides it. */
@@ -245,8 +260,10 @@ export class GameScene extends Phaser.Scene {
     openSettings,
     progress,
     onCreate,
+    demo,
   }: GameSceneOptions) {
-    super('Game');
+    super(demo ? DEMO_SCENE_KEY : 'Game');
+    this.demo = demo;
     this.hudRoot = hudRoot;
     this.buildBarRoot = buildBarRoot;
     this.endScreenRoot = endScreenRoot;
@@ -516,15 +533,20 @@ export class GameScene extends Phaser.Scene {
     this.allRingIds = [];
     this.allRingsKey = '';
     this.ghost = undefined;
-    this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
     this.result = undefined;
-    // A Victory records its Stars against the map played (a loaded scenario's own map included); Defeat records nothing.
-    const { lives: startLives, map } = this.sim.state;
-    this.sim.events.on('victory', ({ lives }) => {
-      // Victory always leaves Lives, so at least 1 star.
-      const stars = starsFor(lives, startLives);
-      if (stars !== 0) this.result = this.recordWin(map.id, stars);
-    });
+    if (this.demo) this.sim = this.startDemo();
+    else {
+      // A real game ends the demo behind the menu.
+      stopDemo(this.scene);
+      this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
+      // A Victory records its Stars against the map played (a loaded scenario's own map included); Defeat records nothing.
+      const { lives: startLives, map } = this.sim.state;
+      this.sim.events.on('victory', ({ lives }) => {
+        // Victory always leaves Lives, so at least 1 star.
+        const stars = starsFor(lives, startLives);
+        if (stars !== 0) this.result = this.recordWin(map.id, stars);
+      });
+    }
     this.gameSpeed = this.settings.get().defaultSpeed;
     this.mapTiles = this.drawMapView();
     this.loop = createFixedStep({
@@ -620,7 +642,10 @@ export class GameScene extends Phaser.Scene {
     // ?anim=0: zero lifetimes, so effects, tracers and floating texts never show.
     this.effects = createEffects(this.flags.anim ? EFFECT.lifeMs : 0);
     this.effectGraphics = onLayer(this.add.graphics(), 'effects');
+    // A phone's demo leaves out the per-shot cosmetics: muzzle flashes and tracers.
+    const shotEffects = this.demo !== 'lite';
     this.sim.events.on('shellFired', ({ towerId }) => {
+      if (!shotEffects) return;
       const tower = this.sim.state.towers.find((t) => t.id === towerId);
       if (tower) for (const at of this.muzzlesOf(tower)) this.effects.add('muzzleFlash', at);
     });
@@ -629,6 +654,7 @@ export class GameScene extends Phaser.Scene {
     this.tracers = createTracers(this.flags.anim ? TRACER.fadeMs : 0);
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
+      if (!shotEffects) return;
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
       if (!tower) return;
       for (const at of this.muzzlesOf(tower)) {
@@ -637,7 +663,8 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    this.wireSounds();
+    // The demo is silent: the menu music plays over it.
+    if (!this.demo) this.wireSounds();
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
     this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
@@ -658,6 +685,7 @@ export class GameScene extends Phaser.Scene {
       update: (view, { x, y, alpha }) => view.setPosition(x, y).setAlpha(alpha),
       destroy: (view) => view.destroy(),
     });
+    if (this.demo) return this.setUpDemoCamera();
     this.setUpCamera();
 
     this.sim.events.on('towerSold', ({ tile, refund }) =>
@@ -704,6 +732,44 @@ export class GameScene extends Phaser.Scene {
       this.pauseMenu.destroy();
     });
     this.onCreate?.();
+  }
+
+  /**
+   * The demo's game (#402): the next script in rotation, on its map, played `preRollMs` ahead so the field is busy from
+   * the first frame. Marks the page `data-demo` while it runs, which turns the menu's background into a see-through scrim.
+   */
+  private startDemo(): Game {
+    const script = demoScriptAt(DEMO_SCRIPTS, this.demoRotation++);
+    const entry = mapById(script.mapId);
+    this.mapId = entry.id;
+    this.demoScript = script;
+    this.demoPanMs = 0;
+    const sim = createDemoGame({ map: entry.data, waves: entry.waves, towers: script.towers });
+    for (let ms = 0; ms < script.preRollMs; ms += TICK_MS) sim.tick(TICK_MS);
+    this.previousPositions = snapshotPositions(sim.state.enemies);
+    const root = document.documentElement;
+    root.dataset.demo = this.demo ?? 'full';
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => delete root.dataset.demo);
+    return sim;
+  }
+
+  /** The demo's camera: no input, it follows the script's pan, and follows the canvas size. */
+  private setUpDemoCamera(): void {
+    this.cameras.main.setOrigin(0, 0);
+    this.panDemoCamera(0);
+    const onResize = (size: Phaser.Structs.Size) => {
+      this.cameras.main.setSize(size.width, size.height);
+      this.panDemoCamera(0);
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, onResize));
+  }
+
+  /** Moves the demo's pan on by `deltaMs` and points the camera there. */
+  private panDemoCamera(deltaMs: number): void {
+    const { pan } = this.demoScript!;
+    this.demoPanMs += deltaMs;
+    this.setView(demoView(this.cameraBounds(), toPixels(panAt(pan, this.demoPanMs)), pan.zoom));
   }
 
   /** Saves a win of `mapId` and says what it earned, including the next map when this win unlocked it. */
@@ -846,20 +912,24 @@ export class GameScene extends Phaser.Scene {
 
   override update(_time: number, frameDeltaMs: number): void {
     // Paused, no time passes: the sim doesn't tick and the cosmetics hold still (ADR-0002: the sim is untouched).
-    const deltaMs = this.pauseMenu.paused ? 0 : frameDeltaMs;
+    // The demo's still frame (reduced motion) is paused for good.
+    const deltaMs = this.demo ? (this.demo === 'still' ? 0 : frameDeltaMs) : this.pauseMenu.paused ? 0 : frameDeltaMs;
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
     this.effects.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     if (this.flags.anim) this.animMs += deltaMs;
-    this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
-    this.playWhistles();
-    this.hud.update();
-    this.buildBar.update();
-    this.endScreen.update();
-    this.towerPanel.update();
-    this.pauseMenu.update();
+    // The demo plays in real time whatever test mode's stepping and speed: it isn't the game under test.
+    this.loop.advance(this.demo ? deltaMs : frameMs(this.flags, deltaMs, this.gameSpeed));
+    if (!this.demo) {
+      this.playWhistles();
+      this.hud.update();
+      this.buildBar.update();
+      this.endScreen.update();
+      this.towerPanel.update();
+      this.pauseMenu.update();
+    }
 
     const { enemies, towers } = this.sim.state;
     this.towerViews.sync(towers);
@@ -868,18 +938,11 @@ export class GameScene extends Phaser.Scene {
     drawTracers(this.tracerGraphics, this.tracers.active());
     this.effectGraphics.clear();
     drawEffects(this.effectGraphics, this.effects.active());
+    this.drawShells();
+    if (this.demo) return this.panDemoCamera(deltaMs);
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);
     this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected);
-    this.shellGraphics.clear();
-    const { shells, timeMs } = this.sim.state;
-    drawShells(
-      this.shellGraphics,
-      shells.map((shell) =>
-        shellPoint({ ...shell, from: toPixels(shell.from), target: toPixels(shell.target) }, timeMs),
-      ),
-    );
-    drawBlasts(this.shellGraphics, this.blasts.active());
     // Every frame too, so a setting switched on the Settings screen shows at once.
     const { showAllRanges } = this.settings.get();
     this.showAllRings(showAllRanges ? towers.filter((tower) => tower !== selected) : []);
@@ -896,6 +959,19 @@ export class GameScene extends Phaser.Scene {
     const kind = this.buildBar.selected;
     this.showGhost(kind, selected ? undefined : ghostAt(this.sim, kind, this.pointerTile));
     this.floatingTextViews.sync(this.floatingTexts.active());
+  }
+
+  /** Shells in flight, and the blasts of those that landed. */
+  private drawShells(): void {
+    this.shellGraphics.clear();
+    const { shells, timeMs } = this.sim.state;
+    drawShells(
+      this.shellGraphics,
+      shells.map((shell) =>
+        shellPoint({ ...shell, from: toPixels(shell.from), target: toPixels(shell.target) }, timeMs),
+      ),
+    );
+    drawBlasts(this.shellGraphics, this.blasts.active());
   }
 
   /**
