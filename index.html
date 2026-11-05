@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Military TD</title>
     <style>
+      /* Text size (#354): the Settings screen sets --text-scale on <html> (1, 1.25 or 1.5), and every DOM font size
+         below is a multiple of it, so one variable scales all UI text. */
+      :root {
+        --text-scale: 1;
+      }
+      /* Reduced motion (#354): no CSS transition or animation while the setting is on (src/settings/display.ts). */
+      :root[data-reduced-motion] *,
+      :root[data-reduced-motion] *::before,
+      :root[data-reduced-motion] *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
       html,
       body {
         margin: 0;
@@ -29,16 +42,19 @@
         padding: 6px;
       }
       /* Three fixed groups (#274): the stats, a message slot and the controls. The slot takes the leftover space and
-         clips its text, so nothing the HUD says can move a button or make the HUD taller. */
+         clips its text, so nothing the HUD says can move a button or make the HUD taller. Only bigger text (#354) that
+         leaves no room on one line wraps the controls onto a second; the stats and controls have fixed widths, so that
+         depends on the text size, not on what the HUD says. */
       #hud {
         grid-area: hud;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 20px;
+        gap: 4px 20px;
         box-sizing: border-box;
         min-height: 36px;
         padding: 0 8px;
-        font: 16px monospace;
+        font: calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
       }
       #hud .hud-stats {
@@ -89,7 +105,7 @@
       }
       #hud button {
         padding: 4px 14px;
-        font: bold 15px monospace;
+        font: bold calc(15px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -154,19 +170,140 @@
         background: transparent;
         box-shadow: inset 0 0 0 2px #5e6350;
       }
+      /* The DPS figure is a button that opens the DPS meter (#243): it reads as the figure, underlined. */
+      #hud {
+        position: relative;
+      }
+      #hud .hud-stats > button.hud-dps {
+        min-width: 9ch;
+        padding: 0;
+        font: inherit;
+        text-align: left;
+        white-space: nowrap;
+        color: inherit;
+        background: none;
+        text-decoration: underline dotted;
+        text-underline-offset: 3px;
+      }
+      #hud .hud-stats > button.hud-dps[aria-expanded='true'] {
+        color: #f0c95a;
+      }
+      /* The DPS meter hangs under the HUD at the map's top-left corner, clear of its centre and of the tower panel
+         (top-right); it scrolls when it is taller than its cap. Under the End screen and Pause overlays. */
+      #hud .dps-meter {
+        position: absolute;
+        top: calc(100% + 14px);
+        left: 8px;
+        z-index: 1;
+        box-sizing: border-box;
+        width: 280px;
+        max-width: calc(100vw - 32px);
+        max-height: 55vh;
+        overflow-y: auto;
+        padding: 6px;
+        font: 12px monospace;
+        background: rgb(27 30 22 / 0.88);
+        border: 1px solid #8a8670;
+        border-radius: 3px;
+      }
+      #hud .dps-meter[hidden] {
+        display: none;
+      }
+      #hud .dps-scope {
+        display: flex;
+        gap: 3px;
+        margin-bottom: 6px;
+      }
+      #hud .dps-scope button {
+        flex: 1;
+        padding: 2px 4px;
+        font: bold 12px monospace;
+        color: #c2a46b;
+        background: transparent;
+        box-shadow: inset 0 0 0 2px #c2a46b;
+      }
+      #hud .dps-scope button[aria-pressed='true'] {
+        color: #1b1e16;
+        background: #c2a46b;
+      }
+      #hud .dps-empty {
+        margin: 4px 2px;
+        color: #a2a58f;
+      }
+      #hud .dps-kinds,
+      #hud .dps-towers {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      #hud .dps-kind + .dps-kind {
+        margin-top: 4px;
+      }
+      /* One kind: swatch, name, DPS, kills and share on a line, the share bar under it. */
+      #hud .dps-meter button.dps-kind-row {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr) auto auto 4ch;
+        align-items: center;
+        gap: 2px 6px;
+        width: 100%;
+        padding: 3px 4px;
+        font: 12px monospace;
+        text-align: left;
+        color: #e4e0c8;
+        background: rgb(228 224 200 / 0.06);
+        border-radius: 2px;
+      }
+      #hud .dps-swatch {
+        box-sizing: border-box;
+        width: 12px;
+        height: 12px;
+        border: 2px solid;
+      }
+      #hud .dps-swatch[data-shape='circle'] {
+        border-radius: 50%;
+      }
+      #hud .dps-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #hud .dps-share {
+        text-align: right;
+      }
+      #hud .dps-bar {
+        grid-column: 1 / -1;
+        height: 3px;
+        background: rgb(228 224 200 / 0.12);
+      }
+      #hud .dps-bar-fill {
+        display: block;
+        height: 100%;
+        background: #c2a46b;
+      }
+      #hud .dps-towers[hidden] {
+        display: none;
+      }
+      #hud .dps-tower {
+        padding: 1px 4px 1px 22px;
+        color: #c9c5ad;
+        white-space: nowrap;
+      }
+      #hud .dps-tower[data-sold='true'] {
+        color: #8a8670;
+      }
       /* A phone: smaller type. After the base rules, so it wins. */
       @media (max-width: 640px), (max-height: 480px) {
         #hud {
           gap: 4px 12px;
           min-height: 28px;
-          font-size: 13px;
+          font-size: calc(13px * var(--text-scale));
         }
         #hud .hud-stats {
           gap: 12px;
         }
         #hud button {
           padding: 3px 10px;
-          font-size: 13px;
+          font-size: calc(13px * var(--text-scale));
         }
       }
       /* A narrow screen: three fixed rows, stats / controls / message. The message row is kept when empty. */
@@ -176,15 +313,29 @@
           grid-template-columns: minmax(0, 1fr);
           align-items: start;
         }
+        /* Stats and controls wrap onto a second line only when bigger text (#354) leaves no room on one. Each stat
+           keeps its fixed width, so a wrap depends on the text size, not on what the HUD says. */
         #hud .hud-stats {
-          flex-wrap: nowrap;
-          gap: 8px;
+          flex-wrap: wrap;
+          gap: 2px 8px;
         }
         #hud .hud-controls {
           order: 1;
+          flex-wrap: wrap;
         }
         #hud .hud-message {
           order: 2;
+        }
+        /* As wide as the map's column, clear of the build bar beside it. */
+        #hud .dps-meter {
+          width: calc(100vw - 132px);
+          max-height: 45vh;
+        }
+        #hud .dps-meter button.dps-kind-row {
+          grid-template-columns: 12px minmax(0, 1fr) auto 4ch;
+        }
+        #hud .dps-kills {
+          display: none;
         }
       }
       /* The End screen covers the canvas, so the map takes no clicks while it's open. */
@@ -223,7 +374,7 @@
         width: 28px;
         height: 28px;
         padding: 0;
-        font: 12px monospace;
+        font: calc(12px * var(--text-scale)) monospace;
         border-width: 1px;
       }
       #build-bar .build-grid {
@@ -240,7 +391,7 @@
         align-items: center;
         gap: 4px;
         padding: 8px 0 5px;
-        font: bold 13px monospace;
+        font: bold calc(13px * var(--text-scale)) monospace;
         color: #e4e0c8;
         background: #262a1f;
         border: 2px solid #4a4f3c;
@@ -256,7 +407,7 @@
       }
       /* Unaffordable: a selected kind stays clickable (to clear it) but looks the same. */
       #build-bar button[aria-disabled='true'] {
-        color: #8a8670;
+        color: #99957c;
       }
       #build-bar button[aria-disabled='true'] .build-icon {
         opacity: 0.4;
@@ -272,22 +423,63 @@
         height: 24px;
         border: 2px solid;
       }
+      /* A tower's stats, left of its button over the map; placed by buildBar.ts, which keeps the tile under the
+         pointer or finger clear. Taps go through it. */
+      #build-bar .build-tip {
+        position: fixed;
+        z-index: 5;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: 180px;
+        padding: 6px 8px;
+        font: 11px/1.35 monospace;
+        color: #e4e0c8;
+        background: rgb(27 30 22 / 0.94);
+        border: 1px solid #4a4f3c;
+        border-radius: 3px;
+        pointer-events: none;
+      }
+      #build-bar .build-tip[hidden] {
+        display: none;
+      }
+      #build-bar .build-tip strong {
+        display: block;
+        font-size: 12px;
+        color: #f0c95a;
+      }
+      #build-bar .build-tip p {
+        margin: 2px 0 4px;
+        color: #c8c4ac;
+      }
+      #build-bar .build-tip dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0 8px;
+        margin: 0;
+      }
+      #build-bar .build-tip dt {
+        color: #a2a58f;
+      }
+      #build-bar .build-tip dd {
+        margin: 0;
+      }
       #build-bar kbd {
         position: absolute;
         top: 1px;
         left: 3px;
-        font: 10px monospace;
+        font: calc(10px * var(--text-scale)) monospace;
         color: #a2a58f;
       }
       #end-screen,
       #pause-menu {
         position: absolute;
         inset: 0;
+        z-index: 2;
         display: flex;
         align-items: center;
         justify-content: center;
         background: rgb(27 30 22 / 0.72);
-        font: 16px monospace;
+        font: calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
       }
       /* `display: flex` above would otherwise override the hidden attribute. The pause menu is styled like the End screen. */
@@ -328,7 +520,7 @@
       #end-screen h2,
       #pause-menu h2 {
         margin: 0;
-        font-size: 32px;
+        font-size: calc(32px * var(--text-scale));
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #f0c95a;
@@ -339,7 +531,7 @@
       }
       /* A win's Stars, big enough to read at a glance; the words after them say the same for screen readers. */
       #end-screen .star-glyphs {
-        font-size: 28px;
+        font-size: calc(28px * var(--text-scale));
         letter-spacing: 0.1em;
         color: #f0c95a;
         vertical-align: middle;
@@ -374,7 +566,7 @@
         justify-content: center;
         align-items: flex-start;
         gap: 10px 20px;
-        font-size: 12px;
+        font-size: calc(12px * var(--text-scale));
       }
       #end-screen table {
         border-collapse: collapse;
@@ -408,7 +600,7 @@
       #end-screen button,
       #pause-menu button {
         padding: 6px 22px;
-        font: bold 16px monospace;
+        font: bold calc(16px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -438,7 +630,7 @@
         max-width: calc(100% - 16px);
         max-height: calc(100% - 16px);
         overflow-y: auto;
-        font: 13px monospace;
+        font: calc(13px * var(--text-scale)) monospace;
         overflow-wrap: anywhere;
         color: #e4e0c8;
       }
@@ -454,7 +646,7 @@
       #tower-panel h2,
       #enemy-card h2 {
         margin: 0 24px 2px 0;
-        font-size: 15px;
+        font-size: calc(15px * var(--text-scale));
         color: #f0c95a;
       }
       #tower-panel p,
@@ -486,7 +678,7 @@
         width: 24px;
         height: 24px;
         padding: 0;
-        font: bold 16px monospace;
+        font: bold calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
         background: transparent;
         border: 0;
@@ -496,7 +688,7 @@
         #tower-panel,
         #enemy-card {
           width: 190px;
-          font-size: 12px;
+          font-size: calc(12px * var(--text-scale));
         }
       }
       #tower-panel p.role,
@@ -515,7 +707,7 @@
         width: 100%;
         margin-top: 10px;
         padding: 4px 8px;
-        font: bold 13px monospace;
+        font: bold calc(13px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -535,7 +727,7 @@
         width: 100%;
         margin-top: 6px;
         padding: 4px 8px;
-        font: bold 13px monospace;
+        font: bold calc(13px * var(--text-scale)) monospace;
         color: #e8d9b0;
         background: transparent;
         border: 1px solid #8a8670;
@@ -556,7 +748,7 @@
         gap: 14px;
         overflow-y: auto;
         background: #1b1e16;
-        font: 16px monospace;
+        font: calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
       }
       /* Centred when it fits; a taller screen scrolls from its top (plain `justify-content: center` would clip both ends). */
@@ -580,7 +772,7 @@
       #menu h1,
       #level-select h1 {
         margin: 0 0 18px;
-        font-size: 40px;
+        font-size: calc(40px * var(--text-scale));
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #f0c95a;
@@ -589,7 +781,7 @@
       #level-select > button {
         width: 200px;
         padding: 8px 0;
-        font: bold 18px monospace;
+        font: bold calc(18px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -620,7 +812,7 @@
       }
       #menu .credits-list h2 {
         margin: 0 0 4px;
-        font-size: 16px;
+        font-size: calc(16px * var(--text-scale));
         color: #f0c95a;
       }
       #menu .credits-list p {
@@ -651,7 +843,7 @@
         align-items: center;
         gap: 8px;
         padding: 8px;
-        font: bold 16px monospace;
+        font: bold calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
         background: #262a1f;
         border: 2px solid #5e6350;
@@ -663,12 +855,12 @@
       }
       /* Best Stars, or the lock mark and "Locked", under the name. */
       #level-select .stars {
-        font-size: 20px;
+        font-size: calc(20px * var(--text-scale));
         letter-spacing: 0.1em;
         color: #f0c95a;
       }
       #level-select .locked {
-        font-size: 14px;
+        font-size: calc(14px * var(--text-scale));
         color: #a2a58f;
       }
       /* A locked map stays focusable (aria-disabled), but looks and acts disabled. */
@@ -689,11 +881,12 @@
       #how-to-play {
         position: fixed;
         inset: 0;
+        z-index: 3; /* over the Pause overlay (2), which is over the DPS meter (1) */
         display: flex;
         align-items: center;
         justify-content: center;
         background: rgb(27 30 22 / 0.88);
-        font: 16px monospace;
+        font: calc(16px * var(--text-scale)) monospace;
         color: #e4e0c8;
       }
       /* `display: flex` above would otherwise override the hidden attribute. */
@@ -718,7 +911,7 @@
       #settings h2,
       #how-to-play h2 {
         margin: 0;
-        font-size: 22px;
+        font-size: calc(22px * var(--text-scale));
         text-align: center;
         color: #f0c95a;
       }
@@ -775,7 +968,7 @@
         align-self: center;
         width: 160px;
         padding: 6px 0;
-        font: bold 16px monospace;
+        font: bold calc(16px * var(--text-scale)) monospace;
         color: #1b1e16;
         background: #c2a46b;
         border: 0;
@@ -842,7 +1035,7 @@
         position: fixed;
         right: 6px;
         bottom: 4px;
-        font: 12px monospace;
+        font: calc(12px * var(--text-scale)) monospace;
         color: #8a8670;
         pointer-events: none;
       }

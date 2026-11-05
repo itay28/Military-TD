@@ -1,6 +1,6 @@
 {
   "name": "military-td",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "license": "UNLICENSED",
   "description": "A basic military-themed tower defense game.",
@@ -26,6 +26,7 @@
     "credits": "node scripts/credits.ts",
     "check:assets": "node scripts/check-assets.ts",
     "atlas": "node scripts/atlas.ts",
+    "ambience-fx": "node scripts/ambience-fx.ts",
     "radio-fx": "node scripts/radio-fx.ts",
     "weapon-fx": "node scripts/weapon-fx.ts",
     "render:pivot": "node scripts/render-pivot.ts"

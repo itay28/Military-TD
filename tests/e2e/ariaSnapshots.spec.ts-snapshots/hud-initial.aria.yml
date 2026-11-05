@@ -1,4 +1,5 @@
-- text: Money 100 Lives 20 Wave 0 / 10 DPS –
+- text: Money 100 Lives 20 Wave 0 / 10
+- button "DPS –"
 - status
 - button "Start Wave"
 - button "Auto-start"
