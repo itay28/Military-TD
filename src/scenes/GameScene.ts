@@ -32,11 +32,12 @@ import {
   fitView,
   panBy,
   screenToWorld,
+  worldToScreen,
   zoomAt,
   type CameraBounds,
   type CameraView,
 } from './camera';
-import { pixelToTile, toPixels, type Pixel } from './coords';
+import { pixelToTile, tileTopLeft, toPixels, type Pixel } from './coords';
 import {
   drawBlasts,
   drawDismantleRing,
@@ -68,6 +69,7 @@ import { createTracers, type Tracers } from './tracers';
 import { motionTimings, type MotionTimings } from './motion';
 import { TILESET_FRAMES, tileArt } from './tileset';
 import { buildOptions, mountBuildBar, type BuildBar, type IconAtlas } from '../ui/buildBar';
+import type { Rect } from '../ui/towerTooltip';
 import { mountEndScreen, type EndScreen, type VictoryResult } from '../ui/endScreen';
 import { mountHud, type Hud } from '../ui/hud';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
@@ -931,6 +933,7 @@ export class GameScene extends Phaser.Scene {
     this.music()?.enterScene(scene);
     this.music()?.setCombat(combat);
     this.hud.update();
+    this.buildBar.avoid(this.pointerTile && this.tilePageRect(this.pointerTile));
     this.buildBar.update();
     this.endScreen.update();
     this.towerPanel.update();
@@ -1012,6 +1015,14 @@ export class GameScene extends Phaser.Scene {
       drawRangeRing(this.allRings, tower);
       this.allRings.translateCanvas(-x, -y);
     }
+  }
+
+  /** Where tile `tile` is on the page, in CSS pixels, through the camera: a build-bar tooltip keeps it clear. */
+  private tilePageRect(tile: Tile): Rect {
+    const canvas = this.game.canvas.getBoundingClientRect();
+    const { x, y } = worldToScreen(this.view, tileTopLeft(tile));
+    const size = TILE_PX * this.view.zoom;
+    return { left: canvas.left + x, top: canvas.top + y, width: size, height: size };
   }
 
   /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none or no kind is selected. */
