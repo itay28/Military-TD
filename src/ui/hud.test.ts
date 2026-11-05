@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WAVE_BANNER_MS } from '../data/display';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
@@ -102,6 +102,24 @@ describe('HUD', () => {
       mountHud(root, game, fakeSpeed());
       button()!.click();
       expect(game.state.phase).toBe('wave');
+      expect(game.state.waveNumber).toBe(1);
+    });
+
+    it('startWave() does what a click does, for the Space key', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      hud.startWave();
+      expect(game.state.phase).toBe('wave');
+      expect(button()!.disabled).toBe(true);
+    });
+
+    it('startWave() does nothing while the button is disabled', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      const startWave = vi.spyOn(game, 'callNextWave');
+      hud.startWave();
+      hud.startWave();
+      expect(startWave).toHaveBeenCalledOnce();
       expect(game.state.waveNumber).toBe(1);
     });
 
@@ -367,20 +385,6 @@ describe('HUD', () => {
       game.callNextWave();
       hud.update();
       expect(byTestId('hud-wave')?.textContent).toBe('Waves 1–2 / 2');
-    });
-
-    it('Space calls the next wave in, but not while a button or field has focus', () => {
-      const game = timedGame();
-      mountHud(root, game, fakeSpeed());
-      const space = (target: EventTarget) =>
-        target.dispatchEvent(
-          new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true }),
-        );
-      space(document.body);
-      expect(game.state.waveNumber).toBe(1);
-      button()!.focus();
-      space(button()!);
-      expect(game.state.waveNumber).toBe(1);
     });
 
     it('Tactical mode shows no countdown, ever', () => {

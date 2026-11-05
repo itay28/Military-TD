@@ -38,4 +38,15 @@ describe('createEffects', () => {
     effects.add('muzzleFlash', AT);
     expect(effects.active()).toEqual([]);
   });
+
+  it('reads a live lifetime each time, so a shorter one applies to effects already showing', () => {
+    let lifeMs = 200;
+    const effects = createEffects(() => lifeMs);
+    effects.add('muzzleFlash', AT);
+    effects.advance(50);
+    lifeMs = 100;
+    expect(effects.active()[0]?.progress).toBeCloseTo(0.5);
+    effects.advance(50);
+    expect(effects.active()).toEqual([]);
+  });
 });

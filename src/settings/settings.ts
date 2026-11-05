@@ -12,9 +12,20 @@ export interface Settings {
   readonly musicVolume: number;
   /** The sound-effects channel, 0–100. */
   readonly sfxVolume: number;
+  /**
+   * Less decorative motion (#354): no rising text or walk cycle, and shorter flashes, tracers and blasts
+   * (`motionTimings`, src/scenes/motion.ts). Defaults to the system's `prefers-reduced-motion`.
+   */
+  readonly reducedMotion: boolean;
+  /** Scales all DOM UI text, in percent (#354). */
+  readonly textSize: TextSize;
   /** Tactical mode (ADR-0011): no wave timers, each wave called by the player; a win earns at most 2 stars. Next game. */
   readonly tacticalMode: boolean;
 }
+
+/** The text sizes the player can pick, in percent. */
+export const TEXT_SIZES = [100, 125, 150] as const;
+export type TextSize = (typeof TEXT_SIZES)[number];
 
 /** The settings that are volumes: each a whole number from 0 to 100. */
 export const VOLUME_FIELDS = ['masterVolume', 'musicVolume', 'sfxVolume'] as const;
@@ -27,15 +38,22 @@ export const DEFAULT_SETTINGS: Settings = {
   masterVolume: 80,
   musicVolume: 60,
   sfxVolume: 80,
+  reducedMotion: false,
+  textSize: 100,
   tacticalMode: false,
 };
+
+/** The defaults for this device: reduced motion follows the system's `prefers-reduced-motion`. */
+export function defaultSettings({ prefersReducedMotion }: { prefersReducedMotion: boolean }): Settings {
+  return { ...DEFAULT_SETTINGS, reducedMotion: prefersReducedMotion };
+}
 
 /** The one place the settings live. `createPersistedSettings` (persist.ts) saves them between visits. */
 export interface SettingsStore {
   get(): Settings;
   /**
    * Merges `patch` into the settings. Throws RangeError for a default speed that isn't a game speed, or a volume that
-   * isn't a whole number from 0 to 100; nothing changes then.
+   * isn't a whole number from 0 to 100, or a text size that isn't one of `TEXT_SIZES`; nothing changes then.
    */
   set(patch: Partial<Settings>): void;
   /** Calls `listener` after each change, until the returned function is called. */
@@ -57,6 +75,8 @@ export function createSettings(initial: Settings = DEFAULT_SETTINGS): SettingsSt
         if (value !== undefined && !isVolume(value))
           throw new RangeError(`${field} ${value} is not a whole number from 0 to ${MAX_VOLUME}`);
       }
+      if (patch.textSize !== undefined && !TEXT_SIZES.includes(patch.textSize))
+        throw new RangeError(`${patch.textSize} is not a text size (${TEXT_SIZES.join(', ')})`);
       current = { ...current, ...patch };
       for (const listener of [...listeners]) listener();
     },

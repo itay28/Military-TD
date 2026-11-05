@@ -1,4 +1,5 @@
 import type { Pixel } from './coords';
+import { readLive, type Live } from './motion';
 
 /** A floating text to draw this frame, at its current position and alpha. */
 export interface FloatingTextView extends Pixel {
@@ -18,7 +19,7 @@ export interface FloatingTexts {
 }
 
 /** Short messages that rise `risePx` and fade out over `durationMs`. Cosmetic only, so they run on frame time. */
-export function createFloatingTexts({ durationMs, risePx }: { durationMs: number; risePx: number }): FloatingTexts {
+export function createFloatingTexts(config: Live<{ durationMs: number; risePx: number }>): FloatingTexts {
   let nextId = 1;
   let texts: { id: number; text: string; at: Pixel; ageMs: number }[] = [];
   return {
@@ -26,16 +27,19 @@ export function createFloatingTexts({ durationMs, risePx }: { durationMs: number
       texts.push({ id: nextId++, text, at, ageMs: 0 });
     },
     advance(dtMs) {
+      const { durationMs } = readLive(config);
       for (const text of texts) text.ageMs += dtMs;
       texts = texts.filter((text) => text.ageMs < durationMs);
     },
     // Filtered here too, so a duration of 0 (?anim=0) never shows a text added since the last advance.
-    active: () =>
-      texts
+    active: () => {
+      const { durationMs, risePx } = readLive(config);
+      return texts
         .filter((text) => text.ageMs < durationMs)
         .map(({ id, text, at, ageMs }) => {
           const progress = ageMs / durationMs;
           return { id, text, x: at.x, y: at.y - risePx * progress, alpha: 1 - progress };
-        }),
+        });
+    },
   };
 }
