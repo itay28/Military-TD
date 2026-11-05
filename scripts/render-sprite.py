@@ -47,7 +47,6 @@ import json
 import math
 import os
 import sys
-import tempfile
 import urllib.request
 from pathlib import Path
 
@@ -55,7 +54,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parent.parent
-TURNTABLE = {"frames": 24, "frameSize": 384, "columns": 6, "elevationDeg": 30, "budgetBytes": 300_000, "samples": 32}
+TURNTABLE = {"frames": 24, "frameSize": 384, "columns": 6, "elevationDeg": 30, "budgetBytes": 300_000, "samples": 32, "alphaFloor": 8}
 TURNTABLE["stepDeg"] = 360 / TURNTABLE["frames"]
 FRONT = {"+y": 0.0, "-x": -math.pi / 2, "-y": math.pi, "+x": math.pi / 2}  # Z rotation that turns the front to +Y
 
@@ -423,13 +422,15 @@ def frame_png(path: Path) -> object:
 
 
 def desaturated(img, amount: float) -> object:
-    """`img` with each pixel's colour mixed `amount` of the way to its grey (Rec. 709 luma), as desaturate() does."""
+    """`img` with each pixel's colour mixed `amount` of the way to its grey (Rec. 709 luma), as desaturate() does,
+    and the near-transparent noise around the shadow cleared (it would double the WebP's size)."""
     import numpy as np
     from PIL import Image
 
     px = np.asarray(img, dtype=np.float32)
     y = px[..., :3] @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
     px[..., :3] += (y[..., None] - px[..., :3]) * amount
+    px[px[..., 3] < TURNTABLE["alphaFloor"]] = 0  # the shadow catcher's faint sky-light noise: clear, not 1-7/255
     return Image.fromarray(np.clip(px + 0.5, 0, 255).astype(np.uint8), "RGBA")
 
 
@@ -442,8 +443,8 @@ def save_sheet(frames: list, path: Path) -> int:
     sheet = Image.new("RGBA", (cols * size, rows * size), (0, 0, 0, 0))
     for i, f in enumerate(frames):
         sheet.paste(f, ((i % cols) * size, (i // cols) * size))
-    for quality in range(85, 19, -5):
-        sheet.save(path, "WEBP", quality=quality, alpha_quality=80, method=6)
+    for quality in range(90, 19, -5):  # alpha at 50: the alpha plane is most of the bytes, and 50 looks the same
+        sheet.save(path, "WEBP", quality=quality, alpha_quality=50, method=6)
         if path.stat().st_size <= TURNTABLE["budgetBytes"]:
             return path.stat().st_size
     sys.exit(f"{path.name}: over {TURNTABLE['budgetBytes']} bytes even at quality 20")
@@ -463,14 +464,15 @@ def render_turntable(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     cam.data.clip_end = 100
     el = math.radians(TURNTABLE["elevationDeg"])
     frames = []
-    with tempfile.TemporaryDirectory() as tmp:
-        for i in range(TURNTABLE["frames"]):
-            az = math.radians(i * TURNTABLE["stepDeg"])  # compass bearing from the model: 0 = its front (north)
-            cam.location = centre + 20 * Vector((math.sin(az) * math.cos(el), math.cos(az) * math.cos(el), math.sin(el)))
-            cam.rotation_euler = (centre - cam.location).to_track_quat("-Z", "Y").to_euler()
-            scene.render.filepath = str(Path(tmp) / f"{i:02}.png")
-            bpy.ops.render.render(write_still=True)
-            frames.append(desaturated(frame_png(Path(scene.render.filepath)), cfg["desaturate"]))
+    tmp = cache.parent / "turntable-frames" / spec["id"]  # kept, so the sheet can be re-encoded without rendering
+    tmp.mkdir(parents=True, exist_ok=True)
+    for i in range(TURNTABLE["frames"]):
+        az = math.radians(i * TURNTABLE["stepDeg"])  # compass bearing from the model: 0 = its front (north)
+        cam.location = centre + 20 * Vector((math.sin(az) * math.cos(el), math.cos(az) * math.cos(el), math.sin(el)))
+        cam.rotation_euler = (centre - cam.location).to_track_quat("-Z", "Y").to_euler()
+        scene.render.filepath = str(tmp / f"{i:02}.png")
+        bpy.ops.render.render(write_still=True)
+        frames.append(desaturated(frame_png(Path(scene.render.filepath)), cfg["desaturate"]))
     folder = out / f"render-{spec['id']}"
     folder.mkdir(parents=True, exist_ok=True)
     sheet = folder / f"{spec['id']}-turntable.webp"
