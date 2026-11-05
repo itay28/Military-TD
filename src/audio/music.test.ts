@@ -3,6 +3,10 @@ import {
   createMusicController,
   DUCK_FADE_MS,
   DUCK_VOLUME,
+  END_SCREEN,
+  gameMusic,
+  LAYER_FADE_MS,
+  TRACK_CHANNEL,
   trackFor,
   TRACK_VOLUME,
   VOLUME_RAMP_MS,
@@ -10,6 +14,7 @@ import {
   type MusicVoice,
   type TrackId,
 } from './music';
+import type { Channel } from './volume';
 
 interface FakeVoice extends MusicVoice {
   readonly track: TrackId;
@@ -51,10 +56,11 @@ function fakeBackend(missing: readonly TrackId[] = []) {
 }
 
 describe('trackFor', () => {
-  it('plays the menu track on the menus and the game track in the Game', () => {
+  it('plays the menu track on the menus, the ambient bed in the Game and the game track on the End screen (#405)', () => {
     expect(trackFor('Menu')).toBe('menu');
     expect(trackFor('LevelSelect')).toBe('menu');
-    expect(trackFor('Game')).toBe('game');
+    expect(trackFor('Game')).toBe('ambient');
+    expect(trackFor(END_SCREEN)).toBe('game');
   });
 
   it('is silent on Boot and on a scene it does not know', () => {
@@ -92,13 +98,13 @@ describe('createMusicController', () => {
     expect(voices[0]?.stopped).toBe(false);
   });
 
-  it('keeps the game track through a restart (the End screen is part of the Game)', () => {
+  it('keeps the ambient bed and its layer through a second start of the Game', () => {
     const { backend, voices } = fakeBackend();
     const music = createMusicController(backend, { muted: false });
     music.unlock();
     music.enterScene('Game');
     music.enterScene('Game');
-    expect(voices.map((v) => v.track)).toEqual(['game']);
+    expect(voices.map((v) => v.track)).toEqual(['ambient', 'combat']);
   });
 
   it('crossfades over about a second to a different track', () => {
@@ -106,7 +112,7 @@ describe('createMusicController', () => {
     const music = createMusicController(backend, { muted: false });
     music.unlock();
     music.enterScene('LevelSelect');
-    music.enterScene('Game');
+    music.enterScene('End');
 
     const [menu, game] = voices;
     expect(game?.track).toBe('game');
@@ -132,7 +138,7 @@ describe('createMusicController', () => {
     const music = createMusicController(backend, { muted: false });
     music.unlock();
     music.enterScene('Menu');
-    music.enterScene('Game');
+    music.enterScene('End');
     music.enterScene('Menu');
 
     expect(voices.map((v) => v.track)).toEqual(['menu', 'game', 'menu']);
@@ -151,7 +157,7 @@ describe('createMusicController', () => {
     const music = createMusicController(backend, { muted: false });
     music.unlock();
     music.enterScene('Menu');
-    expect(() => music.enterScene('Game')).not.toThrow();
+    expect(() => music.enterScene('End')).not.toThrow();
     music.enterScene('Menu');
     expect(voices.map((v) => v.track)).toEqual(['menu', 'menu']);
   });
@@ -169,7 +175,7 @@ describe('createMusicController', () => {
     );
     music.unlock();
     music.enterScene('Menu');
-    music.enterScene('Game');
+    music.enterScene('End');
     expect(calls).toBe(0);
   });
 
@@ -177,7 +183,7 @@ describe('createMusicController', () => {
     const { backend, voices } = fakeBackend();
     const music = createMusicController(backend, { muted: false, crossfadeMs: 250 });
     music.unlock();
-    music.enterScene('Game');
+    music.enterScene('End');
     expect(voices[0]?.fades).toEqual([{ volume: TRACK_VOLUME.game, ms: 250 }]);
   });
 
@@ -218,7 +224,7 @@ describe('createMusicController', () => {
     const music = createMusicController(backend, { muted: false, volume: () => 0.5 });
     music.enterScene('Menu');
     music.unlock();
-    music.enterScene('Game');
+    music.enterScene('End');
     music.refreshVolume();
     expect(voices[0]!.fades).toEqual([
       { volume: 0.5 * TRACK_VOLUME.menu, ms: 1000 },
@@ -249,7 +255,7 @@ describe('ducking (#396)', () => {
     const { backend, voices } = fakeBackend();
     const music = createMusicController(backend, { muted: false });
     music.unlock();
-    music.enterScene('Game');
+    music.enterScene('End');
     music.setDucked(true);
     expect(DUCK_VOLUME).toBeCloseTo(0.4);
     expect(voices[0]?.fades.at(-1)).toEqual({ volume: DUCK_VOLUME, ms: DUCK_FADE_MS });
@@ -261,7 +267,7 @@ describe('ducking (#396)', () => {
     const { backend, voices } = fakeBackend();
     const music = createMusicController(backend, { muted: false });
     music.unlock();
-    music.enterScene('Game');
+    music.enterScene('End');
     const before = voices[0]?.fades.length;
     music.setDucked(false);
     expect(voices[0]?.fades.length).toBe(before);
@@ -273,7 +279,7 @@ describe('ducking (#396)', () => {
     music.unlock();
     music.enterScene('Menu');
     music.setDucked(true);
-    music.enterScene('Game');
+    music.enterScene('End');
     expect(voices[1]?.fades).toEqual([{ volume: DUCK_VOLUME, ms: 1000 }]);
   });
 
@@ -281,7 +287,7 @@ describe('ducking (#396)', () => {
     const { backend, voices } = fakeBackend();
     const music = createMusicController(backend, { muted: false });
     music.unlock();
-    music.enterScene('Game');
+    music.enterScene('End');
     music.setDucked(true);
     music.enterScene('Boot');
     const before = voices[0]?.fades.length;
@@ -300,8 +306,107 @@ describe('ducking (#396)', () => {
     muted.setDucked(true);
     const missing = createMusicController(backend, { muted: false });
     missing.unlock();
-    missing.enterScene('Game');
+    missing.enterScene('End');
     expect(() => missing.setDucked(true)).not.toThrow();
     expect(voices).toHaveLength(0);
+  });
+});
+
+describe('the battlefield ambience (#405)', () => {
+  /** The SFX channel at 0.5, music at 0.8, so a test can tell which one a track reads. */
+  const volume = (channel: Channel): number => (channel === 'sfx' ? 0.5 : 0.8);
+
+  function inGame(missing: readonly TrackId[] = []) {
+    const { backend, voices } = fakeBackend(missing);
+    const music = createMusicController(backend, { muted: false, volume });
+    music.unlock();
+    music.enterScene('Game');
+    return { music, voices, bed: voices[0]!, layer: voices[1]! };
+  }
+
+  it('counts the ambience as sound effects and the tracks as music', () => {
+    expect(TRACK_CHANNEL).toEqual({ menu: 'music', game: 'music', ambient: 'sfx', combat: 'sfx' });
+  });
+
+  it('fades the bed in at the SFX volume and starts its combat layer silent (the Build phase)', () => {
+    const { voices, bed, layer } = inGame();
+    expect(voices.map((v) => v.track)).toEqual(['ambient', 'combat']);
+    expect(bed.fades).toEqual([{ volume: 0.5 * TRACK_VOLUME.ambient, ms: 1000 }]);
+    expect(layer.fades).toEqual([{ volume: 0, ms: 1000 }]);
+  });
+
+  it('fades the combat layer up during a wave and back down after it', () => {
+    const { music, bed, layer } = inGame();
+    music.setCombat(true);
+    expect(layer.fades.at(-1)).toEqual({ volume: 0.5 * TRACK_VOLUME.combat, ms: LAYER_FADE_MS });
+    music.setCombat(true);
+    expect(layer.fades).toHaveLength(2);
+    music.setCombat(false);
+    expect(layer.fades.at(-1)).toEqual({ volume: 0, ms: LAYER_FADE_MS });
+    expect(bed.fades).toHaveLength(1);
+  });
+
+  it('starts the layer loud when a wave is already on as the bed starts', () => {
+    const { backend, voices } = fakeBackend();
+    const music = createMusicController(backend, { muted: false, volume });
+    music.setCombat(true);
+    music.enterScene('Game');
+    music.unlock();
+    expect(voices[1]?.fades).toEqual([{ volume: 0.5 * TRACK_VOLUME.combat, ms: 1000 }]);
+  });
+
+  it('crossfades the bed and its layer to the game track on the End screen', () => {
+    const { music, voices, bed, layer } = inGame();
+    music.setCombat(true);
+    music.enterScene(END_SCREEN);
+    expect(voices[2]?.track).toBe('game');
+    expect(voices[2]?.fades).toEqual([{ volume: 0.8 * TRACK_VOLUME.game, ms: 1000 }]);
+    expect(bed.fades.at(-1)).toEqual({ volume: 0, ms: 1000 });
+    expect(layer.fades.at(-1)).toEqual({ volume: 0, ms: 1000 });
+    bed.finishFade();
+    layer.finishFade();
+    expect(bed.stopped && layer.stopped).toBe(true);
+    // A wave flag left over does nothing to the game track, which has no layer.
+    music.setCombat(false);
+    expect(voices).toHaveLength(3);
+  });
+
+  it('ducks the layer with the bed, and ramps both on refreshVolume', () => {
+    const { music, bed, layer } = inGame();
+    music.setCombat(true);
+    music.setDucked(true);
+    expect(bed.fades.at(-1)).toEqual({ volume: 0.5 * TRACK_VOLUME.ambient * DUCK_VOLUME, ms: DUCK_FADE_MS });
+    expect(layer.fades.at(-1)).toEqual({ volume: 0.5 * TRACK_VOLUME.combat * DUCK_VOLUME, ms: DUCK_FADE_MS });
+    music.setDucked(false);
+    music.refreshVolume();
+    expect(bed.fades.at(-1)).toEqual({ volume: 0.5 * TRACK_VOLUME.ambient, ms: VOLUME_RAMP_MS });
+    expect(layer.fades.at(-1)).toEqual({ volume: 0.5 * TRACK_VOLUME.combat, ms: VOLUME_RAMP_MS });
+  });
+
+  it('keeps the bed when the layer file is missing, and the layer when the bed is', () => {
+    const noLayer = inGame(['combat']);
+    expect(noLayer.voices.map((v) => v.track)).toEqual(['ambient']);
+    expect(() => noLayer.music.setCombat(true)).not.toThrow();
+    const noBed = inGame(['ambient']);
+    expect(noBed.voices.map((v) => v.track)).toEqual(['combat']);
+  });
+
+  it('never touches the backend when muted (test mode)', () => {
+    const { backend, voices } = fakeBackend();
+    const music = createMusicController(backend, { muted: true });
+    music.unlock();
+    music.enterScene('Game');
+    music.setCombat(true);
+    music.enterScene(END_SCREEN);
+    expect(voices).toEqual([]);
+  });
+});
+
+describe('gameMusic', () => {
+  it('plays the layer during a wave, and the End screen once the game is over', () => {
+    expect(gameMusic('build')).toEqual({ scene: 'Game', combat: false });
+    expect(gameMusic('wave')).toEqual({ scene: 'Game', combat: true });
+    expect(gameMusic('victory')).toEqual({ scene: END_SCREEN, combat: false });
+    expect(gameMusic('defeat')).toEqual({ scene: END_SCREEN, combat: false });
   });
 });

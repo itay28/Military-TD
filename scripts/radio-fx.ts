@@ -1,11 +1,12 @@
 /**
- * Builds the radio comms cues (#396): `assets/radio-cues/{waveStart,waveReinforcements,victory,defeat}.ogg`, from the
+ * Builds the radio comms cues (#396): `assets/radio-cues/{waveStart,waveReinforcements,leak,victory,defeat}.ogg`, from the
  * committed voice takes (`assets/radio-voice/takes/`, made by `scripts/radio-voice.py`), real scanner noise
  * (`assets/kresiek-radio-noise/`) and, for defeat, gunfire and a blast (`assets/free-firearm-sfx/`,
  * `assets/ezduzziteh-explosions/`). Every input is in the repo, so a cue can be rebuilt or retuned (ADR-0003 spirit).
  * Needs ffmpeg on the PATH.
  *
- *   node scripts/radio-fx.ts
+ *   node scripts/radio-fx.ts          # every cue
+ *   node scripts/radio-fx.ts leak     # just the cues named
  *
  * Each cue is a timeline of parts mixed together: voice lines through a radio (a compressor and a soft clip inside a
  * 300–3400 Hz band-pass, so the clip's harmonics stay in the band), squelch bursts at the start and end of a
@@ -33,11 +34,14 @@ const BAND = bandFor(300, 3400);
 /** Evens out a line and drives it into the clip, as a radio's mic gain does. */
 const COMPRESS = 'acompressor=threshold=-24dB:ratio=6:attack=5:release=80:makeup=4';
 
-type CueId = 'waveStart' | 'waveReinforcements' | 'victory' | 'defeat';
+type CueId = 'waveStart' | 'waveReinforcements' | 'leak' | 'victory' | 'defeat';
 
 type Part =
-  /** The cue's voice take at `at` s, `db` louder (default 0). */
-  | { kind: 'voice'; at: number; db?: number }
+  /**
+   * A voice take at `at` s, `db` louder (default 0): the cue's own, or another cue's `take` cut to `span` (start, end
+   * in s) with short fades.
+   */
+  | { kind: 'voice'; at: number; db?: number; take?: CueId; span?: readonly [number, number] }
   /** A sound effect file at `at` s and `db` dB, through the radio band. */
   | { kind: 'sfx'; file: string; at: number; db: number }
   /** `dur` s of static at `at` s and `db` dB, with short fades so it doesn't click. */
@@ -81,6 +85,19 @@ const CUES: readonly Cue[] = [
     parts: [squelch(0), bed(0.1, 3.25), { kind: 'voice', at: 0.1 }, squelch(3.36, 0.14)],
   },
   {
+    // "They're breaking through!" (#405), cut from the defeat take, for an enemy that leaks. Throttled in the game, so a
+    // burst of leaks calls it once.
+    id: 'leak',
+    length: 1.45,
+    gainDb: -3,
+    parts: [
+      squelch(0),
+      bed(0.1, 1.15),
+      { kind: 'voice', at: 0.12, take: 'defeat', span: [0, 1.04] },
+      squelch(1.27, 0.18),
+    ],
+  },
+  {
     // "Area secure! Out." on a clean link.
     id: 'victory',
     length: 2.2,
@@ -117,7 +134,7 @@ function build(cue: Cue): void {
   const voices = cue.parts.filter((p) => p.kind === 'voice');
   const sfx = cue.parts.filter((p) => p.kind === 'sfx');
   const statics = cue.parts.filter((p) => p.kind === 'static');
-  const inputs = [...voices.map(() => `${TAKES_DIR}/${cue.id}.flac`), ...sfx.map((p) => p.file), NOISE];
+  const inputs = [...voices.map((v) => `${TAKES_DIR}/${v.take ?? cue.id}.flac`), ...sfx.map((p) => p.file), NOISE];
   const noiseIn = inputs.length - 1;
   const chains: string[] = [];
   const labels: string[] = [];
@@ -126,8 +143,12 @@ function build(cue: Cue): void {
   voices.forEach((v, i) => {
     const crush = cue.crushBits ? `,acrusher=bits=${cue.crushBits}:mix=0.5` : '';
     const drive = (v.db ?? 0) + (cue.driveDb ?? 0);
+    const cut = v.span
+      ? `atrim=start=${v.span[0]}:end=${v.span[1]},asetpts=PTS-STARTPTS,afade=t=in:d=0.01,` +
+        `afade=t=out:st=${v.span[1] - v.span[0] - 0.04}:d=0.04,`
+      : '';
     chains.push(
-      `[${i}]aresample=${RATE},aformat=channel_layouts=mono,${band},${COMPRESS},volume=${drive}dB,asoftclip=type=tanh${crush},${band},${delay(v.at)}[v${i}]`,
+      `[${i}]${cut}aresample=${RATE},aformat=channel_layouts=mono,${band},${COMPRESS},volume=${drive}dB,asoftclip=type=tanh${crush},${band},${delay(v.at)}[v${i}]`,
     );
     labels.push(`[v${i}]`);
   });
@@ -170,5 +191,7 @@ function build(cue: Cue): void {
   console.log(`${out}: ${Math.round(Number(seconds) * 1000)} ms`);
 }
 
+// `node scripts/radio-fx.ts leak` rebuilds just the cues named; no names rebuilds them all.
+const only = process.argv.slice(2);
 mkdirSync(OUT_DIR, { recursive: true });
-for (const cue of CUES) build(cue);
+for (const cue of CUES) if (only.length === 0 || only.includes(cue.id)) build(cue);
