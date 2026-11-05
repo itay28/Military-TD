@@ -211,6 +211,12 @@ export const SHELL = { color: 0xd9d9d9, radius: 4, blastColor: 0xff8a3d, blastWi
  */
 export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015, revealMarginPx: 40 } as const;
 
+/**
+ * With the reduced-motion setting on (#354): flashes, tracers and blasts carry information (ADR-0009), so they stay,
+ * shorter. The text drift and walk cycle stop (`motionTimings`, src/scenes/motion.ts).
+ */
+export const REDUCED_MOTION = { effectLifeMs: 120, tracerFadeMs: 50, blastFadeMs: 150 } as const;
+
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
 
