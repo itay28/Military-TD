@@ -78,6 +78,7 @@ export const TOWER_STYLE = {
   cannon: { shape: 'square', size: 36, fill: 0x6b4f2a, outline: 0xf0b429, outlineWidth: 3 }, // bronze, amber outline
   aaGun: { shape: 'circle', size: 30, fill: 0x8a5a2b, outline: 0xe5e1cf, outlineWidth: 2 }, // rust brown circle, bone outline
   mortar: { shape: 'circle', size: 34, fill: 0x4a3f2a, outline: 0xd9b45a, outlineWidth: 2 }, // dug-in brown pit, brass rim
+  grenadeLauncher: { shape: 'square', size: 30, fill: 0x4b5320, outline: 0xd9b45a, outlineWidth: 2 }, // olive, brass outline
 } as const satisfies Record<TowerKind, TowerStyle>;
 
 /** What the player calls each tower kind. Every kind needs one. */
@@ -86,6 +87,7 @@ export const TOWER_NAMES = {
   cannon: 'Cannon',
   aaGun: 'AA Gun',
   mortar: 'Mortar',
+  grenadeLauncher: 'Grenade Launcher',
 } as const satisfies Record<TowerKind, string>;
 
 /** What each tower kind is for, in one line: the tower panel leads with it. Every kind needs one; keep it true to the stats. */
@@ -94,6 +96,7 @@ export const TOWER_ROLES = {
   aaGun: 'Built for aircraft: fast, light rounds. Hits ground too.',
   cannon: 'Slow, heavy shells that punch through armor. Ground only.',
   mortar: 'Long-range shells that hit everything in the blast. Ground only, not up close.',
+  grenadeLauncher: 'Fast bursts of grenades. Shreds infantry, bounces off armor.',
 } as const satisfies Record<TowerKind, string>;
 
 /** What the player calls each enemy kind. Every kind needs one. */
@@ -198,6 +201,7 @@ export const TRACER_STYLE = {
   rifleNest: { color: 0xffe9a0, width: 2 },
   cannon: { color: 0xffb347, width: 4 },
   mortar: { color: 0xd9b45a, width: 3 }, // unused: the Mortar fires Shells, not tracers
+  grenadeLauncher: { color: 0xd9b45a, width: 2 }, // unused: grenades fly as Shells
   aaGun: { color: 0xffd27a, width: 1 },
 } as const satisfies Record<TowerKind, { color: number; width: number }>;
 

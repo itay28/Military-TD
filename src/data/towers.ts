@@ -14,20 +14,38 @@ export const TOWER_STATS = {
     targets: ['ground'],
     shell: { flightMs: 1000, innerRadius: 0.6, outerRadius: 1.25 },
   },
+  // Automatic grenade launcher (Mk 19, AGS-17/30, QLZ-87): fast bursts of small-blast grenades, direct fire, so no
+  // dead zone. A grenade flies as a Shell; armor comes off each hit, so tanks barely notice (#75).
+  grenadeLauncher: {
+    cost: 90,
+    range: 3,
+    fireRate: 1.5,
+    damage: 14,
+    targets: ['ground'],
+    shell: { flightMs: 400, innerRadius: 0.35, outerRadius: 0.7 },
+  },
 } as const satisfies Record<string, TowerStats>;
 
 export type TowerKind = keyof typeof TOWER_STATS;
 
 /**
+ * The kinds the player can build, in build-bar order. A kind waits outside it until its renders land (ADR-0009: no map
+ * mixes art styles); tests and headless scenarios can use any kind. The grenade launcher joins in #365.
+ */
+export const IN_PLAY_TOWERS: readonly TowerKind[] = ['rifleNest', 'aaGun', 'cannon', 'mortar'];
+
+/**
  * How fast each kind's turret turns toward its target, in radians per second; it fires only once it faces it
  * (within `AIM_TOLERANCE`). A soldier and a light AA mount swing fast, a heavy gun slowly.
- * `null`: the Mortar lobs shells (indirect fire), so it fires without turning.
+ * `null`: the Mortar lobs shells (indirect fire), so it fires without turning. The grenade launcher fires shells too,
+ * but aimed directly from a tripod, so it turns.
  */
 export const TURN_RATES: Record<TowerKind, number | null> = {
   rifleNest: 8 * Math.PI,
   aaGun: 3 * Math.PI,
   cannon: Math.PI / 2,
   mortar: null,
+  grenadeLauncher: 2 * Math.PI,
 };
 
 /** Seconds of look-ahead every turning kind gets, on top of the time a half turn takes it (see `trackHorizon`). */
@@ -78,5 +96,9 @@ export const TOWER_LEVELS = {
   mortar: [
     { ...TOWER_STATS.mortar, cost: 100, range: 5.5 },
     { ...TOWER_STATS.mortar, cost: 175, range: 5.5, fireRate: 0.625 / 1.5, damage: 64 },
+  ],
+  grenadeLauncher: [
+    { ...TOWER_STATS.grenadeLauncher, cost: 72, range: 3.5 },
+    { ...TOWER_STATS.grenadeLauncher, cost: 126, range: 3.5, fireRate: 1.875, damage: 22.4 },
   ],
 } as const satisfies Record<TowerKind, readonly TowerStats[]>;

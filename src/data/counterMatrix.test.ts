@@ -41,4 +41,11 @@ describe('counter matrix', () => {
     // Cannon vs Jeep: a 60-damage shell kills a 20-HP Jeep, so it counts 20.
     expect(efficiency('cannon', 'jeep')).toBeCloseTo((0.5 * 20) / 100);
   });
+
+  // The matrix scores a lone enemy, so it doesn't count the blast that makes the launcher good against groups.
+  it('does not count the grenade launcher an efficient counter to the Tank: armor eats each grenade (#75)', () => {
+    expect(efficientCounters('tank')).not.toContain('grenadeLauncher');
+    // 1.5 grenades/s × (14 − 8 armor) / 90 Money: the Tank barely notices.
+    expect(efficiency('grenadeLauncher', 'tank')).toBeCloseTo((1.5 * 6) / 90);
+  });
 });

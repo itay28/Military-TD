@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { TOWER_STATS, type TowerKind } from '../../src/data/towers';
+import { IN_PLAY_TOWERS, type TowerKind } from '../../src/data/towers';
 import { towerLevels } from '../../src/sim/towers';
 import { openGame, state, tileToScreen } from './helpers';
 
@@ -8,7 +8,7 @@ const VIEWPORTS = [
   { name: 'phone portrait', width: 390, height: 844 },
   { name: 'phone landscape', width: 844, height: 390 },
 ] as const;
-const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
+const KINDS = IN_PLAY_TOWERS;
 
 /** Selects tower `kind` (placed by the every-tower-kind scenario) at `level`, by commands and a click on its tile. */
 async function openPanel(page: Page, kind: TowerKind, level: number) {
