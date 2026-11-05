@@ -1,6 +1,7 @@
 import type { EnemyKind } from '../data/enemies';
 import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
+import type { DecalKind } from '../data/display';
 import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
 import type { Tile } from '../sim/map';
@@ -37,6 +38,8 @@ export interface TestView {
     readonly at: Pixel;
     readonly progress: number;
   }[];
+  /** The aftermath decals (wrecks, crash marks, craters, fallen infantry) drawn on the next frame; none with ?anim=0. */
+  readonly decals: readonly { readonly kind: DecalKind; readonly alpha: number }[];
   /**
    * The Ghost under the pointer: shown only while a mouse hovers, or a finger drags over, a tile with a build kind
    * selected. `tile` is null when it is hidden.
