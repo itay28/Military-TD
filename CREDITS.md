@@ -371,15 +371,6 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-03
 - Files: `assets/weapon-sounds/**`
 
-## 100 CC0 SFX
-
-- Author: rubberduck
-- Source: <https://opengameart.org/content/100-cc0-sfx>
-- License: CC0-1.0
-- Attribution: 100 CC0 SFX by rubberduck (OpenGameArt.org), CC0
-- Downloaded: 2026-11-02
-- Files: `assets/rubberduck-100-sfx/**`
-
 ## War on Water tracks
 
 - Author: yd
@@ -433,3 +424,12 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: IBM Plex Mono by IBM Corp., SIL Open Font License 1.1 (Regular and Bold)
 - Downloaded: 2026-11-05
 - Files: `assets/ibm-plex-mono/**`
+
+## Battlefield ambience
+
+- Author: Military-TD, from The Free Firearm Sound Library, EZduzziteh's Explosions, Kresiek The Furry's Radio Noise 1 and its radio voice takes
+- Source: <https://opengameart.org/content/the-free-firearm-sound-library>
+- License: CC0-1.0
+- Attribution: Built by scripts/ambience-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Explosions by EZduzziteh, Radio Noise 1 by Kresiek The Furry and the radio voice takes (voiced from Voiceover Pack by Kenney), with synthesized wind, all CC0
+- Downloaded: 2026-11-05
+- Files: `assets/battlefield-ambience/**`
