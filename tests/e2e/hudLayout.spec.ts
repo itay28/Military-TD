@@ -23,12 +23,15 @@ for (const viewport of [
   { width: 390, height: 844 },
   { width: 360, height: 740 },
   { width: 900, height: 560 },
+  // #354: the biggest text size on a phone wraps the stats and controls, but the buttons still keep their place.
+  { width: 400, height: 800, textSize: 150 as const },
+  { width: 900, height: 560, textSize: 150 as const },
 ]) {
-  test(`on ${viewport.width} × ${viewport.height}, the HUD and its buttons keep their place in every state`, async ({
+  test(`on ${viewport.width} × ${viewport.height}${viewport.textSize ? ` at ${viewport.textSize} %` : ''}, the HUD and its buttons keep their place in every state`, async ({
     page,
   }) => {
-    await page.setViewportSize(viewport);
-    await openGame(page);
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await openGame(page, { textSize: viewport.textSize });
     const initial = await layout(page);
     const states: string[] = [];
     const check = async (name: string) => {
