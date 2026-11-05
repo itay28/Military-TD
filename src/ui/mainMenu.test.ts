@@ -17,7 +17,7 @@ describe('Main menu', () => {
   it('shows the title and a Play, a Settings and a Credits button', () => {
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
     expect(root.hidden).toBe(false);
-    expect(root.querySelector('h1')?.textContent).toBe('Military TD');
+    expect(root.querySelector('h1')?.textContent).toBe('Hold the Perimeter');
     expect(button('Play')?.type).toBe('button');
     expect(button('Settings')?.type).toBe('button');
     expect(button('Credits')?.type).toBe('button');

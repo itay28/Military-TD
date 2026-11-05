@@ -25,7 +25,7 @@ export function mountMainMenu(
 ): MainMenu {
   const doc = root.ownerDocument;
   const title = doc.createElement('h1');
-  title.textContent = 'Military TD';
+  title.textContent = 'Hold the Perimeter';
   const play = doc.createElement('button');
   play.type = 'button';
   play.textContent = 'Play';

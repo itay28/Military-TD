@@ -46,8 +46,8 @@ test('on a short phone screen the Main menu title and last button can be scrolle
   await page.setViewportSize({ width: 667, height: 120 });
   await openMenu(page);
   const buttons = page.locator('#menu > button');
-  await page.getByRole('heading', { name: 'Military TD' }).scrollIntoViewIfNeeded();
-  await expect(page.getByRole('heading', { name: 'Military TD' })).toBeInViewport();
+  await page.getByRole('heading', { name: 'Hold the Perimeter' }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('heading', { name: 'Hold the Perimeter' })).toBeInViewport();
   await buttons.last().scrollIntoViewIfNeeded();
   await expect(buttons.last()).toBeInViewport();
   const scrolls = await page.evaluate(() => {
