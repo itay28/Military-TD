@@ -2,6 +2,7 @@ import { WAVE_BANNER_MS } from '../data/display';
 import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
+import { mountDpsMeter, type DpsMeterOptions } from './dpsMeter';
 
 /** The parts of the Game the HUD reads and commands. */
 export type HudGame = Pick<Game, 'state' | 'events' | 'callNextWave'>;
@@ -19,7 +20,7 @@ export interface Hud {
 }
 
 /** Builds the HUD inside `root` and shows `game` in it. It's DOM, not Phaser text, so tests can query it (ADR-0003). */
-export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud {
+export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsMeter: DpsMeterOptions = {}): Hud {
   const doc = root.ownerDocument;
   // Three fixed groups, so a text that appears or grows never moves a button (#274): the stats, a message slot that
   // takes the leftover space and clips, and the controls.
@@ -41,7 +42,14 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   const money = field('hud-money', stats);
   const lives = field('hud-lives', stats);
   const wave = field('hud-wave', stats);
-  const dps = field('hud-dps', stats);
+  // The DPS figure opens and closes the DPS meter, a panel under the HUD (#243).
+  const dps = doc.createElement('button');
+  dps.type = 'button';
+  dps.dataset.testid = 'hud-dps';
+  dps.className = 'hud-dps';
+  dps.setAttribute('aria-controls', 'dps-meter');
+  dps.setAttribute('aria-expanded', 'false');
+  stats.append(dps);
   const { tacticalMode } = game.state;
   // Timed mode (ADR-0011): waves come on their timers and this calls the next one in early. Tactical: it starts each.
   const callNextWave = doc.createElement('button');
@@ -63,6 +71,11 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   banner.className = 'hud-banner';
   banner.dataset.testid = 'wave-banner';
   message.append(banner);
+  const meter = mountDpsMeter(root, game, dpsMeter);
+  dps.addEventListener('click', () => {
+    meter.toggle();
+    dps.setAttribute('aria-expanded', String(meter.open));
+  });
   let bannerText = '';
   /** Sim time when the banner goes away; it shows until then. */
   let bannerUntilMs = 0;
@@ -101,6 +114,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     // slot at 900 px beside an overlap counter; the "cleared" banner follows it there when there's room.
     const { nextWaveAtMs } = state;
     setText(nextWave, nextWaveAtMs === undefined ? '' : `Next ${Math.ceil((nextWaveAtMs - state.timeMs) / 1000)}s`);
+    meter.update();
   };
   const offWaveCleared = game.events.on('waveCleared', ({ waveNumber }) => {
     bannerText = `Wave ${waveNumber} cleared`;
