@@ -66,6 +66,16 @@ export interface TestView {
     readonly frame: number;
   }[];
   /**
+   * The enemy card open now: the enemy it shows, its kind and the name it gives, and whether a tap pinned it (rather
+   * than a hovering mouse). Null when it is closed.
+   */
+  readonly enemyCard: {
+    readonly enemyId: number;
+    readonly kind: EnemyKind;
+    readonly name: string;
+    readonly pinned: boolean;
+  } | null;
+  /**
    * Each tower's turret angle in radians (0 east, −π/2 north), as turned so far toward its target. Tracked for every
    * tower, drawn only for one with a turret sprite.
    */

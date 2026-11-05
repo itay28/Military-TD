@@ -35,6 +35,7 @@ const EMPTY_VIEW: TestView = {
   sprites: true,
   mapTiles: 'sprites',
   enemies: [],
+  enemyCard: null,
   turrets: [],
   rendered: [],
 };
@@ -148,6 +149,7 @@ describe('createTestApi', () => {
       sprites: true,
       mapTiles: 'sprites' as const,
       enemies: [{ id: 3, kind: 'tank' as const, facing: Math.PI / 2, frame: 1 }],
+      enemyCard: { enemyId: 3, kind: 'tank' as const, name: 'Tank', pinned: true },
       turrets: [{ towerId: 1, angle: -Math.PI / 2 }],
       rendered: ['aaGun' as const],
     };
