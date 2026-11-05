@@ -1255,19 +1255,45 @@ describe('decide: the cause of each wait (#419)', () => {
     expect(cause(decide(pr({ closes: [{ number: 3, blocked: true, needsInfo: false }] }), now))).toBe('blocked');
     expect(cause(decide(pr({ closes: [{ number: 3, blocked: false, needsInfo: true }] }), now))).toBe('needs-info');
     expect(
-      cause(decide(pr({ closes: [{ number: 3, blocked: false, needsInfo: false, milestone: { number: 4, title: 'v0.3.0' } }] }), now, 'main', v02)),
+      cause(
+        decide(
+          pr({ closes: [{ number: 3, blocked: false, needsInfo: false, milestone: { number: 4, title: 'v0.3.0' } }] }),
+          now,
+          'main',
+          v02,
+        ),
+      ),
     ).toBe('milestone');
     expect(cause(decide(pr(), now, 'main', null, { issue: null }))).toBe('main-ci');
   });
 
   it('waits on the maintainer for a release PR to merge by hand, and on CI for one that is running', () => {
     const release = (over: Partial<StewardPr> = {}) =>
-      pr({ title: 'chore(main): release 0.1.2', head: 'release-please--branches--main', closes: [], comments: [], ...over });
+      pr({
+        title: 'chore(main): release 0.1.2',
+        head: 'release-please--branches--main',
+        closes: [],
+        comments: [],
+        ...over,
+      });
     expect(cause(decide(release(), now, 'main', v02))).toBe('release');
     expect(
-      cause(decide(release({ title: 'chore(main): release 0.2.0', checks: [{ name: 'ci', state: 'pending' }] }), now, 'main', v02)),
+      cause(
+        decide(
+          release({ title: 'chore(main): release 0.2.0', checks: [{ name: 'ci', state: 'pending' }] }),
+          now,
+          'main',
+          v02,
+        ),
+      ),
     ).toBe('checks');
-    const report = pr({ title: 'chore: release 0.2.0', head: 'chore/release-0.2.0', body: 'Refs #160', closes: [], comments: [] });
+    const report = pr({
+      title: 'chore: release 0.2.0',
+      head: 'chore/release-0.2.0',
+      body: 'Refs #160',
+      closes: [],
+      comments: [],
+    });
     expect(cause(decide(report, now, 'main', { ...v02, done: true }))).toBe('release');
   });
 });
@@ -1295,11 +1321,10 @@ describe('labelChanges', () => {
 describe('applyStatusLabel', () => {
   it('adds the new label and removes the stale one', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
-    expect(await applyStatusLabel(pr({ labels: ['waiting: agent'] }), 'ready to merge', 'gh-token', fetchFn)).toBe(true);
-    expect(calls(fetchFn)).toEqual([
-      `POST ${api}/issues/7/labels`,
-      `DELETE ${api}/issues/7/labels/waiting%3A%20agent`,
-    ]);
+    expect(await applyStatusLabel(pr({ labels: ['waiting: agent'] }), 'ready to merge', 'gh-token', fetchFn)).toBe(
+      true,
+    );
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/labels`, `DELETE ${api}/issues/7/labels/waiting%3A%20agent`]);
     expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string)).toEqual({ labels: ['ready to merge'] });
   });
 
