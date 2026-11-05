@@ -11,4 +11,5 @@ playwright/.cache/
 .env*.local
 .cache/
 .venv-art/
+.venv-voice/
 __pycache__/

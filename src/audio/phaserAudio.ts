@@ -14,16 +14,22 @@ export function soundKey(id: SoundId): string {
 }
 
 /**
- * Plays sounds through Phaser. Silent while audio is locked (so nothing bursts out at the first input), for a sound whose
- * file didn't load (`isLoaded` false), and on any playback error: sound never breaks the game.
+ * Plays sounds through Phaser at `volume()` (0–1, the SFX channel of the mix, #67), read at each play. Silent at volume
+ * 0, while audio is locked (so nothing bursts out at the first input), for a sound whose file didn't load (`isLoaded`
+ * false), and on any playback error: sound never breaks the game.
  */
-export function createPhaserAudio(sound: SoundManagerLike, isLoaded: (key: string) => boolean): AudioOut {
+export function createPhaserAudio(
+  sound: SoundManagerLike,
+  isLoaded: (key: string) => boolean,
+  volume: () => number,
+): AudioOut {
   return {
-    play(id, volume = 1) {
+    play(id, gain = 1) {
       const key = soundKey(id);
-      if (sound.locked || !isLoaded(key)) return;
+      const level = volume();
+      if (level <= 0 || sound.locked || !isLoaded(key)) return;
       try {
-        sound.play(key, { volume });
+        sound.play(key, { volume: level * gain });
       } catch {
         // A blocked or undecodable file: stay silent.
       }

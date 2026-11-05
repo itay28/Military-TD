@@ -32,15 +32,19 @@ describe('createPersistedSettings', () => {
     const storage = createMemoryStorage();
     const settings = createPersistedSettings(storage);
     settings.set({ defaultSpeed: 2 });
-    expect(saved(storage)).toEqual({ version: SETTINGS_VERSION, settings: { defaultSpeed: 2, showAllRanges: false } });
+    expect(saved(storage)).toEqual({ version: SETTINGS_VERSION, settings: { ...DEFAULT_SETTINGS, defaultSpeed: 2 } });
     settings.set({ showAllRanges: true });
-    expect(saved(storage)).toEqual({ version: SETTINGS_VERSION, settings: { defaultSpeed: 2, showAllRanges: true } });
+    expect(saved(storage)).toEqual({
+      version: SETTINGS_VERSION,
+      settings: { ...DEFAULT_SETTINGS, defaultSpeed: 2, showAllRanges: true },
+    });
   });
 
   it('loads the saved settings at boot', () => {
     const storage = createMemoryStorage();
-    createPersistedSettings(storage).set({ defaultSpeed: 3, showAllRanges: true });
-    expect(createPersistedSettings(storage).get()).toEqual({ defaultSpeed: 3, showAllRanges: true });
+    const chosen = { defaultSpeed: 3, showAllRanges: true, masterVolume: 50, musicVolume: 0, sfxVolume: 100 } as const;
+    createPersistedSettings(storage).set(chosen);
+    expect(createPersistedSettings(storage).get()).toEqual(chosen);
   });
 
   it('does not save a change that set rejects', () => {
@@ -81,16 +85,39 @@ describe('loadSettings', () => {
     expect(loadSettings(withRaw(raw))).toEqual(DEFAULT_SETTINGS);
   });
 
+  const v2 = (settings: object) => withRaw(JSON.stringify({ version: 2, settings }));
+
   it('falls back to the default field by field', () => {
-    const raw = JSON.stringify({ version: 1, settings: { defaultSpeed: 4, showAllRanges: true } });
-    expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 1, showAllRanges: true });
-    const raw2 = JSON.stringify({ version: 1, settings: { defaultSpeed: 3, showAllRanges: 'yes' } });
-    expect(loadSettings(withRaw(raw2))).toEqual({ defaultSpeed: 3, showAllRanges: false });
+    expect(loadSettings(v2({ defaultSpeed: 4, showAllRanges: true }))).toEqual({
+      ...DEFAULT_SETTINGS,
+      showAllRanges: true,
+    });
+    expect(loadSettings(v2({ defaultSpeed: 3, showAllRanges: 'yes' }))).toEqual({
+      ...DEFAULT_SETTINGS,
+      defaultSpeed: 3,
+    });
+  });
+
+  it('clamps an out-of-range volume to 0–100 and rounds it to a whole number', () => {
+    expect(loadSettings(v2({ masterVolume: 150, musicVolume: -5, sfxVolume: 42.6 }))).toEqual({
+      ...DEFAULT_SETTINGS,
+      masterVolume: 100,
+      musicVolume: 0,
+      sfxVolume: 43,
+    });
+  });
+
+  it.each([
+    ['a string', '50'],
+    ['null', null],
+    ['NaN (saved as null)', Number.NaN],
+    ['a boolean', true],
+  ])('gives a volume that is %s its default', (_name, value) => {
+    expect(loadSettings(v2({ masterVolume: value, musicVolume: value, sfxVolume: value }))).toEqual(DEFAULT_SETTINGS);
   });
 
   it('drops unknown fields', () => {
-    const raw = JSON.stringify({ version: 1, settings: { defaultSpeed: 2, volume: 11 } });
-    expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 2, showAllRanges: false });
+    expect(loadSettings(v2({ defaultSpeed: 2, volume: 11 }))).toEqual({ ...DEFAULT_SETTINGS, defaultSpeed: 2 });
   });
 
   it('returns the defaults for a version newer than this build knows', () => {
@@ -98,9 +125,14 @@ describe('loadSettings', () => {
     expect(loadSettings(withRaw(raw))).toEqual(DEFAULT_SETTINGS);
   });
 
+  it('migrates a v1 save: its speed and ranges stay, the volumes take their defaults', () => {
+    const raw = JSON.stringify({ version: 1, settings: { defaultSpeed: 3, showAllRanges: true } });
+    expect(loadSettings(withRaw(raw))).toEqual({ ...DEFAULT_SETTINGS, defaultSpeed: 3, showAllRanges: true });
+  });
+
   it('migrates an older version', () => {
     const raw = JSON.stringify({ version: 0, settings: { defaultSpeed: 3, showAllRanges: true } });
-    expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 3, showAllRanges: true });
+    expect(loadSettings(withRaw(raw))).toEqual({ ...DEFAULT_SETTINGS, defaultSpeed: 3, showAllRanges: true });
   });
 
   it('returns the defaults when reading storage throws', () => {
@@ -109,10 +141,30 @@ describe('loadSettings', () => {
 });
 
 describe('migrate', () => {
-  it('brings an older version up to the current one (v1 has nothing to change)', () => {
-    const data = { defaultSpeed: 2, showAllRanges: true };
-    expect(migrate(0, data)).toEqual(data);
-    expect(migrate(SETTINGS_VERSION, data)).toEqual(data);
+  it('is at version 2, the first with volumes', () => {
+    expect(SETTINGS_VERSION).toBe(2);
+  });
+
+  it('brings v1 (and v0) up to v2 by adding the default volumes', () => {
+    const v1 = { defaultSpeed: 2, showAllRanges: true };
+    const v2 = { ...v1, masterVolume: 80, musicVolume: 60, sfxVolume: 80 };
+    expect(migrate(1, v1)).toEqual(v2);
+    expect(migrate(0, v1)).toEqual(v2);
+  });
+
+  it('keeps a v1 save’s other fields for sanitize to judge, and leaves a v2 save as it is', () => {
+    expect(migrate(1, { defaultSpeed: 9 })).toEqual({
+      defaultSpeed: 9,
+      masterVolume: 80,
+      musicVolume: 60,
+      sfxVolume: 80,
+    });
+    const data = { defaultSpeed: 2, showAllRanges: true, masterVolume: 1, musicVolume: 2, sfxVolume: 3 };
+    expect(migrate(2, data)).toEqual(data);
+  });
+
+  it('passes a v1 save that is not an object on, for sanitize to replace', () => {
+    expect(migrate(1, 'fast')).toBe('fast');
   });
 
   it('refuses a newer or malformed version', () => {

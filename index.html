@@ -760,6 +760,29 @@
         height: 18px;
         margin: 0;
       }
+      /* A volume slider (#67): its name and value on one line, the slider full width under them. */
+      #settings .volume {
+        display: grid;
+        grid-template-areas: 'name value' 'slider slider';
+        grid-template-columns: 1fr auto;
+        gap: 4px 12px;
+      }
+      #settings .volume label {
+        grid-area: name;
+      }
+      #settings .volume output {
+        grid-area: value;
+        min-width: 4ch;
+        text-align: right;
+        color: #c2a46b;
+      }
+      #settings .volume input {
+        grid-area: slider;
+        width: 100%;
+        min-width: 200px;
+        height: 24px;
+        cursor: pointer;
+      }
       #settings button {
         align-self: center;
         width: 160px;

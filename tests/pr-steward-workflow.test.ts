@@ -73,3 +73,23 @@ describe('PR steward workflow: debounce', () => {
     expect(yaml).toMatch(/^ {4}needs: debounce\n {4}if: needs\.debounce\.outputs\.go == 'true'\n/m);
   });
 });
+
+// Status labels follow within one run, not the hourly sweep (#419).
+describe('PR steward workflow: freshness of the status labels', () => {
+  const debounce = yaml.slice(yaml.indexOf('\n  debounce:\n'), yaml.indexOf('\n  pr-steward:\n'));
+
+  it('runs when a PR turns draft or ready or closes, and on issue label, milestone and close changes', () => {
+    expect(yaml).toMatch(/^ {2}pull_request:\n {4}types: \[converted_to_draft, ready_for_review, closed\]\n/m);
+    expect(yaml).toMatch(/^ {2}issues:\n {4}types: \[labeled, unlabeled, milestoned, demilestoned, closed\]\n/m);
+  });
+
+  // Its own label writes on PRs would wake it again.
+  it('does not run on PR label changes', () => {
+    expect(yaml).not.toMatch(/^ {2}pull_request:\n {4}types: \[[^\]]*\blabeled\b/m);
+  });
+
+  it("lets through the maintainer's comment on a needs-info issue, and skips fork PR events", () => {
+    expect(debounce).toContain("contains(github.event.issue.labels.*.name, 'needs-info')");
+    expect(debounce).toContain("(github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)");
+  });
+});
