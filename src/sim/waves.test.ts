@@ -97,6 +97,15 @@ describe('validateWaves', () => {
     expect(() => validateWaves([ok, { groups: [] }])).toThrow(new RangeError('wave 2: has no groups'));
   });
 
+  it.each([Number.NaN, -1, Number.POSITIVE_INFINITY])(
+    'rejects a wave whose afterMs is %s, naming the wave',
+    (afterMs) => {
+      expect(() => validateWaves([ok, { ...ok, afterMs }])).toThrow(
+        new RangeError(`wave 2: afterMs ${afterMs} ms is not a finite, non-negative time`),
+      );
+    },
+  );
+
   it.each([
     ['count 0', { count: 0 }, /^wave 2, group 2: count 0 /],
     ['a fractional count', { count: 2.5 }, /^wave 2, group 2: count 2\.5 /],

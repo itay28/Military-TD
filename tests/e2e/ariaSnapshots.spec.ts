@@ -13,7 +13,7 @@ async function expectAria(locator: Locator, name: string) {
   expect(`${await locator.ariaSnapshot()}\n`).toMatchSnapshot([name]);
 }
 
-test('the HUD at the start shows Money, Lives, Wave, DPS and a Start Wave button that is not disabled', async ({
+test('the HUD at the start shows Money, Lives, Wave, DPS, the countdown and a Call next wave button that is not disabled', async ({
   page,
 }) => {
   await openGame(page);
@@ -74,7 +74,7 @@ test('the Level select lists each map by name and best stars, then Back', async 
 test('the End screen after a won one-wave game shows the result and the damage report tables', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await stepToEnd(page);
   await expectAria(page.locator('#end-screen'), 'end-screen-victory.aria.yml');
 });

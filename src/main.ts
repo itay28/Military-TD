@@ -98,7 +98,7 @@ const game = new Phaser.Game({
   scene: [
     new BootScene(flags),
     new MenuScene({ app, menuRoot, openSettings, openHowToPlay }),
-    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
+    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll, settings }),
     gameScene,
   ],
 });

@@ -50,7 +50,7 @@
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 4px 20px;
+        gap: 4px 12px;
         box-sizing: border-box;
         min-height: 36px;
         padding: 0 8px;
@@ -60,7 +60,7 @@
       #hud .hud-stats {
         display: flex;
         flex: none;
-        gap: 12px;
+        gap: 8px;
       }
       /* Fixed widths, so Money 100 → 75 or DPS – → DPS 12 doesn't shift its neighbours. */
       #hud .hud-stats > span {
@@ -68,7 +68,7 @@
         white-space: nowrap;
       }
       #hud [data-testid='hud-money'] {
-        min-width: 11ch;
+        min-width: 10ch;
       }
       #hud [data-testid='hud-lives'] {
         min-width: 8ch;
@@ -88,10 +88,12 @@
         white-space: nowrap;
         text-overflow: ellipsis;
       }
+      /* Inline, one after the other: the countdown first, so it shows whole; the banner after it, cut off if need be. */
       #hud .hud-message > * {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        display: inline;
+      }
+      #hud .hud-message > :not(:empty) + * {
+        margin-left: 1ch;
       }
       #hud .hud-banner {
         color: #f0c95a;
@@ -357,6 +359,10 @@
         #hud .hud-stats {
           flex-wrap: wrap;
           gap: 2px 8px;
+        }
+        /* Room for "Waves 10–11 / 12" (overlapping waves), so the stats don't re-wrap when a second wave arrives. */
+        #hud [data-testid='hud-wave'] {
+          min-width: 14ch;
         }
         #hud .hud-controls {
           order: 1;

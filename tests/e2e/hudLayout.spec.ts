@@ -1,19 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
-import { TICK_MS } from '../../src/sim/game';
-import { AUTO_START_DELAY_MS } from '../../src/data/waves';
 import { clickTile, openGame, selectKind } from './helpers';
 
 const BESIDE_PATH = { col: 1, row: 3 };
 const SECOND_BESIDE_PATH = { col: 2, row: 3 };
-const DELAY_TICKS = Math.round(AUTO_START_DELAY_MS / TICK_MS);
 
 type Box = { x: number; y: number; width: number; height: number };
 
 /** The boxes of the HUD and of each of its buttons, by name. */
 async function layout(page: Page): Promise<Record<string, Box | null>> {
   const boxes: Record<string, Box | null> = { hud: await page.locator('#hud').boundingBox() };
-  for (const id of ['start-wave', 'auto-start', 'game-speed', 'pause'])
-    boxes[id] = await page.getByTestId(id).boundingBox();
+  for (const id of ['start-wave', 'game-speed', 'pause']) boxes[id] = await page.getByTestId(id).boundingBox();
   return boxes;
 }
 
@@ -40,10 +36,8 @@ for (const viewport of [
     };
     const step = (ticks: number) => page.evaluate((n) => window.__TD__!.step(n), ticks);
 
-    await page.getByTestId('auto-start').click();
-    await check('Auto-start on');
-    await page.getByTestId('auto-start').click();
-    await check('Auto-start off');
+    await expect(page.getByTestId('hud-next-wave')).toHaveText(/^Next \d+s$/);
+    await check('build window countdown');
     await selectKind(page);
     await clickTile(page, BESIDE_PATH);
     await check('a tower bought');
@@ -53,9 +47,8 @@ for (const viewport of [
       await page.getByTestId(`game-speed-${i + 1}`).click();
       await check(`game speed ${i + 1}`);
     }
-    await page.getByTestId('auto-start').click();
     await page.getByTestId('start-wave').click();
-    await check('wave started');
+    await check('wave called in');
     await step(60);
     await check('mid-wave');
     await page.evaluate(() => {
@@ -64,13 +57,13 @@ for (const viewport of [
     });
     await expect(page.getByTestId('wave-banner')).toHaveText(/cleared/);
     await check('wave cleared (banner up)');
-    await page.evaluate(() => window.__TD__!.step(1));
-    await step(DELAY_TICKS - 100);
-    await expect(page.getByTestId('hud-next-wave')).toHaveText(/Next wave in/);
+    await expect(page.getByTestId('hud-next-wave')).toHaveText(/^Next \d+s$/);
     await check('countdown showing');
-    await step(200);
-    await expect(page.getByTestId('hud-wave')).toHaveText(/^Wave 2 \//);
-    await check('the next wave auto-started');
-    expect(states).toHaveLength(12);
+    // Two calls in a row put waves 2 and 3 on the field together.
+    await page.getByTestId('start-wave').click();
+    await page.getByTestId('start-wave').click();
+    await expect(page.getByTestId('hud-wave')).toHaveText(/^Waves 2–3 \//);
+    await check('two waves overlapping');
+    expect(states).toHaveLength(11);
   });
 }

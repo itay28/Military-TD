@@ -574,14 +574,17 @@ export class GameScene extends Phaser.Scene {
     this.allRingIds = [];
     this.allRingsKey = '';
     this.ghost = undefined;
-    this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
+    // Tactical mode is fixed for the game, from the settings when it starts; a loaded scenario can set its own.
+    const { tacticalMode } = this.settings.get();
+    this.sim = setUpGame({ map: mapById(this.mapId).data, tacticalMode, ...this.setup });
     this.result = undefined;
     // A Victory records its Stars against the map played (a loaded scenario's own map included); Defeat records nothing.
     const { lives: startLives, map } = this.sim.state;
     this.sim.events.on('victory', ({ lives }) => {
       // Victory always leaves Lives, so at least 1 star.
-      const stars = starsFor(lives, startLives);
-      if (stars !== 0) this.result = this.recordWin(map.id, stars);
+      const tactical = this.sim.state.tacticalMode;
+      const stars = starsFor(lives, startLives, { tactical });
+      if (stars !== 0) this.result = { ...this.recordWin(map.id, stars), ...(tactical ? { tactical } : {}) };
     });
     this.gameSpeed = this.settings.get().defaultSpeed;
     this.mapTiles = this.drawMapView();
