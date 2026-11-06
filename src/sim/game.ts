@@ -1,9 +1,10 @@
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, SELL_REFUND, START_HEADING, TOWER_STATS, type TowerKind } from '../data/towers';
 import { AUTO_START_DELAY_MS } from '../data/waves';
+import { coverageIntervals } from './coverage';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { createMap, type GameMap, type MapData, type Position, type Tile } from './map';
+import { createMap, tileCenter, type GameMap, type MapData, type Position, type Tile } from './map';
 import { createShell, landShells, type Shell, type ShellLanding } from './shells';
 import {
   addTower,
@@ -16,7 +17,7 @@ import {
   withWaveElapsed,
   type CombatStats,
 } from './stats';
-import { fireTowers, nextLevel, towerAt, type Shot, type Tower } from './towers';
+import { fireTowers, nextLevel, towerAt, type Shot, type Tower, type TowerStats } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
 /** The one fixed step, in ms. The Game scene and the scenario runner both tick with it. */
@@ -84,7 +85,8 @@ export interface GameEvents {
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
   /** A tower finished dismantling and left `tile`. `refund` is the Money it gave back, already in `state.money`. */
   towerSold: { readonly towerId: number; readonly tile: Tile; readonly refund: number };
-  waveStarted: { readonly waveNumber: number };
+  /** A wave began. `holdovers` is how many enemies were already on the field before its first spawn. */
+  waveStarted: { readonly waveNumber: number; readonly holdovers: number };
   /** Every enemy of the wave has spawned and none is left alive. */
   waveCleared: { readonly waveNumber: number };
   /** The last wave was cleared with Lives left. The game is over. */
@@ -159,6 +161,9 @@ export function createGame(config: GameConfig): Game {
   const map = createMap(config.map);
   validateWaves(config.waves);
   const line = createPathLine(map.waypointPositions);
+  /** The Path stretches a tower on `tile` with `stats` can fire on, for pre-aiming. */
+  const coverageOf = (tile: Tile, { range, minRange }: Pick<TowerStats, 'range' | 'minRange'>) =>
+    coverageIntervals(line, tileCenter(tile), range, minRange);
   const state: { -readonly [K in keyof GameState]: GameState[K] } & {
     enemies: Enemy[];
     towers: Tower[];
@@ -204,8 +209,9 @@ export function createGame(config: GameConfig): Game {
     state.autoStartAtMs = undefined;
     state.stats = resetWave(state.stats);
     state.waveNumber++;
+    const holdovers = state.enemies.length;
     state.enemies.push(...wave.schedule.take(0).map((spawn) => createEnemy(spawn.kind)));
-    emitter.emit('waveStarted', { waveNumber: state.waveNumber });
+    emitter.emit('waveStarted', { waveNumber: state.waveNumber, holdovers });
     return { ok: true };
   };
 
@@ -358,6 +364,7 @@ export function createGame(config: GameConfig): Game {
         level: 1,
         spent: stats.cost,
         heading: START_HEADING,
+        coverage: coverageOf(tile, stats),
       });
       return { ok: true, towerId };
     },
@@ -367,7 +374,13 @@ export function createGame(config: GameConfig): Game {
       if (!allowed.ok) return allowed;
       const { tower, next } = allowed;
       const { cost, ...stats } = next;
-      const upgraded: Tower = { ...tower, ...stats, level: tower.level + 1, spent: tower.spent + cost };
+      const upgraded: Tower = {
+        ...tower,
+        ...stats,
+        level: tower.level + 1,
+        spent: tower.spent + cost,
+        coverage: coverageOf(tower.tile, stats),
+      };
       state.money -= cost;
       state.towers = state.towers.map((t) => (t.id === towerId ? upgraded : t));
       return { ok: true, level: upgraded.level };

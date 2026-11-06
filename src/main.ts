@@ -1,4 +1,8 @@
 import Phaser from 'phaser';
+import { createMusicController } from './audio/music';
+import { createPhaserMusicBackend, type LoopingSound } from './audio/phaserMusic';
+import { MUSIC_REGISTRY_KEY } from './audio/radio';
+import { createAudioMix } from './audio/volume';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
@@ -6,8 +10,11 @@ import { MenuScene } from './scenes/MenuScene';
 import { createPersistedProgress } from './progress/persist';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
+import { applyDisplaySettings, prefersReducedMotion } from './settings/display';
 import { browserStorage, createMemoryStorage, createPersistedSettings } from './settings/persist';
+import { defaultSettings } from './settings/settings';
 import { SCENARIOS } from './testing/scenarios';
+import { mountHowToPlay, type OpenHowToPlay } from './ui/howToPlay';
 import { mountSettingsScreen, type OpenSettings } from './ui/settingsScreen';
 import { showVersion } from './ui/version';
 
@@ -35,14 +42,26 @@ if (!menuRoot) throw new Error('index.html has no #menu element');
 const settingsRoot = document.getElementById('settings');
 if (!settingsRoot) throw new Error('index.html has no #settings element');
 
+const howToPlayRoot = document.getElementById('how-to-play');
+if (!howToPlayRoot) throw new Error('index.html has no #how-to-play element');
+
 const flags = parseTestFlags(window.location.search);
 // One set of settings, shared by both menus and every game, saved between visits. Test mode keeps them in memory
 // unless ?persist=1, so e2e runs don't leak into each other.
 const storage = flags.test && !flags.persist ? createMemoryStorage() : browserStorage();
-const settings = createPersistedSettings(storage);
+// Reduced motion defaults to the system's preference until the player picks (#354).
+const settings = createPersistedSettings(
+  storage,
+  defaultSettings({ prefersReducedMotion: prefersReducedMotion(window) }),
+);
+// Text size and reduced motion apply to the whole page, and follow every change.
+applyDisplaySettings(settings, document.documentElement);
 // Saved progress (maps won, best stars) lives under its own key: the Game records wins, the Level select unlocks from it.
 const progress = createPersistedProgress(storage);
+// Volume (#67): master × channel from the settings, silent while the tab is hidden. Music and sound effects both read it.
+const audioMix = createAudioMix(settings, document);
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
+const openHowToPlay: OpenHowToPlay = (onBack) => mountHowToPlay(howToPlayRoot, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
@@ -55,7 +74,9 @@ const gameScene = new GameScene({
   pauseMenuRoot,
   flags,
   settings,
+  audioMix,
   openSettings,
+  openHowToPlay,
   progress,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {
@@ -76,7 +97,7 @@ const game = new Phaser.Game({
   backgroundColor: '#1b1e16',
   scene: [
     new BootScene(flags),
-    new MenuScene({ app, menuRoot, openSettings }),
+    new MenuScene({ app, menuRoot, openSettings, openHowToPlay }),
     new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
     gameScene,
   ],
@@ -85,3 +106,33 @@ const game = new Phaser.Game({
 new ResizeObserver(() => {
   if (game.scale.getParentBounds()) game.scale.refresh();
 }).observe(gameRoot);
+
+// Music (#66): each scene's track, crossfaded on a change, from the first input on (browsers block audio before it).
+// Test mode is muted, so e2e runs and scenarios are unchanged.
+const music = createMusicController(
+  createPhaserMusicBackend({
+    add: (key, config) => game.sound.add(key, config) as unknown as LoopingSound,
+    has: (key) => game.cache.audio.exists(key),
+    now: () => performance.now(),
+    every: (tick) => {
+      const id = window.setInterval(tick, 50);
+      return () => window.clearInterval(id);
+    },
+  }),
+  { muted: flags.test, volume: () => audioMix.volume('music') },
+);
+// The Game scene ducks the music under its radio cues (#396).
+game.registry.set(MUSIC_REGISTRY_KEY, music);
+audioMix.subscribe(() => music.refreshVolume());
+game.events.once(Phaser.Core.Events.READY, () => {
+  for (const scene of game.scene.getScenes(false)) {
+    scene.events.on(Phaser.Scenes.Events.START, () => music.enterScene(scene.scene.key));
+  }
+});
+const unlockMusic = (): void => {
+  music.unlock();
+  window.removeEventListener('pointerdown', unlockMusic);
+  window.removeEventListener('keydown', unlockMusic);
+};
+window.addEventListener('pointerdown', unlockMusic);
+window.addEventListener('keydown', unlockMusic);

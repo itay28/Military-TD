@@ -2,6 +2,7 @@ import { WAVE_BANNER_MS } from '../data/display';
 import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
+import { mountDpsMeter, type DpsMeterOptions } from './dpsMeter';
 
 /** The parts of the Game the HUD reads and commands. */
 export type HudGame = Pick<Game, 'state' | 'events' | 'startWave' | 'setAutoStart'>;
@@ -12,6 +13,8 @@ export type HudSpeed = GameSpeedControl;
 export interface Hud {
   /** The group holding the HUD's buttons; the pause menu adds its Pause button here. */
   readonly controls: HTMLElement;
+  /** What a click on Start Wave does (the Space key): nothing while it is disabled. */
+  startWave(): void;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
   /** Removes the HUD's elements and unsubscribes from game events. */
@@ -19,7 +22,7 @@ export interface Hud {
 }
 
 /** Builds the HUD inside `root` and shows `game` in it. It's DOM, not Phaser text, so tests can query it (ADR-0003). */
-export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud {
+export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsMeter: DpsMeterOptions = {}): Hud {
   const doc = root.ownerDocument;
   // Three fixed groups, so a text that appears or grows never moves a button (#274): the stats, a message slot that
   // takes the leftover space and clips, and the controls.
@@ -41,7 +44,14 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   const money = field('hud-money', stats);
   const lives = field('hud-lives', stats);
   const wave = field('hud-wave', stats);
-  const dps = field('hud-dps', stats);
+  // The DPS figure opens and closes the DPS meter, a panel under the HUD (#243).
+  const dps = doc.createElement('button');
+  dps.type = 'button';
+  dps.dataset.testid = 'hud-dps';
+  dps.className = 'hud-dps';
+  dps.setAttribute('aria-controls', 'dps-meter');
+  dps.setAttribute('aria-expanded', 'false');
+  stats.append(dps);
   const startWave = doc.createElement('button');
   startWave.type = 'button';
   startWave.dataset.testid = 'start-wave';
@@ -68,6 +78,11 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   banner.className = 'hud-banner';
   banner.dataset.testid = 'wave-banner';
   message.append(banner);
+  const meter = mountDpsMeter(root, game, dpsMeter);
+  dps.addEventListener('click', () => {
+    meter.toggle();
+    dps.setAttribute('aria-expanded', String(meter.open));
+  });
   let bannerText = '';
   /** Sim time when the banner goes away; it shows until then. */
   let bannerUntilMs = 0;
@@ -101,16 +116,19 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
     const { autoStartAtMs } = state;
     const counting = autoStartAtMs !== undefined && !showBanner;
     setText(nextWave, counting ? `Next wave in ${Math.ceil((autoStartAtMs - state.timeMs) / 1000)}` : '');
+    meter.update();
   };
   const offWaveCleared = game.events.on('waveCleared', ({ waveNumber }) => {
     bannerText = `Wave ${waveNumber} cleared`;
     bannerUntilMs = game.state.timeMs + WAVE_BANNER_MS;
   });
   // The sim decides; a refused start changes nothing. Redraw at once so a second click can't land first.
-  startWave.addEventListener('click', () => {
+  const onStartWave = () => {
+    if (startWave.disabled) return;
     game.startWave();
     update();
-  });
+  };
+  startWave.addEventListener('click', onStartWave);
   autoStart.addEventListener('click', () => {
     game.setAutoStart(!game.state.autoStart);
     update();
@@ -118,6 +136,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed): Hud
   update();
   return {
     controls,
+    startWave: onStartWave,
     update,
     destroy() {
       offWaveCleared();

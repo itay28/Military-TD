@@ -1,6 +1,16 @@
 import Phaser from 'phaser';
 import atlasJsonUrl from '../../assets/atlas/sprites.json?url';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
+import gameMp3Url from '../../assets/yd-war-on-water/game.mp3';
+import gameOggUrl from '../../assets/yd-war-on-water/game.ogg';
+import menuMp3Url from '../../assets/yd-war-on-water/menu.mp3';
+import menuOggUrl from '../../assets/yd-war-on-water/menu.ogg';
+import ambientMp3Url from '../../assets/battlefield-ambience/ambient.mp3';
+import ambientOggUrl from '../../assets/battlefield-ambience/ambient.ogg';
+import combatMp3Url from '../../assets/battlefield-ambience/combat.mp3';
+import combatOggUrl from '../../assets/battlefield-ambience/combat.ogg';
+import type { TrackId } from '../audio/music';
+import { musicKey } from '../audio/phaserMusic';
 import { groundTextureKey, MAPS } from '../data/maps';
 import { RENDERS } from '../data/renders';
 import { SOUND_URLS } from '../data/sounds';
@@ -9,10 +19,19 @@ import { SOUND_IDS } from '../audio/sounds';
 import { ATLAS_KEY } from '../data/sprites';
 import { firstScene, type TestFlags } from '../testing/flags';
 
+/** Each track's files (music, and the battlefield ambience #405), OGG first. */
+const TRACK_URLS: Record<TrackId, string[]> = {
+  menu: [menuOggUrl, menuMp3Url],
+  game: [gameOggUrl, gameMp3Url],
+  ambient: [ambientOggUrl, ambientMp3Url],
+  combat: [combatOggUrl, combatMp3Url],
+};
+
 /**
  * First scene. Preloads the sprite atlas, the rendered sprites, each map's ground image and the sounds, then goes to the
  * Main menu, or the Game in test mode. A failed load doesn't stop the game: the Game scene draws the tileset for a missing
- * ground image, shapes for any sprite it can't find, and stays silent for a sound that didn't load.
+ * ground image, shapes for any sprite it can't find, and stays silent for a sound that didn't load. Music (#66) and the
+ * battlefield ambience (#405) load too; a track that fails to load stays silent.
  */
 export class BootScene extends Phaser.Scene {
   private readonly flags: TestFlags;
@@ -32,9 +51,11 @@ export class BootScene extends Phaser.Scene {
       this.load.image(render.hullKey, render.hullUrl);
       this.load.image(render.turretKey, render.turretUrl);
     }
-    // Test mode is silent (#45), so it skips the sound files too.
+    // Test mode is silent (#45, #66), so it skips the sound and music files too.
     if (!this.flags.test) {
       for (const id of SOUND_IDS) this.load.audio(soundKey(id), SOUND_URLS[id]);
+      // OGG first; Phaser falls back to the MP3 on a browser without OGG Vorbis (older Safari).
+      for (const [track, urls] of Object.entries(TRACK_URLS)) this.load.audio(musicKey(track as TrackId), urls);
     }
   }
 

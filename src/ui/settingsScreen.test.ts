@@ -69,10 +69,52 @@ describe('mountSettingsScreen', () => {
     expect(settings.get().showAllRanges).toBe(false);
   });
 
-  it('has no volume controls (#67)', () => {
-    mount();
-    expect(root.querySelector('input[type="range"]')).toBeNull();
-    expect(root.textContent).not.toMatch(/volume/i);
+  describe('volume sliders (#67)', () => {
+    const sliders = () => [...root.querySelectorAll<HTMLInputElement>('input[type="range"]')];
+    const nameOf = (input: HTMLInputElement) => root.querySelector(`label[for="${input.id}"]`)?.textContent;
+    const slider = (name: string) => sliders().find((input) => nameOf(input) === name)!;
+    const slide = (input: HTMLInputElement, value: number) => {
+      input.value = String(value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const shown = (input: HTMLInputElement) => root.querySelector(`output[for="${input.id}"]`)?.textContent;
+
+    it('has a labelled 0–100 slider each for master, music and sound effects, at the current values', () => {
+      settings.set({ masterVolume: 70, musicVolume: 35, sfxVolume: 100 });
+      mount();
+      expect(sliders().map(nameOf)).toEqual(['Master volume', 'Music volume', 'Sound effects volume']);
+      for (const input of sliders()) {
+        expect([input.min, input.max, input.step]).toEqual(['0', '100', '5']);
+      }
+      expect(sliders().map((input) => input.value)).toEqual(['70', '35', '100']);
+    });
+
+    it('shows and announces each value as a percentage', () => {
+      mount();
+      expect(sliders().map((input) => input.getAttribute('aria-valuetext'))).toEqual(['80%', '60%', '80%']);
+      expect(sliders().map(shown)).toEqual(['80%', '60%', '80%']);
+    });
+
+    it.each([
+      ['Master volume', 'masterVolume'],
+      ['Music volume', 'musicVolume'],
+      ['Sound effects volume', 'sfxVolume'],
+    ] as const)('%s changes its setting as it slides, and its shown value with it', (name, field) => {
+      mount();
+      const input = slider(name);
+      slide(input, 25);
+      expect(settings.get()[field]).toBe(25);
+      expect(input.getAttribute('aria-valuetext')).toBe('25%');
+      expect(shown(input)).toBe('25%');
+      slide(input, 0);
+      expect(settings.get()[field]).toBe(0);
+    });
+
+    it('leaves the other settings alone', () => {
+      mount();
+      slide(slider('Music volume'), 10);
+      expect(settings.get()).toMatchObject({ masterVolume: 80, sfxVolume: 80, defaultSpeed: 1, showAllRanges: false });
+    });
   });
 
   it('focuses the checked speed when it opens', () => {
@@ -110,5 +152,49 @@ describe('mountSettingsScreen', () => {
     expect(root.hidden).toBe(true);
     pressKey('Escape');
     expect(onBack).not.toHaveBeenCalled();
+  });
+
+  describe('reduce motion and text size (#354)', () => {
+    const checkboxNamed = (name: string) =>
+      [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((box) => labelOf(box) === name);
+    const textSizeGroup = () =>
+      [...root.querySelectorAll('fieldset')].find((set) => set.querySelector('legend')?.textContent === 'Text size');
+    const textSizes = () => [...textSizeGroup()!.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+
+    it('offers a labelled Reduce motion checkbox showing the current setting', () => {
+      settings.set({ reducedMotion: true });
+      mount();
+      expect(checkboxNamed('Reduce motion')?.checked).toBe(true);
+    });
+
+    it('switches reduced motion as soon as the box is toggled', () => {
+      mount();
+      checkboxNamed('Reduce motion')!.click();
+      expect(settings.get().reducedMotion).toBe(true);
+      checkboxNamed('Reduce motion')!.click();
+      expect(settings.get().reducedMotion).toBe(false);
+    });
+
+    it('offers 100 %, 125 % and 150 % as one labelled group, with the current size checked', () => {
+      settings.set({ textSize: 125 });
+      mount();
+      const radios = textSizes();
+      expect(radios.map(labelOf)).toEqual(['100 %', '125 %', '150 %']);
+      expect(new Set(radios.map((radio) => radio.name)).size).toBe(1);
+      expect(radios.map((radio) => radio.checked)).toEqual([false, true, false]);
+    });
+
+    it('sets the text size as soon as one is picked', () => {
+      mount();
+      textSizes()[2]!.click();
+      expect(settings.get().textSize).toBe(150);
+    });
+
+    it('keeps the speed and text size groups apart: picking a size leaves the speed alone', () => {
+      mount();
+      textSizes()[1]!.click();
+      expect(settings.get().defaultSpeed).toBe(1);
+      expect(speed('×1')!.checked).toBe(true);
+    });
   });
 });

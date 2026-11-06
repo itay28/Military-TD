@@ -1,6 +1,15 @@
-import { AIM_TOLERANCE, TOWER_LEVELS, TOWER_STATS, TURN_RATES, type TowerKind } from '../data/towers';
+import {
+  AIM_TOLERANCE,
+  RETARGET_MARGIN_S,
+  TOWER_LEVELS,
+  TOWER_STATS,
+  TURN_RATES,
+  trackHorizon,
+  type TowerKind,
+} from '../data/towers';
 import { aimAngle, turnToward, wrap } from './aim';
 import { damageTaken, type Layer } from './combat';
+import type { CoverageInterval } from './coverage';
 import type { Enemy } from './enemies';
 import { tileCenter, type Position, type Tile } from './map';
 import type { ShellStats } from './shells';
@@ -42,6 +51,13 @@ export interface Tower extends TowerStats {
   readonly dismantleMs?: number;
   /** Where its turret points, in radians (0 east, rows grow down); it turns at its kind's `TURN_RATES`. */
   readonly heading: number;
+  /**
+   * The stretches of the Path it can fire on, from `coverageIntervals`; the game sets them when it is placed and
+   * upgraded. With none, an idle tower keeps its heading.
+   */
+  readonly coverage?: readonly CoverageInterval[];
+  /** The enemy an idle tower is pre-aiming at (see `preAim`), kept until another comes in clearly sooner. */
+  readonly preAimId?: number | undefined;
 }
 
 /** Every level's stats for `kind`, level 1 (`TOWER_STATS`) first. */
@@ -104,12 +120,50 @@ export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | u
   return target;
 }
 
+/** Where an idle tower turns: toward `point`, laid for enemy `enemyId` when it has one. */
+export interface PreAim {
+  readonly point: Position;
+  readonly enemyId?: number;
+}
+
+/**
+ * Where a tower with no target in range lays its turret (#372): on the entry point of the coverage interval the
+ * soonest-engaging enemy will reach next. An enemy's time to engage is the longer of its walk to that entry
+ * (`(enter − distance) / speed`) and the turret's turn to face it; only enemies on a layer the tower hits, with an
+ * interval ahead, and engaging within `trackHorizon(kind)` count. Ties go to the one furthest along. The tower keeps
+ * the enemy it was laying on (`preAimId`) unless another engages sooner by more than `RETARGET_MARGIN_S`.
+ * With no such enemy, it faces its first interval's entry; with no coverage, or no turn rate (the Mortar), undefined.
+ */
+export function preAim(tower: Tower, enemies: readonly Enemy[]): PreAim | undefined {
+  const turnRate = TURN_RATES[tower.kind];
+  const horizon = trackHorizon(tower.kind);
+  const first = tower.coverage?.[0];
+  if (turnRate === null || horizon === null || !first) return undefined;
+  const center = tileCenter(tower.tile);
+  let best: { enemy: Enemy; point: Position; time: number } | undefined;
+  let kept: typeof best;
+  for (const enemy of enemies) {
+    if (!tower.targets.includes(enemy.layer) || enemy.speed <= 0) continue;
+    const next = tower.coverage!.find((interval) => interval.enter > enemy.distance);
+    if (!next) continue;
+    const turn = Math.abs(wrap(Math.atan2(next.entry.y - center.y, next.entry.x - center.x) - tower.heading));
+    const time = Math.max((next.enter - enemy.distance) / enemy.speed, turn / turnRate);
+    if (time > horizon) continue;
+    const candidate = { enemy, point: next.entry, time };
+    if (enemy.id === tower.preAimId) kept = candidate;
+    if (!best || time < best.time || (time === best.time && enemy.distance > best.enemy.distance)) best = candidate;
+  }
+  const chosen = kept && best && best.time >= kept.time - RETARGET_MARGIN_S ? kept : best;
+  return chosen ? { point: chosen.point, enemyId: chosen.enemy.id } : { point: first.entry };
+}
+
 /**
  * Counts each tower's cooldown down by `dtMs` and turns it toward its target at its kind's turn rate (`TURN_RATES`);
  * a ready tower facing its target (within `AIM_TOLERANCE`) hits it once, for `damage` less the target's armor
  * (see `damageTaken`). A kind with no turn rate (the Mortar) faces its target at once.
  * A tower with `shell` doesn't hit: it returns a launch at its target's position, to become a Shell.
  * Towers act in order, and an enemy at 0 HP is removed at once, so later towers retarget.
+ * A tower with no target in range turns toward its `preAim` point instead.
  * A dismantling tower neither turns nor fires.
  * Time past the end of a cooldown carries into the next, so the fire rate holds at any tick size;
  * an idle or still-turning tower waits at 0, ready.
@@ -127,18 +181,20 @@ export function fireTowers(
     if (tower.dismantleMs !== undefined) return tower;
     const cooldownMs = tower.cooldownMs - dtMs;
     const target = selectTarget(tower, alive);
-    const aim = aimAngle(tileCenter(tower.tile), target?.position, tower.heading);
+    const laid = target ? undefined : preAim(tower, alive);
+    const aim = aimAngle(tileCenter(tower.tile), target?.position ?? laid?.point, tower.heading);
+    const preAimId = laid?.enemyId;
     const turnRate = TURN_RATES[tower.kind];
     const heading = turnRate === null ? wrap(aim) : turnToward(tower.heading, aim, (turnRate * dtMs) / 1000);
     const aimed = Math.abs(wrap(aim - heading)) <= AIM_TOLERANCE;
     if (!target || !aimed || cooldownMs > COOLDOWN_EPSILON)
-      return { ...tower, heading, cooldownMs: Math.max(0, cooldownMs) };
+      return { ...tower, heading, preAimId, cooldownMs: Math.max(0, cooldownMs) };
     if (tower.shell) launches.push({ tower, target: target.position, shell: tower.shell });
     else fireDirect(tower, target);
     // A tower that came off cooldown mid-tick fired late; take that time off its next cooldown.
     // One that was already waiting at 0 only now saw (or faced) a target, so it gets a full cooldown.
     const lateMs = tower.cooldownMs > 0 ? Math.max(0, -cooldownMs) : 0;
-    return { ...tower, heading, cooldownMs: Math.max(0, 1000 / tower.fireRate - lateMs) };
+    return { ...tower, heading, preAimId, cooldownMs: Math.max(0, 1000 / tower.fireRate - lateMs) };
   });
   return { towers: nextTowers, enemies: alive, shots, launches, kills };
 
