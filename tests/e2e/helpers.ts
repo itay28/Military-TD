@@ -55,13 +55,13 @@ export async function openMenu(page: Page, { progress, unlockAll = false }: Menu
     );
   }
   await page.goto(`/?${params}`);
-  await page.getByRole('button', { name: 'Play' }).waitFor();
+  await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
 }
 
 /** Opens the Level select in test mode: the Main menu, then Play. */
 export async function openLevelSelect(page: Page, options: MenuOptions = {}) {
   await openMenu(page, options);
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
   await page.getByRole('heading', { name: 'Select map' }).waitFor();
 }
 
