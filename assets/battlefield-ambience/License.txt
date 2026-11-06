@@ -1,4 +1,4 @@
-Battlefield ambience (ambient.ogg/.mp3, combat.ogg/.mp3) for Military-TD
+Battlefield ambience (ambient.ogg/.mp3, combat.ogg/.mp3) for Hold the Perimeter
 
 Built by scripts/ambience-fx.ts (ffmpeg) from:
 - The Free Firearm Sound Library (Ben Jaszczak et al.), CC0 1.0: the distant gunfire
