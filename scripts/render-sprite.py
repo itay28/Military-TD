@@ -22,6 +22,11 @@ A model's optional `exclude` lists meshes to delete before rendering (e.g. add-o
 silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`; `overrides` gives a
 material its own `color` and `specular`), for a model painted in the wrong colour.
 
+`sun` (optional) overrides keys of the global sun for one model: soldiers use a higher sun so the shadow stays short
+(issue #342). The global `alphaFloor` zeroes the faint alpha the shadow catcher leaves over the whole ground plane
+(sky occlusion), so a sprite has no baked haze and its frame can be cropped to the figure. It applies to every model:
+only the soldier sets were re-rendered for #342, so re-rendering a vehicle or tower changes its alpha the same way.
+
 `turnDeg` turns a model clockwise after `frontAxis`, for one set down at an angle (not along an axis).
 
 `pose` freezes a rigged model at one frame of one of its animations (`action`, `frame`), e.g. a soldier crouched
@@ -288,7 +293,7 @@ def build_stage(cfg: dict, spec: dict) -> object:
     scene.collection.objects.link(cam)
     scene.camera = cam
 
-    sun_cfg = cfg["sun"]
+    sun_cfg = {**cfg["sun"], **spec.get("sun", {})}
     sun_data = bpy.data.lights.new("Sun", "SUN")
     sun_data.energy = sun_cfg["strength"]
     sun_data.angle = math.radians(sun_cfg["softnessDeg"])
@@ -314,14 +319,17 @@ def build_stage(cfg: dict, spec: dict) -> object:
     return ground
 
 
-def desaturate(path: Path, amount: float) -> None:
-    """Mix each pixel's colour `amount` of the way to its grey (Rec. 709 luma); alpha is untouched."""
+def desaturate(path: Path, amount: float, alpha_floor: float) -> None:
+    """Mix each pixel's colour `amount` of the way to its grey (Rec. 709 luma); alpha at or below `alpha_floor`
+    (0..1) becomes 0 (the shadow catcher's ground-wide haze), the rest is untouched."""
     img = bpy.data.images.load(str(path))
     px = list(img.pixels)
     for i in range(0, len(px), 4):
         r, g, b = px[i], px[i + 1], px[i + 2]
         y = 0.2126 * r + 0.7152 * g + 0.0722 * b
         px[i], px[i + 1], px[i + 2] = r + (y - r) * amount, g + (y - g) * amount, b + (y - b) * amount
+        if px[i + 3] <= alpha_floor:
+            px[i + 3] = 0.0
     img.pixels = px
     img.filepath_raw = str(path)
     img.file_format = "PNG"
@@ -332,7 +340,7 @@ def desaturate(path: Path, amount: float) -> None:
 def render(path: Path, cfg: dict) -> None:
     bpy.context.scene.render.filepath = str(path)
     bpy.ops.render.render(write_still=True)
-    desaturate(path, cfg["desaturate"])
+    desaturate(path, cfg["desaturate"], cfg.get("alphaFloor", 0))
     print(f"wrote {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
 
 
