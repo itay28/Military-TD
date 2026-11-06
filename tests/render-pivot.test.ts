@@ -108,8 +108,12 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
     it(`has one render per kind in play for ${faction}, and none for an unknown kind`, () => {
       const kinds = RENDER_CONFIG.models.filter((m) => m.faction === faction).map((m) => m.kind);
       expect(new Set(kinds).size).toBe(kinds.length);
-      expect(kinds).toEqual(expect.arrayContaining(inPlay));
-      for (const kind of kinds) expect(Object.keys(SPRITES)).toContain(kind);
+      // Exact: the kinds in play, plus any kind not yet in play whose renders landed early.
+      const early = kinds.filter(
+        (kind) => kind in TOWER_STATS && !(IN_PLAY_TOWERS as readonly string[]).includes(kind),
+      );
+      expect(kinds.filter((kind) => !early.includes(kind)).sort()).toEqual(inPlay);
+      for (const kind of early) expect(Object.keys(SPRITES)).toContain(kind);
     });
   }
 });
