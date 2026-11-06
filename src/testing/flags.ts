@@ -14,6 +14,8 @@ export interface TestFlags {
   readonly persist: boolean;
   /** `?unlock=all`: test mode opens every map on the Level select, so e2e can play any of them. */
   readonly unlockAll: boolean;
+  /** `?demo=1`: test mode plays the live battlefield behind the menu (off otherwise, so e2e see a flat background). */
+  readonly demo: boolean;
 }
 
 export function parseTestFlags(search: string): TestFlags {
@@ -27,6 +29,7 @@ export function parseTestFlags(search: string): TestFlags {
     menu: params.get('menu') === '1',
     persist: params.get('persist') === '1',
     unlockAll: params.get('unlock') === 'all',
+    demo: params.get('demo') === '1',
   };
 }
 
