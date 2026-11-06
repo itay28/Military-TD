@@ -30,7 +30,8 @@ const HANDLER: Partial<Record<ShortcutAction, keyof ShortcutHandlers>> = {
  */
 export function mountShortcuts(doc: Document, game: ShortcutsGame, handlers: ShortcutHandlers): { destroy(): void } {
   const onKey = (event: KeyboardEvent) => {
-    if (event.repeat || isGameOver(game.state.phase)) return;
+    // A key the map cursor took (Space placing at it) is not also a shortcut.
+    if (event.repeat || event.defaultPrevented || isGameOver(game.state.phase)) return;
     const action = shortcutFor(event);
     const handler = action && HANDLER[action];
     if (!handler) return;

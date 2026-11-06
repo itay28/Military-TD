@@ -87,6 +87,24 @@ export function canPlaceAt(view: CameraView, { viewport, world }: CameraBounds, 
   return point.x >= 0 && point.y >= 0 && point.x < world.width && point.y < world.height;
 }
 
+/** A rectangle in world pixels. */
+export interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** The smallest pan that brings `rect` on screen (the camera following the map cursor), kept inside the map. */
+export function revealTile(view: CameraView, bounds: CameraBounds, rect: Rect): CameraView {
+  const reveal = (scroll: number, visible: number, start: number, size: number) =>
+    start < scroll ? start : start + size > scroll + visible ? start + size - visible : scroll;
+  const scrollX = reveal(view.scrollX, bounds.viewport.width / view.zoom, rect.x, rect.width);
+  const scrollY = reveal(view.scrollY, bounds.viewport.height / view.zoom, rect.y, rect.height);
+  if (scrollX === view.scrollX && scrollY === view.scrollY) return view;
+  return clampView({ ...view, scrollX, scrollY }, bounds);
+}
+
 /**
  * `view` as it is when the world point `at` is at least `margin` screen pixels inside the canvas, else centred on it
  * (within the map). Returns `view` itself when nothing needs to move.
