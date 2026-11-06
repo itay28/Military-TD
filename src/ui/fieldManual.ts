@@ -302,7 +302,7 @@ export function mountFieldManual(
       entryButtons[next]!.focus();
       return;
     }
-    if (target === modelEl && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
       turnBy(event.key === 'ArrowLeft' ? -FIELD_MANUAL.keyStepDeg : FIELD_MANUAL.keyStepDeg);
     }

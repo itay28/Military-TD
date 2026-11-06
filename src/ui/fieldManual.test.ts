@@ -147,6 +147,12 @@ describe('mountFieldManual', () => {
     expect(angle()).toBe(0);
   });
 
+  it('turns the model with ← and → from the entry list too', () => {
+    mount({ reducedMotion: true });
+    key(root.querySelector('button')!, 'ArrowLeft');
+    expect(angle()).toBe(345);
+  });
+
   it('turns the model when dragged', () => {
     mount({ reducedMotion: true });
     const el = model();

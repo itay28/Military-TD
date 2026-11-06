@@ -1059,13 +1059,12 @@ export class GameScene extends Phaser.Scene {
     if (refusal) this.floatingTexts.add(refusal, at);
   }
 
-  /** One fixed tick of the game, from the real-time loop or test mode's step(). */
   /** Unlocks each enemy kind in the Field manual the first time one is on the map (#408). */
   private recordMetEnemies(): void {
-    const met = this.progress.get().metEnemies;
-    for (const enemy of this.sim.state.enemies) if (!met.includes(enemy.kind)) this.progress.recordMet(enemy.kind);
+    for (const enemy of this.sim.state.enemies) this.progress.recordMet(enemy.kind);
   }
 
+  /** One fixed tick of the game, from the real-time loop or test mode's step(). */
   private tickOnce(): void {
     this.previousPositions = snapshotPositions(this.sim.state.enemies);
     this.sim.tick(TICK_MS);

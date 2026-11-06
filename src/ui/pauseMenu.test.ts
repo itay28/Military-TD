@@ -206,10 +206,11 @@ describe('mountPauseMenu', () => {
   describe('Keys (help overlay)', () => {
     const help = () => root.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="help-title"]');
 
-    it('has a Keys button after Settings', () => {
+    it('has a Keys button after Settings and the Field manual', () => {
       mount({ openSettings: vi.fn() });
       const labels = [...dialog()!.querySelectorAll(':scope > button')].map((b) => b.textContent);
-      expect(labels.indexOf('Keys')).toBe(labels.indexOf('Settings') + 1);
+      expect(labels.indexOf('Keys')).toBe(labels.indexOf('Field manual') + 1);
+      expect(labels.indexOf('Field manual')).toBe(labels.indexOf('Settings') + 1);
     });
 
     it('opens the help overlay in place of the Paused dialog, still paused', () => {
