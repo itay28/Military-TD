@@ -10,3 +10,9 @@ export const ENEMY_STATS = {
 } as const satisfies Record<string, EnemyStats>;
 
 export type EnemyKind = keyof typeof ENEMY_STATS;
+
+/** Kinds in no map or screen yet: the Jet waits for its renders and rollout (#361, #366; ADR-0009). Remove it here when it ships. */
+export const NOT_PLAYABLE_KINDS: readonly EnemyKind[] = ['jet'];
+
+/** Every kind a player can meet. */
+export const PLAYABLE_KINDS = (Object.keys(ENEMY_STATS) as EnemyKind[]).filter((k) => !NOT_PLAYABLE_KINDS.includes(k));

@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { validateWaves } from '../sim/waves';
-import { ENEMY_STATS, type EnemyKind } from './enemies';
+import { PLAYABLE_KINDS, type EnemyKind } from './enemies';
 import { WAVES } from './waves';
 
-/** Kinds not in any map yet: the Jet waits for its renders and rollout (#361, #366; ADR-0009). */
-const NOT_PLAYABLE: readonly string[] = ['jet'];
-const playableKinds = Object.keys(ENEMY_STATS).filter((k) => !NOT_PLAYABLE.includes(k));
+const playableKinds: string[] = [...PLAYABLE_KINDS];
 
 const kindsIn = (wave: (typeof WAVES)[number]) => new Set(wave.groups.map((g) => g.kind));
 

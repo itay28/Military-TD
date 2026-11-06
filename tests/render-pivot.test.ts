@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
+import { NOT_PLAYABLE_KINDS } from '../src/data/enemies';
 import { SPRITES } from '../src/data/sprites';
 import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
@@ -100,7 +101,7 @@ describe('the committed render data', () => {
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
   // The Jet's renders land with #361; until then it draws with the shape fallback.
   const kinds = Object.keys(SPRITES)
-    .filter((k) => k !== 'jet')
+    .filter((k) => !(NOT_PLAYABLE_KINDS as readonly string[]).includes(k))
     .sort();
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {

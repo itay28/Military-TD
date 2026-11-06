@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_NAMES, ENEMY_WEAKNESS } from './display';
-import { ENEMY_STATS } from './enemies';
+import { ENEMY_STATS, NOT_PLAYABLE_KINDS } from './enemies';
 import { HAIRPIN_WAVES, SERPENTINE_WAVES, SWITCHBACK_WAVES, WAVES } from './waves';
 
 describe('jet', () => {
@@ -12,6 +12,10 @@ describe('jet', () => {
     expect(ENEMY_WEAKNESS.jet).toBe('Fast, fragile jet. Needs AA coverage along the route.');
   });
   it('is in no map wave yet (ADR-0009)', () => {
-    expect(JSON.stringify([WAVES, SWITCHBACK_WAVES, SERPENTINE_WAVES, HAIRPIN_WAVES])).not.toContain('"jet"');
+    expect(NOT_PLAYABLE_KINDS).toContain('jet');
+    const kinds = [WAVES, SWITCHBACK_WAVES, SERPENTINE_WAVES, HAIRPIN_WAVES].flatMap((waves) =>
+      waves.flatMap((w) => w.groups.map((g) => g.kind)),
+    );
+    expect(kinds).not.toContain('jet');
   });
 });
