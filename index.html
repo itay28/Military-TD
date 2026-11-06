@@ -1086,6 +1086,38 @@
         color: #8a8670;
         pointer-events: none;
       }
+      /* Touch (#72): every button is at least 32 px both ways, so a finger can hit it. After the rules above. */
+      @media (max-width: 640px), (max-height: 480px), (pointer: coarse) {
+        #hud button {
+          min-width: 32px;
+          min-height: 32px;
+        }
+        #build-bar[data-collapsed='true'] {
+          width: 32px;
+        }
+        #build-bar .build-toggle {
+          width: 32px;
+          height: 32px;
+        }
+        #tower-panel button[aria-label='Close'],
+        #enemy-card button[aria-label='Close'] {
+          width: 32px;
+          height: 32px;
+          top: 0;
+          right: 0;
+        }
+        #tower-panel [data-testid='tower-upgrade'],
+        #tower-panel [data-testid='tower-sell'] {
+          min-height: 32px;
+        }
+      }
+      #tower-panel [data-testid='tower-upgrade-reason'] {
+        margin: 4px 0 0;
+        color: #c9b48a;
+      }
+      #tower-panel [data-testid='tower-upgrade-reason'][hidden] {
+        display: none;
+      }
     </style>
   </head>
   <body>
