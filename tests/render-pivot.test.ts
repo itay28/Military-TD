@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
+import { NOT_IN_PLAY } from '../src/data/enemies';
 import { SPRITES } from '../src/data/sprites';
 import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
@@ -98,12 +99,17 @@ describe('the committed render data', () => {
 });
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  const kinds = Object.keys(SPRITES).sort();
+  // A kind not in play yet (NOT_IN_PLAY) may or may not have its renders: they land before its rollout.
+  const notInPlay: readonly string[] = NOT_IN_PLAY;
+  const kinds = Object.keys(SPRITES)
+    .filter((kind) => !notInPlay.includes(kind))
+    .sort();
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
-    it(`has one render per kind for ${faction}`, () => {
-      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
-      expect(models.map((m) => m.kind).sort()).toEqual(kinds);
+    it(`has one render per kind in play for ${faction}`, () => {
+      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction).map((m) => m.kind);
+      expect(models.filter((kind) => !notInPlay.includes(kind)).sort()).toEqual(kinds);
+      expect(new Set(models).size).toBe(models.length);
     });
   }
 });
