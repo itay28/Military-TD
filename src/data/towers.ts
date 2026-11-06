@@ -30,6 +30,21 @@ export const TURN_RATES: Record<TowerKind, number | null> = {
   mortar: null,
 };
 
+/** Seconds of look-ahead every turning kind gets, on top of the time a half turn takes it (see `trackHorizon`). */
+export const TRACK_BASE_S = 1.5;
+
+/**
+ * How far ahead, in seconds, an idle tower looks for an enemy to pre-aim at: `TRACK_BASE_S` plus a half turn
+ * (π / turn rate), so a slow turret looks further ahead. `null` for a kind with no turn rate (the Mortar).
+ */
+export function trackHorizon(kind: TowerKind): number | null {
+  const turnRate = TURN_RATES[kind];
+  return turnRate === null ? null : TRACK_BASE_S + Math.PI / turnRate;
+}
+
+/** A pre-aiming tower keeps the enemy it's laying on unless another would come into range this much sooner, in seconds. */
+export const RETARGET_MARGIN_S = 0.25;
+
 /** How far off its target, in radians, a turret may point and still fire (about 6°). */
 export const AIM_TOLERANCE = 0.1;
 

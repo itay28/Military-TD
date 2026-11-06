@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  panToReveal,
   canPlaceAt,
   clampView,
   coverZoom,
@@ -170,5 +171,27 @@ describe('demoView', () => {
     const view = demoView(PHONE, { x: 384, y: 0 }, 1);
     expect(view.scrollY).toBe(0);
     expect(view.scrollX + PHONE.viewport.width / view.zoom).toBeLessThanOrEqual(WORLD.width);
+  });
+});
+
+describe('panToReveal', () => {
+  const bounds = { viewport: { width: 400, height: 300 }, world: { width: 1000, height: 800 }, maxZoom: 3 };
+  const view = { scrollX: 200, scrollY: 100, zoom: 1 };
+  const margin = 40;
+
+  it('leaves the view alone when the point is on screen', () => {
+    expect(panToReveal(view, { x: 400, y: 250 }, margin, bounds)).toBe(view);
+  });
+
+  it('centres the point when it is off screen', () => {
+    expect(panToReveal(view, { x: 800, y: 600 }, margin, bounds)).toEqual({ scrollX: 600, scrollY: 450, zoom: 1 });
+  });
+
+  it('centres it when it is inside the margin of the edge', () => {
+    expect(panToReveal(view, { x: 210, y: 250 }, margin, bounds)).toEqual({ scrollX: 10, scrollY: 100, zoom: 1 });
+  });
+
+  it('stays inside the map at its corner', () => {
+    expect(panToReveal(view, { x: 990, y: 790 }, margin, bounds)).toEqual({ scrollX: 600, scrollY: 500, zoom: 1 });
   });
 });

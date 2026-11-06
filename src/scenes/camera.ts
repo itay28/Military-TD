@@ -109,3 +109,17 @@ export function demoView(
     zoom,
   };
 }
+
+/**
+ * `view` as it is when the world point `at` is at least `margin` screen pixels inside the canvas, else centred on it
+ * (within the map). Returns `view` itself when nothing needs to move.
+ */
+export function panToReveal(view: CameraView, at: Pixel, margin: number, bounds: CameraBounds): CameraView {
+  const { x, y } = worldToScreen(view, at);
+  const { width, height } = bounds.viewport;
+  if (x >= margin && y >= margin && x <= width - margin && y <= height - margin) return view;
+  return clampView(
+    { ...view, scrollX: at.x - width / (2 * view.zoom), scrollY: at.y - height / (2 * view.zoom) },
+    bounds,
+  );
+}

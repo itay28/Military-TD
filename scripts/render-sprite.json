@@ -88,7 +88,7 @@
       },
       "tint": {
         "color": [1.0, 1.0, 1.0],
-        "skip": ["Body", "Eyewear"],
+        "skip": ["Eyewear"],
         "overrides": {
           "Bottom": {
             "color": [1.25, 1.15, 0.85]
@@ -101,8 +101,14 @@
           },
           "Glove": {
             "color": [1.3, 1.1, 0.85]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
           }
         }
+      },
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -185,10 +191,10 @@
         "action": "walking_firing",
         "frame": 10
       },
-      "canvasTiles": 1.25,
+      "canvasTiles": 0.95,
       "tint": {
         "color": [1.0, 1.0, 1.0],
-        "skip": ["Body", "Eyewear"],
+        "skip": ["Eyewear"],
         "overrides": {
           "Bottom": {
             "color": [1.25, 1.15, 0.85]
@@ -201,8 +207,14 @@
           },
           "Glove": {
             "color": [1.3, 1.1, 0.85]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
           }
         }
+      },
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -289,7 +301,7 @@
       },
       "tint": {
         "color": [1.0, 1.0, 1.0],
-        "skip": ["Body", "Eyewear"],
+        "skip": ["Eyewear"],
         "overrides": {
           "Bottom": {
             "color": [0.95, 1.0, 0.72]
@@ -302,8 +314,14 @@
           },
           "Glove": {
             "color": [0.6, 0.62, 0.5]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
           }
         }
+      },
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -389,10 +407,10 @@
         "action": "walking_firing",
         "frame": 10
       },
-      "canvasTiles": 1.25,
+      "canvasTiles": 0.95,
       "tint": {
         "color": [1.0, 1.0, 1.0],
-        "skip": ["Body", "Eyewear"],
+        "skip": ["Eyewear"],
         "overrides": {
           "Bottom": {
             "color": [0.95, 1.0, 0.72]
@@ -405,20 +423,38 @@
           },
           "Glove": {
             "color": [0.6, 0.62, 0.5]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
           }
         }
+      },
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
       "id": "russia-jeep",
       "kind": "jeep",
       "faction": "russia",
-      "depicts": "UAZ-469 soft-top",
-      "sketchfab": "1f58a38deb854829bd1b1ba1c15555d0",
-      "author": "Okopchi",
+      "depicts": "UAZ-469 with its top folded down, its recoilless rifle and machine gun removed",
+      "sketchfab": "77bdfa6804334b2794e65654e9dd8f3a",
+      "author": "lebedeventerprise",
       "license": "CC-BY-4.0",
       "frontAxis": "-y",
       "lengthTiles": 0.8,
+      "exclude": ["CannonBase_0", "Cannon_0", "Cannon_1", "Cannon_2", "Hull_4", "Hull_5"],
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["MetalStuff", "Lamp", "RedLight", "Bamper"],
+        "overrides": {
+          "GreenUaz": {
+            "flat": true,
+            "color": [0.075, 0.075, 0.035],
+            "specular": 0
+          }
+        }
+      },
       "canvasTiles": 1.0
     },
     {
@@ -467,7 +503,7 @@
       },
       "tint": {
         "color": [1.0, 1.0, 1.0],
-        "skip": ["Body", "Eyewear"],
+        "skip": ["Eyewear"],
         "overrides": {
           "Bottom": {
             "color": [0.62, 0.85, 0.58]
@@ -480,8 +516,14 @@
           },
           "Glove": {
             "color": [0.5, 0.55, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
           }
         }
+      },
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -545,10 +587,10 @@
         "action": "walking_firing",
         "frame": 10
       },
-      "canvasTiles": 1.25,
+      "canvasTiles": 0.95,
       "tint": {
         "color": [1.0, 1.0, 1.0],
-        "skip": ["Body", "Eyewear"],
+        "skip": ["Eyewear"],
         "overrides": {
           "Bottom": {
             "color": [0.62, 0.85, 0.58]
@@ -561,8 +603,14 @@
           },
           "Glove": {
             "color": [0.5, 0.55, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
           }
         }
+      },
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -577,7 +625,7 @@
       "lengthTiles": 0.8,
       "exclude": ["mitrailleuse_Material_0"],
       "tint": {
-        "color": [0.7, 0.45, 0.8]
+        "color": [0.55, 0.38, 0.25]
       },
       "canvasTiles": 1.0
     },
@@ -653,7 +701,7 @@
       },
       "tint": {
         "color": [1.0, 1.0, 1.0],
-        "skip": ["Body", "Eyewear"],
+        "skip": ["Eyewear"],
         "overrides": {
           "Bottom": {
             "color": [0.62, 0.68, 0.95]
@@ -666,8 +714,14 @@
           },
           "Glove": {
             "color": [0.75, 0.6, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
           }
         }
+      },
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -756,10 +810,10 @@
         "action": "walking_firing",
         "frame": 10
       },
-      "canvasTiles": 1.25,
+      "canvasTiles": 0.95,
       "tint": {
         "color": [1.0, 1.0, 1.0],
-        "skip": ["Body", "Eyewear"],
+        "skip": ["Eyewear"],
         "overrides": {
           "Bottom": {
             "color": [0.62, 0.68, 0.95]
@@ -772,8 +826,14 @@
           },
           "Glove": {
             "color": [0.75, 0.6, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
           }
         }
+      },
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -831,5 +891,6 @@
       "lengthTiles": 1.3,
       "canvasTiles": 1.5
     }
-  ]
+  ],
+  "alphaFloor": 0.06
 }

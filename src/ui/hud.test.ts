@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WAVE_BANNER_MS } from '../data/display';
 import { AUTO_START_DELAY_MS } from '../data/waves';
 import { createGame, type Game } from '../sim/game';
@@ -99,6 +99,24 @@ describe('HUD', () => {
       mountHud(root, game, fakeSpeed());
       button()!.click();
       expect(game.state.phase).toBe('wave');
+      expect(game.state.waveNumber).toBe(1);
+    });
+
+    it('startWave() does what a click does, for the Space key', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      hud.startWave();
+      expect(game.state.phase).toBe('wave');
+      expect(button()!.disabled).toBe(true);
+    });
+
+    it('startWave() does nothing while the button is disabled', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      const startWave = vi.spyOn(game, 'startWave');
+      hud.startWave();
+      hud.startWave();
+      expect(startWave).toHaveBeenCalledOnce();
       expect(game.state.waveNumber).toBe(1);
     });
 
@@ -243,6 +261,22 @@ describe('HUD', () => {
     };
     const rounded = (game: Game) =>
       `DPS ${Math.round(waveDps(game.state.stats.wave.damage, game.state.stats.wave.elapsedMs))}`;
+
+    it('is a button that opens and closes the DPS meter', () => {
+      mountHud(root, armed(), fakeSpeed());
+      const button = byTestId('hud-dps') as HTMLButtonElement;
+      expect(button.tagName).toBe('BUTTON');
+      expect(button.getAttribute('aria-controls')).toBe('dps-meter');
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(byTestId('dps-meter')?.hidden).toBe(true);
+      button.click();
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(byTestId('dps-meter')?.hidden).toBe(false);
+      expect(byTestId('dps-kind-rifleNest')).not.toBeNull();
+      button.click();
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(byTestId('dps-meter')?.hidden).toBe(true);
+    });
 
     it('shows "DPS –" before any wave', () => {
       mountHud(root, armed(), fakeSpeed());

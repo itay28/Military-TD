@@ -173,13 +173,13 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-mortar/**`
 
-## uaz 469 (top-down render)
+## UAZ-469 Low Poly (top-down render)
 
-- Author: Okopchi
-- Source: <https://sketchfab.com/3d-models/1f58a38deb854829bd1b1ba1c15555d0>
+- Author: lebedeventerprise
+- Source: <https://sketchfab.com/3d-models/77bdfa6804334b2794e65654e9dd8f3a>
 - License: CC-BY-4.0
-- Attribution: "uaz 469" by Okopchi (sketchfab.com), CC-BY 4.0, rendered top-down
-- Downloaded: 2026-11-02
+- Attribution: "UAZ-469 Low Poly" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down, its recoilless rifle and machine gun removed, repainted olive
+- Downloaded: 2026-11-03
 - Files: `assets/render-russia-jeep/**`
 
 ## Mi-8 (top-down render)
@@ -371,15 +371,6 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-03
 - Files: `assets/weapon-sounds/**`
 
-## 100 CC0 SFX
-
-- Author: rubberduck
-- Source: <https://opengameart.org/content/100-cc0-sfx>
-- License: CC0-1.0
-- Attribution: 100 CC0 SFX by rubberduck (OpenGameArt.org), CC0
-- Downloaded: 2026-11-02
-- Files: `assets/rubberduck-100-sfx/**`
-
 ## War on Water tracks
 
 - Author: yd
@@ -415,3 +406,12 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: Built by scripts/radio-fx.ts from the radio voice takes (voiced from Voiceover Pack by Kenney), Radio Noise 1 by Kresiek The Furry, The Free Firearm Sound Library (Ben Jaszczak et al.) and Explosions by EZduzziteh, all CC0
 - Downloaded: 2026-11-04
 - Files: `assets/radio-cues/**`
+
+## Battlefield ambience
+
+- Author: Military-TD, from The Free Firearm Sound Library, EZduzziteh's Explosions, Kresiek The Furry's Radio Noise 1 and its radio voice takes
+- Source: <https://opengameart.org/content/the-free-firearm-sound-library>
+- License: CC0-1.0
+- Attribution: Built by scripts/ambience-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Explosions by EZduzziteh, Radio Noise 1 by Kresiek The Furry and the radio voice takes (voiced from Voiceover Pack by Kenney), with synthesized wind, all CC0
+- Downloaded: 2026-11-05
+- Files: `assets/battlefield-ambience/**`
