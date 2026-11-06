@@ -1,5 +1,5 @@
 import { GAME_SPEEDS } from '../scenes/gameSpeed';
-import { MAX_VOLUME, type SettingsStore, type VolumeField } from '../settings/settings';
+import { MAX_VOLUME, TEXT_SIZES, type SettingsStore, type VolumeField } from '../settings/settings';
 
 export interface SettingsScreenOptions {
   /** Called when the player presses Back (or Esc), after the screen has closed. */
@@ -69,6 +69,26 @@ export function mountSettingsScreen(
   showMapGrid.checked = current.showMapGrid;
   showMapGrid.addEventListener('change', () => settings.set({ showMapGrid: showMapGrid.checked }));
 
+  const reducedMotion = doc.createElement('input');
+  reducedMotion.type = 'checkbox';
+  reducedMotion.checked = current.reducedMotion;
+  reducedMotion.addEventListener('change', () => settings.set({ reducedMotion: reducedMotion.checked }));
+
+  // Text size (#354): radios, like the speed, so the arrow keys move between sizes and each applies at once.
+  const textSizes = doc.createElement('fieldset');
+  const textSizeLegend = doc.createElement('legend');
+  textSizeLegend.textContent = 'Text size';
+  textSizes.append(textSizeLegend);
+  for (const size of TEXT_SIZES) {
+    const radio = doc.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'text-size';
+    radio.value = String(size);
+    radio.checked = size === current.textSize;
+    radio.addEventListener('change', () => settings.set({ textSize: size }));
+    textSizes.append(labelled(radio, `${size} %`));
+  }
+
   const volumes = VOLUME_SLIDERS.map(({ field, label, id }) => {
     const row = doc.createElement('div');
     row.className = 'volume';
@@ -118,6 +138,8 @@ export function mountSettingsScreen(
     labelled(showAllRanges, 'Always show tower ranges'),
     labelled(showMapGrid, 'Show map grid'),
     ...volumes,
+    labelled(reducedMotion, 'Reduce motion'),
+    textSizes,
     backButton,
   );
   root.append(dialog);

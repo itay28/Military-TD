@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSettings, DEFAULT_SETTINGS } from './settings';
+import { createSettings, DEFAULT_SETTINGS, defaultSettings, TEXT_SIZES } from './settings';
 
 describe('createSettings', () => {
   it('starts at the defaults: ×1, only the selected or hovered tower’s range, and 80/60/80 volumes', () => {
@@ -10,6 +10,8 @@ describe('createSettings', () => {
       masterVolume: 80,
       musicVolume: 60,
       sfxVolume: 80,
+      reducedMotion: false,
+      textSize: 100,
     });
     expect(createSettings().get()).toEqual(DEFAULT_SETTINGS);
   });
@@ -22,6 +24,8 @@ describe('createSettings', () => {
       masterVolume: 10,
       musicVolume: 20,
       sfxVolume: 30,
+      reducedMotion: true,
+      textSize: 150,
     } as const;
     expect(createSettings(given).get()).toEqual(given);
   });
@@ -57,6 +61,30 @@ describe('createSettings', () => {
     expect(settings.get()).toMatchObject({ masterVolume: 0, sfxVolume: 100 });
   });
 
+  it('offers text sizes of 100, 125 and 150 %', () => {
+    expect(TEXT_SIZES).toEqual([100, 125, 150]);
+  });
+
+  it.each([125, 150, 100] as const)('accepts a text size of %s %%', (textSize) => {
+    const settings = createSettings();
+    settings.set({ textSize });
+    expect(settings.get().textSize).toBe(textSize);
+  });
+
+  it.each([110, 0, 200, Number.NaN])('rejects a text size of %s: only 100, 125 or 150', (textSize) => {
+    const settings = createSettings();
+    expect(() => settings.set({ textSize: textSize as never })).toThrow(RangeError);
+    expect(settings.get()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('switches reduced motion on and off', () => {
+    const settings = createSettings();
+    settings.set({ reducedMotion: true });
+    expect(settings.get().reducedMotion).toBe(true);
+    settings.set({ reducedMotion: false });
+    expect(settings.get().reducedMotion).toBe(false);
+  });
+
   it('hands out snapshots, so a caller cannot change the settings by mutating one', () => {
     const settings = createSettings();
     const before = settings.get();
@@ -81,5 +109,15 @@ describe('createSettings', () => {
     settings.subscribe(listener);
     expect(() => settings.set({ masterVolume: 200 })).toThrow(RangeError);
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('defaultSettings', () => {
+  it('turns reduced motion on by default when the system asks for less motion', () => {
+    expect(defaultSettings({ prefersReducedMotion: true })).toEqual({ ...DEFAULT_SETTINGS, reducedMotion: true });
+  });
+
+  it('is DEFAULT_SETTINGS when the system has no preference', () => {
+    expect(defaultSettings({ prefersReducedMotion: false })).toEqual(DEFAULT_SETTINGS);
   });
 });

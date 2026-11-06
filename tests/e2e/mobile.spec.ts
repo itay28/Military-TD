@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { TILE_PX } from '../../src/data/display';
+import { GRID_COLS, GRID_ROWS } from '../../src/data/grid';
 import { TOWER_STATS } from '../../src/data/towers';
 import { clickTile, openGame, selectKind, state, tileToScreen, view } from './helpers';
 
@@ -69,6 +71,55 @@ for (const viewport of [
       // A lifted finger hovers nothing, so it leaves no Ghost behind; the kind stays selected for the next one.
       await expect.poll(async () => (await view(page)).ghost.visible).toBe(false);
       await expect(page.getByTestId('build-rifleNest')).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    test('a selected kind shows its tooltip on the screen, clear of the Ghost tile, until it is placed', async ({
+      page,
+    }) => {
+      await openGame(page);
+      await selectKind(page);
+      const tip = page.getByTestId('build-tip-rifleNest');
+      await expect(tip).toBeVisible();
+      await expect(tip).toContainText('Rifle Nest');
+      const box = (await tip.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 0.5);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 0.5);
+
+      // Drag the finger to the map tile nearest the middle of the tooltip: the tooltip keeps off it.
+      const canvas = (await page.locator('#game canvas').boundingBox())!;
+      const { scrollX, scrollY, zoom } = (await view(page)).camera;
+      const clamp = (value: number, max: number) => Math.max(0, Math.min(value, max - 1));
+      const under = {
+        col: clamp(Math.floor(((box.x + box.width / 2 - canvas.x) / zoom + scrollX) / TILE_PX), GRID_COLS),
+        row: clamp(Math.floor(((box.y + box.height / 2 - canvas.y) / zoom + scrollY) / TILE_PX), GRID_ROWS),
+      };
+      const from = await tileToScreen(page, BESIDE_PATH);
+      const to = await tileToScreen(page, under);
+      const touch = await touchscreen(page);
+      await touch('touchStart', [from]);
+      for (let i = 1; i <= 5; i++) {
+        await touch('touchMove', [{ x: from.x + ((to.x - from.x) * i) / 5, y: from.y + ((to.y - from.y) * i) / 5 }]);
+      }
+      await expect.poll(async () => (await view(page)).ghost.tile).toEqual(under);
+      const size = TILE_PX * zoom;
+      const tile = { x: to.x - size / 2, y: to.y - size / 2 };
+      await expect
+        .poll(async () => {
+          const now = (await tip.boundingBox())!;
+          return (
+            now.x < tile.x + size && tile.x < now.x + now.width && now.y < tile.y + size && tile.y < now.y + now.height
+          );
+        })
+        .toBe(false);
+      await touch('touchEnd', []);
+
+      // Placing keeps the kind selected (for the next one), so the tooltip stays; cancelling hides it.
+      await expect(page.getByTestId('build-rifleNest')).toHaveAttribute('aria-pressed', 'true');
+      await page.getByTestId('build-rifleNest').tap();
+      await expect(page.getByTestId('build-rifleNest')).toHaveAttribute('aria-pressed', 'false');
+      await expect(tip).toBeHidden();
     });
 
     test('a drag lifted over the build bar places nothing', async ({ page }) => {

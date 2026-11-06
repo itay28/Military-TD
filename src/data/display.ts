@@ -2,6 +2,7 @@ import type { Layer } from '../sim/combat';
 import type { PlaceTowerRefusal, UpgradeTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
+import { PALETTE } from './palette';
 import type { TowerKind } from './towers';
 
 /** Size of one tile in pixels. Only Scenes convert tiles to pixels. */
@@ -60,8 +61,20 @@ const ENEMY_BOB = [1, 1.06, 1.03] as const;
 /** `frames` is the length of `bob`, so the two cannot drift apart. */
 export const ENEMY_ANIM = { frameMs: 120, frames: ENEMY_BOB.length, phaseMs: 130, bob: ENEMY_BOB } as const;
 
-/** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
-export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
+/**
+ * The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. Its length is the main
+ * cue; at or below `lowAt` of max HP it also turns from `fill` to `low`.
+ */
+export const HP_BAR = {
+  width: 24,
+  height: 4,
+  gap: 4,
+  back: 0x1a1a1a,
+  backAlpha: 0.7,
+  fill: PALETTE.hpFull,
+  low: PALETTE.hpLow,
+  lowAt: 1 / 3,
+} as const;
 
 /** How a tower kind is drawn (before the v0.4 sprites). */
 export interface TowerStyle {
@@ -89,6 +102,36 @@ export const TOWER_NAMES = {
   mortar: 'Mortar',
 } as const satisfies Record<TowerKind, string>;
 
+/** What each tower kind is for, in one line: the tower panel leads with it. Every kind needs one; keep it true to the stats. */
+export const TOWER_ROLES = {
+  rifleNest: 'Cheap all-rounder: hits ground and air. Light rounds that armor soaks.',
+  aaGun: 'Built for aircraft: fast, light rounds. Hits ground too.',
+  cannon: 'Slow, heavy shells that punch through armor. Ground only.',
+  mortar: 'Long-range shells that hit everything in the blast. Ground only, not up close.',
+} as const satisfies Record<TowerKind, string>;
+
+/** What the player calls each enemy kind. Every kind needs one. */
+export const ENEMY_NAMES = {
+  infantry: 'Infantry',
+  jeep: 'Jeep',
+  helicopter: 'Helicopter',
+  tank: 'Tank',
+} as const satisfies Record<EnemyKind, string>;
+
+/**
+ * What hurts each enemy kind, in one plain line on its enemy card. Every kind needs one; keep it true to the stats
+ * (armor, layer, and each tower's damage, pierce and targets).
+ */
+export const ENEMY_WEAKNESS = {
+  infantry: 'No armor: every tower hurts it. Mortar blasts catch whole squads.',
+  jeep: 'Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it.',
+  helicopter: 'Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best.',
+  tank: 'Armor: Rifle Nests barely scratch it. Cannons and Mortars work.',
+} as const satisfies Record<EnemyKind, string>;
+
+/** The smallest tap area of an enemy, as a diameter in screen pixels, so a small one is easy to hit on a phone. */
+export const ENEMY_HIT_PX = 32;
+
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
 
@@ -105,12 +148,31 @@ export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Re
 export const DISMANTLE = { alpha: 0.4, color: 0xe5e1cf, radius: 28, width: 2 } as const;
 
 /** The range ring shown while the pointer is over a tower, or while it is selected, with an inner ring at its minimum range if it has one. */
-export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
+export const RANGE_RING = { color: PALETTE.rangeRing, alpha: 0.6, width: 1 } as const;
 
-/** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */
+/** The glow around every tower of the kind clicked in the DPS meter (#244): a bright outline that pulses, on both shapes. */
+export const HIGHLIGHT = { color: 0x4fd1ff, width: 3, glowWidth: 8, glowAlpha: 0.35, pad: 5, pulseMs: 1200 } as const;
+
+/**
+ * The brackets at the corners of the selected tower's tile, `inset` px inside it with arms `arm` px long, over a dark
+ * edge: the selection is a shape, not only the range ring the hovered tower has too.
+ */
+export const SELECTION = {
+  color: PALETTE.selection,
+  width: 2,
+  inset: 2,
+  arm: 10,
+  outline: { color: 0x1b2412, alpha: 0.6, width: 4 },
+} as const;
+
+/**
+ * The ghost tower and range ring under the pointer: green where placement would succeed, raspberry red with a cross
+ * over the shape where it wouldn't. The cross reaches `reach` of the way from the centre to the shape's edge.
+ */
 export const GHOST = {
-  placeable: 0x6fcf4f,
-  blocked: 0xe0533d,
+  placeable: PALETTE.valid,
+  blocked: PALETTE.invalid,
+  cross: { width: 3, reach: 0.7 },
   fillAlpha: 0.35,
   ringAlpha: 0.8,
   ringWidth: 1,
@@ -161,7 +223,13 @@ export const SHELL = { color: 0xd9d9d9, radius: 4, blastColor: 0xff8a3d, blastWi
  * moves less than `dragThresholdPx` screen pixels is a click, not a drag; each wheel pixel zooms by `wheelZoomPerPx`
  * (as an exponent, so in and out are symmetric).
  */
-export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015 } as const;
+export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015, revealMarginPx: 40 } as const;
+
+/**
+ * With the reduced-motion setting on (#354): flashes, tracers and blasts carry information (ADR-0009), so they stay,
+ * shorter. The text drift and walk cycle stop (`motionTimings`, src/scenes/motion.ts).
+ */
+export const REDUCED_MOTION = { effectLifeMs: 120, tracerFadeMs: 50, blastFadeMs: 150 } as const;
 
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
@@ -176,3 +244,9 @@ export const EFFECT = {
   explosion: { color: 0xff8a3d, radius: 8, growth: 1.6 },
   puff: { color: 0xc9c9c9, radius: 6, growth: 1.5 },
 } as const;
+
+/** The DPS meter rewrites its figures at most this often, in ms of real time (a few times a second). */
+export const DPS_METER_REFRESH_MS = 250;
+
+/** Below this width, in CSS pixels, the DPS meter starts with its kinds collapsed (the HUD's phone layout). */
+export const DPS_METER_NARROW_PX = 640;

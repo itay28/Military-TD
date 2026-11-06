@@ -1,3 +1,4 @@
+import type { TowerKind } from '../data/towers';
 import type { EnemyKind } from '../data/enemies';
 import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
@@ -37,6 +38,8 @@ export interface TestView {
     readonly at: Pixel;
     readonly progress: number;
   }[];
+  /** The DPS meter's highlight (#244): the kind clicked there, and the id of every tower of it that is outlined. */
+  readonly highlight: { readonly kind: TowerKind | null; readonly towerIds: readonly number[] };
   /**
    * The Ghost under the pointer: shown only while a mouse hovers, or a finger drags over, a tile with a build kind
    * selected. `tile` is null when it is hidden.
@@ -63,6 +66,16 @@ export interface TestView {
     readonly facing: number;
     readonly frame: number;
   }[];
+  /**
+   * The enemy card open now: the enemy it shows, its kind and the name it gives, and whether a tap pinned it (rather
+   * than a hovering mouse). Null when it is closed.
+   */
+  readonly enemyCard: {
+    readonly enemyId: number;
+    readonly kind: EnemyKind;
+    readonly name: string;
+    readonly pinned: boolean;
+  } | null;
   /**
    * Each tower's turret angle in radians (0 east, −π/2 north), as turned so far toward its target. Tracked for every
    * tower, drawn only for one with a turret sprite.

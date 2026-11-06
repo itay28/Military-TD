@@ -25,7 +25,7 @@ test('Settings on the Main menu opens the Settings screen, and Back returns to t
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(settingsDialog(page)).toBeHidden();
   await expect(page.getByRole('button', { name: 'Settings' })).toBeFocused();
-  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
 });
 
 test('Settings on the pause menu opens the Settings screen, and Back (or Esc) returns to the paused game', async ({
@@ -50,7 +50,7 @@ test('a new game from the Main menu starts at the default game speed', async ({ 
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('radio', { name: '×2' }).check();
   await page.getByRole('button', { name: 'Back' }).click();
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
   await page.getByRole('button', { name: `${FIRST_MAP.name}, no stars yet` }).click();
 
   await expectSpeed(page, 2);
