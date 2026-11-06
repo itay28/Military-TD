@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { SPRITES } from '../src/data/sprites';
+import { IN_PLAY_TOWERS, TOWER_STATS } from '../src/data/towers';
 import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
@@ -98,12 +99,21 @@ describe('the committed render data', () => {
 });
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  const kinds = Object.keys(SPRITES).sort();
+  // Every kind in play: a tower kind joins `IN_PLAY_TOWERS` only once its renders land (the grenade launcher, #359).
+  const inPlay = Object.keys(SPRITES)
+    .filter((kind) => !(kind in TOWER_STATS) || (IN_PLAY_TOWERS as readonly string[]).includes(kind))
+    .sort();
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
-    it(`has one render per kind for ${faction}`, () => {
-      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
-      expect(models.map((m) => m.kind).sort()).toEqual(kinds);
+    it(`has one render per kind in play for ${faction}, and none for an unknown kind`, () => {
+      const kinds = RENDER_CONFIG.models.filter((m) => m.faction === faction).map((m) => m.kind);
+      expect(new Set(kinds).size).toBe(kinds.length);
+      // Exact: the kinds in play, plus any kind not yet in play whose renders landed early.
+      const early = kinds.filter(
+        (kind) => kind in TOWER_STATS && !(IN_PLAY_TOWERS as readonly string[]).includes(kind),
+      );
+      expect(kinds.filter((kind) => !early.includes(kind)).sort()).toEqual(inPlay);
+      for (const kind of early) expect(Object.keys(SPRITES)).toContain(kind);
     });
   }
 });

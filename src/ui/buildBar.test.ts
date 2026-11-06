@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
 import { renderFor } from '../data/renders';
 import { towerIcon } from '../data/sprites';
-import { TOWER_STATS } from '../data/towers';
+import { IN_PLAY_TOWERS, TOWER_STATS } from '../data/towers';
 import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
 import { towerTooltip } from './towerTooltip';
 
@@ -29,9 +29,9 @@ beforeEach(() => {
 });
 
 describe('buildOptions', () => {
-  it('has every tower kind, in TOWER_STATS order, with its name, cost and colours', () => {
+  it('has every kind in play, in IN_PLAY_TOWERS order, with its name, cost and colours', () => {
     expect(buildOptions()).toEqual(
-      Object.entries(TOWER_STATS).map(([kind, stats]) => ({
+      IN_PLAY_TOWERS.map((kind) => [kind, TOWER_STATS[kind]] as const).map(([kind, stats]) => ({
         kind,
         name: TOWER_NAMES[kind as keyof typeof TOWER_STATS],
         cost: stats.cost,
@@ -48,6 +48,10 @@ describe('buildOptions', () => {
       })),
     );
     expect(buildOptions()[0]).toMatchObject({ kind: 'rifleNest', name: 'Rifle Nest', cost: 50 });
+  });
+
+  it('leaves out a kind not in play yet: the grenade launcher waits for its renders (#75, #365)', () => {
+    expect(buildOptions().map((option) => option.kind)).not.toContain('grenadeLauncher');
   });
 });
 
