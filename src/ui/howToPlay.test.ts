@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENEMY_NAMES, ENEMY_WEAKNESS, TOWER_NAMES, TOWER_ROLES } from '../data/display';
-import { ENEMY_STATS } from '../data/enemies';
+import { ENEMY_STATS, PLAYABLE_KINDS } from '../data/enemies';
 import { START_LIVES, START_MONEY } from '../data/start';
 import { SELL_REFUND, TOWER_STATS } from '../data/towers';
 import { mountHowToPlay } from './howToPlay';
@@ -58,13 +58,11 @@ describe('How to play screen', () => {
     );
   });
 
-  it('lists every enemy with its reward and weakness line', () => {
+  it('lists every playable enemy (not the Jet yet) with its reward and weakness line', () => {
     mountHowToPlay(root, { onBack: () => {} });
     const items = [...section('Enemies').querySelectorAll('li')].map((li) => li.textContent);
     expect(items).toEqual(
-      (Object.keys(ENEMY_STATS) as (keyof typeof ENEMY_STATS)[]).map(
-        (k) => `${ENEMY_NAMES[k]} (reward ${ENEMY_STATS[k].reward}): ${ENEMY_WEAKNESS[k]}`,
-      ),
+      PLAYABLE_KINDS.map((k) => `${ENEMY_NAMES[k]} (reward ${ENEMY_STATS[k].reward}): ${ENEMY_WEAKNESS[k]}`),
     );
   });
 
