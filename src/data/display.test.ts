@@ -17,6 +17,11 @@ describe('names and role lines', () => {
     expect(TOWER_ROLES[kind]?.trim()).toBeTruthy();
   });
 
+  it('the Sniper is named and says what it is for, intel included (#353)', () => {
+    expect(TOWER_NAMES.sniper).toBe('Sniper');
+    expect(TOWER_ROLES.sniper).toBe('Long range, slow, hits the toughest target. Reports on the next wave.');
+  });
+
   it.each(Object.keys(ENEMY_STATS) as EnemyKind[])('enemy %s has a name and a line on what hurts it', (kind) => {
     expect(ENEMY_NAMES[kind]?.trim()).toBeTruthy();
     expect(ENEMY_WEAKNESS[kind]?.trim()).toBeTruthy();

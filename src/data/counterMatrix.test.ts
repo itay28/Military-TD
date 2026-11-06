@@ -41,4 +41,10 @@ describe('counter matrix', () => {
     // Cannon vs Jeep: a 60-damage shell kills a 20-HP Jeep, so it counts 20.
     expect(efficiency('cannon', 'jeep')).toBeCloseTo((0.5 * 20) / 100);
   });
+
+  it('the Sniper chips Tanks (an efficient counter) but the Cannon stays the best against them', () => {
+    expect(efficientCounters('tank')).toContain('sniper');
+    const best = towerKinds.reduce((a, b) => (efficiency(b, 'tank') > efficiency(a, 'tank') ? b : a));
+    expect(best).toBe('cannon');
+  });
 });
