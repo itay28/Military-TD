@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.6.1](https://github.com/itay28/Military-TD/compare/v0.6.0...v0.6.1) (2026-11-06)
+
+
+### Features
+
+* build-bar tower tooltips ([#390](https://github.com/itay28/Military-TD/issues/390)) ([0e11b11](https://github.com/itay28/Military-TD/commit/0e11b11881088218496b0d906a1cac9f4677c241))
+* colourblind-safe colours with non-colour cues ([#394](https://github.com/itay28/Military-TD/issues/394)) ([ad4c427](https://github.com/itay28/Military-TD/commit/ad4c4275a8f8f3876809100e746b1329acd77439))
+* DPS meter breakdown by tower kind and by tower ([#385](https://github.com/itay28/Military-TD/issues/385)) ([37f0def](https://github.com/itay28/Military-TD/commit/37f0defc7a42dd95bb3f46c8b0730947f85bc1d9))
+* DPS meter rows select a tower or highlight a kind ([#388](https://github.com/itay28/Military-TD/issues/388)) ([645319c](https://github.com/itay28/Military-TD/commit/645319cafed36a0b8804f774cd9a92b4532f4b9e))
+* enemy info card and tower role line ([#389](https://github.com/itay28/Military-TD/issues/389)) ([55d2c59](https://github.com/itay28/Military-TD/commit/55d2c59ad1fccb156b178fabeac4c3bb7b7cdc1c))
+* How to play screen ([#425](https://github.com/itay28/Military-TD/issues/425)) ([9e36b21](https://github.com/itay28/Military-TD/commit/9e36b21bbd0e53d6169a162d8e9f6abf41c1e3c6))
+* idle towers pre-aim at the next enemy's entry into range ([#395](https://github.com/itay28/Military-TD/issues/395)) ([3c86b96](https://github.com/itay28/Military-TD/commit/3c86b96a182ad7cca933c113b086fe2f0b75ee77))
+* keyboard shortcuts and a Keys help overlay ([#367](https://github.com/itay28/Military-TD/issues/367)) ([7903e6a](https://github.com/itay28/Military-TD/commit/7903e6a7dbe5d88262ea6e0f3e141f374a265cdf))
+* live battlefield behind the main menu ([#434](https://github.com/itay28/Military-TD/issues/434)) ([a309164](https://github.com/itay28/Military-TD/commit/a309164d80bf6af0cad014fe09f7cb59ef85ad0b))
+* reduced motion and text size settings ([#416](https://github.com/itay28/Military-TD/issues/416)) ([89e3fcf](https://github.com/itay28/Military-TD/commit/89e3fcf6c262fda11211484a9a4685f39b44f2e5))
+* rename the game to Hold the Perimeter ([#422](https://github.com/itay28/Military-TD/issues/422)) ([19fcc4b](https://github.com/itay28/Military-TD/commit/19fcc4bf29f323101aa40aaa02a7d895372436c8))
+
+
+### Bug Fixes
+
+* crop soldier sprites to the figure and drop the baked haze and long shadow ([#392](https://github.com/itay28/Military-TD/issues/392)) ([ffe588f](https://github.com/itay28/Military-TD/commit/ffe588ff3e67d342b9cb912e92911aa82a6583dc))
+* put the path first in the split agent's gh api POST calls ([#451](https://github.com/itay28/Military-TD/issues/451)) ([acd01d3](https://github.com/itay28/Military-TD/commit/acd01d378eeb98a631f2afa6620ebfbd9bf4e0ac))
+* Russian jeep renders as an open-top UAZ-469, China jeep olive ([#393](https://github.com/itay28/Military-TD/issues/393)) ([b22b16f](https://github.com/itay28/Military-TD/commit/b22b16f50e99bf5c6c0240af830203533472b745))
+
 ## [0.6.0](https://github.com/itay28/Military-TD/compare/v0.5.0...v0.6.0) (2026-11-05)
 
 
