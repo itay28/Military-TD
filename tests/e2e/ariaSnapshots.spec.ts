@@ -33,10 +33,16 @@ test('the build bar marks the selected tower', async ({ page }) => {
   await expectAria(page.locator('#build-bar'), 'build-bar-selected.aria.yml');
 });
 
-test('the pause menu offers Resume, Restart, Settings, Field manual, and Quit to menu', async ({ page }) => {
+test('the pause menu offers Resume, Restart, Settings, Field manual, Keys, and Quit to menu', async ({ page }) => {
   await openGame(page);
   await page.getByRole('button', { name: 'Pause' }).click();
   await expectAria(page.locator('#pause-menu'), 'pause-menu.aria.yml');
+});
+
+test('the Keys help overlay lists every shortcut, then Back', async ({ page }) => {
+  await openGame(page);
+  await page.keyboard.press('h');
+  await expectAria(page.locator('#pause-menu'), 'help-overlay.aria.yml');
 });
 
 test('the Main menu shows the title, Play, Settings, Field manual, and Credits', async ({ page }) => {
@@ -44,7 +50,7 @@ test('the Main menu shows the title, Play, Settings, Field manual, and Credits',
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
 });
 
-test('the Settings screen shows the default game speed choices, the range setting, the volume sliders, Show hints again and Back', async ({
+test('the Settings screen shows the default game speed choices, the range setting, the volume sliders, reduce motion, text size, Show hints again and Back', async ({
   page,
 }) => {
   await openMenu(page);

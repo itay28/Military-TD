@@ -170,4 +170,48 @@ describe('mountSettingsScreen', () => {
     pressKey('Escape');
     expect(onBack).not.toHaveBeenCalled();
   });
+
+  describe('reduce motion and text size (#354)', () => {
+    const checkboxNamed = (name: string) =>
+      [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((box) => labelOf(box) === name);
+    const textSizeGroup = () =>
+      [...root.querySelectorAll('fieldset')].find((set) => set.querySelector('legend')?.textContent === 'Text size');
+    const textSizes = () => [...textSizeGroup()!.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+
+    it('offers a labelled Reduce motion checkbox showing the current setting', () => {
+      settings.set({ reducedMotion: true });
+      mount();
+      expect(checkboxNamed('Reduce motion')?.checked).toBe(true);
+    });
+
+    it('switches reduced motion as soon as the box is toggled', () => {
+      mount();
+      checkboxNamed('Reduce motion')!.click();
+      expect(settings.get().reducedMotion).toBe(true);
+      checkboxNamed('Reduce motion')!.click();
+      expect(settings.get().reducedMotion).toBe(false);
+    });
+
+    it('offers 100 %, 125 % and 150 % as one labelled group, with the current size checked', () => {
+      settings.set({ textSize: 125 });
+      mount();
+      const radios = textSizes();
+      expect(radios.map(labelOf)).toEqual(['100 %', '125 %', '150 %']);
+      expect(new Set(radios.map((radio) => radio.name)).size).toBe(1);
+      expect(radios.map((radio) => radio.checked)).toEqual([false, true, false]);
+    });
+
+    it('sets the text size as soon as one is picked', () => {
+      mount();
+      textSizes()[2]!.click();
+      expect(settings.get().textSize).toBe(150);
+    });
+
+    it('keeps the speed and text size groups apart: picking a size leaves the speed alone', () => {
+      mount();
+      textSizes()[1]!.click();
+      expect(settings.get().defaultSpeed).toBe(1);
+      expect(speed('×1')!.checked).toBe(true);
+    });
+  });
 });

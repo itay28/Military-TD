@@ -1,6 +1,8 @@
 import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type GameState } from '../sim/game';
 import type { OpenFieldManual } from './fieldManual';
+import { mountHelpOverlay, type HelpOverlay } from './helpOverlay';
+import { shortcutFor } from './keymap';
 import type { OpenSettings } from './settingsScreen';
 
 /** The parts of the Game the pause menu reads. */
@@ -30,18 +32,20 @@ export interface PauseMenu {
   readonly paused: boolean;
   /** Opens the overlay. Does nothing once the game is over. */
   open(): void;
-  /** Closes the overlay, and the Settings screen if it is open, and resumes. */
+  /** Pauses and shows the Keys help overlay (the ?/H keys); Esc or Back then resumes. Does nothing once the game is over. */
+  openHelp(): void;
+  /** Closes the overlay, and the Settings screen or help overlay if one is open, and resumes. */
   close(): void;
   /** Keeps the Pause button and the overlay in step with the game; call once per frame. Writes only on a change. */
   update(): void;
-  /** Removes the Pause button and the overlay, unblocks the page and stops listening for Esc. */
+  /** Removes the Pause button and the overlay, unblocks the page and stops listening for P and Esc. */
   destroy(): void;
 }
 
 const TITLE_ID = 'pause-menu-title';
 
 /**
- * Builds the pause overlay inside `root`, over the canvas, and a Pause button in `buttonRoot`. Esc toggles it; a
+ * Builds the pause overlay inside `root`, over the canvas, and a Pause button in `buttonRoot`. P or Esc toggles it; a
  * keydown handler that uses an Esc for something else marks it with `preventDefault()`, and then it doesn't pause.
  * Pausing is a full freeze: the overlay covers the map and the `blocked` areas can't be used until Resume.
  */
@@ -66,7 +70,10 @@ export function mountPauseMenu(
   const setPaused = (value: boolean) => {
     if (paused === value) return;
     paused = value;
-    if (!paused) closeSettings();
+    if (!paused) {
+      closeSettings();
+      closeHelp();
+    }
     root.hidden = !paused;
     for (const area of blocked) area.inert = paused;
     if (paused) {
@@ -78,6 +85,29 @@ export function mountPauseMenu(
     if (!destroyed && !isGameOver(game.state.phase)) setPaused(true);
   };
   const close = () => setPaused(false);
+  const closeHelp = () => {
+    helpOverlay?.close();
+    helpOverlay = undefined;
+    dialog.hidden = false;
+  };
+  /** Shows the help overlay in place of the Paused dialog; `onBack` runs when the player leaves it. */
+  const showHelp = (onBack: () => void) => {
+    dialog.hidden = true;
+    helpOverlay = mountHelpOverlay(helpRoot, {
+      onBack: () => {
+        helpOverlay = undefined;
+        dialog.hidden = false;
+        onBack();
+      },
+    });
+  };
+  const openHelp = () => {
+    if (destroyed || isGameOver(game.state.phase) || helpOverlay) return;
+    if (paused) closeSettings();
+    else setPaused(true);
+    // Opened from the game, Back returns to it.
+    showHelp(close);
+  };
   const closeSettings = () => {
     subScreen?.close();
     subScreen = undefined;
@@ -120,32 +150,40 @@ export function mountPauseMenu(
   };
   const settings = subScreenButton('settings', 'Settings', openSettings);
   const fieldManual = subScreenButton('field-manual', 'Field manual', openFieldManual);
+  // Opened from the Paused dialog, Back returns to it.
+  let helpOverlay: HelpOverlay | undefined;
+  const keys = makeButton('keys', 'Keys', () => showHelp(() => keys.focus()));
   dialog.append(
     heading,
     resume,
     makeButton('pause-restart', 'Restart', () => onRestart()),
     settings,
     fieldManual,
+    keys,
     makeButton('quit', 'Quit to menu', onQuit && (() => onQuit())),
   );
-  root.append(dialog);
+  const helpRoot = doc.createElement('div');
+  helpRoot.className = 'help';
+  helpRoot.hidden = true;
+  root.append(dialog, helpRoot);
   const speedButtons = speed && mountSpeedButtons(dialog, speed, (n) => `pause-speed-${n}`);
   // Between Resume and Restart.
   if (speedButtons) resume.after(speedButtons.group);
   root.hidden = true;
 
-  // While paused, keys stop at the window, before the build bar's and tower panel's shortcuts see them: Esc resumes.
+  // While paused, keys stop at the window, before the build bar's and tower panel's shortcuts see them: P/Esc resume.
   const swallowKeysWhilePaused = (event: KeyboardEvent) => {
     if (!paused) return;
     event.stopPropagation();
-    if (event.key !== 'Escape' || event.repeat) return;
-    // From Settings or the Field manual, Esc goes back to the Paused dialog rather than resuming.
+    if (shortcutFor(event) !== 'pause' || event.repeat) return;
+    // From Settings, the Field manual or the help overlay, it goes back the way the player came rather than resuming.
     if (subScreen) subScreen.back();
+    else if (helpOverlay) helpOverlay.back();
     else close();
   };
-  // Esc pauses last, so one that cancelled something first (a tower selection, a build kind) doesn't also pause.
+  // P/Esc pause last, so an Esc that cancelled something first (a tower selection, a build kind) doesn't also pause.
   const pauseOnEscape = (event: KeyboardEvent) => {
-    if (event.key === 'Escape' && !event.repeat && !event.defaultPrevented) open();
+    if (shortcutFor(event) === 'pause' && !event.repeat && !event.defaultPrevented) open();
   };
   const win = doc.defaultView!;
   win.addEventListener('keydown', swallowKeysWhilePaused, true);
@@ -156,6 +194,7 @@ export function mountPauseMenu(
       return paused;
     },
     open,
+    openHelp,
     close,
     update() {
       const over = isGameOver(game.state.phase);

@@ -15,5 +15,15 @@
   - slider "Music volume": "60"
   - text: Sound effects volume
   - slider "Sound effects volume": "80"
+  - checkbox "Reduce motion"
+  - text: Reduce motion
+  - group "Text size":
+    - text: Text size
+    - radio "100 %" [checked]
+    - text: 100 %
+    - radio "125 %"
+    - text: 125 %
+    - radio "150 %"
+    - text: 150 %
   - button "Show hints again"
   - button "Back"

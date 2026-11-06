@@ -3,14 +3,13 @@ import atlasPngUrl from '../../assets/atlas/sprites.png';
 import {
   CAMERA,
   DISMANTLE,
-  EFFECT,
   ENEMY_HIT_PX,
   ENEMY_NAMES,
   FLOATING_TEXT,
-  SHELL,
+  HIGHLIGHT,
   SPRITE_SCALE,
   TILE_PX,
-  TRACER,
+  TOWER_STYLE,
 } from '../data/display';
 import { soundFor, type SoundEvent } from '../audio/sounds';
 import { silentAudio, throttleAudio } from '../audio/audioOut';
@@ -42,6 +41,7 @@ import {
   clampView,
   fitView,
   panBy,
+  panToReveal,
   screenToWorld,
   worldToScreen,
   zoomAt,
@@ -54,6 +54,7 @@ import {
   drawDismantleRing,
   drawEnemy,
   drawGhost,
+  drawHighlight,
   drawHpBar,
   drawLevelPips,
   drawRangeRing,
@@ -66,7 +67,7 @@ import {
 import { drawGrid, drawMap } from './drawMap';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
-import { MAX_GAME_SPEED, type GameSpeed, type GameSpeedControl } from './gameSpeed';
+import { MAX_GAME_SPEED, nextSpeed, type GameSpeed, type GameSpeedControl } from './gameSpeed';
 import { createGestures, hoverFrom, type Gesture, type Gestures } from './gestures';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
@@ -77,6 +78,7 @@ import { ghostAt, placeAt, type Ghost } from './placement';
 import { enemyAt, resolveClick } from './selection';
 import { createBlasts, shellPoint, type Blasts } from './shellView';
 import { createTracers, type Tracers } from './tracers';
+import { motionTimings, type MotionTimings } from './motion';
 import { TILESET_FRAMES, tileArt } from './tileset';
 import { buildOptions, mountBuildBar, type BuildBar, type IconAtlas } from '../ui/buildBar';
 import type { Rect } from '../ui/towerTooltip';
@@ -93,6 +95,7 @@ import {
 } from '../ui/hints';
 import type { OpenFieldManual } from '../ui/fieldManual';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
+import { mountShortcuts } from '../ui/shortcuts';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
@@ -116,6 +119,7 @@ const DEPTH = {
   shells: 4,
   effects: 4,
   ghost: 5,
+  highlight: 5.5,
   rangeRing: 6,
   floatingText: 7,
 } as const;
@@ -260,6 +264,11 @@ export class GameScene extends Phaser.Scene {
   /** With Always show tower ranges: every tower's range ring but the selected one's, which `selectedRing` draws. */
   private allRings!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
+  /** A view-only glow on every tower of the kind highlighted in the DPS meter (#244). */
+  private highlightGraphics!: Phaser.GameObjects.Graphics;
+  private highlightedKind: TowerKind | undefined;
+  /** The towers of the highlighted kind, by id, for `view()`. */
+  private highlightedIds: readonly number[] = [];
   /** The ghost last drawn, and its kind, so it is redrawn only when its tile, colour or kind changes. */
   private ghost: (Ghost & { readonly kind: TowerKind }) | undefined;
   private floatingTexts!: FloatingTexts;
@@ -366,6 +375,7 @@ export class GameScene extends Phaser.Scene {
       ].sort((a, b) => a - b),
       tracers: this.tracers.active(),
       effects: this.effects.active(),
+      highlight: { kind: this.highlightedKind ?? null, towerIds: [...this.highlightedIds] },
       ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
@@ -635,8 +645,9 @@ export class GameScene extends Phaser.Scene {
         };
       },
       update: (view, enemy) => {
-        // ?anim=0 never advances the clock, but the per-id phase would still spread frames, so pin them to 0.
-        const frame = this.flags.anim ? animFrame(this.animMs, enemy.id) : 0;
+        // With ?anim=0 or reduced motion the walk cycle stands still: the per-id phase would still spread frames, so pin
+        // them to 0.
+        const frame = this.motion().enemyWalk ? animFrame(this.animMs, enemy.id) : 0;
         // Only the shape's rotor moves with the frame; a sprite's HP bar doesn't.
         const redrawShape = !view.sprite && view.frame !== frame;
         if (view.hp !== enemy.hp || redrawShape) {
@@ -702,8 +713,8 @@ export class GameScene extends Phaser.Scene {
       },
     });
 
-    // ?anim=0: zero lifetimes, so effects, tracers and floating texts never show.
-    this.effects = createEffects(this.flags.anim ? EFFECT.lifeMs : 0);
+    // Lifetimes read live from the reduced-motion setting (#354); ?anim=0 zeroes them, so the cosmetics never show.
+    this.effects = createEffects(() => this.motion().effectLifeMs);
     this.effectGraphics = onLayer(this.add.graphics(), 'effects');
     this.sim.events.on('shellFired', ({ towerId }) => {
       const tower = this.sim.state.towers.find((t) => t.id === towerId);
@@ -711,7 +722,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.sim.events.on('shellLanded', ({ position }) => this.effects.add('explosion', toPixels(position)));
     this.sim.events.on('enemyKilled', ({ enemy }) => this.effects.add('puff', toPixels(enemy.position)));
-    this.tracers = createTracers(this.flags.anim ? TRACER.fadeMs : 0);
+    this.tracers = createTracers(() => this.motion().tracerFadeMs);
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
@@ -725,7 +736,7 @@ export class GameScene extends Phaser.Scene {
     this.wireSounds();
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
-    this.blasts = createBlasts(this.flags.anim ? SHELL.blastFadeMs : 0);
+    this.blasts = createBlasts(() => this.motion().blastFadeMs);
     this.shellGraphics = onLayer(this.add.graphics(), 'shells');
     this.sim.events.on('shellLanded', ({ position, outerRadius }) =>
       this.blasts.add(toPixels(position), outerRadius * TILE_PX),
@@ -740,7 +751,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
-    this.floatingTexts = createFloatingTexts(this.flags.anim ? FLOATING_TEXT : { ...FLOATING_TEXT, durationMs: 0 });
+    this.highlightGraphics = onLayer(this.add.graphics(), 'highlight');
+    this.highlightedKind = undefined;
+    this.highlightedIds = [];
+    this.floatingTexts = createFloatingTexts(() => this.motion().floatingText);
     this.floatingTextViews = createViewSync<FloatingTextView, Phaser.GameObjects.Text>({
       create: ({ text }) => onLayer(this.add.text(0, 0, text, FLOATING_TEXT.style).setOrigin(0.5, 1), 'floatingText'),
       update: (view, { x, y, alpha }) => view.setPosition(x, y).setAlpha(alpha),
@@ -756,7 +770,10 @@ export class GameScene extends Phaser.Scene {
       get: () => this.gameSpeed,
       set: (value) => (this.gameSpeed = value),
     };
-    this.hud = mountHud(this.hudRoot, this.sim, speed);
+    this.hud = mountHud(this.hudRoot, this.sim, speed, {
+      onSelectTower: (id) => this.selectTower(id),
+      onHighlightKind: (kind) => (this.highlightedKind = kind),
+    });
     // Placing a new tower, inspecting a placed one and inspecting an enemy are exclusive: picking one closes the others.
     this.buildBar = mountBuildBar(
       this.buildBarRoot,
@@ -799,7 +816,16 @@ export class GameScene extends Phaser.Scene {
     this.hintsSkipped = false;
     this.hintsSaved = false;
     this.hints = mountHints(this.hintsRoot, { onSkip: () => (this.hintsSkipped = true) });
+    // U, S, Space, F and ?/H (src/ui/keymap.ts), each through the same call as its button. 1–9 are the build bar's.
+    const shortcuts = mountShortcuts(this.hudRoot.ownerDocument, this.sim, {
+      upgrade: () => this.towerPanel.upgrade(),
+      sell: () => this.towerPanel.sell(),
+      startWave: () => this.hud.startWave(),
+      cycleSpeed: () => (this.gameSpeed = nextSpeed(this.gameSpeed)),
+      openHelp: () => this.pauseMenu.openHelp(),
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      shortcuts.destroy();
       this.hints.destroy();
       this.hud.destroy();
       this.buildBar.destroy();
@@ -865,6 +891,32 @@ export class GameScene extends Phaser.Scene {
     );
     this.progress.recordResult(mapId, stars);
     return unlocks ? { stars, unlockedMap: MAPS[index + 1]!.name } : { stars };
+  }
+
+  /** Selects tower `id` as a tap on it would, and pans the camera to it if it is off screen (#244). */
+  private selectTower(id: number): void {
+    const tower = this.sim.state.towers.find((t) => t.id === id);
+    if (!tower) return;
+    this.towerPanel.select(id);
+    const view = panToReveal(this.view, towerCenter(tower), CAMERA.revealMarginPx, this.cameraBounds());
+    if (view === this.view) return;
+    this.fitted = false;
+    this.setView(view);
+  }
+
+  /** Outlines every tower of the highlighted kind, pulsing; redrawn each frame while there is one. */
+  private drawHighlights(towers: readonly Tower[]): void {
+    const kind = this.highlightedKind;
+    const marked = kind === undefined ? [] : towers.filter((tower) => tower.kind === kind);
+    this.highlightedIds = marked.map((tower) => tower.id);
+    this.highlightGraphics.clear();
+    const pulse = this.flags.anim ? 0.5 + 0.5 * Math.sin((this.animMs / HIGHLIGHT.pulseMs) * 2 * Math.PI) : 1;
+    for (const tower of marked) {
+      const { x, y } = towerCenter(tower);
+      this.highlightGraphics.translateCanvas(x, y);
+      drawHighlight(this.highlightGraphics, TOWER_STYLE[tower.kind], pulse);
+      this.highlightGraphics.translateCanvas(-x, -y);
+    }
   }
 
   /** The camera's limits now: the canvas size and the map's size in world pixels. */
@@ -1019,6 +1071,11 @@ export class GameScene extends Phaser.Scene {
     this.sim.tick(TICK_MS);
   }
 
+  /** The cosmetic timings for this frame: the reduced-motion setting is read live, so a change applies at once. */
+  private motion(): MotionTimings {
+    return motionTimings({ reducedMotion: this.settings.get().reducedMotion, anim: this.flags.anim });
+  }
+
   override update(_time: number, frameDeltaMs: number): void {
     // Paused, no time passes: the sim doesn't tick and the cosmetics hold still (ADR-0002: the sim is untouched).
     const deltaMs = this.pauseMenu.paused ? 0 : frameDeltaMs;
@@ -1027,7 +1084,7 @@ export class GameScene extends Phaser.Scene {
     this.blasts.advance(deltaMs);
     this.effects.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
-    if (this.flags.anim) this.animMs += deltaMs;
+    if (this.motion().enemyWalk) this.animMs += deltaMs;
     this.loop.advance(frameMs(this.flags, deltaMs, this.gameSpeed));
     this.playWhistles();
     // The battlefield ambience (#405): the combat layer during a wave, the game track on the End screen. Both calls do
@@ -1056,6 +1113,7 @@ export class GameScene extends Phaser.Scene {
     drawTracers(this.tracerGraphics, this.tracers.active());
     this.effectGraphics.clear();
     drawEffects(this.effectGraphics, this.effects.active());
+    this.drawHighlights(towers);
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);
     this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected, true);

@@ -10,7 +10,9 @@ import { MenuScene } from './scenes/MenuScene';
 import { createPersistedProgress } from './progress/persist';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
+import { applyDisplaySettings, prefersReducedMotion } from './settings/display';
 import { browserStorage, createMemoryStorage, createPersistedSettings } from './settings/persist';
+import { defaultSettings } from './settings/settings';
 import { SCENARIOS } from './testing/scenarios';
 import { mountFieldManual, type OpenFieldManual } from './ui/fieldManual';
 import { mountSettingsScreen, type OpenSettings } from './ui/settingsScreen';
@@ -47,7 +49,13 @@ const flags = parseTestFlags(window.location.search);
 // One set of settings, shared by both menus and every game, saved between visits. Test mode keeps them in memory
 // unless ?persist=1, so e2e runs don't leak into each other.
 const storage = flags.test && !flags.persist ? createMemoryStorage() : browserStorage();
-const settings = createPersistedSettings(storage);
+// Reduced motion defaults to the system's preference until the player picks (#354).
+const settings = createPersistedSettings(
+  storage,
+  defaultSettings({ prefersReducedMotion: prefersReducedMotion(window) }),
+);
+// Text size and reduced motion apply to the whole page, and follow every change.
+applyDisplaySettings(settings, document.documentElement);
 // Saved progress (maps won, best stars) lives under its own key: the Game records wins, the Level select unlocks from it.
 const progress = createPersistedProgress(storage);
 // Volume (#67): master × channel from the settings, silent while the tab is hidden. Music and sound effects both read it.

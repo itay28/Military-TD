@@ -137,6 +137,9 @@ export const DISMANTLE = { alpha: 0.4, color: 0xe5e1cf, radius: 28, width: 2 } a
 /** The range ring shown while the pointer is over a tower, or while it is selected, with an inner ring at its minimum range if it has one. */
 export const RANGE_RING = { color: PALETTE.rangeRing, alpha: 0.6, width: 1 } as const;
 
+/** The glow around every tower of the kind clicked in the DPS meter (#244): a bright outline that pulses, on both shapes. */
+export const HIGHLIGHT = { color: 0x4fd1ff, width: 3, glowWidth: 8, glowAlpha: 0.35, pad: 5, pulseMs: 1200 } as const;
+
 /**
  * The brackets at the corners of the selected tower's tile, `inset` px inside it with arms `arm` px long, over a dark
  * edge: the selection is a shape, not only the range ring the hovered tower has too.
@@ -207,7 +210,13 @@ export const SHELL = { color: 0xd9d9d9, radius: 4, blastColor: 0xff8a3d, blastWi
  * moves less than `dragThresholdPx` screen pixels is a click, not a drag; each wheel pixel zooms by `wheelZoomPerPx`
  * (as an exponent, so in and out are symmetric).
  */
-export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015 } as const;
+export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015, revealMarginPx: 40 } as const;
+
+/**
+ * With the reduced-motion setting on (#354): flashes, tracers and blasts carry information (ADR-0009), so they stay,
+ * shorter. The text drift and walk cycle stop (`motionTimings`, src/scenes/motion.ts).
+ */
+export const REDUCED_MOTION = { effectLifeMs: 120, tracerFadeMs: 50, blastFadeMs: 150 } as const;
 
 /** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
