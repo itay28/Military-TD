@@ -3,6 +3,10 @@ export const GAME_SPEEDS = [1, 2, 3] as const;
 export type GameSpeed = (typeof GAME_SPEEDS)[number];
 export const MAX_GAME_SPEED: GameSpeed = 3;
 
+/** The speed after `speed`, wrapping from the fastest back to ×1 (the F key). */
+export const nextSpeed = (speed: GameSpeed): GameSpeed =>
+  GAME_SPEEDS[(GAME_SPEEDS.indexOf(speed) + 1) % GAME_SPEEDS.length]!;
+
 /** The player's game speed, which the scene owns: the HUD and the pause menu show it and set it. */
 export interface GameSpeedControl {
   get(): GameSpeed;

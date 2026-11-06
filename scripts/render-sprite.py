@@ -116,22 +116,31 @@ def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) 
 
     `skip` keeps materials whose name starts with an entry. `overrides` gives a material (by name prefix) its own
     `color` and, optionally, `specular` (Principled "Specular IOR Level"), for a part that renders lighter than
-    the rest: a pale texture, or flat tops mirroring the sky.
+    the rest: a pale texture, or flat tops mirroring the sky. An override with `"flat": true` on an untextured
+    material (a flat base colour) sets that colour (and `specular`) instead, for a low-poly model painted in plain
+    colours; without it, untextured materials are left alone.
     """
     for mat in bpy.data.materials:
         tree = mat.node_tree
         bsdf = tree.nodes.get("Principled BSDF") if tree else None
-        if not bsdf or not bsdf.inputs["Base Color"].links or any(mat.name.startswith(s) for s in skip):
+        if not bsdf or any(mat.name.startswith(s) for s in skip):
+            continue
+        own = next((o for prefix, o in overrides.items() if mat.name.startswith(prefix)), {})
+        flat = not bsdf.inputs["Base Color"].links
+        if flat and not own.get("flat"):
+            continue
+        if "specular" in own:
+            bsdf.inputs["Specular IOR Level"].default_value = own["specular"]
+        if flat:
+            if "color" in own:
+                bsdf.inputs["Base Color"].default_value = (*own["color"], 1.0)
             continue
         link = bsdf.inputs["Base Color"].links[0]
         mix = tree.nodes.new("ShaderNodeMix")
         mix.data_type = "RGBA"
         mix.blend_type = "MULTIPLY"
         mix.inputs["Factor"].default_value = 1.0
-        own = next((o for prefix, o in overrides.items() if mat.name.startswith(prefix)), {})
         mix.inputs["B"].default_value = (*own.get("color", color), 1.0)
-        if "specular" in own:
-            bsdf.inputs["Specular IOR Level"].default_value = own["specular"]
         tree.links.new(link.from_socket, mix.inputs["A"])
         tree.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
 

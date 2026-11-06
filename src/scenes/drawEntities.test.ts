@@ -5,10 +5,12 @@ import {
   EFFECT,
   ENEMY_STYLE,
   GHOST,
+  HIGHLIGHT,
   HP_BAR,
   LEVEL_PIP,
   RANGE_RING,
   ROTOR,
+  SELECTION,
   SHELL,
   TILE_PX,
   TOWER_STYLE,
@@ -24,10 +26,13 @@ import {
   drawGhost,
   drawHpBar,
   drawLevelPips,
+  drawHighlight,
   drawRangeRing,
+  drawSelection,
   drawShells,
   drawTower,
   drawTracers,
+  hpBarFill,
   rangeRingRadii,
   type EntityPainter,
 } from './drawEntities';
@@ -224,6 +229,48 @@ describe('drawHpBar', () => {
     drawHpBar(bar.painter, infantry(10));
     expect(bar.calls).toEqual(whole.calls.slice(-4));
   });
+
+  it('fills a low bar in the low-HP colour, so the change is a second cue next to its length', () => {
+    const max = ENEMY_STATS.infantry.maxHp;
+    const { painter, calls } = recordingPainter();
+    drawHpBar(painter, infantry(max / 4));
+    expect(calls[2]).toEqual(['fillStyle', HP_BAR.low]);
+    expect(calls[3]).toEqual(['fillRect', -HP_BAR.width / 2, expect.any(Number), HP_BAR.width / 4, HP_BAR.height]);
+  });
+});
+
+describe('hpBarFill', () => {
+  it('is the full colour above the low share and the low colour at or below it', () => {
+    expect(hpBarFill(100, 100)).toBe(HP_BAR.fill);
+    expect(hpBarFill(HP_BAR.lowAt * 100 + 1, 100)).toBe(HP_BAR.fill);
+    expect(hpBarFill(HP_BAR.lowAt * 100, 100)).toBe(HP_BAR.low);
+    expect(hpBarFill(1, 100)).toBe(HP_BAR.low);
+  });
+});
+
+describe('drawSelection', () => {
+  it('draws a bracket at each corner of the tile, so the selected tower is marked by shape and not only colour', () => {
+    const { painter, calls } = recordingPainter();
+    drawSelection(painter);
+    const c = TILE_PX / 2 - SELECTION.inset;
+    const a = SELECTION.arm;
+    expect(calls).toEqual([
+      ['lineStyle', SELECTION.outline.width, SELECTION.outline.color, SELECTION.outline.alpha],
+      ...[-1, 1].flatMap((sx) =>
+        [-1, 1].flatMap((sy) => [
+          ['lineBetween', sx * c, sy * c, sx * (c - a), sy * c],
+          ['lineBetween', sx * c, sy * c, sx * c, sy * (c - a)],
+        ]),
+      ),
+      ['lineStyle', SELECTION.width, SELECTION.color],
+      ...[-1, 1].flatMap((sx) =>
+        [-1, 1].flatMap((sy) => [
+          ['lineBetween', sx * c, sy * c, sx * (c - a), sy * c],
+          ['lineBetween', sx * c, sy * c, sx * c, sy * (c - a)],
+        ]),
+      ),
+    ]);
+  });
 });
 
 describe('drawLevelPips', () => {
@@ -326,6 +373,33 @@ describe('drawRangeRing', () => {
   });
 });
 
+describe('drawHighlight', () => {
+  it('outlines a square tower a little outside its size, glow first', () => {
+    const { painter, calls } = recordingPainter();
+    drawHighlight(painter, TOWER_STYLE.rifleNest, 1);
+    const half = (TOWER_STYLE.rifleNest.size + 2 * HIGHLIGHT.pad) / 2;
+    expect(calls.map((c) => c[0])).toEqual(['lineStyle', 'strokeRect', 'lineStyle', 'strokeRect']);
+    expect(calls[1]).toEqual(['strokeRect', -half, -half, 2 * half, 2 * half]);
+    expect(calls[2]).toEqual(['lineStyle', HIGHLIGHT.width, HIGHLIGHT.color, 1]);
+  });
+
+  it('outlines a circular tower with circles', () => {
+    const { painter, calls } = recordingPainter();
+    drawHighlight(painter, TOWER_STYLE.aaGun, 0);
+    expect(calls.filter((c) => c[0] === 'strokeCircle')).toHaveLength(2);
+    expect(calls[1]).toEqual(['strokeCircle', 0, 0, TOWER_STYLE.aaGun.size / 2 + HIGHLIGHT.pad]);
+  });
+
+  it('swells the glow with the pulse', () => {
+    const glowAlpha = (pulse: number) => {
+      const { painter, calls } = recordingPainter();
+      drawHighlight(painter, TOWER_STYLE.cannon, pulse);
+      return calls[0]![3] as number;
+    };
+    expect(glowAlpha(1)).toBeGreaterThan(glowAlpha(0));
+  });
+});
+
 describe('drawTracers', () => {
   it("draws one line per tracer in its tower's style, at its alpha", () => {
     const { painter, calls } = recordingPainter();
@@ -366,10 +440,21 @@ describe('drawGhost', () => {
     expect(calls).toEqual(ghostCalls(GHOST.placeable));
   });
 
-  it('draws them in red where placement would be refused', () => {
+  it('draws them in the invalid colour where placement would be refused, with a cross over the shape so it reads without colour', () => {
     const { painter, calls } = recordingPainter();
     drawGhost(painter, 'rifleNest', false);
-    expect(calls).toEqual(ghostCalls(GHOST.blocked));
+    const arm = half * GHOST.cross.reach;
+    const cross = [
+      ['lineBetween', -arm, -arm, arm, arm],
+      ['lineBetween', -arm, arm, arm, -arm],
+    ];
+    expect(calls).toEqual([
+      ...ghostCalls(GHOST.blocked),
+      ['lineStyle', GHOST.cross.width + 2, GHOST.outline.color, GHOST.outline.alpha],
+      ...cross,
+      ['lineStyle', GHOST.cross.width, GHOST.blocked],
+      ...cross,
+    ]);
   });
 
   it('draws a Mortar as a see-through circle, with its range ring and the dead zone inside it', () => {
