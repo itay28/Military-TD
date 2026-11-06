@@ -6,6 +6,7 @@ describe('createSettings', () => {
     expect(DEFAULT_SETTINGS).toEqual({
       defaultSpeed: 1,
       showAllRanges: false,
+      showMapGrid: true,
       masterVolume: 80,
       musicVolume: 60,
       sfxVolume: 80,
@@ -19,6 +20,7 @@ describe('createSettings', () => {
     const given = {
       defaultSpeed: 3,
       showAllRanges: true,
+      showMapGrid: false,
       masterVolume: 10,
       musicVolume: 20,
       sfxVolume: 30,

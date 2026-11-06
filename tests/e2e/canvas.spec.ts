@@ -168,3 +168,15 @@ test('with anim=0 no combat effect is drawn', async ({ page }) => {
   });
   expect(drawn).toBe(0);
 });
+
+test('the tactical map grid (#400) draws over the ground and under the towers, so it hides no unit or range ring', async ({
+  page,
+}) => {
+  await openGame(page, { anim: true });
+  await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
+  await expect.poll(async () => (await view(page)).drawOrder).toContain('towers');
+  const { drawOrder } = await view(page);
+  const order = drawOrder.filter((layer) => ['map', 'mapGrid', 'towers', 'rangeRing'].includes(layer));
+  expect(order.indexOf('mapGrid')).toBeGreaterThan(order.indexOf('map'));
+  expect(order.indexOf('mapGrid')).toBeLessThan(order.indexOf('towers'));
+});
