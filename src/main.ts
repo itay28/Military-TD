@@ -10,8 +10,11 @@ import { MenuScene } from './scenes/MenuScene';
 import { createPersistedProgress } from './progress/persist';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
+import { applyDisplaySettings, prefersReducedMotion } from './settings/display';
 import { browserStorage, createMemoryStorage, createPersistedSettings } from './settings/persist';
+import { defaultSettings } from './settings/settings';
 import { SCENARIOS } from './testing/scenarios';
+import { mountHowToPlay, type OpenHowToPlay } from './ui/howToPlay';
 import { mountSettingsScreen, type OpenSettings } from './ui/settingsScreen';
 import { showVersion } from './ui/version';
 
@@ -39,16 +42,26 @@ if (!menuRoot) throw new Error('index.html has no #menu element');
 const settingsRoot = document.getElementById('settings');
 if (!settingsRoot) throw new Error('index.html has no #settings element');
 
+const howToPlayRoot = document.getElementById('how-to-play');
+if (!howToPlayRoot) throw new Error('index.html has no #how-to-play element');
+
 const flags = parseTestFlags(window.location.search);
 // One set of settings, shared by both menus and every game, saved between visits. Test mode keeps them in memory
 // unless ?persist=1, so e2e runs don't leak into each other.
 const storage = flags.test && !flags.persist ? createMemoryStorage() : browserStorage();
-const settings = createPersistedSettings(storage);
+// Reduced motion defaults to the system's preference until the player picks (#354).
+const settings = createPersistedSettings(
+  storage,
+  defaultSettings({ prefersReducedMotion: prefersReducedMotion(window) }),
+);
+// Text size and reduced motion apply to the whole page, and follow every change.
+applyDisplaySettings(settings, document.documentElement);
 // Saved progress (maps won, best stars) lives under its own key: the Game records wins, the Level select unlocks from it.
 const progress = createPersistedProgress(storage);
 // Volume (#67): master × channel from the settings, silent while the tab is hidden. Music and sound effects both read it.
 const audioMix = createAudioMix(settings, document);
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
+const openHowToPlay: OpenHowToPlay = (onBack) => mountHowToPlay(howToPlayRoot, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
@@ -63,6 +76,7 @@ const gameScene = new GameScene({
   settings,
   audioMix,
   openSettings,
+  openHowToPlay,
   progress,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {
@@ -83,7 +97,7 @@ const game = new Phaser.Game({
   backgroundColor: '#1b1e16',
   scene: [
     new BootScene(flags),
-    new MenuScene({ app, menuRoot, openSettings }),
+    new MenuScene({ app, menuRoot, openSettings, openHowToPlay }),
     new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
     gameScene,
   ],
