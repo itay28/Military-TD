@@ -67,10 +67,16 @@ export function mountTowerPanel(
   const upgrade = doc.createElement('button');
   upgrade.type = 'button';
   upgrade.dataset.testid = 'tower-upgrade';
+  // A finger can't hover the button's `title`, so the refusal is also written on the panel.
+  const upgradeReason = doc.createElement('p');
+  upgradeReason.dataset.testid = 'tower-upgrade-reason';
+  upgradeReason.hidden = true;
+  upgradeReason.id = 'tower-upgrade-reason';
+  upgrade.setAttribute('aria-describedby', upgradeReason.id);
   const sell = doc.createElement('button');
   sell.type = 'button';
   sell.dataset.testid = 'tower-sell';
-  dialog.append(heading, close, role, level, list, upgrade, sell);
+  dialog.append(heading, close, role, level, list, upgrade, upgradeReason, sell);
   root.append(dialog);
   root.hidden = true;
   let selectedId: number | undefined;
@@ -110,12 +116,17 @@ export function mountTowerPanel(
     // The sim decides whether the upgrade is allowed; the panel only names it and shows why not.
     const next = nextLevel(tower);
     setHidden(upgrade, !next);
-    if (!next) return;
+    if (!next) {
+      setHidden(upgradeReason, true);
+      return;
+    }
     setText(upgrade, `${LEVEL_NAME[tower.level + 1]} (${next.cost})`);
     const allowed = game.canUpgradeTower(tower.id);
     if (upgrade.disabled === allowed.ok) upgrade.disabled = !allowed.ok;
     const reason = allowed.ok ? '' : UPGRADE_REFUSAL_TEXT[allowed.reason];
     if (upgrade.title !== reason) upgrade.title = reason;
+    setText(upgradeReason, reason);
+    setHidden(upgradeReason, allowed.ok);
   };
   const select = (id: number | undefined) => {
     if (destroyed) return;
