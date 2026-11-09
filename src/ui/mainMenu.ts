@@ -1,5 +1,6 @@
-import type { OpenHowToPlay, HowToPlayScreen } from './howToPlay';
-import type { OpenSettings, SettingsScreen } from './settingsScreen';
+import type { OpenFieldManual } from './fieldManual';
+import type { OpenHowToPlay } from './howToPlay';
+import type { OpenSettings } from './settingsScreen';
 import { GAME_TITLE } from './gameTitle';
 
 export interface MainMenuOptions {
@@ -13,19 +14,21 @@ export interface MainMenuOptions {
   readonly initialFocus?: 'play' | 'credits';
   /** Opens the Settings screen over the menu. Without it, Settings is disabled. */
   readonly openSettings?: OpenSettings;
+  /** Opens the Field manual over the menu (#408). Without it, Field manual is disabled. */
+  readonly openFieldManual?: OpenFieldManual | undefined;
   /** Opens the How to play screen over the menu. Without it, How to play is disabled. */
   readonly openHowToPlay?: OpenHowToPlay;
 }
 
 export interface MainMenu {
-  /** Closes an open Settings screen, removes the menu's elements, hides it and shows the game's UI again; Play does nothing after this. */
+  /** Closes an open Settings screen or Field manual, removes the menu's elements, hides it and shows the game's UI again; Play does nothing after this. */
   destroy(): void;
 }
 
 /** Builds the Main menu inside `root`, a screen over the whole page. It's DOM, so tests can query it (ADR-0003). */
 export function mountMainMenu(
   root: HTMLElement,
-  { app, onPlay, onCredits, openSettings, openHowToPlay, initialFocus = 'play' }: MainMenuOptions,
+  { app, onPlay, onCredits, openSettings, openFieldManual, openHowToPlay, initialFocus = 'play' }: MainMenuOptions,
 ): MainMenu {
   const doc = root.ownerDocument;
   const title = doc.createElement('h1');
@@ -35,57 +38,43 @@ export function mountMainMenu(
   play.textContent = 'Play';
   const onClick = () => onPlay();
   play.addEventListener('click', onClick);
-  const settings = doc.createElement('button');
-  settings.type = 'button';
-  settings.textContent = 'Settings';
-  // Open, the Settings screen covers the menu, which goes inert behind it until Back.
-  let settingsScreen: SettingsScreen | undefined;
-  const onSettings = () => {
-    if (!openSettings) return;
-    root.inert = true;
-    settingsScreen = openSettings(() => {
-      settingsScreen = undefined;
-      root.inert = false;
-      settings.focus();
-    });
+  // Open, Settings, the Field manual or How to play covers the menu, which goes inert behind it until Back.
+  let subScreen: { close(): void } | undefined;
+  const subScreenButton = (text: string, open: ((onBack: () => void) => { close(): void }) | undefined) => {
+    const button = doc.createElement('button');
+    button.type = 'button';
+    button.textContent = text;
+    if (open)
+      button.addEventListener('click', () => {
+        root.inert = true;
+        subScreen = open(() => {
+          subScreen = undefined;
+          root.inert = false;
+          button.focus();
+        });
+      });
+    else button.disabled = true;
+    return button;
   };
-  if (openSettings) settings.addEventListener('click', onSettings);
-  else settings.disabled = true;
-  const howTo = doc.createElement('button');
-  howTo.type = 'button';
-  howTo.textContent = 'How to play';
-  let howToScreen: HowToPlayScreen | undefined;
-  const onHowTo = () => {
-    if (!openHowToPlay) return;
-    root.inert = true;
-    howToScreen = openHowToPlay(() => {
-      howToScreen = undefined;
-      root.inert = false;
-      howTo.focus();
-    });
-  };
-  if (openHowToPlay) howTo.addEventListener('click', onHowTo);
-  else howTo.disabled = true;
+  const settings = subScreenButton('Settings', openSettings);
+  const fieldManual = subScreenButton('Field manual', openFieldManual);
+  const howTo = subScreenButton('How to play', openHowToPlay);
   const credits = doc.createElement('button');
   credits.type = 'button';
   credits.textContent = 'Credits';
   const onCreditsClick = () => onCredits();
   credits.addEventListener('click', onCreditsClick);
-  root.append(title, play, settings, howTo, credits);
+  root.append(title, play, settings, fieldManual, howTo, credits);
   root.hidden = false;
   app.dataset.screen = 'menu';
   (initialFocus === 'credits' ? credits : play).focus();
   return {
     destroy() {
-      settingsScreen?.close();
-      settingsScreen = undefined;
-      howToScreen?.close();
-      howToScreen = undefined;
+      subScreen?.close();
+      subScreen = undefined;
       root.inert = false;
       play.removeEventListener('click', onClick);
       credits.removeEventListener('click', onCreditsClick);
-      settings.removeEventListener('click', onSettings);
-      howTo.removeEventListener('click', onHowTo);
       root.replaceChildren();
       root.hidden = true;
       delete app.dataset.screen;
