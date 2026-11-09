@@ -1,5 +1,6 @@
 import manifest from '../../assets/manifest.json';
 import pkg from '../../package.json';
+import { GAME_TITLE } from './gameTitle';
 
 /** One manifest pack (`assets/manifest.json`, docs/assets.md): the fields the Credits screen reads. */
 interface CreditPack {
@@ -79,11 +80,7 @@ export function mountCredits(root: HTMLElement, { app, onBack }: CreditsOptions)
   }
   const game = gameCredits(pkg);
   const own = el('section', undefined, 'game-credits');
-  own.append(
-    el('h2', 'Hold the Perimeter'),
-    el('p', `Engine: ${game.engine}`),
-    el('p', `Code license: ${game.codeLicense}`),
-  );
+  own.append(el('h2', GAME_TITLE), el('p', `Engine: ${game.engine}`), el('p', `Code license: ${game.codeLicense}`));
   list.append(own);
 
   const back = el('button', 'Back');

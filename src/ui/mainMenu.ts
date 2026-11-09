@@ -1,5 +1,6 @@
 import type { OpenHowToPlay, HowToPlayScreen } from './howToPlay';
 import type { OpenSettings, SettingsScreen } from './settingsScreen';
+import { GAME_TITLE } from './gameTitle';
 
 export interface MainMenuOptions {
   /** The page's `#app`: marked `data-screen="menu"` while the menu shows, which hides the HUD, build bar and tower panel. */
@@ -28,7 +29,7 @@ export function mountMainMenu(
 ): MainMenu {
   const doc = root.ownerDocument;
   const title = doc.createElement('h1');
-  title.textContent = 'Hold the Perimeter';
+  title.textContent = GAME_TITLE;
   const play = doc.createElement('button');
   play.type = 'button';
   play.textContent = 'Play';
