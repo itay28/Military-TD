@@ -57,19 +57,60 @@ beforeEach(() => {
 });
 
 describe('HUD', () => {
-  it('shows the starting Money, Lives and "Wave 0 / N"', () => {
+  it('shows the starting Funds, HQ and "Wave 0 / N"', () => {
     mountHud(root, newGame(), fakeSpeed());
-    expect(byTestId('hud-money')?.textContent).toBe('Money 100');
-    expect(byTestId('hud-lives')?.textContent).toBe('Lives 20');
+    expect(byTestId('hud-money')?.textContent).toBe('Funds $100');
+    expect(byTestId('hud-lives')?.textContent).toBe('HQ20/20');
     expect(byTestId('hud-wave')?.textContent).toBe('Wave 0 / 2');
   });
 
-  it('Lives drop on the next update after a leak', () => {
+  it('HQ drops on the next update after a leak', () => {
     const game = newGame();
     const hud = mountHud(root, game, fakeSpeed());
     playWave(game);
     hud.update();
-    expect(byTestId('hud-lives')?.textContent).toBe('Lives 19');
+    expect(byTestId('hud-lives')?.textContent).toBe('HQ19/20');
+  });
+
+  describe('HQ bar', () => {
+    const hq = () => byTestId('hud-lives')!;
+    const fill = () => hq().querySelector<HTMLElement>('.hq-fill')!;
+
+    it('is a meter named HQ, read as "HQ 20 of 20"', () => {
+      mountHud(root, newGame(), fakeSpeed());
+      expect(hq().getAttribute('role')).toBe('meter');
+      expect(hq().getAttribute('aria-label')).toBe('HQ');
+      expect(hq().getAttribute('aria-valuemin')).toBe('0');
+      expect(hq().getAttribute('aria-valuemax')).toBe('20');
+      expect(hq().getAttribute('aria-valuenow')).toBe('20');
+      expect(hq().getAttribute('aria-valuetext')).toBe('HQ 20 of 20');
+    });
+
+    it('its max is the Lives the game started with', () => {
+      mountHud(root, newGame(8), fakeSpeed());
+      expect(hq().getAttribute('aria-valuemax')).toBe('8');
+      expect(hq().textContent).toBe('HQ8/8');
+    });
+
+    it('shrinks and is re-read after a leak', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      expect(fill().style.width).toBe('100%');
+      playWave(game);
+      hud.update();
+      expect(hq().getAttribute('aria-valuenow')).toBe('19');
+      expect(hq().getAttribute('aria-valuetext')).toBe('HQ 19 of 20');
+      expect(fill().style.width).toBe('95%');
+    });
+
+    it('marks its level: ok, then low at half, then critical', () => {
+      const game = newGame(2);
+      const hud = mountHud(root, game, fakeSpeed());
+      expect(hq().dataset.level).toBe('ok');
+      playWave(game);
+      hud.update();
+      expect(hq().dataset.level).toBe('low');
+    });
   });
 
   it('Money drops on the next update after a tower is placed', () => {
@@ -77,7 +118,7 @@ describe('HUD', () => {
     const hud = mountHud(root, game, fakeSpeed());
     expect(game.placeTower('rifleNest', { col: 1, row: 0 })).toMatchObject({ ok: true });
     hud.update();
-    expect(byTestId('hud-money')?.textContent).toBe('Money 50');
+    expect(byTestId('hud-money')?.textContent).toBe('Funds $50');
   });
 
   it('the wave counter shows the started wave', () => {
@@ -88,12 +129,12 @@ describe('HUD', () => {
     expect(byTestId('hud-wave')?.textContent).toBe('Wave 1 / 2');
   });
 
-  describe('Start Wave (Tactical mode)', () => {
+  describe('Start wave (Tactical mode)', () => {
     const button = () => root.querySelector<HTMLButtonElement>('button[data-testid="start-wave"]');
 
-    it('is a "Start Wave" button, enabled in the Build phase', () => {
+    it('is a "Start wave" button, enabled in the Build phase', () => {
       mountHud(root, newGame(), fakeSpeed());
-      expect(button()?.textContent).toBe('Start Wave');
+      expect(button()?.textContent).toBe('Start wave');
       expect(button()?.disabled).toBe(false);
     });
 
@@ -239,6 +280,20 @@ describe('HUD', () => {
       game.tick(WAVE_BANNER_MS - 1);
       hud.update();
       expect(banner()?.textContent).toBe('Wave 1 cleared');
+      game.tick(1);
+      hud.update();
+      expect(banner()?.textContent).toBe('');
+    });
+
+    it('shows "CONTACT — WAVE N" when a wave starts, for WAVE_BANNER_MS', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      game.callNextWave();
+      hud.update();
+      expect(banner()?.textContent).toBe('CONTACT — WAVE 1');
+      game.tick(WAVE_BANNER_MS - 1);
+      hud.update();
+      expect(banner()?.textContent).toBe('CONTACT — WAVE 1');
       game.tick(1);
       hud.update();
       expect(banner()?.textContent).toBe('');

@@ -1,3 +1,4 @@
+import { TERMS } from '../data/display';
 import type { OpenFieldManual } from './fieldManual';
 import type { OpenHowToPlay } from './howToPlay';
 import type { OpenSettings } from './settingsScreen';
@@ -35,7 +36,7 @@ export function mountMainMenu(
   title.textContent = GAME_TITLE;
   const play = doc.createElement('button');
   play.type = 'button';
-  play.textContent = 'Play';
+  play.textContent = TERMS.play;
   const onClick = () => onPlay();
   play.addEventListener('click', onClick);
   // Open, Settings, the Field manual or How to play covers the menu, which goes inert behind it until Back.

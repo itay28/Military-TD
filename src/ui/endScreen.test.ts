@@ -56,7 +56,7 @@ describe('End screen', () => {
     expect(root.hidden).toBe(true);
   });
 
-  it('after Victory shows "Victory" and every wave survived', () => {
+  it('after Victory shows "MISSION COMPLETE" and every wave survived', () => {
     const game = newGame();
     const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
@@ -65,11 +65,11 @@ describe('End screen', () => {
     end.update();
     expect(game.state.phase).toBe('victory');
     expect(root.hidden).toBe(false);
-    expect(dialog()?.querySelector('h2')?.textContent).toBe('Victory');
+    expect(dialog()?.querySelector('h2')?.textContent).toBe('MISSION COMPLETE');
     expect(byTestId('waves-survived')?.textContent).toBe('Waves survived 3 / 3');
   });
 
-  it('after Defeat shows "Defeat" and the waves cleared before it', () => {
+  it('after Defeat shows "MISSION FAILED" and the waves cleared before it', () => {
     const game = newGame(2);
     const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     playWave(game);
@@ -77,8 +77,19 @@ describe('End screen', () => {
     end.update();
     expect(game.state.phase).toBe('defeat');
     expect(root.hidden).toBe(false);
-    expect(dialog()?.querySelector('h2')?.textContent).toBe('Defeat');
+    expect(dialog()?.querySelector('h2')?.textContent).toBe('MISSION FAILED');
     expect(byTestId('waves-survived')?.textContent).toBe('Waves survived 1 / 3');
+  });
+
+  it('heads the stats with an "After-action report" heading, before the waves survived', () => {
+    const game = newGame(2);
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
+    playWave(game);
+    playWave(game);
+    end.update();
+    const aar = dialog()?.querySelector('h3');
+    expect(aar?.textContent).toBe('After-action report');
+    expect(aar?.nextElementSibling).toBe(byTestId('waves-survived'));
   });
 
   /** Plays all three waves to Victory with the End screen given `result`, and opens it. */
@@ -134,7 +145,7 @@ describe('End screen', () => {
     end.update();
     const labelId = dialog()?.getAttribute('aria-labelledby');
     expect(dialog()?.getAttribute('aria-modal')).toBe('true');
-    expect(labelId && document.getElementById(labelId)?.textContent).toBe('Defeat');
+    expect(labelId && document.getElementById(labelId)?.textContent).toBe('MISSION FAILED');
     expect(restart()?.textContent).toBe('Restart');
     expect(document.activeElement).toBe(restart());
   });
@@ -159,14 +170,14 @@ describe('End screen', () => {
     expect(restarts).toBe(1);
   });
 
-  it('clicking Level select calls onLevelSelect once, and the button follows Restart', () => {
+  it('clicking Operations calls onLevelSelect once, and the button follows Restart', () => {
     const game = newGame(1);
     let picks = 0;
     const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => picks++ });
     playWave(game);
     end.update();
     const button = root.querySelector<HTMLButtonElement>('button[data-testid="level-select"]')!;
-    expect(button.textContent).toBe('Level select');
+    expect(button.textContent).toBe('Operations');
     expect(restart()!.nextElementSibling).toBe(button);
     button.click();
     expect(picks).toBe(1);

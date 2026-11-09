@@ -1,6 +1,6 @@
 - main:
   - heading "Hold the Perimeter" [level=1]
-  - button "Play"
+  - button "Deploy"
   - button "Settings"
   - button "Field manual"
   - button "How to play"

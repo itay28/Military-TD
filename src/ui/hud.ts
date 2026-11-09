@@ -1,4 +1,4 @@
-import { WAVE_BANNER_MS } from '../data/display';
+import { TERMS, WAVE_BANNER_MS, contactBanner, formatFunds, hqLevel } from '../data/display';
 import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
@@ -42,7 +42,25 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
     return el;
   };
   const money = field('hud-money', stats);
+  // The HQ: a meter, so a screen reader hears "HQ 14 of 20"; the label, bar and digits inside are for the eye.
+  const maxLives = game.state.lives;
   const lives = field('hud-lives', stats);
+  lives.className = 'hq';
+  lives.setAttribute('role', 'meter');
+  lives.setAttribute('aria-label', TERMS.lives);
+  lives.setAttribute('aria-valuemin', '0');
+  lives.setAttribute('aria-valuemax', String(maxLives));
+  const hqLabel = doc.createElement('span');
+  hqLabel.className = 'hq-label';
+  hqLabel.textContent = TERMS.lives;
+  const hqBar = doc.createElement('span');
+  hqBar.className = 'hq-bar';
+  const hqFill = doc.createElement('span');
+  hqFill.className = 'hq-fill';
+  hqBar.append(hqFill);
+  const hqCount = doc.createElement('span');
+  hqCount.className = 'hq-count';
+  lives.append(hqLabel, hqBar, hqCount);
   const wave = field('hud-wave', stats);
   // The DPS figure opens and closes the DPS meter, a panel under the HUD (#243).
   const dps = doc.createElement('button');
@@ -57,7 +75,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
   const callNextWave = doc.createElement('button');
   callNextWave.type = 'button';
   callNextWave.dataset.testid = 'start-wave';
-  callNextWave.textContent = tacticalMode ? 'Start Wave' : 'Call next wave';
+  callNextWave.textContent = tacticalMode ? TERMS.startWave : 'Call next wave';
   controls.append(callNextWave);
   const nextWave = field('hud-next-wave', message);
   const speedButtons = mountSpeedButtons(
@@ -92,8 +110,14 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
 
   const update = () => {
     const { state } = game;
-    setText(money, `Money ${state.money}`);
-    setText(lives, `Lives ${state.lives}`);
+    setText(money, `${TERMS.money} ${formatFunds(state.money)}`);
+    if (hqCount.textContent !== `${state.lives}/${maxLives}`) {
+      hqCount.textContent = `${state.lives}/${maxLives}`;
+      lives.setAttribute('aria-valuenow', String(state.lives));
+      lives.setAttribute('aria-valuetext', `${TERMS.lives} ${state.lives} of ${maxLives}`);
+      lives.dataset.level = hqLevel(state.lives, maxLives);
+      hqFill.style.width = `${maxLives > 0 ? (100 * state.lives) / maxLives : 0}%`;
+    }
     const { activeWaves } = state;
     const overlap = activeWaves.length > 1;
     setText(
@@ -110,18 +134,20 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
     // Ticks stop once the game is over, so a faster speed would change nothing.
     speedButtons.sync(isGameOver(state.phase));
     // Ticks stop once the game is over, so the banner would never time out: take it down then.
-    const showBanner = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
-    setText(banner, showBanner ? bannerText : '');
+    const bannerUp = state.timeMs < bannerUntilMs && !isGameOver(state.phase);
+    setText(banner, bannerUp ? bannerText : '');
     // In timed mode the countdown is always up while a wave is due, during a wave too. Short, so it fits the message
     // slot at 900 px beside an overlap counter; the "cleared" banner follows it there when there's room.
     const { nextWaveAtMs } = state;
     setText(nextWave, nextWaveAtMs === undefined ? '' : `Next ${Math.ceil((nextWaveAtMs - state.timeMs) / 1000)}s`);
     meter.update();
   };
-  const offWaveCleared = game.events.on('waveCleared', ({ waveNumber }) => {
-    bannerText = `Wave ${waveNumber} cleared`;
+  const showBanner = (text: string) => {
+    bannerText = text;
     bannerUntilMs = game.state.timeMs + WAVE_BANNER_MS;
-  });
+  };
+  const offWaveStarted = game.events.on('waveStarted', ({ waveNumber }) => showBanner(contactBanner(waveNumber)));
+  const offWaveCleared = game.events.on('waveCleared', ({ waveNumber }) => showBanner(`Wave ${waveNumber} cleared`));
   // The sim decides; a refused start changes nothing. Redraw at once so a second click can't land first.
   const onStartWave = () => {
     if (callNextWave.disabled) return;
@@ -135,6 +161,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
     startWave: onStartWave,
     update,
     destroy() {
+      offWaveStarted();
       offWaveCleared();
       root.replaceChildren();
     },
