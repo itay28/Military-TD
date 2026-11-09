@@ -4,6 +4,7 @@ import { createPhaserMusicBackend, type LoopingSound } from './audio/phaserMusic
 import { MUSIC_REGISTRY_KEY } from './audio/radio';
 import { createAudioMix } from './audio/volume';
 import { BootScene } from './scenes/BootScene';
+import { DEMO_SCENE_KEY, demoMode } from './scenes/demoMode';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
@@ -78,7 +79,7 @@ const openHowToPlay: OpenHowToPlay = (onBack) => mountHowToPlay(howToPlayRoot, {
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
-const gameScene = new GameScene({
+const gameOptions = {
   hudRoot,
   buildBarRoot,
   endScreenRoot,
@@ -93,11 +94,21 @@ const gameScene = new GameScene({
   openFieldManual,
   openHowToPlay,
   progress,
+};
+const gameScene = new GameScene({
+  ...gameOptions,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {
     if (flags.test) window.__TD__ ??= createTestApi(gameScene.testHooks(), SCENARIOS);
   },
 });
+
+// The live battlefield behind the menu (#402): a second Game scene playing a scripted demo, unless it's off.
+const demo = demoMode(flags, {
+  reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+});
+const demoScenes = demo === 'off' ? [] : [new GameScene({ ...gameOptions, demo })];
 
 const gameRoot = document.getElementById('game');
 if (!gameRoot) throw new Error('index.html has no #game element');
@@ -115,6 +126,7 @@ const game = new Phaser.Game({
     new MenuScene({ app, menuRoot, openSettings, openFieldManual, openHowToPlay }),
     new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
     gameScene,
+    ...demoScenes,
   ],
 });
 // Phaser resizes on window resizes only; collapsing the build bar or the HUD wrapping resizes the stage without one.
@@ -141,6 +153,8 @@ game.registry.set(MUSIC_REGISTRY_KEY, music);
 audioMix.subscribe(() => music.refreshVolume());
 game.events.once(Phaser.Core.Events.READY, () => {
   for (const scene of game.scene.getScenes(false)) {
+    // The demo plays under the Main menu and Level select, which pick the music.
+    if (scene.scene.key === DEMO_SCENE_KEY) continue;
     scene.events.on(Phaser.Scenes.Events.START, () => music.enterScene(scene.scene.key));
   }
 });

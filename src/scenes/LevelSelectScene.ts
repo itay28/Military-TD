@@ -3,6 +3,7 @@ import { MAPS } from '../data/maps';
 import type { ProgressStore } from '../progress/progress';
 import { isUnlocked } from '../sim/progression';
 import { mountLevelSelect } from '../ui/levelSelect';
+import { showDemo } from './demoMode';
 
 export interface LevelSelectSceneOptions {
   /** The page's `#app`, whose game UI the Level select hides. */
@@ -32,6 +33,8 @@ export class LevelSelectScene extends Phaser.Scene {
 
   /** Runs each time the scene starts, so it reads the progress as it is now, after any game since. */
   create(): void {
+    // The live battlefield plays behind the menu screens (#402); a running one carries on.
+    showDemo(this.scene);
     const mapIds = MAPS.map((map) => map.id);
     const progress = this.progress.get();
     const screen = mountLevelSelect(this.root, {

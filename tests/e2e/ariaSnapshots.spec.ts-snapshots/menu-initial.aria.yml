@@ -1,5 +1,5 @@
 - main:
-  - heading "Military TD" [level=1]
+  - heading "Hold the Perimeter" [level=1]
   - button "Play"
   - button "Settings"
   - button "Field manual"
