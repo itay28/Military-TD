@@ -28,7 +28,7 @@ describe('createPersistedProgress', () => {
     progress.recordResult('a', 2);
     expect(saved(storage)).toEqual({
       version: PROGRESS_VERSION,
-      progress: { maps: { a: { completed: true, bestStars: 2 } } },
+      progress: { maps: { a: { completed: true, bestStars: 2 } }, hintsDone: false },
     });
     expect(PROGRESS_KEY).toBe('military-td.progress');
   });
@@ -48,6 +48,22 @@ describe('createPersistedProgress', () => {
     const storage = withProgress({ a: { completed: true, bestStars: 3 } });
     createPersistedProgress(storage).recordResult('a', 1);
     expect(saved(storage).progress.maps.a.bestStars).toBe(3);
+  });
+
+  it('saves the hints flag when it changes', () => {
+    const storage = createMemoryStorage();
+    const progress = createPersistedProgress(storage);
+    progress.setHintsDone(true);
+    expect(saved(storage)).toEqual({ version: PROGRESS_VERSION, progress: { maps: {}, hintsDone: true } });
+    expect(createPersistedProgress(storage).get().hintsDone).toBe(true);
+    progress.setHintsDone(false);
+    expect(saved(storage).progress.hintsDone).toBe(false);
+  });
+
+  it('ignores a failed save of the hints flag', () => {
+    const progress = createPersistedProgress(throwing('set'));
+    expect(() => progress.setHintsDone(true)).not.toThrow();
+    expect(progress.get().hintsDone).toBe(true);
   });
 
   it('ignores a failed save', () => {
@@ -85,6 +101,22 @@ describe('loadProgress', () => {
     expect(loaded.maps.gone).toEqual({ completed: true, bestStars: 2 });
   });
 
+  it('keeps a saved hints flag, and takes false for a bad one', () => {
+    const save = (hintsDone: unknown) =>
+      withRaw(JSON.stringify({ version: PROGRESS_VERSION, progress: { maps: {}, hintsDone } }));
+    expect(loadProgress(save(true)).hintsDone).toBe(true);
+    expect(loadProgress(save(false)).hintsDone).toBe(false);
+    expect(loadProgress(save('yes')).hintsDone).toBe(false);
+  });
+
+  it('loads a v1 save with its maps, hints done once any map was won', () => {
+    const won = { a: { completed: true, bestStars: 2 } };
+    expect(loadProgress(withProgress(won, 1))).toEqual({ maps: won, hintsDone: true });
+    const notWon = { a: { completed: false, bestStars: 0 } };
+    expect(loadProgress(withProgress(notWon, 1))).toEqual({ maps: notWon, hintsDone: false });
+    expect(loadProgress(withProgress({}, 1))).toEqual({ maps: {}, hintsDone: false });
+  });
+
   it('drops bad values field by field', () => {
     const loaded = loadProgress(
       withProgress({
@@ -103,9 +135,28 @@ describe('loadProgress', () => {
 });
 
 describe('migrate', () => {
+  it('is at version 2', () => {
+    expect(PROGRESS_VERSION).toBe(2);
+  });
+
   it('passes the current version through', () => {
-    const data = { maps: {} };
+    const data = { maps: {}, hintsDone: true };
     expect(migrate(PROGRESS_VERSION, data)).toBe(data);
+  });
+
+  it('adds hintsDone to v1 progress: true once any map was won, maps untouched', () => {
+    const won = { maps: { a: { completed: true, bestStars: 3 }, b: { completed: false, bestStars: 0 } } };
+    expect(migrate(1, won)).toEqual({ ...won, hintsDone: true });
+    expect(migrate(1, { maps: { b: { completed: false, bestStars: 0 } } })).toEqual({
+      maps: { b: { completed: false, bestStars: 0 } },
+      hintsDone: false,
+    });
+    expect(migrate(1, { maps: {} })).toEqual({ maps: {}, hintsDone: false });
+  });
+
+  it('leaves v1 data that is not progress for sanitize to reject', () => {
+    expect(migrate(1, 'junk')).toBe('junk');
+    expect(migrate(1, { maps: 5 })).toEqual({ maps: 5, hintsDone: false });
   });
 
   it.each([PROGRESS_VERSION + 1, -1, 1.5, Number.NaN])('rejects version %s', (version) => {
