@@ -12,8 +12,8 @@ export default defineScenario({
     { groups: [{ kind: 'jeep', count: 3, spacingMs: 300, delayMs: 0 }] },
   ],
   script: [
-    { atTick: 0, command: { type: 'startWave' } },
-    { atTick: JEEP_WAVE_TICK, command: { type: 'startWave' } },
+    { atTick: 0, command: { type: 'callNextWave' } },
+    { atTick: JEEP_WAVE_TICK, command: { type: 'callNextWave' } },
   ],
   until: 'end',
   expectations({ finalState, events }, expect) {

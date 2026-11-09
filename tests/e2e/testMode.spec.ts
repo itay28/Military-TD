@@ -4,7 +4,7 @@ import { openGame, state, stepToEnd } from './helpers';
 
 test('step=manual: the game stands still in real time, and step() advances it', async ({ page }) => {
   await openGame(page, { manualStep: true });
-  await page.getByRole('button', { name: 'Start wave' }).click();
+  await page.getByRole('button', { name: 'Call next wave' }).click();
   await page.waitForTimeout(500);
   expect((await state(page)).timeMs).toBe(0);
   const after = await page.evaluate(() => window.__TD__!.step(60));
@@ -31,7 +31,7 @@ test("loadScenario sets up a named scenario's game, and the test plays it from t
   });
   await expect(page.getByTestId('hud-wave')).toHaveText('Wave 0 / 1');
 
-  expect(await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }))).toEqual({ ok: true });
+  expect(await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }))).toEqual({ ok: true });
   expect(await stepToEnd(page)).toMatchObject({ phase: 'victory', lives: START_LIVES });
 });
 

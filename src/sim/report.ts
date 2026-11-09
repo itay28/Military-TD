@@ -33,7 +33,7 @@ export interface DamageReport {
   readonly kinds: readonly KindReportRow[];
   /** Each finished wave, in order. */
   readonly waves: readonly WaveReportRow[];
-  /** The whole game; `elapsedMs` is every finished wave's duration added up. */
+  /** The whole game; `elapsedMs` is the time any wave was on the field (overlaps count once). */
   readonly total: ReportFigures & { readonly elapsedMs: number };
 }
 
@@ -45,7 +45,7 @@ const dps = (damage: number, elapsedMs: number): number => (elapsedMs > 0 ? wave
  * over the wave's duration; a kind's and the total, their damage over the game's wave time.
  */
 export function damageReport(stats: CombatStats): DamageReport {
-  const elapsedMs = stats.waves.reduce((sum, wave) => sum + wave.elapsedMs, 0);
+  const elapsedMs = stats.waveTimeMs;
   // Integer keys come back in ascending order, which is placement order: ids only grow.
   const towers = Object.entries(stats.placed).map(([id, { kind, tile, waveMs, sold }]): TowerReportRow => {
     const { damage, kills } = stats.towers[Number(id)]?.total ?? ZERO;
