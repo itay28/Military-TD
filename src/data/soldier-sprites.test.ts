@@ -69,3 +69,13 @@ describe('soldier sprites (#342)', () => {
     }
   });
 });
+
+describe('infantry reads at game tile size (#441)', () => {
+  it('spans at least 0.6 tiles on its long side, for every faction', () => {
+    const PX_PER_TILE = 128;
+    for (const s of SOLDIER_SPRITES.filter((x) => x.kind === 'infantry')) {
+      const { box } = boundingBox(s.path, (a) => a >= OPAQUE);
+      expect(Math.max(box.w, box.h) / PX_PER_TILE, `${s.id} tiles`).toBeGreaterThanOrEqual(0.6);
+    }
+  });
+});
