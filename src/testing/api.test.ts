@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import { START_MONEY } from '../data/start';
 import { TOWER_STATS } from '../data/towers';
 import { TICK_MS } from '../sim/game';
@@ -9,7 +9,9 @@ const BUILDABLE = { col: 1, row: 3 };
 const ONE_INFANTRY: GameSetup = { waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }] };
 
 /** Hooks over a real game, as the Game scene gives them. */
-function fakeHooks(setup: GameSetup = {}): TestHooks & { load: ReturnType<typeof vi.fn> } {
+function fakeHooks(
+  setup: GameSetup = {},
+): TestHooks & { load: ReturnType<typeof vi.fn>; setHints: Mock<(on: boolean) => void> } {
   const game = setUpGame(setup);
   return {
     game,
@@ -18,6 +20,7 @@ function fakeHooks(setup: GameSetup = {}): TestHooks & { load: ReturnType<typeof
     },
     load: vi.fn(async () => {}),
     view: () => EMPTY_VIEW,
+    setHints: vi.fn<(on: boolean) => void>(),
   };
 }
 
@@ -26,8 +29,10 @@ const EMPTY_VIEW: TestView = {
   rangeRings: [],
   tracers: [],
   effects: [],
+  decals: [],
   highlight: { kind: null, towerIds: [] },
   ghost: { visible: false, tile: null },
+  cursor: { col: 0, row: 0, shown: false },
   camera: { scrollX: 0, scrollY: 0, zoom: 1 },
   drawOrder: ['map'],
   sprites: true,
@@ -126,6 +131,7 @@ describe('createTestApi', () => {
       },
       step: () => {},
       load: async () => {},
+      setHints: () => {},
       view: () => EMPTY_VIEW,
     };
     const testApi = api(hooks);
@@ -140,8 +146,10 @@ describe('createTestApi', () => {
       rangeRings: [1],
       tracers: [{ from: { x: 72, y: 168 }, to: { x: 24, y: 120 }, alpha: 1 }],
       effects: [{ kind: 'puff' as const, at: { x: 24, y: 120 }, progress: 0.5 }],
+      decals: [{ kind: 'wreck' as const, alpha: 0.5 }],
       highlight: { kind: 'cannon' as const, towerIds: [4] },
       ghost: { visible: true, tile: { col: 1, row: 2 } },
+      cursor: { col: 3, row: 4, shown: true },
       camera: { scrollX: 10, scrollY: -20, zoom: 1.5 },
       drawOrder: ['map', 'towers', 'rangeRing'],
       sprites: true,
@@ -162,5 +170,15 @@ describe('createTestApi', () => {
     expect(view.tracers).toHaveLength(1);
     expect(view.enemies[0]!.facing).toBe(Math.PI / 2);
     expect(view.turrets[0]?.angle).toBe(-Math.PI / 2);
+  });
+});
+
+describe('setHints', () => {
+  it('forces the onboarding hints on or off through the hooks', () => {
+    const hooks = fakeHooks();
+    const testApi = api(hooks);
+    testApi.setHints(true);
+    testApi.setHints(false);
+    expect(hooks.setHints.mock.calls).toEqual([[true], [false]]);
   });
 });

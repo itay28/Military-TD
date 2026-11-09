@@ -50,7 +50,7 @@ test('the Main menu shows the title, Deploy, Settings, and Credits', async ({ pa
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
 });
 
-test('the Settings screen shows the default game speed choices, the range setting, the volume sliders, reduce motion, text size and Back', async ({
+test('the Settings screen shows the default game speed choices, the range setting, the volume sliders, reduce motion, text size, Show hints again and Back', async ({
   page,
 }) => {
   await openMenu(page);
