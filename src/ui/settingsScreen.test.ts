@@ -70,6 +70,32 @@ describe('mountSettingsScreen', () => {
     expect(settings.get().showAllRanges).toBe(false);
   });
 
+  it('has a labelled Show map grid checkbox, on at first, that switches the setting at once (#400)', () => {
+    mount();
+    const box = [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find(
+      (input) => labelOf(input) === 'Show map grid',
+    )!;
+    expect(box.checked).toBe(true);
+    box.click();
+    expect(settings.get().showMapGrid).toBe(false);
+    box.click();
+    expect(settings.get().showMapGrid).toBe(true);
+  });
+
+  it('has a labelled Tactical mode checkbox, with its one-line cost, that switches the setting at once (#413)', () => {
+    mount();
+    const tactical = [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((box) =>
+      labelOf(box)?.startsWith('Tactical mode'),
+    )!;
+    expect(tactical.checked).toBe(false);
+    const hint = document.getElementById(tactical.getAttribute('aria-describedby')!);
+    expect(hint?.textContent).toBe('Call each wave yourself. Wins earn at most 2 stars.');
+    tactical.click();
+    expect(settings.get().tacticalMode).toBe(true);
+    tactical.click();
+    expect(settings.get().tacticalMode).toBe(false);
+  });
+
   describe('volume sliders (#67)', () => {
     const sliders = () => [...root.querySelectorAll<HTMLInputElement>('input[type="range"]')];
     const nameOf = (input: HTMLInputElement) => root.querySelector(`label[for="${input.id}"]`)?.textContent;

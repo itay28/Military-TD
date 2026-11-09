@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DPS_METER_REFRESH_MS } from '../data/display';
-import { addTower, addWaveTime, emptyStats, endWave, recordShots, resetWave, withWaveElapsed } from '../sim/stats';
+import { addTower, addWaveTime, emptyStats, endWave, recordShots, startWaveStats, withWaveElapsed } from '../sim/stats';
 import type { CombatStats } from '../sim/stats';
 import type { Shot } from '../sim/towers';
 import { mountDpsMeter, type DpsMeterGame } from './dpsMeter';
@@ -17,8 +17,13 @@ const tile = { col: 0, row: 0 };
 // Wave 1 (4 s): Rifle Nest 1 deals 40 and kills, Cannon 2 deals 100, Rifle Nest 3 deals 20.
 function wave1(): CombatStats {
   let stats = addTower(addTower(addTower(emptyStats(), 1, 'rifleNest', tile), 2, 'cannon', tile), 3, 'rifleNest', tile);
-  stats = recordShots(stats, [shot(1, 10, 40), shot(2, 11, 100), shot(3, 12, 20)], new Set([10]));
-  return endWave(withWaveElapsed(addWaveTime(stats, [1, 2, 3], 4000), 4000), 1);
+  stats = recordShots(
+    startWaveStats(stats, 1),
+    [shot(1, 10, 40), shot(2, 11, 100), shot(3, 12, 20)],
+    new Set([10]),
+    () => 1,
+  );
+  return endWave(withWaveElapsed(addWaveTime(stats, [1, 2, 3], 4000), new Map([[1, 4000]]), 1), 1);
 }
 
 /** A game the test drives by hand: the meter only reads `state`. */
@@ -119,8 +124,16 @@ describe('DPS meter', () => {
     const meter = mountDpsMeter(root, game, { now, narrow: () => false });
     meter.toggle();
     // Wave 2 (1 s so far): only Rifle Nest 3 has fired.
-    let stats = resetWave(game.state.stats);
-    stats = withWaveElapsed(recordShots(stats, [shot(3, 13, 10)], new Set()), 1000);
+    let stats = startWaveStats(game.state.stats, 2);
+    stats = withWaveElapsed(
+      addWaveTime(
+        recordShots(stats, [shot(3, 13, 10)], new Set(), () => 2),
+        [3],
+        1000,
+      ),
+      new Map([[2, 1000]]),
+      2,
+    );
     game.state = { ...game.state, stats, phase: 'wave' };
     clock += DPS_METER_REFRESH_MS;
     meter.update();

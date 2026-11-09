@@ -20,7 +20,7 @@ const BESIDE_PATH = { col: 1, row: 2 };
 const FAR_FROM_PATH = { col: 0, row: 4 };
 
 const newGame = (money = 300, waves: readonly WaveData[] = [], lives = 20) =>
-  createGame({ map: SMALL, lives, money, waves });
+  createGame({ map: SMALL, lives, money, waves, tacticalMode: true });
 
 function place(game: Game, tile = BESIDE_PATH): number {
   const result = game.placeTower('rifleNest', tile);
@@ -76,7 +76,7 @@ describe('sellTower', () => {
     const id = place(game);
     const shots: unknown[] = [];
     game.events.on('towerFired', (s) => shots.push(s));
-    game.startWave();
+    game.callNextWave();
     game.sellTower(id);
     tickFor(game, 500);
     expect(shots).toEqual([]);
@@ -116,7 +116,7 @@ describe('sellTower', () => {
   it('refuses gameEnded, changing nothing', () => {
     const game = newGame(300, ONE_INFANTRY, 1);
     const id = place(game, FAR_FROM_PATH);
-    game.startWave();
+    game.callNextWave();
     for (let i = 0; i < 60 * 60 && game.state.phase === 'wave'; i++) game.tick(TICK_MS);
     expect(game.state.phase).toBe('defeat');
     const money = game.state.money;
@@ -129,7 +129,7 @@ describe('sellTower', () => {
     const play = (sellAtTick?: number) => {
       const game = newGame(300, ONE_INFANTRY, 1);
       const id = place(game, FAR_FROM_PATH);
-      game.startWave();
+      game.callNextWave();
       let ticks = 0;
       for (; ticks < 60 * 60 && game.state.phase === 'wave'; ticks++) {
         if (ticks === sellAtTick) game.sellTower(id);

@@ -12,6 +12,9 @@ import type { WaveData } from './waves';
  */
 export const DEMO_POOL = 1_000_000;
 
+/** A demo's wave timer: the next wave comes this soon after the last, so the field stays busy. */
+export const DEMO_WAVE_AFTER_MS = 5000;
+
 /** Every game event type, so a demo forwards each one (a new event type must be added here to type-check). */
 const EVENT_TYPES: Readonly<Record<keyof GameEvents, true>> = {
   enemyLeaked: true,
@@ -41,7 +44,7 @@ export interface DemoSetup {
 
 /**
  * The real game, set up from a demo script: the towers placed free and raised to their levels, Lives and Money from
- * `DEMO_POOL`, auto-start on and the first wave started. When it ends it quietly swaps in a fresh copy of that setup.
+ * `DEMO_POOL`, the first wave called in (the wave timers bring the rest). When it ends it quietly swaps in a fresh copy of that setup.
  * Events come from whichever copy is playing, so listeners survive a reset; tower ids come back the same, so their
  * views do too. Throws, like `setUpGame`, for a tower that can't be placed, or a level its kind doesn't have.
  */
@@ -50,7 +53,7 @@ export function createDemoGame({ map, waves, towers }: DemoSetup): DemoGame {
   const setUp = (): Game => {
     const game = setUpGame({
       map,
-      waves,
+      waves: waves.map((wave) => ({ ...wave, afterMs: DEMO_WAVE_AFTER_MS })),
       lives: DEMO_POOL,
       money: DEMO_POOL,
       towers: towers.map(({ kind, tile }) => ({ kind, tile })),
@@ -63,8 +66,8 @@ export function createDemoGame({ map, waves, towers }: DemoSetup): DemoGame {
     });
     for (const type of Object.keys(EVENT_TYPES) as (keyof GameEvents)[])
       game.events.on(type, (event) => events.emit(type, event));
-    game.setAutoStart(true);
-    game.startWave();
+    // Wave timers bring the rest on their own; the first is called in at once.
+    game.callNextWave();
     return game;
   };
   let current = setUp();
@@ -84,8 +87,7 @@ export function createDemoGame({ map, waves, towers }: DemoSetup): DemoGame {
       loops++;
     },
     spawnEnemy: (kind) => current.spawnEnemy(kind),
-    startWave: () => current.startWave(),
-    setAutoStart: (on) => current.setAutoStart(on),
+    callNextWave: () => current.callNextWave(),
     placeTower: (kind, tile) => current.placeTower(kind, tile),
     canPlaceTower: (kind, tile) => current.canPlaceTower(kind, tile),
     upgradeTower: (towerId) => current.upgradeTower(towerId),

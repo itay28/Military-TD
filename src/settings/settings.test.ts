@@ -2,15 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { createSettings, DEFAULT_SETTINGS, defaultSettings, TEXT_SIZES } from './settings';
 
 describe('createSettings', () => {
-  it('starts at the defaults: ×1, only the selected or hovered tower’s range, and 80/60/80 volumes', () => {
+  it('starts at the defaults: ×1, only the selected or hovered tower’s range, 80/60/80 volumes, and Tactical mode off (timed waves)', () => {
     expect(DEFAULT_SETTINGS).toEqual({
       defaultSpeed: 1,
       showAllRanges: false,
+      showMapGrid: true,
       masterVolume: 80,
       musicVolume: 60,
       sfxVolume: 80,
       reducedMotion: false,
       textSize: 100,
+      tacticalMode: false,
     });
     expect(createSettings().get()).toEqual(DEFAULT_SETTINGS);
   });
@@ -19,11 +21,13 @@ describe('createSettings', () => {
     const given = {
       defaultSpeed: 3,
       showAllRanges: true,
+      showMapGrid: false,
       masterVolume: 10,
       musicVolume: 20,
       sfxVolume: 30,
       reducedMotion: true,
       textSize: 150,
+      tacticalMode: true,
     } as const;
     expect(createSettings(given).get()).toEqual(given);
   });

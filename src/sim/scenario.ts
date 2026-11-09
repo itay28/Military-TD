@@ -17,8 +17,7 @@ export type ScenarioCommand =
   | ({ readonly type: 'placeTower' } & TowerPlacement)
   | { readonly type: 'upgradeTower'; readonly towerId: number }
   | { readonly type: 'sellTower'; readonly towerId: number }
-  | { readonly type: 'startWave' }
-  | { readonly type: 'setAutoStart'; readonly on: boolean }
+  | { readonly type: 'callNextWave' }
   | { readonly type: 'spawnEnemy'; readonly kind: EnemyKind };
 
 /** Runs `command` after `atTick` ticks: 0 is before the first tick. */
@@ -45,12 +44,17 @@ export interface GameSetup {
   readonly towers?: readonly TowerPlacement[];
   /** Overrides the map's waves. */
   readonly waves?: readonly WaveData[];
+  /** Tactical mode (ADR-0011): no wave timers. Off by default, as in a new game. */
+  readonly tacticalMode?: boolean;
 }
 
 /** A game situation to run headlessly (ADR-0003): a setup, a script, and when to stop. */
 export interface Scenario extends GameSetup {
   readonly script?: readonly ScriptStep[];
-  /** A bot that starts the next wave whenever the game is in the Build phase, so a run can play a whole game. */
+  /**
+   * A bot that calls in the next wave whenever the field is clear (the Build phase), so a run can play a whole game
+   * without waiting out the wave timers. In timed mode the timers still bring waves in on their own.
+   */
   readonly autoStartWaves?: boolean;
   /**
    * A strategy that plays like a player: called every tick, after the script and before `autoStartWaves`, with the
@@ -128,6 +132,7 @@ export function setUpGame(setup: GameSetup = {}): Game {
     // Pre-placed towers are placed like any other, with their cost added first, so they come free.
     money: (setup.money ?? START_MONEY) + towersCost,
     waves: setup.waves ?? wavesForMap(map.id),
+    tacticalMode: setup.tacticalMode ?? false,
   });
   for (const { kind, tile } of towers) {
     const placed = game.placeTower(kind, tile);
@@ -166,7 +171,7 @@ export function runScenario(scenario: Scenario): ScenarioResult {
     return undefined;
   };
   const issue = (command: ScenarioCommand) => {
-    // Log the command ahead of the events it causes (startWave emits waveStarted).
+    // Log the command ahead of the events it causes (callNextWave emits waveStarted).
     const at = events.length;
     const result = applyCommand(game, command);
     events.splice(at, 0, { tick: ticks, type: 'command', command, result });
@@ -175,7 +180,7 @@ export function runScenario(scenario: Scenario): ScenarioResult {
     for (const step of script) if (step.atTick === ticks) issue(step.command);
     for (const command of scenario.bot?.(game.state) ?? []) issue(command);
     const { phase, waveNumber, totalWaves } = game.state;
-    if (scenario.autoStartWaves && phase === 'build' && waveNumber < totalWaves) issue({ type: 'startWave' });
+    if (scenario.autoStartWaves && phase === 'build' && waveNumber < totalWaves) issue({ type: 'callNextWave' });
     const done = outcome();
     if (done) return { outcome: done, finalState: game.state, events, ticks };
     ticks++; // first, so events from this tick carry its number
@@ -192,10 +197,8 @@ export function applyCommand(game: Game, command: ScenarioCommand): CommandOutco
       return game.upgradeTower(command.towerId);
     case 'sellTower':
       return game.sellTower(command.towerId);
-    case 'startWave':
-      return game.startWave();
-    case 'setAutoStart':
-      return game.setAutoStart(command.on);
+    case 'callNextWave':
+      return game.callNextWave();
     case 'spawnEnemy':
       return { ok: true, enemyId: game.spawnEnemy(command.kind) };
   }

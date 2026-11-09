@@ -15,6 +15,7 @@ import { applyDisplaySettings, prefersReducedMotion } from './settings/display';
 import { browserStorage, createMemoryStorage, createPersistedSettings } from './settings/persist';
 import { defaultSettings } from './settings/settings';
 import { SCENARIOS } from './testing/scenarios';
+import { mountFieldManual, type OpenFieldManual } from './ui/fieldManual';
 import { mountHowToPlay, type OpenHowToPlay } from './ui/howToPlay';
 import { mountSettingsScreen, type OpenSettings } from './ui/settingsScreen';
 import { showVersion } from './ui/version';
@@ -65,6 +66,15 @@ const progress = createPersistedProgress(storage);
 // Volume (#67): master × channel from the settings, silent while the tab is hidden. Music and sound effects both read it.
 const audioMix = createAudioMix(settings, document);
 const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack, progress });
+const fieldManualRoot = document.getElementById('field-manual');
+if (!fieldManualRoot) throw new Error('index.html has no #field-manual element');
+// Over the Main menu or the paused game; it shows only the enemy kinds already met (#408).
+const openFieldManual: OpenFieldManual = (onBack) =>
+  mountFieldManual(fieldManualRoot, {
+    onBack,
+    progress,
+    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  });
 const openHowToPlay: OpenHowToPlay = (onBack) => mountHowToPlay(howToPlayRoot, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
@@ -81,6 +91,7 @@ const gameOptions = {
   settings,
   audioMix,
   openSettings,
+  openFieldManual,
   openHowToPlay,
   progress,
 };
@@ -112,8 +123,8 @@ const game = new Phaser.Game({
   backgroundColor: '#1b1e16',
   scene: [
     new BootScene(flags),
-    new MenuScene({ app, menuRoot, openSettings, openHowToPlay }),
-    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
+    new MenuScene({ app, menuRoot, openSettings, openFieldManual, openHowToPlay }),
+    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll, settings }),
     gameScene,
     ...demoScenes,
   ],

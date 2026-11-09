@@ -8,11 +8,8 @@ const group = (kind: EnemyKind, count: number, spacingMs: number, delayMs = 0): 
   delayMs,
 });
 
-/**
- * With auto-start on, the next wave starts this long after the last one is cleared, in game time. Longer than
- * `WAVE_BANNER_MS`, so the "Wave N cleared" banner and a moment of build time aren't skipped.
- */
-export const AUTO_START_DELAY_MS = 5000;
+/** A wave's timer when its data gives none (`WaveData.afterMs`, ADR-0011): from the previous wave's start, in game time. */
+export const DEFAULT_WAVE_AFTER_MS = 40_000;
 
 /**
  * The wave schedule, in order (PLAN: starting numbers). Each new kind first comes alone and in small numbers, then

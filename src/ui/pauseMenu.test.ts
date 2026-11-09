@@ -139,64 +139,19 @@ describe('mountPauseMenu', () => {
     expect(button('quit')!.disabled).toBe(true);
   });
 
-  it('disables Settings when it is given no Settings screen to open', () => {
+  it('disables Settings, Field manual and How to play when it is given no screen to open', () => {
     mount().open();
     expect(button('settings')!.disabled).toBe(true);
+    expect(button('field-manual')!.disabled).toBe(true);
+    expect(button('field-manual')!.textContent).toBe('Field manual');
+    expect(button('how-to-play')!.disabled).toBe(true);
   });
 
-  describe('How to play', () => {
-    let onBack: () => void;
-    let screen: { close: Mock<() => void>; back: Mock<() => void> };
-    const openHowToPlay = vi.fn((back: () => void) => {
-      onBack = back;
-      return screen;
-    });
-    beforeEach(() => {
-      openHowToPlay.mockClear();
-      screen = { close: vi.fn(), back: vi.fn(() => onBack()) };
-    });
-
-    it('is disabled when it is given no screen to open', () => {
-      mount().open();
-      expect(button('how-to-play')!.disabled).toBe(true);
-    });
-
-    it('opens in place of the Paused dialog, still paused', () => {
-      const menu = mount({ openHowToPlay });
-      menu.open();
-      button('how-to-play')!.click();
-      expect(openHowToPlay).toHaveBeenCalledOnce();
-      expect(dialog()!.hidden).toBe(true);
-      expect(menu.paused).toBe(true);
-    });
-
-    it('comes back to the Paused dialog with its button focused', () => {
-      mount({ openHowToPlay }).open();
-      button('how-to-play')!.click();
-      onBack();
-      expect(dialog()!.hidden).toBe(false);
-      expect(document.activeElement).toBe(button('how-to-play'));
-    });
-
-    it('makes Esc go back rather than resume', () => {
-      const menu = mount({ openHowToPlay });
-      menu.open();
-      button('how-to-play')!.click();
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-      expect(screen.back).toHaveBeenCalledOnce();
-      expect(menu.paused).toBe(true);
-    });
-
-    it('closes an open screen when destroyed', () => {
-      const menu = mount({ openHowToPlay });
-      menu.open();
-      button('how-to-play')!.click();
-      menu.destroy();
-      expect(screen.close).toHaveBeenCalled();
-    });
-  });
-
-  describe('Settings', () => {
+  describe.each([
+    ['Settings', 'settings', 'openSettings'],
+    ['Field manual', 'field-manual', 'openFieldManual'],
+    ['How to play', 'how-to-play', 'openHowToPlay'],
+  ] as const)('%s', (_name, testId, option) => {
     let onBack: () => void;
     let screen: { close: Mock<() => void>; back: Mock<() => void> };
     const openSettings = vi.fn((back: () => void) => {
@@ -210,9 +165,9 @@ describe('mountPauseMenu', () => {
     });
 
     it('opens the Settings screen in place of the Paused dialog, still paused', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       expect(openSettings).toHaveBeenCalledOnce();
       expect(dialog()!.hidden).toBe(true);
       expect(menu.paused).toBe(true);
@@ -220,19 +175,19 @@ describe('mountPauseMenu', () => {
     });
 
     it('comes back to the Paused dialog with Settings focused', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       onBack();
       expect(dialog()!.hidden).toBe(false);
       expect(menu.paused).toBe(true);
-      expect(document.activeElement).toBe(button('settings'));
+      expect(document.activeElement).toBe(button(testId));
     });
 
     it('makes Esc go back from Settings rather than resume', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       pressKey('Escape');
       expect(screen.back).toHaveBeenCalledOnce();
       expect(menu.paused).toBe(true);
@@ -242,9 +197,9 @@ describe('mountPauseMenu', () => {
     });
 
     it('closes an open Settings screen when destroyed', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       menu.destroy();
       expect(screen.close).toHaveBeenCalledOnce();
     });
@@ -253,10 +208,12 @@ describe('mountPauseMenu', () => {
   describe('Keys (help overlay)', () => {
     const help = () => root.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="help-title"]');
 
-    it('has a Keys button after How to play', () => {
+    it('has a Keys button after Settings, the Field manual and How to play', () => {
       mount({ openSettings: vi.fn() });
       const labels = [...dialog()!.querySelectorAll(':scope > button')].map((b) => b.textContent);
       expect(labels.indexOf('Keys')).toBe(labels.indexOf('How to play') + 1);
+      expect(labels.indexOf('How to play')).toBe(labels.indexOf('Field manual') + 1);
+      expect(labels.indexOf('Field manual')).toBe(labels.indexOf('Settings') + 1);
     });
 
     it('opens the help overlay in place of the Paused dialog, still paused', () => {
