@@ -172,7 +172,7 @@ test('with anim=0 no combat effect is drawn', async ({ page }) => {
 test('a kill leaves fallen infantry on the ground, which then fades away (#403)', async ({ page }) => {
   await openGame(page, { anim: true });
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   const kinds = await page.evaluate(() => {
     const td = window.__TD__!;
     const seen = new Set<string>();
@@ -189,7 +189,7 @@ test('a kill leaves fallen infantry on the ground, which then fades away (#403)'
 test('with anim=0 a fight leaves no aftermath (#403)', async ({ page }) => {
   await openGame(page, { anim: false });
   await page.evaluate(() => window.__TD__!.loadScenario('mortar-vs-group'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   const drawn = await page.evaluate(() => {
     const td = window.__TD__!;
     let count = 0;
