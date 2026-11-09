@@ -45,6 +45,7 @@ describe('createPersistedSettings', () => {
     const chosen = {
       defaultSpeed: 3,
       showAllRanges: true,
+      showMapGrid: false,
       masterVolume: 50,
       musicVolume: 0,
       sfxVolume: 100,
@@ -107,6 +108,12 @@ describe('loadSettings', () => {
     });
   });
 
+  it('keeps a saved Show map grid choice, and defaults to on for a missing or invalid one (#400)', () => {
+    expect(loadSettings(v2({ showMapGrid: false })).showMapGrid).toBe(false);
+    expect(loadSettings(v2({})).showMapGrid).toBe(true);
+    expect(loadSettings(v2({ showMapGrid: 'no' })).showMapGrid).toBe(true);
+  });
+
   it('clamps an out-of-range volume to 0–100 and rounds it to a whole number', () => {
     expect(loadSettings(v2({ masterVolume: 150, musicVolume: -5, sfxVolume: 42.6 }))).toEqual({
       ...DEFAULT_SETTINGS,
@@ -147,10 +154,17 @@ describe('loadSettings', () => {
   it('migrates a v2 save: its values stay, text size is 100 and reduced motion follows the system', () => {
     const v2 = { defaultSpeed: 2, showAllRanges: true, masterVolume: 40, musicVolume: 30, sfxVolume: 20 } as const;
     const raw = JSON.stringify({ version: 2, settings: v2 });
-    expect(loadSettings(withRaw(raw))).toEqual({ ...v2, reducedMotion: false, textSize: 100, tacticalMode: false });
+    expect(loadSettings(withRaw(raw))).toEqual({
+      ...v2,
+      showMapGrid: true,
+      reducedMotion: false,
+      textSize: 100,
+      tacticalMode: false,
+    });
     const prefersLess = defaultSettings({ prefersReducedMotion: true });
     expect(loadSettings(withRaw(raw), prefersLess)).toEqual({
       ...v2,
+      showMapGrid: true,
       reducedMotion: true,
       textSize: 100,
       tacticalMode: false,

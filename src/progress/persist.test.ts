@@ -28,7 +28,7 @@ describe('createPersistedProgress', () => {
     progress.recordResult('a', 2);
     expect(saved(storage)).toEqual({
       version: PROGRESS_VERSION,
-      progress: { maps: { a: { completed: true, bestStars: 2 } }, hintsDone: false },
+      progress: { maps: { a: { completed: true, bestStars: 2 } }, hintsDone: false, metEnemies: [] },
     });
     expect(PROGRESS_KEY).toBe('military-td.progress');
   });
@@ -54,7 +54,10 @@ describe('createPersistedProgress', () => {
     const storage = createMemoryStorage();
     const progress = createPersistedProgress(storage);
     progress.setHintsDone(true);
-    expect(saved(storage)).toEqual({ version: PROGRESS_VERSION, progress: { maps: {}, hintsDone: true } });
+    expect(saved(storage)).toEqual({
+      version: PROGRESS_VERSION,
+      progress: { maps: {}, hintsDone: true, metEnemies: [] },
+    });
     expect(createPersistedProgress(storage).get().hintsDone).toBe(true);
     progress.setHintsDone(false);
     expect(saved(storage).progress.hintsDone).toBe(false);
@@ -111,10 +114,10 @@ describe('loadProgress', () => {
 
   it('loads a v1 save with its maps, hints done once any map was won', () => {
     const won = { a: { completed: true, bestStars: 2 } };
-    expect(loadProgress(withProgress(won, 1))).toEqual({ maps: won, hintsDone: true });
+    expect(loadProgress(withProgress(won, 1))).toEqual({ maps: won, hintsDone: true, metEnemies: [] });
     const notWon = { a: { completed: false, bestStars: 0 } };
-    expect(loadProgress(withProgress(notWon, 1))).toEqual({ maps: notWon, hintsDone: false });
-    expect(loadProgress(withProgress({}, 1))).toEqual({ maps: {}, hintsDone: false });
+    expect(loadProgress(withProgress(notWon, 1))).toEqual({ maps: notWon, hintsDone: false, metEnemies: [] });
+    expect(loadProgress(withProgress({}, 1))).toEqual({ maps: {}, hintsDone: false, metEnemies: [] });
   });
 
   it('drops bad values field by field', () => {
@@ -135,31 +138,57 @@ describe('loadProgress', () => {
 });
 
 describe('migrate', () => {
-  it('is at version 2', () => {
-    expect(PROGRESS_VERSION).toBe(2);
+  it('is at version 3', () => {
+    expect(PROGRESS_VERSION).toBe(3);
   });
 
   it('passes the current version through', () => {
-    const data = { maps: {}, hintsDone: true };
+    const data = { maps: {}, hintsDone: true, metEnemies: [] };
     expect(migrate(PROGRESS_VERSION, data)).toBe(data);
   });
 
   it('adds hintsDone to v1 progress: true once any map was won, maps untouched', () => {
     const won = { maps: { a: { completed: true, bestStars: 3 }, b: { completed: false, bestStars: 0 } } };
-    expect(migrate(1, won)).toEqual({ ...won, hintsDone: true });
-    expect(migrate(1, { maps: { b: { completed: false, bestStars: 0 } } })).toEqual({
+    expect(migrate(1, won)).toEqual({ ...won, hintsDone: true, metEnemies: [] });
+    expect(migrate(1, { maps: { b: { completed: false, bestStars: 0 } } })).toMatchObject({
       maps: { b: { completed: false, bestStars: 0 } },
       hintsDone: false,
     });
-    expect(migrate(1, { maps: {} })).toEqual({ maps: {}, hintsDone: false });
+    expect(migrate(1, { maps: {} })).toEqual({ maps: {}, hintsDone: false, metEnemies: [] });
   });
 
   it('leaves v1 data that is not progress for sanitize to reject', () => {
     expect(migrate(1, 'junk')).toBe('junk');
-    expect(migrate(1, { maps: 5 })).toEqual({ maps: 5, hintsDone: false });
+    expect(migrate(1, { maps: 5 })).toEqual({ maps: 5, hintsDone: false, metEnemies: [] });
   });
 
   it.each([PROGRESS_VERSION + 1, -1, 1.5, Number.NaN])('rejects version %s', (version) => {
     expect(migrate(version, {})).toBeNull();
+  });
+
+  it('adds metEnemies to v2 progress: every enemy kind in the waves of each map won', () => {
+    const won = { maps: { mvp: { completed: true, bestStars: 1 } }, hintsDone: true };
+    const migrated = migrate(2, won) as { metEnemies: string[] };
+    expect(migrated).toMatchObject(won);
+    expect([...migrated.metEnemies].sort()).toEqual(['helicopter', 'infantry', 'jeep', 'tank']);
+    expect(migrate(2, { maps: { mvp: { completed: false, bestStars: 0 } }, hintsDone: false })).toMatchObject({
+      metEnemies: [],
+    });
+    expect(migrate(2, { maps: { gone: { completed: true, bestStars: 3 } }, hintsDone: false })).toMatchObject({
+      metEnemies: [],
+    });
+  });
+});
+
+describe('metEnemies', () => {
+  it('saves and reloads the kinds met, dropping unknown kinds and duplicates', () => {
+    const storage = createMemoryStorage();
+    createPersistedProgress(storage).recordMet('jeep');
+    expect(saved(storage).progress.metEnemies).toEqual(['jeep']);
+    expect(createPersistedProgress(storage).get().metEnemies).toEqual(['jeep']);
+    const raw = (metEnemies: unknown) =>
+      withRaw(JSON.stringify({ version: PROGRESS_VERSION, progress: { maps: {}, hintsDone: false, metEnemies } }));
+    expect(loadProgress(raw(['tank', 'dragon', 'tank', 4])).metEnemies).toEqual(['tank']);
+    expect(loadProgress(raw('tank')).metEnemies).toEqual([]);
   });
 });
