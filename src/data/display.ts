@@ -96,6 +96,42 @@ export const TOWER_STYLE = {
   sniper: { shape: 'square', size: 26, fill: 0x4b5a3a, outline: 0xe5e1cf, outlineWidth: 2 }, // small olive hide, bone outline
 } as const satisfies Record<TowerKind, TowerStyle>;
 
+/**
+ * What the player reads for the game's terms (ADR-0010): military, but clear first. Display text only; the code and
+ * the sim keep `money`, `lives`, Victory and Defeat. Every screen, hint and tooltip takes its words from here.
+ */
+export const TERMS = {
+  money: 'Funds',
+  lives: 'HQ',
+  startWave: 'Start wave',
+  play: 'Deploy',
+  levelSelect: 'Operations',
+  victory: 'MISSION COMPLETE',
+  defeat: 'MISSION FAILED',
+  report: 'After-action report',
+} as const;
+
+/** An amount of Money as the player reads it: "$100". */
+export const formatFunds = (amount: number): string => `$${amount}`;
+
+/** The HUD banner when a wave starts. */
+export const contactBanner = (waveNumber: number): string => `CONTACT — WAVE ${waveNumber}`;
+
+/** What a locked map on the Operations screen says, naming the map that unlocks it. */
+export const lockedLine = (previous: string | undefined): string => `Locked: complete ${previous ?? 'the map before'}`;
+
+/** The HQ bar's state: `low` at or under `low` of the start Lives, `critical` at or under `critical`. */
+export const HQ_BAR = { low: 0.5, critical: 0.25 } as const;
+
+export type HqLevel = 'ok' | 'low' | 'critical';
+
+/** How the HQ bar reads with `lives` of `maxLives` left. */
+export function hqLevel(lives: number, maxLives: number): HqLevel {
+  const share = maxLives > 0 ? lives / maxLives : 0;
+  if (share <= HQ_BAR.critical) return 'critical';
+  return share <= HQ_BAR.low ? 'low' : 'ok';
+}
+
 /** What the player calls each tower kind. Every kind needs one. */
 export const TOWER_NAMES = {
   rifleNest: 'Rifle Nest',
@@ -199,7 +235,7 @@ export const PLACEMENT_REFUSAL_TEXT = {
   gameEnded: 'The game has ended',
   notBuildable: "Can't build here",
   occupied: 'Tile occupied',
-  insufficientMoney: 'Not enough money',
+  insufficientMoney: 'Not enough funds',
 } as const satisfies Record<PlaceTowerRefusal, string>;
 
 /** Why the Upgrade button is disabled, as its tooltip. `maxLevel` never shows: the button is hidden then. */
@@ -208,7 +244,7 @@ export const UPGRADE_REFUSAL_TEXT = {
   noSuchTower: 'The tower is gone',
   dismantling: 'Being dismantled',
   maxLevel: 'Top level',
-  insufficientMoney: 'Not enough money',
+  insufficientMoney: 'Not enough funds',
 } as const satisfies Record<UpgradeTowerRefusal, string>;
 
 /** The line drawn for each hit, from the tower to the target. */
@@ -239,7 +275,7 @@ export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015
  */
 export const REDUCED_MOTION = { effectLifeMs: 120, tracerFadeMs: 50, blastFadeMs: 150 } as const;
 
-/** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
+/** How long the HUD's "CONTACT — WAVE N" and "Wave N cleared" banners stay up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
 
 /**

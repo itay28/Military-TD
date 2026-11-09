@@ -14,11 +14,11 @@ beforeEach(() => {
 });
 
 describe('Main menu', () => {
-  it('shows the game title Hold the Perimeter and a Play, a Settings and a Credits button', () => {
+  it('shows the game title Hold the Perimeter and a Deploy, a Settings and a Credits button', () => {
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
     expect(root.hidden).toBe(false);
     expect(root.querySelector('h1')?.textContent).toBe('Hold the Perimeter');
-    expect(button('Play')?.type).toBe('button');
+    expect(button('Deploy')?.type).toBe('button');
     expect(button('Settings')?.type).toBe('button');
     expect(button('Credits')?.type).toBe('button');
   });
@@ -38,7 +38,7 @@ describe('Main menu', () => {
 
   it('disables Settings when it is given no Settings screen to open', () => {
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
-    expect(button('Play')?.disabled).toBe(false);
+    expect(button('Deploy')?.disabled).toBe(false);
     expect(button('Settings')?.disabled).toBe(true);
   });
 
@@ -60,7 +60,7 @@ describe('Main menu', () => {
     const openHowToPlay = vi.fn(() => ({ close: () => {}, back: () => {} }));
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {}, openHowToPlay });
     const labels = [...root.querySelectorAll('button')].map((b) => b.textContent);
-    expect(labels).toEqual(['Play', 'Settings', 'Field manual', 'How to play', 'Credits']);
+    expect(labels).toEqual(['Deploy', 'Settings', 'Field manual', 'How to play', 'Credits']);
     button('How to play')!.click();
     expect(openHowToPlay).toHaveBeenCalledOnce();
     expect(root.inert).toBe(true);
@@ -127,16 +127,16 @@ describe('Main menu', () => {
     expect(root.inert).toBe(false);
   });
 
-  it('calls onPlay when the player presses Play', () => {
+  it('calls onPlay when the player presses Deploy', () => {
     const onPlay = vi.fn();
     mountMainMenu(root, { app, onPlay, onCredits: () => {} });
-    button('Play')?.click();
+    button('Deploy')?.click();
     expect(onPlay).toHaveBeenCalledOnce();
   });
 
-  it('focuses Play when it opens', () => {
+  it('focuses Deploy when it opens', () => {
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
-    expect(document.activeElement).toBe(button('Play'));
+    expect(document.activeElement).toBe(button('Deploy'));
   });
 
   it('marks the app as on the menu, which hides the HUD, build bar and tower panel, until destroyed', () => {
@@ -146,10 +146,10 @@ describe('Main menu', () => {
     expect(app.dataset.screen).toBeUndefined();
   });
 
-  it('after destroy, is hidden and empty, and an old Play button does nothing', () => {
+  it('after destroy, is hidden and empty, and an old Deploy button does nothing', () => {
     const onPlay = vi.fn();
     const menu = mountMainMenu(root, { app, onPlay, onCredits: () => {} });
-    const play = button('Play')!;
+    const play = button('Deploy')!;
     menu.destroy();
     play.click();
     expect(onPlay).not.toHaveBeenCalled();

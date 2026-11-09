@@ -17,7 +17,7 @@ test('with ?demo=1 the battle plays behind a see-through menu, and the camera pa
   await openMenu(page, { demo: true });
   await expect(root(page)).toHaveAttribute('data-demo', 'full');
   await expect(page.locator('#menu')).toHaveCSS('background-image', /radial-gradient/);
-  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Deploy', exact: true })).toBeFocused();
   // The canvas changes from frame to frame: units move and the camera pans.
   const canvas = page.locator('#game canvas');
   const before = await canvas.screenshot();
@@ -36,8 +36,8 @@ test('the menu works over the demo: Settings, Credits, the Level select, and a m
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(root(page)).toHaveAttribute('data-demo', 'full');
 
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
   await expect(root(page)).toHaveAttribute('data-demo', 'full');
 
   await page.getByRole('button', { name: `${FIRST_MAP.name}, no stars yet` }).click();
