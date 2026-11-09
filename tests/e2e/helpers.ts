@@ -41,12 +41,15 @@ export interface MenuOptions {
   readonly progress?: Readonly<Record<string, { completed: boolean; bestStars: number }>>;
   /** `unlock=all`: every map can be picked. */
   readonly unlockAll?: boolean;
+  /** `demo=1`: the live battlefield plays behind the menu (#402), as for a player. */
+  readonly demo?: boolean;
 }
 
 /** Opens the Main menu in test mode (`menu=1`). `window.__TD__` appears only once Play starts a game. */
-export async function openMenu(page: Page, { progress, unlockAll = false }: MenuOptions = {}) {
+export async function openMenu(page: Page, { progress, unlockAll = false, demo = false }: MenuOptions = {}) {
   const params = new URLSearchParams({ test: '1', menu: '1', step: 'manual', anim: '0' });
   if (unlockAll) params.set('unlock', 'all');
+  if (demo) params.set('demo', '1');
   if (progress !== undefined) {
     params.set('persist', '1');
     await page.addInitScript(

@@ -1,4 +1,4 @@
-# Military-TD — Plan
+# Hold the Perimeter — Plan
 
 A military-themed tower defense game that runs in the browser.
 
