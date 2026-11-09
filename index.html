@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Military TD</title>
+    <title>Hold the Perimeter</title>
     <style>
       /* Text size (#354): the Settings screen sets --text-scale on <html> (1, 1.25 or 1.5), and every DOM font size
          below is a multiple of it, so one variable scales all UI text. */
@@ -803,6 +803,24 @@
       #level-select > :last-child {
         margin-bottom: auto;
       }
+      /* While the live battlefield plays behind them (#402), the page is marked data-demo and the canvas shows through:
+         a dark scrim that is darkest behind the menu column, so its buttons stay readable over the battle. */
+      :root[data-demo] #menu {
+        background: radial-gradient(
+          ellipse 60% 75% at center,
+          rgb(27 30 22 / 0.9) 0%,
+          rgb(27 30 22 / 0.78) 45%,
+          rgb(27 30 22 / 0.35) 100%
+        );
+      }
+      :root[data-demo] #level-select {
+        background: rgb(27 30 22 / 0.78);
+      }
+      /* The battlefield fills the window, edge to edge, while the menu screens hide the HUD and build bar around it. */
+      :root[data-demo] #app[data-screen] {
+        gap: 0;
+        padding: 0;
+      }
       /* `display: flex` above would otherwise override the hidden attribute. */
       #menu[hidden],
       #level-select[hidden] {
@@ -1149,6 +1167,38 @@
         font: calc(12px * var(--text-scale)) monospace;
         color: #8a8670;
         pointer-events: none;
+      }
+      /* Touch (#72): every button is at least 32 px both ways, so a finger can hit it. After the rules above. */
+      @media (max-width: 640px), (max-height: 480px), (pointer: coarse) {
+        #hud button {
+          min-width: 32px;
+          min-height: 32px;
+        }
+        #build-bar[data-collapsed='true'] {
+          width: 32px;
+        }
+        #build-bar .build-toggle {
+          width: 32px;
+          height: 32px;
+        }
+        #tower-panel button[aria-label='Close'],
+        #enemy-card button[aria-label='Close'] {
+          width: 32px;
+          height: 32px;
+          top: 0;
+          right: 0;
+        }
+        #tower-panel [data-testid='tower-upgrade'],
+        #tower-panel [data-testid='tower-sell'] {
+          min-height: 32px;
+        }
+      }
+      #tower-panel [data-testid='tower-upgrade-reason'] {
+        margin: 4px 0 0;
+        color: #c9b48a;
+      }
+      #tower-panel [data-testid='tower-upgrade-reason'][hidden] {
+        display: none;
       }
     </style>
   </head>
