@@ -1,5 +1,5 @@
 - main:
-  - heading "Select map" [level=1]
+  - heading "Operations" [level=1]
   - list:
     - listitem:
       - button "Training Ground, no stars yet": Training Ground

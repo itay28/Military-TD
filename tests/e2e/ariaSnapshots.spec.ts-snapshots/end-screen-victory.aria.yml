@@ -1,8 +1,9 @@
-- dialog "Victory":
-  - heading "Victory" [level=2]
-  - paragraph: Waves survived 1 / 1
+- dialog "MISSION COMPLETE":
+  - heading "MISSION COMPLETE" [level=2]
   - paragraph: 3 of 3 stars
   - paragraph: "New map unlocked: Switchback"
+  - heading "After-action report" [level=3]
+  - paragraph: Waves survived 1 / 1
   - table "By tower":
     - caption: By tower
     - rowgroup:
@@ -59,4 +60,4 @@
         - cell "1"
         - cell "29.0"
   - button "Restart"
-  - button "Level select"
+  - button "Operations"

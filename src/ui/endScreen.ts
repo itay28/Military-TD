@@ -1,4 +1,4 @@
-import { TOWER_NAMES } from '../data/display';
+import { TERMS, TOWER_NAMES } from '../data/display';
 import { isGameOver, type Game } from '../sim/game';
 import type { Stars } from '../sim/progression';
 import { damageReport, type DamageReport, type ReportFigures } from '../sim/report';
@@ -20,7 +20,7 @@ export const TACTICAL_CAP_TEXT = 'Tactical: max 2 stars';
 export interface EndScreenOptions {
   /** Called when the player presses Restart. */
   readonly onRestart: () => void;
-  /** Called when the player presses Level select. */
+  /** Called when the player presses Operations (the Level select). */
   readonly onLevelSelect: () => void;
   /** Read once when the overlay opens on a Victory; nothing is shown for it without one. */
   readonly result?: () => VictoryResult | undefined;
@@ -163,12 +163,14 @@ export function mountEndScreen(
   const levelSelect = doc.createElement('button');
   levelSelect.type = 'button';
   levelSelect.dataset.testid = 'level-select';
-  levelSelect.textContent = 'Level select';
+  levelSelect.textContent = TERMS.levelSelect;
   const onLevelSelectClick = () => onLevelSelect();
   levelSelect.addEventListener('click', onLevelSelectClick);
   const report = doc.createElement('div');
   report.className = 'report';
-  dialog.append(heading, wavesSurvived, report, restart, levelSelect);
+  const reportHeading = doc.createElement('h3');
+  reportHeading.textContent = TERMS.report;
+  dialog.append(heading, reportHeading, wavesSurvived, report, restart, levelSelect);
   root.append(dialog);
   root.hidden = true;
   let destroyed = false;
@@ -177,10 +179,10 @@ export function mountEndScreen(
   const update = () => {
     const { phase, wavesCleared, totalWaves } = game.state;
     if (destroyed || !root.hidden || !isGameOver(phase)) return;
-    heading.textContent = phase === 'victory' ? 'Victory' : 'Defeat';
+    heading.textContent = phase === 'victory' ? TERMS.victory : TERMS.defeat;
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
     const won = phase === 'victory' ? result?.() : undefined;
-    if (won) wavesSurvived.after(...buildResult(doc, won));
+    if (won) heading.after(...buildResult(doc, won));
     report.replaceChildren(...buildReport(doc, damageReport(game.state.stats)));
     root.hidden = false;
     // Focusing the last child would scroll a tall report to the bottom, hiding the title.

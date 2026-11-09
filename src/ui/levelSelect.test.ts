@@ -44,7 +44,7 @@ describe('Level select', () => {
   it('shows a heading, one button per map named after it, and Back', () => {
     mount({ maps: TWO_MAPS });
     expect(root.hidden).toBe(false);
-    expect(root.querySelector('h1')?.textContent).toBe('Select map');
+    expect(root.querySelector('h1')?.textContent).toBe('Operations');
     expect(buttons().map((b) => b.getAttribute('aria-label') ?? b.textContent?.trim())).toEqual([
       'Training Ground, no stars yet',
       'Second Map, no stars yet',
@@ -92,12 +92,12 @@ describe('Level select', () => {
     expect(shown(mapButton('Second Map'), 'locked')?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('shows a locked map as Locked with a lock mark, named with what unlocks it; a click on it picks nothing', () => {
+  it('shows a locked map as "Locked: complete <the map before>" with no emoji, named with what unlocks it; a click on it picks nothing', () => {
     const onPick = vi.fn();
     mount({ maps: TWO_MAPS, onPick, statusOf: (index) => ({ unlocked: index === 0, bestStars: 0 }) });
     const locked = button('Second Map, locked. Complete Training Ground to unlock');
     expect(locked?.getAttribute('aria-disabled')).toBe('true');
-    expect(shown(locked, 'locked')?.textContent).toBe('🔒 Locked');
+    expect(shown(locked, 'locked')?.textContent).toBe('Locked: complete Training Ground');
     expect(shown(locked, 'stars')).toBeNull();
     locked?.click();
     expect(onPick).not.toHaveBeenCalled();

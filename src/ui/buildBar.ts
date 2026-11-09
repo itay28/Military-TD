@@ -1,4 +1,4 @@
-import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
+import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE, formatFunds } from '../data/display';
 import { renderFor, type RenderedSprite } from '../data/renders';
 import { towerIcon, type TowerIcon } from '../data/sprites';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
@@ -185,11 +185,11 @@ export function mountBuildBar<K extends string>(
     const button = doc.createElement('button');
     button.type = 'button';
     button.dataset.testid = `build-${option.kind}`;
-    // Name and cost, as the tower panel names its buttons ("Optics (40)"), so a screen reader hears the price.
-    button.setAttribute('aria-label', `${option.name} (${option.cost})`);
+    // Name and cost, as the tower panel names its buttons ("Optics ($40)"), so a screen reader hears the price.
+    button.setAttribute('aria-label', `${option.name} (${formatFunds(option.cost)})`);
     const tip = option.tooltip && tooltipElement(doc, option.kind, hotkey, option.tooltip);
     if (tip) button.setAttribute('aria-describedby', tip.id);
-    else button.title = `${option.name} (${hotkey}): ${option.cost}`;
+    else button.title = `${option.name} (${hotkey}): ${formatFunds(option.cost)}`;
     const icon = doc.createElement('span');
     icon.className = 'build-icon';
     const box = (ICON_BOX * option.icon.size) / largest;
@@ -210,7 +210,7 @@ export function mountBuildBar<K extends string>(
     }
     const cost = doc.createElement('span');
     cost.className = 'build-cost';
-    cost.textContent = String(option.cost);
+    cost.textContent = formatFunds(option.cost);
     const key = doc.createElement('kbd');
     key.textContent = hotkey;
     button.append(icon, cost, key);

@@ -81,7 +81,7 @@ test('Quit to menu goes to the Level select; Settings is enabled (#48)', async (
   await expect(page.getByRole('button', { name: 'Settings' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Quit to menu' })).toBeEnabled();
   await page.getByRole('button', { name: 'Quit to menu' }).click();
-  await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
   await expect(pauseMenu(page)).toBeHidden();
 });
 
@@ -89,18 +89,18 @@ test('pausing is unavailable once the game is over', async ({ page }) => {
   await openGame(page);
   await page.getByRole('button', { name: 'Call next wave' }).click();
   await playToEnd(page);
-  await expect(page.getByRole('dialog', { name: /Victory|Defeat/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /MISSION COMPLETE|MISSION FAILED/ })).toBeVisible();
   await expect(pauseButton(page)).toBeDisabled();
   await page.keyboard.press('Escape');
   await expect(pauseMenu(page)).toBeHidden();
 });
 
-test('the End screen has a Level select button that leaves the map', async ({ page }) => {
+test('the End screen has an Operations button that leaves the map', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
   await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await stepToEnd(page);
-  await page.getByRole('button', { name: 'Level select' }).click();
-  await expect(page.getByRole('heading', { name: 'Select map' })).toBeVisible();
-  await expect(page.getByRole('dialog', { name: /Victory|Defeat/ })).toBeHidden();
+  await page.getByRole('button', { name: 'Operations' }).click();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /MISSION COMPLETE|MISSION FAILED/ })).toBeHidden();
 });
