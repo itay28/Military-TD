@@ -2,6 +2,7 @@ import type { TowerKind } from '../data/towers';
 import type { EnemyKind } from '../data/enemies';
 import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
+import type { DecalKind } from '../data/display';
 import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
 import type { Tile } from '../sim/map';
@@ -40,6 +41,8 @@ export interface TestView {
     readonly at: Pixel;
     readonly progress: number;
   }[];
+  /** The aftermath decals (wrecks, crash marks, craters, fallen infantry) drawn on the next frame; none with ?anim=0. */
+  readonly decals: readonly { readonly kind: DecalKind; readonly alpha: number }[];
   /** The DPS meter's highlight (#244): the kind clicked there, and the id of every tower of it that is outlined. */
   readonly highlight: { readonly kind: TowerKind | null; readonly towerIds: readonly number[] };
   /**
@@ -47,6 +50,8 @@ export interface TestView {
    * selected. `tile` is null when it is hidden.
    */
   readonly ghost: { readonly visible: boolean; readonly tile: Tile | null };
+  /** The map cursor (#356): its tile, and whether its highlight is drawn (the map has keyboard focus). */
+  readonly cursor: { readonly col: number; readonly row: number; readonly shown: boolean };
   /** The camera over the map: the world pixel at the canvas's top-left corner, and the zoom. */
   readonly camera: { readonly scrollX: number; readonly scrollY: number; readonly zoom: number };
   /** Each display object's layer (`map`, `towers`, `enemies`, …), back to front as Phaser renders them; repeats collapsed. */
