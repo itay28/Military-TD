@@ -39,7 +39,7 @@ const ACTION_BY_KEY = new Map(KEY_MAP.flatMap(({ action, keys }) => keys.map((ke
 /** Inputs that take typed keys, or arrow and number keys (a range): a shortcut there would steal the player's typing. */
 const TYPING_INPUTS = new Set(['text', 'search', 'email', 'number', 'password', 'tel', 'url', 'range']);
 
-function isTypingTarget(target: EventTarget | null): boolean {
+export function isTypingTarget(target: EventTarget | null): boolean {
   if (!target || !(target as Node).nodeType) return false;
   const el = target as HTMLElement;
   if (el.isContentEditable) return true;
@@ -62,3 +62,18 @@ export function shortcutFor(event: KeyboardEvent): ShortcutAction | undefined {
   if (event.ctrlKey || event.altKey || event.metaKey || isTypingTarget(event.target)) return undefined;
   return ACTION_BY_KEY.get(event.key.toLowerCase());
 }
+
+/** One row of the help overlay for a key the map cursor handles (src/ui/mapCursor.ts). */
+export interface KeyHelp {
+  readonly label: string;
+  readonly description: string;
+}
+
+/** The map cursor's keys, listed by the help overlay after `KEY_MAP`. */
+export const MAP_KEY_HELP: readonly KeyHelp[] = [
+  { label: 'Arrows / WASD', description: 'Move the map cursor (WASD only with nothing picked)' },
+  { label: 'Shift+Arrow', description: 'Move the map cursor 4 tiles' },
+  { label: 'Enter', description: 'Build the picked tower at the cursor, or select what is there' },
+  { label: 'Space', description: 'Build at the cursor while a tower is picked' },
+  { label: 'Tab', description: 'Move between the HUD, the build bar, the map and the open panel' },
+];

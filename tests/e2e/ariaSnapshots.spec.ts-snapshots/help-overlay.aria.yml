@@ -27,4 +27,19 @@
       - row "? / H Show these keys":
         - rowheader "? / H"
         - cell "Show these keys"
+      - row "Arrows / WASD Move the map cursor (WASD only with nothing picked)":
+        - rowheader "Arrows / WASD"
+        - cell "Move the map cursor (WASD only with nothing picked)"
+      - row "Shift+Arrow Move the map cursor 4 tiles":
+        - rowheader "Shift+Arrow"
+        - cell "Move the map cursor 4 tiles"
+      - row "Enter Build the picked tower at the cursor, or select what is there":
+        - rowheader "Enter"
+        - cell "Build the picked tower at the cursor, or select what is there"
+      - row "Space Build at the cursor while a tower is picked":
+        - rowheader "Space"
+        - cell "Build at the cursor while a tower is picked"
+      - row "Tab Move between the HUD, the build bar, the map and the open panel":
+        - rowheader "Tab"
+        - cell "Move between the HUD, the build bar, the map and the open panel"
   - button "Back"
