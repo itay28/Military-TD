@@ -457,7 +457,7 @@
         outline: none;
       }
       #game:focus-visible {
-        outline: 3px solid #ffc400;
+        outline: 3px solid var(--amber);
         outline-offset: -3px;
       }
       /* Drags and pinches on the map move the camera, not the page. */
@@ -1187,11 +1187,11 @@
         width: max-content;
         max-width: min(240px, calc(100vw - 16px));
         padding: 8px 10px;
-        font: 13px monospace;
-        color: #1b1e16;
-        background: #f0c95a;
+        font: 0.8125rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--amber);
         border-radius: 4px;
-        box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+        box-shadow: 0 2px 6px color-mix(in srgb, var(--olive-950) 50%, transparent);
       }
       #hints .hint p {
         margin: 0 0 6px;
@@ -1200,14 +1200,14 @@
         pointer-events: auto;
         padding: 2px 8px;
         font: inherit;
-        color: #e4e0c8;
-        background: #3a3f2f;
-        border: 1px solid #1b1e16;
+        color: var(--bone);
+        background: var(--olive-700);
+        border: 1px solid var(--olive-900);
         border-radius: 3px;
         cursor: pointer;
       }
       #hints .hint button:focus-visible {
-        outline: 2px solid #1b1e16;
+        outline: 2px solid var(--olive-900);
         outline-offset: 2px;
       }
       #hints .hint::after {
@@ -1218,17 +1218,17 @@
       #hints .hint[data-side='below']::after {
         bottom: 100%;
         left: calc(var(--arrow-x, 50%) - 8px);
-        border-bottom-color: #f0c95a;
+        border-bottom-color: var(--amber);
       }
       #hints .hint[data-side='above']::after {
         top: 100%;
         left: calc(var(--arrow-x, 50%) - 8px);
-        border-top-color: #f0c95a;
+        border-top-color: var(--amber);
       }
       #hints .hint[data-side='left']::after {
         left: 100%;
         top: calc(50% - 8px);
-        border-left-color: #f0c95a;
+        border-left-color: var(--amber);
       }
       #version {
         position: fixed;
