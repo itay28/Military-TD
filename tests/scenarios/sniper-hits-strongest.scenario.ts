@@ -12,7 +12,7 @@ export default defineScenario({
       ],
     },
   ],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: { ticks: 600 },
   expectations({ events }, expect) {
     const shots = events.filter((e) => e.type === 'towerFired');
