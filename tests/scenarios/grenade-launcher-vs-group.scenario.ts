@@ -23,7 +23,7 @@ export default defineScenario({
   map: STRAIGHT,
   towers: [{ kind: 'grenadeLauncher', tile: { col: 1, row: 3 } }],
   waves: [{ groups: [{ kind: 'infantry', count: 6, spacingMs: 150, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: { event: 'shellLanded' },
   expectations({ events }, expect) {
     const landed = events.filter((e) => e.type === 'shellLanded');
