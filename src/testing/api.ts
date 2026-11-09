@@ -50,6 +50,8 @@ export interface TestView {
    * selected. `tile` is null when it is hidden.
    */
   readonly ghost: { readonly visible: boolean; readonly tile: Tile | null };
+  /** The map cursor (#356): its tile, and whether its highlight is drawn (the map has keyboard focus). */
+  readonly cursor: { readonly col: number; readonly row: number; readonly shown: boolean };
   /** The camera over the map: the world pixel at the canvas's top-left corner, and the zoom. */
   readonly camera: { readonly scrollX: number; readonly scrollY: number; readonly zoom: number };
   /** Each display object's layer (`map`, `towers`, `enemies`, …), back to front as Phaser renders them; repeats collapsed. */

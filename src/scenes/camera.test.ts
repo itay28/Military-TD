@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   panToReveal,
   canPlaceAt,
+  revealTile,
   clampView,
   coverZoom,
   demoView,
@@ -136,6 +137,27 @@ describe('canPlaceAt', () => {
     const margin = worldToScreen(view, { x: -10, y: 100 });
     expect(canPlaceAt(view, DESKTOP, margin)).toBe(false);
     expect(canPlaceAt(view, DESKTOP, worldToScreen(view, { x: 10, y: 100 }))).toBe(true);
+  });
+});
+
+describe('revealTile', () => {
+  /** Zoomed in on a desktop: 480×300 world pixels visible, from (100, 50). */
+  const view = { scrollX: 100, scrollY: 50, zoom: 2 };
+  const tile = (x: number, y: number) => ({ x, y, width: 32, height: 32 });
+
+  it('leaves the camera alone while the rectangle is on screen', () => {
+    expect(revealTile(view, DESKTOP, tile(200, 100))).toEqual(view);
+  });
+
+  it('pans the least that brings the rectangle on screen, on each side', () => {
+    expect(revealTile(view, DESKTOP, tile(68, 100))).toEqual({ ...view, scrollX: 68 });
+    expect(revealTile(view, DESKTOP, tile(580, 100))).toEqual({ ...view, scrollX: 132 });
+    expect(revealTile(view, DESKTOP, tile(200, 30))).toEqual({ ...view, scrollY: 30 });
+    expect(revealTile(view, DESKTOP, tile(200, 330))).toEqual({ ...view, scrollY: 62 });
+  });
+
+  it('keeps the camera inside the map', () => {
+    expect(revealTile(view, DESKTOP, tile(736, 448))).toEqual({ ...view, scrollX: 288, scrollY: 180 });
   });
 });
 
