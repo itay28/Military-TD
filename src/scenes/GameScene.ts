@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
 import {
+  AFTERMATH,
+  AFTERMATH_OF,
   CAMERA,
   DISMANTLE,
   ENEMY_HIT_PX,
@@ -72,6 +74,8 @@ import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, nextSpeed, type GameSpeed, type GameSpeedControl } from './gameSpeed';
 import { createGestures, hoverFrom, type Gesture, type Gestures } from './gestures';
+import { aftermathTimings, createAftermath, type Aftermath } from './aftermath';
+import { drawAftermath } from './drawAftermath';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { headingOf, spriteRotation } from './heading';
@@ -116,6 +120,7 @@ const ringKeyTowerId = (key: string): number => Number(key.split('@')[0]);
 /** Draw order, back to front. */
 const DEPTH = {
   map: 0,
+  decals: 0.5,
   towers: 1,
   enemies: 2,
   air: 3,
@@ -268,6 +273,8 @@ export class GameScene extends Phaser.Scene {
   /** Each tower's view by id, for `view()`'s turret angles. */
   private readonly towerViewById = new Map<number, TowerView>();
   private effects!: Effects;
+  private aftermath!: Aftermath;
+  private aftermathGraphics!: Phaser.GameObjects.Graphics;
   private effectGraphics!: Phaser.GameObjects.Graphics;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
@@ -391,6 +398,7 @@ export class GameScene extends Phaser.Scene {
       ].sort((a, b) => a - b),
       tracers: this.tracers.active(),
       effects: this.effects.active(),
+      decals: this.aftermath.active().map(({ kind, alpha }) => ({ kind, alpha })),
       highlight: { kind: this.highlightedKind ?? null, towerIds: [...this.highlightedIds] },
       ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
@@ -473,6 +481,28 @@ export class GameScene extends Phaser.Scene {
     const sprite = onLayer(this.add.container(0, 0, [hull, turret]), layer);
     const graphics = onLayer(this.add.graphics(), layer);
     return { sprite, graphics, rendered: true, spriteScale: 1, facing: RENDER_FACING };
+  }
+
+  /**
+   * What fights leave on the ground (#403): a wreck, crash mark or fallen soldier where an enemy died, turned the way it
+   * was heading, and a crater where a shell landed. Cosmetic, so off with `?anim=0`; reduced motion follows the
+   * player's setting (#354) at the start of the run (no fire, no fall, faster fades).
+   */
+  private setUpAftermath(): void {
+    const { reducedMotion } = this.settings.get();
+    this.aftermath = createAftermath({
+      cap: AFTERMATH.cap,
+      timings: aftermathTimings({ anim: this.flags.anim, reducedMotion }),
+    });
+    this.aftermathGraphics = onLayer(this.add.graphics(), 'decals');
+    this.sim.events.on('enemyKilled', ({ enemy }) => {
+      const { decal, size } = AFTERMATH_OF[enemy.kind];
+      const view = this.enemyViews.views().find(({ id }) => id === enemy.id);
+      this.aftermath.add(decal, toPixels(enemy.position), { heading: view?.heading ?? 0, size });
+    });
+    this.sim.events.on('shellLanded', ({ position }) =>
+      this.aftermath.add('crater', toPixels(position), { heading: 0, size: AFTERMATH.crater.size }),
+    );
   }
 
   /** Where `tower`'s shots start now: its barrel tips, turned with the turret to the sim's heading. */
@@ -746,6 +776,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.sim.events.on('shellLanded', ({ position }) => this.effects.add('explosion', toPixels(position)));
     this.sim.events.on('enemyKilled', ({ enemy }) => this.effects.add('puff', toPixels(enemy.position)));
+    this.setUpAftermath();
     this.tracers = createTracers(() => this.motion().tracerFadeMs);
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
@@ -1144,6 +1175,7 @@ export class GameScene extends Phaser.Scene {
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
     this.effects.advance(deltaMs);
+    this.aftermath.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     if (this.motion().enemyWalk) this.animMs += deltaMs;
     // The demo plays in real time whatever test mode's stepping and speed: it isn't the game under test.
@@ -1176,6 +1208,8 @@ export class GameScene extends Phaser.Scene {
     drawTracers(this.tracerGraphics, this.tracers.active());
     this.effectGraphics.clear();
     drawEffects(this.effectGraphics, this.effects.active());
+    this.aftermathGraphics.clear();
+    drawAftermath(this.aftermathGraphics, this.aftermath.active());
     this.drawShells();
     if (this.demo) return this.panDemoCamera(deltaMs);
     this.drawHighlights(towers);
