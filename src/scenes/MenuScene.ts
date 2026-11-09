@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { mountCredits, type Credits } from '../ui/credits';
+import type { OpenFieldManual } from '../ui/fieldManual';
 import { mountMainMenu, type MainMenu } from '../ui/mainMenu';
 import type { OpenHowToPlay } from '../ui/howToPlay';
 import type { OpenSettings } from '../ui/settingsScreen';
@@ -12,22 +13,26 @@ export interface MenuSceneOptions {
   readonly menuRoot: HTMLElement;
   /** Opens the Settings screen over the menu. */
   readonly openSettings: OpenSettings;
+  /** Opens the Field manual over the menu. */
+  readonly openFieldManual?: OpenFieldManual | undefined;
   /** Opens the How to play screen over the menu. */
   readonly openHowToPlay: OpenHowToPlay;
 }
 
-/** The Main menu: a title, Play (opens the Level select), Settings, How to play and Credits (a second screen in the same root, with Back). Both are DOM (src/ui/). */
+/** The Main menu: a title, Play (opens the Level select), Settings, Field manual, How to play and Credits (a second screen in the same root, with Back). Both are DOM (src/ui/). */
 export class MenuScene extends Phaser.Scene {
   private readonly app: HTMLElement;
   private readonly menuRoot: HTMLElement;
   private readonly openSettings: OpenSettings;
+  private readonly openFieldManual: OpenFieldManual | undefined;
   private readonly openHowToPlay: OpenHowToPlay;
 
-  constructor({ app, menuRoot, openSettings, openHowToPlay }: MenuSceneOptions) {
+  constructor({ app, menuRoot, openSettings, openFieldManual, openHowToPlay }: MenuSceneOptions) {
     super('Menu');
     this.app = app;
     this.menuRoot = menuRoot;
     this.openSettings = openSettings;
+    this.openFieldManual = openFieldManual;
     this.openHowToPlay = openHowToPlay;
   }
 
@@ -42,6 +47,7 @@ export class MenuScene extends Phaser.Scene {
         onPlay: () => this.scene.start('LevelSelect'),
         onCredits: showCredits,
         openSettings: this.openSettings,
+        openFieldManual: this.openFieldManual,
         openHowToPlay: this.openHowToPlay,
         initialFocus,
       });

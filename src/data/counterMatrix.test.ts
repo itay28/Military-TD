@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { damageTaken } from '../sim/combat';
+import { EFFICIENT_SHARE, efficiency } from './counters';
 import { ENEMY_STATS, type EnemyKind } from './enemies';
 import { TOWER_STATS, type TowerKind } from './towers';
 
@@ -10,17 +10,7 @@ import { TOWER_STATS, type TowerKind } from './towers';
 const towerKinds = Object.keys(TOWER_STATS) as TowerKind[];
 const enemyKinds = Object.keys(ENEMY_STATS) as EnemyKind[];
 
-/** Share of the best tower's efficiency a tower needs to count as an efficient counter. */
-const EFFICIENT_SHARE = 0.5;
 const MIN_COUNTERS = 2;
-
-function efficiency(tower: TowerKind, enemy: EnemyKind): number {
-  const t: { cost: number; fireRate: number; damage: number; targets: readonly string[]; armorPierce?: number } =
-    TOWER_STATS[tower];
-  const e = ENEMY_STATS[enemy];
-  if (!t.targets.includes(e.layer)) return 0;
-  return (t.fireRate * damageTaken(t.damage, e.armor, t.armorPierce ?? 0, e.maxHp)) / t.cost;
-}
 
 function efficientCounters(enemy: EnemyKind): TowerKind[] {
   const best = Math.max(...towerKinds.map((tower) => efficiency(tower, enemy)));

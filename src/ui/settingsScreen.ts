@@ -69,6 +69,11 @@ export function mountSettingsScreen(
   showAllRanges.checked = current.showAllRanges;
   showAllRanges.addEventListener('change', () => settings.set({ showAllRanges: showAllRanges.checked }));
 
+  const showMapGrid = doc.createElement('input');
+  showMapGrid.type = 'checkbox';
+  showMapGrid.checked = current.showMapGrid;
+  showMapGrid.addEventListener('change', () => settings.set({ showMapGrid: showMapGrid.checked }));
+
   const reducedMotion = doc.createElement('input');
   reducedMotion.type = 'checkbox';
   reducedMotion.checked = current.reducedMotion;
@@ -163,6 +168,7 @@ export function mountSettingsScreen(
     heading,
     speeds,
     labelled(showAllRanges, 'Always show tower ranges'),
+    labelled(showMapGrid, 'Show map grid'),
     labelled(tactical, 'Tactical mode'),
     tacticalHint,
     ...volumes,
