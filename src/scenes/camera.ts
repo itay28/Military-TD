@@ -105,6 +105,29 @@ export function revealTile(view: CameraView, bounds: CameraBounds, rect: Rect): 
   return clampView({ ...view, scrollX, scrollY }, bounds);
 }
 
+/** The zoom that fills the screen with the map, cropping it on the longer side. */
+export function coverZoom(viewport: Size, world: Size): number {
+  return Math.max(viewport.width / world.width, viewport.height / world.height);
+}
+
+/**
+ * The demo camera behind the menu (#402): `factor` times the cover zoom (past the player's zoom limit if need be),
+ * centred on the world point `center` but kept inside the map, so no margin ever shows.
+ */
+export function demoView(
+  { viewport, world }: Pick<CameraBounds, 'viewport' | 'world'>,
+  center: Pixel,
+  factor: number,
+): CameraView {
+  const zoom = coverZoom(viewport, world) * Math.max(factor, 1);
+  const axis = (at: number, visible: number, size: number) => Math.min(Math.max(at - visible / 2, 0), size - visible);
+  return {
+    scrollX: axis(center.x, viewport.width / zoom, world.width),
+    scrollY: axis(center.y, viewport.height / zoom, world.height),
+    zoom,
+  };
+}
+
 /**
  * `view` as it is when the world point `at` is at least `margin` screen pixels inside the canvas, else centred on it
  * (within the map). Returns `view` itself when nothing needs to move.
