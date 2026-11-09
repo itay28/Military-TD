@@ -19,6 +19,7 @@ const EVENT_TYPES: Readonly<Record<keyof GameEvents, true>> = {
   shellFired: true,
   shellLanded: true,
   enemyKilled: true,
+  dismounted: true,
   towerSold: true,
   waveStarted: true,
   waveCleared: true,
