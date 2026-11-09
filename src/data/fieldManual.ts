@@ -39,6 +39,8 @@ export interface FieldManualEntry {
 
 /** A number as the player reads it: at most two decimals, no trailing zeros. */
 const num = (n: number) => String(Math.round(n * 100) / 100);
+/** Only towers in play are listed (ADR-0009), so the not-in-play Sniper stays out of the enemy lines too. */
+const inPlay = (tower: TowerKind) => BUILD_KINDS.includes(tower);
 
 function towerEntry(kind: TowerKind): FieldManualEntry {
   const stats: {
@@ -90,9 +92,13 @@ function enemyEntry(kind: EnemyKind): FieldManualEntry {
       ['Leak cost', `${stats.leakCost} ${stats.leakCost === 1 ? 'Life' : 'Lives'}`],
     ],
     effectiveLabel: 'Weak against',
-    effective: counteredBy(kind).map((tower) => TOWER_NAMES[tower]),
+    effective: counteredBy(kind)
+      .filter(inPlay)
+      .map((tower) => TOWER_NAMES[tower]),
     weakLabel: 'Shrugs off',
-    weak: resists(kind).map((tower) => TOWER_NAMES[tower]),
+    weak: resists(kind)
+      .filter(inPlay)
+      .map((tower) => TOWER_NAMES[tower]),
   };
 }
 

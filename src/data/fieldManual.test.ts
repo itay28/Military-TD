@@ -47,4 +47,11 @@ describe('fieldManualEntries', () => {
     expect(heli.weakLabel).toBe('Shrugs off');
     expect(heli.weak).toEqual(expect.arrayContaining(['Cannon', 'Mortar']));
   });
+
+  it('names no tower that is not in play in an enemy entry (ADR-0009)', () => {
+    for (const e of entries.filter((x) => x.group === 'enemy')) {
+      expect(e.effective).not.toContain('Sniper');
+      expect(e.weak).not.toContain('Sniper');
+    }
+  });
 });
