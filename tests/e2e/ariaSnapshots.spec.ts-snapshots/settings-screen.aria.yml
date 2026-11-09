@@ -25,4 +25,5 @@
     - text: 125 %
     - radio "150 %"
     - text: 150 %
+  - button "Show hints again"
   - button "Back"

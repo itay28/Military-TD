@@ -6,6 +6,26 @@ describe('createProgress', () => {
     expect(createProgress().get()).toEqual(EMPTY_PROGRESS);
   });
 
+  it('starts with hints not done', () => {
+    expect(createProgress().get().hintsDone).toBe(false);
+  });
+
+  it('sets and clears the hints flag', () => {
+    const progress = createProgress();
+    progress.setHintsDone(true);
+    expect(progress.get().hintsDone).toBe(true);
+    progress.setHintsDone(false);
+    expect(progress.get().hintsDone).toBe(false);
+  });
+
+  it('keeps the hints flag through a win, and the maps through the flag', () => {
+    const progress = createProgress();
+    progress.setHintsDone(true);
+    progress.recordResult('a', 2);
+    progress.setHintsDone(true);
+    expect(progress.get()).toEqual({ maps: { a: { completed: true, bestStars: 2 } }, hintsDone: true });
+  });
+
   it('records a win as completed with its stars', () => {
     const progress = createProgress();
     progress.recordResult('crossroads', 2);
