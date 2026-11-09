@@ -5,6 +5,8 @@
 | **Simulation** (sim) | The pure-TS game model in `src/sim`. It owns all game state and rules. | engine, model |
 | **Scene** | A Phaser scene in `src/scenes`. It draws the sim and forwards input. It never changes state directly. | screen, view |
 | **Tile** | One grid cell. Positions are measured in tiles. | cell, square |
+| **Grid square** | A block of 4 × 4 tiles (`MAP_GRID.cellTiles`) on the tactical map grid, lettered along the top and numbered down the left. Not a Tile: the code's `cell*` names mean this block. | |
+| **Grid reference** | The name of a Grid square, such as "C4" (`gridLabel`): column letters, then the row number from 1. | |
 | **Path** | The ordered waypoints enemies walk from spawn to exit. Towers can't be built on Path tiles. | road, lane, track |
 | **Waypoint** | A tile where the Path turns, or its first or last tile. Consecutive waypoints share a row or a column; the tiles between them are **Path tiles**. | node, corner |
 | **Buildable tile** | A tile where a tower may be placed: not on the Path, marked buildable when the map lists buildable tiles (a Map file does), and not occupied. The map's `isBuildable` checks the first part; placement also checks occupancy. | |
