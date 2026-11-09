@@ -1,4 +1,5 @@
 import type { OpenFieldManual } from './fieldManual';
+import type { OpenHowToPlay } from './howToPlay';
 import type { OpenSettings } from './settingsScreen';
 
 export interface MainMenuOptions {
@@ -14,6 +15,8 @@ export interface MainMenuOptions {
   readonly openSettings?: OpenSettings;
   /** Opens the Field manual over the menu (#408). Without it, Field manual is disabled. */
   readonly openFieldManual?: OpenFieldManual | undefined;
+  /** Opens the How to play screen over the menu. Without it, How to play is disabled. */
+  readonly openHowToPlay?: OpenHowToPlay;
 }
 
 export interface MainMenu {
@@ -24,7 +27,7 @@ export interface MainMenu {
 /** Builds the Main menu inside `root`, a screen over the whole page. It's DOM, so tests can query it (ADR-0003). */
 export function mountMainMenu(
   root: HTMLElement,
-  { app, onPlay, onCredits, openSettings, openFieldManual, initialFocus = 'play' }: MainMenuOptions,
+  { app, onPlay, onCredits, openSettings, openFieldManual, openHowToPlay, initialFocus = 'play' }: MainMenuOptions,
 ): MainMenu {
   const doc = root.ownerDocument;
   const title = doc.createElement('h1');
@@ -34,7 +37,7 @@ export function mountMainMenu(
   play.textContent = 'Play';
   const onClick = () => onPlay();
   play.addEventListener('click', onClick);
-  // Open, Settings or the Field manual covers the menu, which goes inert behind it until Back.
+  // Open, Settings, the Field manual or How to play covers the menu, which goes inert behind it until Back.
   let subScreen: { close(): void } | undefined;
   const subScreenButton = (text: string, open: ((onBack: () => void) => { close(): void }) | undefined) => {
     const button = doc.createElement('button');
@@ -54,12 +57,13 @@ export function mountMainMenu(
   };
   const settings = subScreenButton('Settings', openSettings);
   const fieldManual = subScreenButton('Field manual', openFieldManual);
+  const howTo = subScreenButton('How to play', openHowToPlay);
   const credits = doc.createElement('button');
   credits.type = 'button';
   credits.textContent = 'Credits';
   const onCreditsClick = () => onCredits();
   credits.addEventListener('click', onCreditsClick);
-  root.append(title, play, settings, fieldManual, credits);
+  root.append(title, play, settings, fieldManual, howTo, credits);
   root.hidden = false;
   app.dataset.screen = 'menu';
   (initialFocus === 'credits' ? credits : play).focus();

@@ -48,7 +48,7 @@ Every session a maintainer works in gets a **session tracker**: a live page that
   - the plan (from step 1);
   - a short progress log with timestamps;
   - current status and any blockers or open questions;
-  - for UI changes, the screenshots from step 4b.
+  - for visual or audio changes, the images and sounds from step 4b.
 - **Updates:** publish it three times: when the plan is posted, when the PR is marked ready (with screenshots), and when the session ends (final status). Each update is one publish with `edits`, and the log gets one line per step in between. Link it in the first progress comment on the issue.
 
 ### 1. Plan (comment on the issue)
@@ -82,9 +82,10 @@ The `tdd` skill asks for seams to be agreed before tests are written. For a `rea
 - `npm run check` (typecheck, lint, format check, unit and scenario tests) and `npm run test:e2e` when UI is touched.
 - For gameplay changes, also run the relevant scenario with `npm run scenario -- <name>` and read the outcome.
 
-### 4b. Screenshots for UI changes
-A PR that changes what the player sees (HUD, menus, overlays, anything a Scene draws) shows the change in screenshots, so a reviewer sees the result without building the game.
-- **What to capture:** each state the change touches, taken from the built game (`npm run build`, then `npm run preview`, which serves it on port 4173): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use a 900 × 560 viewport (the 768 × 480 canvas plus the HUD above it, the build bar beside it and margins) so later PRs compare like for like.
+### 4b. Screenshots and sounds
+A PR that changes how anything looks shows it in images, and a PR that changes how anything sounds gives a way to hear it, so a reviewer judges the result without building the game. "Looks" is broad: HUD, menus, overlays, anything a Scene draws, and also sprites, art sheets (`docs/art/`), rendered or generated images and docs images, even when the game doesn't load them yet. Naming a file path in the PR is not showing it: the image must render in the PR body (#392 named its faction sheets and showed nothing).
+- **Before and after:** show both for anything that existed before (before from the base branch: `git show origin/main:<path>`, or a screenshot of the base build). When the change is small at full size (a shadow, a few pixels), add a zoomed crop of the part that changed.
+- **What to capture (in-game):** each state the change touches, taken from the built game (`npm run build`, then `npm run preview`, which serves it on port 4173): for example the Build phase, mid-wave, and the end of a game for the HUD, or enabled and disabled for a button. Use a 900 × 560 viewport (the 768 × 480 canvas plus the HUD above it, the build bar beside it and margins) so later PRs compare like for like.
 - **How:** a throwaway Playwright script or spec, kept out of the commit, that opens the game with `openGame(page)` (`tests/e2e/helpers.ts`), sets up the state through the page and `window.__TD__` (`clickTile`, `loadScenario`, `step`), and calls `page.screenshot({ path })`. The config's 900 × 560 viewport applies. `npx playwright test <file>` builds and serves the game for you. Look at each image before attaching it.
 - **Where they live:** the `pr-assets` branch, one folder per PR (`<pr-number>/<name>.png`). It is never merged, so images stay off `main`; GitHub has no API for uploading images to a PR. To add a folder:
   ```sh
@@ -100,6 +101,19 @@ A PR that changes what the player sees (HUD, menus, overlays, anything a Scene d
 - **PR body:** a **Screenshots** section embeds them as `![<what to look at>](https://github.com/itay28/Military-TD/blob/pr-assets/<pr-number>/<name>.png?raw=true)`, a table when there are several. The alt text says what the image shows ("Mid-wave: Start Wave disabled").
 - **Session tracker** (when there is one): embed the same images as `data:` URIs (an Artifact page can't load images from the private repo), with a one-line caption each.
 - **A state you can't capture** (for example one only a test-mode scenario reaches): say so under the screenshots, and name the test that covers it.
+
+#### Sounds
+A PR that adds or changes a sound (an `.ogg` under `assets/`, a cue built by `npm run radio-fx` / `npm run weapon-fx`, a change to which sound plays when, its volume or ducking) gives a reviewer a way to hear each one. GitHub doesn't play audio inline in a PR, so the sounds go on `pr-assets` and the PR links them.
+- **Files:** for each new or changed sound, an `.mp3` copy (every browser, including iOS Safari, plays it; not all play `.ogg`): `ffmpeg -i assets/<pack>/<id>.ogg -q:a 2 <pr-number>/<id>-after.mp3`. For a replaced sound, also the old one from the base branch (`git show origin/main:assets/<pack>/<id>.ogg > old.ogg`, then the same ffmpeg call) as `<id>-before.mp3`. When the change is when or how loud it plays rather than the file, record a short in-game clip instead, or say so and name the test that covers it.
+- **Upload:** the same `pr-assets` steps as the screenshots above, into the same `<pr-number>/` folder.
+- **PR body:** an **Audio** section with a table: sound, when it plays, before, after. Each cell links the file as `[▶ after](https://github.com/itay28/Military-TD/blob/pr-assets/<pr-number>/<id>-after.mp3?raw=true)`; it opens in the browser's player (or downloads, on some browsers). Add one line per sound on what to listen for ("shorter tail, less hiss").
+- **Session tracker** (when there is one): an `<audio controls>` per sound with the file as a `data:audio/mpeg;base64,…` URI.
+
+#### Follow-up changes
+Images and sounds follow the PR to the end. When a later commit (a review fix, a steward round, a maintainer's request) changes how something looks or sounds again:
+- Upload the new images or sounds to the same `pr-assets/<pr-number>/` folder under new names (`<name>-r2.png`, `<id>-after-r2.mp3`), so links in older comments still show what they showed.
+- Edit the PR body: the **Screenshots** / **Audio** sections show the latest version (keep the original before), so the body alone always shows what would merge.
+- The comment that reports the change embeds the new images or links the new sounds too.
 
 ### 5. PR
 - Branch: `<type>/<issue>-<slug>`, e.g. `feat/8-tower-targeting`.
@@ -133,7 +147,7 @@ Each tool call re-sends the whole conversation, so a long session costs more wit
 - [ ] Acceptance criteria met
 - [ ] Issue has progress comments; description updated if the idea changed
 - [ ] Session tracker (maintainer sessions only) shows the final status and the PR link
-- [ ] UI changes: screenshots in the PR body (and the session tracker, if any; step 4b)
+- [ ] Anything looks different: before/after images embedded in the PR body (and the session tracker, if any); any sound added or changed: playable links in the PR body; both showing the latest version after follow-up commits (step 4b)
 - [ ] Tests written first, now passing; new behaviour covered at the right layer
 - [ ] `npm run check` green locally and in CI (plus e2e if UI changed)
 - [ ] The CI review's findings are addressed, or the PR says why not

@@ -2,6 +2,7 @@ import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { isGameOver, type GameState } from '../sim/game';
 import type { OpenFieldManual } from './fieldManual';
 import { mountHelpOverlay, type HelpOverlay } from './helpOverlay';
+import type { OpenHowToPlay } from './howToPlay';
 import { shortcutFor } from './keymap';
 import type { OpenSettings } from './settingsScreen';
 
@@ -23,6 +24,8 @@ export interface PauseMenuOptions {
   readonly openSettings?: OpenSettings;
   /** Opens the Field manual in place of the Paused dialog (#408); the game stays paused. Without it, it is disabled. */
   readonly openFieldManual?: OpenFieldManual | undefined;
+  /** Opens the How to play screen in place of the Paused dialog. Without it, How to play is disabled. */
+  readonly openHowToPlay?: OpenHowToPlay;
   /** The game speed. With it, the Paused dialog can change the speed, so the player resumes at the one they pick. */
   readonly speed?: GameSpeedControl;
 }
@@ -52,7 +55,7 @@ const TITLE_ID = 'pause-menu-title';
 export function mountPauseMenu(
   root: HTMLElement,
   game: PauseMenuGame,
-  { buttonRoot, blocked, onRestart, onQuit, openSettings, openFieldManual, speed }: PauseMenuOptions,
+  { buttonRoot, blocked, onRestart, onQuit, openSettings, openFieldManual, openHowToPlay, speed }: PauseMenuOptions,
 ): PauseMenu {
   const doc = root.ownerDocument;
   const makeButton = (testId: string, text: string, onClick?: () => void) => {
@@ -125,7 +128,7 @@ export function mountPauseMenu(
   heading.id = TITLE_ID;
   heading.textContent = 'Paused';
   const resume = makeButton('resume', 'Resume', close);
-  // Open, Settings or the Field manual takes the Paused dialog's place; the game stays paused, and Back brings the
+  // Open, Settings, the Field manual or How to play takes the Paused dialog's place; the game stays paused, and Back brings the
   // dialog back.
   let subScreen: { back(): void; close(): void } | undefined;
   const subScreenButton = (
@@ -150,6 +153,7 @@ export function mountPauseMenu(
   };
   const settings = subScreenButton('settings', 'Settings', openSettings);
   const fieldManual = subScreenButton('field-manual', 'Field manual', openFieldManual);
+  const howToPlay = subScreenButton('how-to-play', 'How to play', openHowToPlay);
   // Opened from the Paused dialog, Back returns to it.
   let helpOverlay: HelpOverlay | undefined;
   const keys = makeButton('keys', 'Keys', () => showHelp(() => keys.focus()));
@@ -159,6 +163,7 @@ export function mountPauseMenu(
     makeButton('pause-restart', 'Restart', () => onRestart()),
     settings,
     fieldManual,
+    howToPlay,
     keys,
     makeButton('quit', 'Quit to menu', onQuit && (() => onQuit())),
   );
@@ -176,7 +181,7 @@ export function mountPauseMenu(
     if (!paused) return;
     event.stopPropagation();
     if (shortcutFor(event) !== 'pause' || event.repeat) return;
-    // From Settings, the Field manual or the help overlay, it goes back the way the player came rather than resuming.
+    // From Settings, the Field manual, How to play or the help overlay, it goes back the way the player came rather than resuming.
     if (subScreen) subScreen.back();
     else if (helpOverlay) helpOverlay.back();
     else close();

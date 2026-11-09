@@ -139,16 +139,18 @@ describe('mountPauseMenu', () => {
     expect(button('quit')!.disabled).toBe(true);
   });
 
-  it('disables Settings and Field manual when it is given no screen to open', () => {
+  it('disables Settings, Field manual and How to play when it is given no screen to open', () => {
     mount().open();
     expect(button('settings')!.disabled).toBe(true);
     expect(button('field-manual')!.disabled).toBe(true);
     expect(button('field-manual')!.textContent).toBe('Field manual');
+    expect(button('how-to-play')!.disabled).toBe(true);
   });
 
   describe.each([
     ['Settings', 'settings', 'openSettings'],
     ['Field manual', 'field-manual', 'openFieldManual'],
+    ['How to play', 'how-to-play', 'openHowToPlay'],
   ] as const)('%s', (_name, testId, option) => {
     let onBack: () => void;
     let screen: { close: Mock<() => void>; back: Mock<() => void> };
@@ -206,10 +208,11 @@ describe('mountPauseMenu', () => {
   describe('Keys (help overlay)', () => {
     const help = () => root.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="help-title"]');
 
-    it('has a Keys button after Settings and the Field manual', () => {
+    it('has a Keys button after Settings, the Field manual and How to play', () => {
       mount({ openSettings: vi.fn() });
       const labels = [...dialog()!.querySelectorAll(':scope > button')].map((b) => b.textContent);
-      expect(labels.indexOf('Keys')).toBe(labels.indexOf('Field manual') + 1);
+      expect(labels.indexOf('Keys')).toBe(labels.indexOf('How to play') + 1);
+      expect(labels.indexOf('How to play')).toBe(labels.indexOf('Field manual') + 1);
       expect(labels.indexOf('Field manual')).toBe(labels.indexOf('Settings') + 1);
     });
 

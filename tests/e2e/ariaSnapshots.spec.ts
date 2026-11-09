@@ -33,7 +33,9 @@ test('the build bar marks the selected tower', async ({ page }) => {
   await expectAria(page.locator('#build-bar'), 'build-bar-selected.aria.yml');
 });
 
-test('the pause menu offers Resume, Restart, Settings, Field manual, Keys, and Quit to menu', async ({ page }) => {
+test('the pause menu offers Resume, Restart, Settings, Field manual, How to play, Keys, and Quit to menu', async ({
+  page,
+}) => {
   await openGame(page);
   await page.getByRole('button', { name: 'Pause' }).click();
   await expectAria(page.locator('#pause-menu'), 'pause-menu.aria.yml');
@@ -45,7 +47,7 @@ test('the Keys help overlay lists every shortcut, then Back', async ({ page }) =
   await expectAria(page.locator('#pause-menu'), 'help-overlay.aria.yml');
 });
 
-test('the Main menu shows the title, Play, Settings, Field manual, and Credits', async ({ page }) => {
+test('the Main menu shows the title, Play, Settings, Field manual, How to play, and Credits', async ({ page }) => {
   await openMenu(page);
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
 });
@@ -88,4 +90,12 @@ test('the End screen after a won one-wave game shows the result and the damage r
   await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
   await stepToEnd(page);
   await expectAria(page.locator('#end-screen'), 'end-screen-victory.aria.yml');
+});
+
+test('the How to play screen has the goal, money, controls, tower and enemy lines and the keys, then Back', async ({
+  page,
+}) => {
+  await openMenu(page);
+  await page.getByRole('button', { name: 'How to play' }).click();
+  await expectAria(page.locator('#how-to-play'), 'how-to-play.aria.yml');
 });

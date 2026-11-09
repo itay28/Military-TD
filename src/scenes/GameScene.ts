@@ -96,6 +96,7 @@ import {
 import type { OpenFieldManual } from '../ui/fieldManual';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import { mountShortcuts } from '../ui/shortcuts';
+import type { OpenHowToPlay } from '../ui/howToPlay';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
@@ -193,6 +194,7 @@ export interface GameSceneOptions {
   readonly openSettings: OpenSettings;
   /** Opens the Field manual from the pause menu (#408). */
   readonly openFieldManual?: OpenFieldManual;
+  readonly openHowToPlay: OpenHowToPlay;
   /** Saved progress: each Victory records its Stars here. */
   readonly progress: ProgressStore;
   /** Called at the end of every create(), the first game's and each restart's. */
@@ -213,6 +215,7 @@ export class GameScene extends Phaser.Scene {
   private readonly audioMix: AudioMix;
   private readonly openSettings: OpenSettings;
   private readonly openFieldManual: OpenFieldManual | undefined;
+  private readonly openHowToPlay: OpenHowToPlay;
   private readonly progress: ProgressStore;
   private readonly onCreate: (() => void) | undefined;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
@@ -307,6 +310,7 @@ export class GameScene extends Phaser.Scene {
     audioMix,
     openSettings,
     openFieldManual,
+    openHowToPlay,
     progress,
     onCreate,
   }: GameSceneOptions) {
@@ -324,6 +328,7 @@ export class GameScene extends Phaser.Scene {
     this.audioMix = audioMix;
     this.openSettings = openSettings;
     this.openFieldManual = openFieldManual;
+    this.openHowToPlay = openHowToPlay;
     this.progress = progress;
     this.onCreate = onCreate;
   }
@@ -809,6 +814,7 @@ export class GameScene extends Phaser.Scene {
       onQuit: () => this.scene.start('LevelSelect'),
       openSettings: this.openSettings,
       openFieldManual: this.openFieldManual,
+      openHowToPlay: this.openHowToPlay,
       speed,
     });
     this.hintState = INITIAL_HINTS;
