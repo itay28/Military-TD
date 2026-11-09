@@ -1,0 +1,30 @@
+- dialog "Keys":
+  - heading "Keys" [level=2]
+  - table:
+    - rowgroup:
+      - row "Key Action":
+        - columnheader "Key"
+        - columnheader "Action"
+    - rowgroup:
+      - row "1–9 Pick a tower to build":
+        - rowheader "1–9"
+        - cell "Pick a tower to build"
+      - row "U Upgrade the selected tower":
+        - rowheader "U"
+        - cell "Upgrade the selected tower"
+      - row "S Sell the selected tower":
+        - rowheader "S"
+        - cell "Sell the selected tower"
+      - row "Space Start the next wave":
+        - rowheader "Space"
+        - cell "Start the next wave"
+      - row "F Change the game speed":
+        - rowheader "F"
+        - cell "Change the game speed"
+      - row "P / Esc Pause (Esc cancels a selection first)":
+        - rowheader "P / Esc"
+        - cell "Pause (Esc cancels a selection first)"
+      - row "? / H Show these keys":
+        - rowheader "? / H"
+        - cell "Show these keys"
+  - button "Back"

@@ -302,6 +302,45 @@
       #hud .dps-kind + .dps-kind {
         margin-top: 4px;
       }
+      /* The kind's row highlights its towers on the map; a small button beside it expands the tower list. */
+      #hud .dps-kind-head {
+        display: flex;
+        gap: 2px;
+      }
+      #hud .dps-meter button.dps-kind-row {
+        flex: 1;
+        min-width: 0;
+      }
+      #hud .dps-meter button.dps-kind-row[aria-pressed='true'] {
+        box-shadow: inset 0 0 0 2px #4fd1ff;
+      }
+      #hud .dps-meter button.dps-kind-expand {
+        flex: none;
+        padding: 3px 8px;
+        font: 12px monospace;
+        color: #e4e0c8;
+        background: rgb(228 224 200 / 0.06);
+        border-radius: 2px;
+      }
+      #hud .dps-meter button.dps-kind-expand::before {
+        content: '▸';
+      }
+      #hud .dps-meter button.dps-kind-expand[aria-expanded='true']::before {
+        content: '▾';
+      }
+      #hud .dps-meter button.dps-tower-button {
+        display: block;
+        width: 100%;
+        padding: 1px 4px 1px 22px;
+        font: inherit;
+        text-align: left;
+        color: inherit;
+        background: transparent;
+        white-space: nowrap;
+      }
+      #hud .dps-meter button.dps-tower-button:disabled {
+        cursor: default;
+      }
       /* One kind: swatch, name, DPS, kills and share on a line, the share bar under it. */
       #hud .dps-meter button.dps-kind-row {
         display: grid;
@@ -347,7 +386,7 @@
         display: none;
       }
       #hud .dps-tower {
-        padding: 1px 4px 1px 22px;
+        padding: 0;
         color: var(--bone-dim);
         white-space: nowrap;
       }
@@ -603,6 +642,29 @@
         letter-spacing: 0.1em;
         color: var(--amber);
         vertical-align: middle;
+      }
+      /* The Keys help overlay: its wrapper adds no box, so the dialog sizes against the pause menu like the Paused one. */
+      #pause-menu .help:not([hidden]) {
+        display: contents;
+      }
+      #pause-menu .help table {
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      #pause-menu .help th,
+      #pause-menu .help td {
+        padding: 3px 10px;
+        text-align: left;
+        font-weight: normal;
+      }
+      #pause-menu .help thead th {
+        border-bottom: 1px solid #5b6b3a;
+        color: #a2a58f;
+      }
+      #pause-menu .help kbd {
+        font: bold 14px monospace;
+        color: #f0c95a;
+        white-space: nowrap;
       }
       /* The damage report: small tables side by side, wrapping as the dialog narrows. */
       #end-screen .report {
