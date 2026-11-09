@@ -12,7 +12,7 @@ export default defineScenario({
   description: 'A Mortar beside the Path holds fire while an Infantry passes its tile, and shells it before and after.',
   towers: [{ kind: 'mortar', tile: MORTAR_TILE }],
   waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: 'end',
   expectations({ events }, expect) {
     const fired = events.filter((e) => e.type === 'shellFired');

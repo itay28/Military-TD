@@ -59,7 +59,7 @@ test('after Restart, a tower placed on the same tile shows its range ring when h
   const [first] = (await state(page)).towers;
   await expect.poll(() => rangeRing(page)).toMatchObject({ visible: true, towerId: first!.id });
 
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await stepToEnd(page);
   // From the keyboard, so the pointer never leaves the tile: the old game ends with that tower's ring hovered.
   await page.getByRole('button', { name: 'Restart' }).press('Enter');
@@ -78,7 +78,7 @@ test('after Restart, a tower placed on the same tile shows its range ring when h
 test("a tower's shot draws a tracer from the tower's barrel tip to its target, which then fades", async ({ page }) => {
   await openGame(page, { anim: true });
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
 
   const fired = await stepUntilTracer(page);
   const [tower] = fired.state.towers;
@@ -99,7 +99,7 @@ test("a tower's shot draws a tracer from the tower's barrel tip to its target, w
 test('with anim=0 a shot draws no tracer', async ({ page }) => {
   await openGame(page, { anim: false });
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   const tracersDrawn = await page.evaluate(() => {
     const td = window.__TD__!;
     let drawn = 0;
@@ -116,7 +116,7 @@ test('with anim=0 a shot draws no tracer', async ({ page }) => {
 test('draw order, back to front: map, towers, enemies, tracers, range ring', async ({ page }) => {
   await openGame(page, { anim: true });
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await hover(page, BESIDE_PATH);
   await stepUntilTracer(page);
 
@@ -131,7 +131,7 @@ test('draw order, back to front: map, towers, enemies, tracers, range ring', asy
 test('a shot shows a muzzle flash at the barrel tip and its kill a puff, which then expire', async ({ page }) => {
   await openGame(page, { anim: true });
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
 
   const fired = await stepUntilTracer(page);
   const [tower] = fired.state.towers;
@@ -156,13 +156,46 @@ test('a shot shows a muzzle flash at the barrel tip and its kill a puff, which t
 test('with anim=0 no combat effect is drawn', async ({ page }) => {
   await openGame(page, { anim: false });
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   const drawn = await page.evaluate(() => {
     const td = window.__TD__!;
     let count = 0;
     while (td.state().phase === 'wave') {
       td.step(1);
       count += td.view().effects.length;
+    }
+    return count;
+  });
+  expect(drawn).toBe(0);
+});
+
+test('a kill leaves fallen infantry on the ground, which then fades away (#403)', async ({ page }) => {
+  await openGame(page, { anim: true });
+  await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
+  const kinds = await page.evaluate(() => {
+    const td = window.__TD__!;
+    const seen = new Set<string>();
+    while (td.state().phase === 'wave') {
+      td.step(1);
+      for (const decal of td.view().decals) seen.add(decal.kind);
+    }
+    return [...seen];
+  });
+  expect(kinds).toEqual(['fallen']);
+  await expect.poll(async () => (await view(page)).decals, { timeout: 10_000 }).toEqual([]);
+});
+
+test('with anim=0 a fight leaves no aftermath (#403)', async ({ page }) => {
+  await openGame(page, { anim: false });
+  await page.evaluate(() => window.__TD__!.loadScenario('mortar-vs-group'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
+  const drawn = await page.evaluate(() => {
+    const td = window.__TD__!;
+    let count = 0;
+    while (td.state().phase === 'wave') {
+      td.step(1);
+      count += td.view().decals.length;
     }
     return count;
   });

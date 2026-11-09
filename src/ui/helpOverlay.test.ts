@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountHelpOverlay } from './helpOverlay';
-import { KEY_MAP } from './keymap';
+import { KEY_MAP, MAP_KEY_HELP } from './keymap';
 
 let root: HTMLElement;
 beforeEach(() => {
@@ -25,7 +25,15 @@ describe('mountHelpOverlay', () => {
 
   it('lists every key in the key map, with what it does, in key map order', () => {
     mountHelpOverlay(root, { onBack: () => {} });
-    expect(rows()).toEqual(KEY_MAP.map(({ label, description }) => [label, description]));
+    expect(rows().slice(0, KEY_MAP.length)).toEqual(KEY_MAP.map(({ label, description }) => [label, description]));
+  });
+
+  it('lists the map cursor keys after the shortcuts', () => {
+    mountHelpOverlay(root, { onBack: () => {} });
+    expect(rows().slice(KEY_MAP.length)).toEqual(MAP_KEY_HELP.map(({ label, description }) => [label, description]));
+    expect(rows().map(([label]) => label)).toEqual(
+      expect.arrayContaining(['Arrows / WASD', 'Shift+Arrow', 'Enter', 'Tab']),
+    );
   });
 
   it('focuses Back, and Back closes it and calls onBack', () => {

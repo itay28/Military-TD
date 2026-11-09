@@ -7,7 +7,7 @@ const SPREAD_TICKS = 600;
 
 async function startEveryKind(page: Page, ticks = SPREAD_TICKS) {
   await page.evaluate(() => window.__TD__!.loadScenario('every-enemy-kind'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await page.evaluate((n) => window.__TD__!.step(n), ticks);
 }
 

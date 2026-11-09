@@ -5,7 +5,7 @@ test('a win with one Life lost shows 2 of 3 stars and saves them as the map’s 
   await openGame(page, { persist: true });
   // One Infantry leaks on the MVP map: Victory with 19 of 20 Lives.
   await page.evaluate(() => window.__TD__!.loadScenario('single-infantry-leaks'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   const end = await stepToEnd(page);
   expect(end.phase).toBe('victory');
   expect(end.lives).toBe(19);

@@ -67,7 +67,7 @@ test('from the pause menu: enemies met in this game unlock, the game stays pause
   page,
 }) => {
   await openGame(page);
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await expect.poll(() => page.evaluate(() => window.__TD__!.step(500).enemies.length)).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Pause' }).click();
   await page.getByRole('button', { name: 'Field manual' }).click();

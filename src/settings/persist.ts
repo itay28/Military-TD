@@ -13,7 +13,7 @@ import {
 
 export const SETTINGS_KEY = 'military-td.settings';
 /** Bump when the saved shape changes, and teach `migrate` the step from the old version. */
-export const SETTINGS_VERSION = 3;
+export const SETTINGS_VERSION = 4;
 
 /** Brings settings saved at `version` up to the current shape. `null` for a version this build can't read. */
 export function migrate(version: number, data: unknown): unknown {
@@ -23,6 +23,8 @@ export function migrate(version: number, data: unknown): unknown {
   if (version < 2 && isRecord(migrated)) migrated = { ...migrated, ...defaultVolumes() };
   // v2 → v3 (#354): text size starts at 100 %. Reduced motion stays unset, so it follows the system's preference.
   if (version < 3 && isRecord(migrated)) migrated = { ...migrated, textSize: DEFAULT_SETTINGS.textSize };
+  // v3 → v4 (#413): Tactical mode arrives, off: waves come on their timers.
+  if (version < 4 && isRecord(migrated)) migrated = { ...migrated, tacticalMode: DEFAULT_SETTINGS.tacticalMode };
   return migrated;
 }
 
@@ -40,7 +42,7 @@ function sanitizeVolume(value: unknown, field: VolumeField): number {
 /** Keeps each known field that holds a valid value; every other field takes its default. Unknown fields are dropped. */
 function sanitize(data: unknown, defaults: Settings): Settings {
   const raw = isRecord(data) ? data : {};
-  const { defaultSpeed, showAllRanges, reducedMotion, textSize } = raw;
+  const { defaultSpeed, showAllRanges, reducedMotion, textSize, tacticalMode } = raw;
   const volumes = Object.fromEntries(VOLUME_FIELDS.map((field) => [field, sanitizeVolume(raw[field], field)]));
   return {
     defaultSpeed: GAME_SPEEDS.find((speed) => speed === defaultSpeed) ?? defaults.defaultSpeed,
@@ -48,6 +50,7 @@ function sanitize(data: unknown, defaults: Settings): Settings {
     ...(volumes as Pick<Settings, VolumeField>),
     reducedMotion: typeof reducedMotion === 'boolean' ? reducedMotion : defaults.reducedMotion,
     textSize: TEXT_SIZES.find((size) => size === textSize) ?? defaults.textSize,
+    tacticalMode: typeof tacticalMode === 'boolean' ? tacticalMode : defaults.tacticalMode,
   };
 }
 

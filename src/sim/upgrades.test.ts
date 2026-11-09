@@ -63,7 +63,7 @@ describe('upgradeTower', () => {
   it('keeps the tower on its tile, and its cooldown', () => {
     const game = newGame(300, { waves: ONE_INFANTRY });
     const id = place(game);
-    game.startWave();
+    game.callNextWave();
     // Turns to face the Infantry, then fires its first shot.
     for (let i = 0; i < 60 && game.state.towers[0]!.cooldownMs === 0; i++) game.tick(TICK_MS);
     const { cooldownMs, tile, heading } = game.state.towers[0]!;
@@ -75,7 +75,7 @@ describe('upgradeTower', () => {
   it('works in the Wave phase too', () => {
     const game = newGame(300, { waves: ONE_INFANTRY });
     const id = place(game);
-    game.startWave();
+    game.callNextWave();
     expect(game.state.phase).toBe('wave');
     expect(game.upgradeTower(id)).toEqual({ ok: true, level: 2 });
   });
@@ -87,7 +87,7 @@ describe('upgradeTower', () => {
     game.upgradeTower(id);
     const shots: number[] = [];
     game.events.on('towerFired', (shot) => shots.push(shot.hits[0]!.damage));
-    game.startWave();
+    game.callNextWave();
     for (let t = 0; t < 10_000 && game.state.phase === 'wave'; t += TICK_MS) game.tick(TICK_MS);
     expect(shots).toEqual([16, 14]);
   });
@@ -97,7 +97,7 @@ describe('upgradeTower refusals', () => {
   it('gameEnded after Defeat, before any other reason', () => {
     const game = newGame(300, { lives: 1, waves: ONE_INFANTRY });
     const id = place(game, FAR_FROM_PATH);
-    game.startWave();
+    game.callNextWave();
     for (let t = 0; t < 10_000 && game.state.phase === 'wave'; t += TICK_MS) game.tick(TICK_MS);
     expect(game.state.phase).toBe('defeat');
     const before = snapshot(game);

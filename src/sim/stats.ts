@@ -14,8 +14,12 @@ export interface CombatStats {
   readonly towers: Readonly<Record<number, { readonly total: DamageCount; readonly wave: DamageCount }>>;
   /** Every tower ever placed, by id, sold ones too: what the damage report lists. */
   readonly placed: Readonly<Record<number, PlacedTower>>;
-  /** Each finished wave (cleared, or lost at Defeat), in order. */
+  /** Each finished wave (cleared, or lost at Defeat), in the order they finished. */
   readonly waves: readonly WaveRecord[];
+  /** Each wave still on the field, by wave number: its figures so far. Waves can overlap (ADR-0011). */
+  readonly running: Readonly<Record<number, WaveRecord>>;
+  /** Game time with at least one wave on the field: overlapping waves count once. */
+  readonly waveTimeMs: number;
 }
 
 export interface PlacedTower {
@@ -42,6 +46,8 @@ export const emptyStats = (): CombatStats => ({
   towers: {},
   placed: {},
   waves: [],
+  running: {},
+  waveTimeMs: 0,
 });
 
 const add = (count: DamageCount, damage: number, kills: number): DamageCount => ({
@@ -53,14 +59,20 @@ const add = (count: DamageCount, damage: number, kills: number): DamageCount => 
 export type Strike = Pick<Shot, 'towerId' | 'hits'>;
 
 /**
- * Adds a tick's shots and shell landings, in the order they hit. Each hit's damage counts for its tower.
- * An enemy in `killedIds` died to the last shot that hit it, and that hit's tower gets the kill.
+ * Adds a tick's shots and shell landings, in the order they hit. Each hit's damage counts for its tower, and for
+ * the hit enemy's wave (`waveOf`; none for an enemy spawned outside a wave). An enemy in `killedIds` died to the
+ * last shot that hit it, and that hit's tower gets the kill.
  */
-export function recordShots(stats: CombatStats, shots: readonly Strike[], killedIds: ReadonlySet<number>): CombatStats {
+export function recordShots(
+  stats: CombatStats,
+  shots: readonly Strike[],
+  killedIds: ReadonlySet<number>,
+  waveOf: (enemyId: number) => number | undefined = () => undefined,
+): CombatStats {
   const killer = new Map<number, number>();
   for (const { towerId, hits } of shots)
     for (const { enemyId } of hits) if (killedIds.has(enemyId)) killer.set(enemyId, towerId);
-  let { total, wave, towers } = stats;
+  let { total, wave, towers, running } = stats;
   for (const { towerId, hits } of shots) {
     const damage = hits.reduce((sum, hit) => sum + hit.damage, 0);
     const kills = hits.filter((hit) => killer.get(hit.enemyId) === towerId).length;
@@ -68,16 +80,30 @@ export function recordShots(stats: CombatStats, shots: readonly Strike[], killed
     towers = { ...towers, [towerId]: { total: add(entry.total, damage, kills), wave: add(entry.wave, damage, kills) } };
     total = add(total, damage, kills);
     wave = { ...wave, ...add(wave, damage, kills) };
+    for (const hit of hits) {
+      const record = running[waveOf(hit.enemyId) ?? -1];
+      if (!record) continue;
+      const kill = killer.get(hit.enemyId) === towerId ? 1 : 0;
+      running = {
+        ...running,
+        [record.waveNumber]: {
+          ...record,
+          ...add(record, hit.damage, kill),
+          towers: { ...record.towers, [towerId]: add(record.towers[towerId] ?? ZERO, hit.damage, kill) },
+        },
+      };
+    }
   }
-  return { ...stats, total, wave, towers };
+  return { ...stats, total, wave, towers, running };
 }
 
-/** A new wave: wave figures back to 0, totals kept. */
-export function resetWave(stats: CombatStats): CombatStats {
+/** Wave `waveNumber` starts: it gets its own figures, and the latest-wave figures go back to 0; totals are kept. */
+export function startWaveStats(stats: CombatStats, waveNumber: number): CombatStats {
   const towers = Object.fromEntries(
     Object.entries(stats.towers).map(([id, t]) => [id, { total: t.total, wave: ZERO }]),
   );
-  return { ...stats, wave: { ...ZERO, elapsedMs: 0 }, towers };
+  const record: WaveRecord = { waveNumber, ...ZERO, elapsedMs: 0, towers: {} };
+  return { ...stats, wave: { ...ZERO, elapsedMs: 0 }, towers, running: { ...stats.running, [waveNumber]: record } };
 }
 
 /** A newly placed tower joins the list. */
@@ -95,20 +121,36 @@ const updatePlaced = (stats: CombatStats, towerId: number, change: (tower: Place
 export const markSold = (stats: CombatStats, towerId: number): CombatStats =>
   updatePlaced(stats, towerId, (tower) => ({ ...tower, sold: true }));
 
-/** `dtMs` of wave time passed with `towerIds` standing. */
+/** `dtMs` of wave time passed (with one wave or more on the field) with `towerIds` standing. */
 export const addWaveTime = (stats: CombatStats, towerIds: readonly number[], dtMs: number): CombatStats =>
-  towerIds.reduce((acc, id) => updatePlaced(acc, id, (tower) => ({ ...tower, waveMs: tower.waveMs + dtMs })), stats);
+  towerIds.reduce((acc, id) => updatePlaced(acc, id, (tower) => ({ ...tower, waveMs: tower.waveMs + dtMs })), {
+    ...stats,
+    waveTimeMs: stats.waveTimeMs + dtMs,
+  });
 
-/** The wave `waveNumber` ended: its figures, overall and per tower, join the history. */
+/** The wave `waveNumber` ended (cleared, or lost at Defeat): its figures, overall and per tower, join the history. */
 export function endWave(stats: CombatStats, waveNumber: number): CombatStats {
-  const { damage, kills, elapsedMs } = stats.wave;
-  const towers = Object.fromEntries(Object.entries(stats.towers).map(([id, t]) => [id, t.wave]));
-  return { ...stats, waves: [...stats.waves, { waveNumber, damage, kills, elapsedMs, towers }] };
+  const { [waveNumber]: record, ...running } = stats.running;
+  if (!record) return stats;
+  // A tower that hit nothing in this wave shows 0 for it.
+  const towers = Object.fromEntries(Object.keys(stats.towers).map((id) => [id, record.towers[Number(id)] ?? ZERO]));
+  return { ...stats, running, waves: [...stats.waves, { ...record, towers }] };
 }
 
-export const withWaveElapsed = (stats: CombatStats, elapsedMs: number): CombatStats => ({
+/** Sets how long wave `waveNumber` has run; the latest-wave figures take `latest`'s time. */
+export const withWaveElapsed = (
+  stats: CombatStats,
+  elapsedByWave: ReadonlyMap<number, number>,
+  latest: number,
+): CombatStats => ({
   ...stats,
-  wave: { ...stats.wave, elapsedMs },
+  wave: { ...stats.wave, elapsedMs: elapsedByWave.get(latest) ?? stats.wave.elapsedMs },
+  running: Object.fromEntries(
+    Object.entries(stats.running).map(([n, record]) => [
+      n,
+      { ...record, elapsedMs: elapsedByWave.get(Number(n)) ?? record.elapsedMs },
+    ]),
+  ),
 });
 
 /** Damage per second over `elapsedMs`, with the time floored at 1 s so a wave's first hit isn't a spike. */

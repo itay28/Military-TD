@@ -10,7 +10,12 @@ export type EndScreenGame = Pick<Game, 'state'>;
 export interface VictoryResult {
   readonly stars: Stars;
   readonly unlockedMap?: string;
+  /** Won in Tactical mode, so the Stars were capped (ADR-0011). */
+  readonly tactical?: boolean;
 }
+
+/** What the End screen and the Level select say while Tactical mode is on. */
+export const TACTICAL_CAP_TEXT = 'Tactical: max 2 stars';
 
 export interface EndScreenOptions {
   /** Called when the player presses Restart. */
@@ -117,12 +122,21 @@ function buildStars(doc: Document, stars: Stars): HTMLElement {
   return line;
 }
 
-function buildResult(doc: Document, { stars, unlockedMap }: VictoryResult): HTMLElement[] {
-  if (unlockedMap === undefined) return [buildStars(doc, stars)];
-  const unlocked = doc.createElement('p');
-  unlocked.dataset.testid = 'unlocked';
-  unlocked.textContent = `New map unlocked: ${unlockedMap}`;
-  return [buildStars(doc, stars), unlocked];
+function buildResult(doc: Document, { stars, unlockedMap, tactical }: VictoryResult): HTMLElement[] {
+  const lines = [buildStars(doc, stars)];
+  if (tactical) {
+    const cap = doc.createElement('p');
+    cap.dataset.testid = 'tactical-cap';
+    cap.textContent = TACTICAL_CAP_TEXT;
+    lines.push(cap);
+  }
+  if (unlockedMap !== undefined) {
+    const unlocked = doc.createElement('p');
+    unlocked.dataset.testid = 'unlocked';
+    unlocked.textContent = `New map unlocked: ${unlockedMap}`;
+    lines.push(unlocked);
+  }
+  return lines;
 }
 
 /** Builds the End screen inside `root`, an overlay over the canvas. It's DOM, so tests can query it (ADR-0003). */

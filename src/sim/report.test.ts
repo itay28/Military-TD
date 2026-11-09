@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { damageReport } from './report';
-import { addTower, addWaveTime, emptyStats, endWave, markSold, recordShots, resetWave, withWaveElapsed } from './stats';
+import {
+  addTower,
+  addWaveTime,
+  emptyStats,
+  endWave,
+  markSold,
+  recordShots,
+  startWaveStats,
+  withWaveElapsed,
+} from './stats';
 import type { Shot } from './towers';
 
 const shot = (towerId: number, enemyId: number, damage: number): Shot => ({
@@ -12,13 +21,15 @@ const shot = (towerId: number, enemyId: number, damage: number): Shot => ({
 
 // Three towers: Rifle Nests 1 and 3 and Cannon 2. Wave 1 (4 s): 1 and 2 stand, 1 deals 40 and kills, 2 deals 60.
 // Rifle Nest 1 is sold, Rifle Nest 3 placed. Wave 2 (2 s): 2 and 3 stand, 3 deals 10, 2 deals 0.
+const waveOf = (enemyId: number) => (enemyId === 12 ? 2 : 1);
 function played() {
   let stats = addTower(addTower(emptyStats(), 1, 'rifleNest', { col: 1, row: 2 }), 2, 'cannon', { col: 4, row: 0 });
-  stats = recordShots(stats, [shot(1, 10, 40), shot(2, 11, 60)], new Set([10]));
-  stats = endWave(withWaveElapsed(addWaveTime(stats, [1, 2], 4000), 4000), 1);
-  stats = addTower(markSold(resetWave(stats), 1), 3, 'rifleNest', { col: 2, row: 3 });
-  stats = recordShots(stats, [shot(3, 12, 10)], new Set());
-  return endWave(withWaveElapsed(addWaveTime(stats, [2, 3], 2000), 2000), 2);
+  stats = startWaveStats(stats, 1);
+  stats = recordShots(stats, [shot(1, 10, 40), shot(2, 11, 60)], new Set([10]), waveOf);
+  stats = endWave(withWaveElapsed(addWaveTime(stats, [1, 2], 4000), new Map([[1, 4000]]), 1), 1);
+  stats = addTower(markSold(startWaveStats(stats, 2), 1), 3, 'rifleNest', { col: 2, row: 3 });
+  stats = recordShots(stats, [shot(3, 12, 10)], new Set(), waveOf);
+  return endWave(withWaveElapsed(addWaveTime(stats, [2, 3], 2000), new Map([[2, 2000]]), 2), 2);
 }
 
 describe('damageReport', () => {

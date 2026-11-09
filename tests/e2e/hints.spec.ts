@@ -111,7 +111,7 @@ test.describe('on a 400 px wide phone', () => {
     );
     await expect(hint(page)).toHaveText(new RegExp(HINT.startWave));
     await expectOnScreen(page);
-    await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+    await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
     await clearFirstWave(page);
     await expect(hint(page)).toHaveText(new RegExp(HINT.selectTower));
     await expectOnScreen(page);

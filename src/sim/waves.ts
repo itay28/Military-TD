@@ -11,15 +11,22 @@ export interface WaveGroup {
 /** One wave: its groups spawn on their own timelines, in parallel. */
 export interface WaveData {
   readonly groups: readonly WaveGroup[];
+  /**
+   * Its wave timer (ADR-0011): in timed mode the wave arrives this long after the previous wave started, or after the
+   * game started for the first wave (the build window). `DEFAULT_WAVE_AFTER_MS` when left out. Tactical mode ignores it.
+   */
+  readonly afterMs?: number;
 }
 
 /**
- * Throws RangeError, naming the wave and group, for a wave with no groups, or a group whose count isn't a whole
- * number ≥ 1 or whose spacing or delay isn't a finite time ≥ 0.
+ * Throws RangeError, naming the wave and group, for a wave with no groups or whose `afterMs` isn't a finite time ≥ 0,
+ * or a group whose count isn't a whole number ≥ 1 or whose spacing or delay isn't a finite time ≥ 0.
  */
 export function validateWaves(waves: readonly WaveData[]): void {
-  waves.forEach(({ groups }, w) => {
+  waves.forEach(({ groups, afterMs }, w) => {
     if (groups.length === 0) throw new RangeError(`wave ${w + 1}: has no groups`);
+    if (afterMs !== undefined && !isTime(afterMs))
+      throw new RangeError(`wave ${w + 1}: afterMs ${afterMs} ms is not a finite, non-negative time`);
     groups.forEach(({ count, spacingMs, delayMs }, g) => {
       const where = `wave ${w + 1}, group ${g + 1}`;
       if (!Number.isInteger(count) || count < 1)
