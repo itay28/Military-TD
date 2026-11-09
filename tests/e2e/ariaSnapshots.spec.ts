@@ -33,7 +33,9 @@ test('the build bar marks the selected tower', async ({ page }) => {
   await expectAria(page.locator('#build-bar'), 'build-bar-selected.aria.yml');
 });
 
-test('the pause menu offers Resume, Restart, Settings, Keys, and Quit to menu', async ({ page }) => {
+test('the pause menu offers Resume, Restart, Settings, Field manual, How to play, Keys, and Quit to menu', async ({
+  page,
+}) => {
   await openGame(page);
   await page.getByRole('button', { name: 'Pause' }).click();
   await expectAria(page.locator('#pause-menu'), 'pause-menu.aria.yml');
@@ -45,7 +47,7 @@ test('the Keys help overlay lists every shortcut, then Back', async ({ page }) =
   await expectAria(page.locator('#pause-menu'), 'help-overlay.aria.yml');
 });
 
-test('the Main menu shows the title, Deploy, Settings, and Credits', async ({ page }) => {
+test('the Main menu shows the title, Deploy, Settings, Field manual, How to play, and Credits', async ({ page }) => {
   await openMenu(page);
   await expectAria(page.locator('#menu'), 'menu-initial.aria.yml');
 });
@@ -56,6 +58,17 @@ test('the Settings screen shows the default game speed choices, the range settin
   await openMenu(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await expectAria(page.locator('#settings'), 'settings-screen.aria.yml');
+});
+
+test('the Field manual lists the entries, the model with its text alternative, and the stats as a definition list', async ({
+  page,
+}) => {
+  // A win on the first map: its enemy kinds are met (progress v1 → v3 migration).
+  await openMenu(page, { progress: { mvp: { completed: true, bestStars: 3 } } });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('button', { name: 'Field manual' }).click();
+  await page.getByRole('button', { name: 'Tank' }).click();
+  await expectAria(page.locator('#field-manual'), 'field-manual.aria.yml');
 });
 
 test('the Credits screen lists every pack with its author, license, link and attribution, then the game credits', async ({

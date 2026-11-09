@@ -1151,6 +1151,213 @@
         outline: 2px solid #f0c95a;
         outline-offset: 2px;
       }
+      /* The Field manual (#408): over the Main menu or the paused game, like Settings. The list, the turning model and
+         its information side by side; on a phone the model sits on top and the information under it. */
+      #field-manual {
+        position: fixed;
+        inset: 0;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(27 30 22 / 0.92);
+        font: 15px monospace;
+        color: #e4e0c8;
+      }
+      #field-manual[hidden] {
+        display: none;
+      }
+      #field-manual .fm {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-sizing: border-box;
+        width: min(960px, calc(100% - 32px));
+        max-height: calc(100% - 16px);
+        overflow-y: auto;
+        padding: 14px 20px;
+        background: #262a1f;
+        border: 2px solid #c2a46b;
+        border-radius: 4px;
+      }
+      #field-manual h2 {
+        margin: 0;
+        font-size: 22px;
+        text-align: center;
+        color: #f0c95a;
+      }
+      #field-manual .fm-body {
+        display: grid;
+        grid-template-columns: 150px 260px 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+      #field-manual .fm-list h3 {
+        margin: 0 0 4px;
+        font-size: 14px;
+        color: #c2a46b;
+        text-transform: uppercase;
+      }
+      #field-manual .fm-list ul {
+        margin: 0 0 10px;
+        padding: 0;
+        list-style: none;
+      }
+      #field-manual .fm-list button {
+        display: block;
+        width: 100%;
+        padding: 4px 6px;
+        font: 15px monospace;
+        text-align: left;
+        color: #e4e0c8;
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #field-manual .fm-list button[aria-current='true'] {
+        color: #1b1e16;
+        background: #c2a46b;
+        font-weight: bold;
+      }
+      #field-manual .fm-view {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      #field-manual .fm-model {
+        position: relative;
+        width: 240px;
+        height: 240px;
+        overflow: hidden;
+        background: radial-gradient(circle, #3a4030 0%, #262a1f 70%);
+        border: 1px solid #5e6350;
+        border-radius: 4px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+      }
+      #field-manual .fm-model img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        pointer-events: none;
+      }
+      #field-manual .fm-model.fm-turntable img {
+        height: auto;
+        object-fit: fill;
+      }
+      #field-manual .fm-model.classified img {
+        filter: brightness(0) opacity(0.75);
+      }
+      #field-manual .fm-loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        color: #9a9a82;
+      }
+      #field-manual .fm-loading[hidden] {
+        display: none;
+      }
+      #field-manual .fm-rotate,
+      #field-manual .fm-factions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+      }
+      #field-manual .fm-factions[hidden] {
+        display: none;
+      }
+      #field-manual .fm-view button {
+        padding: 4px 8px;
+        font: 14px monospace;
+        color: #e4e0c8;
+        background: #31362a;
+        border: 1px solid #5e6350;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #field-manual .fm-factions button[aria-pressed='true'] {
+        color: #1b1e16;
+        background: #c2a46b;
+        border-color: #c2a46b;
+        font-weight: bold;
+      }
+      #field-manual .fm-info h3 {
+        margin: 0;
+        font-size: 20px;
+        color: #f0c95a;
+      }
+      #field-manual .fm-info p {
+        margin: 6px 0;
+      }
+      #field-manual .fm-class {
+        font-style: italic;
+        color: #c9c5ad;
+      }
+      #field-manual .fm-classified {
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: #e07a5f;
+      }
+      #field-manual dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+        margin: 8px 0;
+      }
+      #field-manual dt {
+        color: #c2a46b;
+      }
+      #field-manual dd {
+        margin: 0;
+      }
+      #field-manual .fm > button {
+        align-self: center;
+        width: 160px;
+        padding: 6px 0;
+        font: bold 16px monospace;
+        color: #1b1e16;
+        background: #c2a46b;
+        border: 0;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #field-manual :is(button, .fm-model):focus-visible {
+        outline: 2px solid #f0c95a;
+        outline-offset: 2px;
+      }
+      @media (max-width: 760px) {
+        #field-manual .fm-body {
+          grid-template-columns: 1fr;
+        }
+        #field-manual .fm-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0 12px;
+        }
+        #field-manual .fm-list ul {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+        #field-manual .fm-list h3 {
+          width: 100%;
+        }
+        #field-manual .fm-list button {
+          width: auto;
+        }
+        #field-manual .fm-view {
+          order: -1;
+        }
+      }
       /* The first-map hints (#68): a layer over the whole page that never takes the pointer, but for Skip hints. The
          callout is placed by script next to what it points at, with an arrow toward it. */
       #hints {
@@ -1270,6 +1477,7 @@
     <main id="menu" hidden></main>
     <main id="level-select" hidden></main>
     <div id="settings" hidden></div>
+    <div id="field-manual" hidden></div>
     <div id="how-to-play" hidden></div>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
