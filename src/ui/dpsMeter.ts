@@ -216,8 +216,8 @@ export function mountDpsMeter(root: HTMLElement, game: DpsMeterGame, options: Dp
     drawnAtMs = now();
     for (const [scope, button] of Object.entries(scopeButtons))
       setAttr(button, 'aria-pressed', String(scope === current));
-    const { stats, towers, phase } = game.state;
-    const elapsedMs = meterElapsedMs(stats, current, phase === 'wave');
+    const { stats, towers } = game.state;
+    const elapsedMs = meterElapsedMs(stats, current);
     const { kinds } = dpsBreakdown(stats, towers, elapsedMs, current);
     setHidden(empty, kinds.length > 0);
     const shown = new Set(kinds.map((k) => k.kind));

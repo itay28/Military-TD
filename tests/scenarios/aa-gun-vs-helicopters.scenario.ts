@@ -4,7 +4,7 @@ export default defineScenario({
   description: 'An AA Gun beside the Path stops a small Helicopter wave that would leak past a lone Rifle Nest.',
   towers: [{ kind: 'aaGun', tile: { col: 4, row: 4 } }],
   waves: [{ groups: [{ kind: 'helicopter', count: 2, spacingMs: 6000, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: 'end',
   expectations({ outcome, events }, expect) {
     expect(outcome).toBe('victory');

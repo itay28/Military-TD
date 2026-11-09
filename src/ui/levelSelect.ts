@@ -1,6 +1,7 @@
 import type { MapEntry } from '../data/maps';
 import { createMap } from '../sim/map';
 import type { Stars } from '../sim/progression';
+import { TACTICAL_CAP_TEXT } from './endScreen';
 import { drawMapPreview } from './mapPreview';
 
 /** What the Level select shows of one map: whether it can be picked, and its best Stars so far. */
@@ -22,6 +23,8 @@ export interface LevelSelectOptions {
   readonly statusOf?: (mapIndex: number) => MapStatus;
   /** Called when the player presses Back. */
   readonly onBack: () => void;
+  /** Tactical mode is on in the settings: the screen says wins earn at most 2 stars (ADR-0011). */
+  readonly tacticalMode?: boolean;
 }
 
 export interface LevelSelect {
@@ -57,7 +60,7 @@ function accessibleName(name: string, { unlocked, bestStars }: MapStatus, previo
  */
 export function mountLevelSelect(
   root: HTMLElement,
-  { app, maps, onPick, onBack, statusOf = () => OPEN }: LevelSelectOptions,
+  { app, maps, onPick, onBack, statusOf = () => OPEN, tacticalMode = false }: LevelSelectOptions,
 ): LevelSelect {
   const doc = root.ownerDocument;
   let live = true;
@@ -89,7 +92,14 @@ export function mountLevelSelect(
   back.type = 'button';
   back.textContent = 'Back';
   back.addEventListener('click', () => live && onBack());
-  root.append(title, list, back);
+  root.append(title);
+  if (tacticalMode) {
+    const cap = doc.createElement('p');
+    cap.dataset.testid = 'tactical-cap';
+    cap.textContent = TACTICAL_CAP_TEXT;
+    root.append(cap);
+  }
+  root.append(list, back);
   root.hidden = false;
   app.dataset.screen = 'level-select';
   mapButtons.findLast((button) => !button.hasAttribute('aria-disabled'))?.focus();

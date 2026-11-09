@@ -61,7 +61,7 @@ describe('createTestApi', () => {
   it('state() does not change when the game moves on', () => {
     const hooks = fakeHooks(ONE_INFANTRY);
     const testApi = api(hooks);
-    hooks.game.startWave();
+    hooks.game.callNextWave();
     const before = testApi.state();
     hooks.step(30);
     expect(before.timeMs).toBe(0);

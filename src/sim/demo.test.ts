@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoScript } from '../data/demo';
 import { TOWER_LEVELS } from '../data/towers';
-import { AUTO_START_DELAY_MS } from '../data/waves';
-import { createDemoGame, demoScriptAt, panAt, type DemoGame } from './demo';
+import { DEMO_WAVE_AFTER_MS, createDemoGame, demoScriptAt, panAt, type DemoGame } from './demo';
 import { TICK_MS } from './game';
 import type { MapData } from './map';
 
@@ -61,7 +60,7 @@ describe('createDemoGame', () => {
     const waveStarts: number[] = [];
     demo.events.on('waveStarted', ({ waveNumber }) => waveStarts.push(waveNumber));
     tickUntilLoops(demo, 1);
-    // Wave 2 by auto-start, then wave 1 again from the reset.
+    // Wave 2 by its wave timer, then wave 1 again from the reset.
     expect(waveStarts).toEqual([2, 1]);
   });
 
@@ -92,11 +91,11 @@ describe('createDemoGame', () => {
     expect(victories).toBe(2);
   });
 
-  it('loses no time between loops beyond the auto-start delay it never waits for', () => {
+  it('loses no time between loops beyond the wave timer it never waits for', () => {
     // The reset starts the first wave at once, so the field is never left empty for long.
     const demo = demoOf();
     tickUntilLoops(demo, 1);
-    expect(demo.state.timeMs).toBeLessThan(AUTO_START_DELAY_MS);
+    expect(demo.state.timeMs).toBeLessThan(DEMO_WAVE_AFTER_MS);
     expect(demo.state.enemies.length).toBeGreaterThan(0);
   });
 

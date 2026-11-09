@@ -6,7 +6,7 @@ export default defineScenario({
   description: 'A Rifle Nest beside the Path start kills one Infantry before it gets away.',
   towers: [{ kind: 'rifleNest', tile: { col: 1, row: 3 } }],
   waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: 'end',
   expectations({ outcome, finalState, events }, expect) {
     expect(outcome).toBe('victory');

@@ -30,7 +30,7 @@ test('S sells the selected tower', async ({ page }) => {
 test('Space starts the wave', async ({ page }) => {
   await openGame(page);
   await page.keyboard.press('Space');
-  await expect(page.getByRole('button', { name: 'Start Wave' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Call next wave' })).toBeEnabled();
   expect(await state(page)).toMatchObject({ phase: 'wave', waveNumber: 1 });
 });
 
