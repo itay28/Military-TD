@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { dpsBreakdown, meterElapsedMs } from './dps';
-import { addTower, addWaveTime, emptyStats, endWave, markSold, recordShots, resetWave, withWaveElapsed } from './stats';
+import {
+  addTower,
+  addWaveTime,
+  emptyStats,
+  endWave,
+  markSold,
+  recordShots,
+  startWaveStats,
+  withWaveElapsed,
+} from './stats';
 import type { Shot } from './towers';
 
 const shot = (towerId: number, enemyId: number, damage: number): Shot => ({
@@ -16,13 +25,18 @@ const tile = { col: 0, row: 0 };
 // Rifle Nest 1 is sold. Wave 2 (2 s): Cannon 2 deals 30 and kills, Rifle Nest 3 deals 10.
 function wave1() {
   let stats = addTower(addTower(addTower(emptyStats(), 1, 'rifleNest', tile), 2, 'cannon', tile), 3, 'rifleNest', tile);
-  stats = recordShots(stats, [shot(1, 10, 40), shot(2, 11, 60), shot(3, 12, 20)], new Set([10]));
-  return endWave(withWaveElapsed(addWaveTime(stats, [1, 2, 3], 4000), 4000), 1);
+  stats = recordShots(
+    startWaveStats(stats, 1),
+    [shot(1, 10, 40), shot(2, 11, 60), shot(3, 12, 20)],
+    new Set([10]),
+    () => 1,
+  );
+  return endWave(withWaveElapsed(addWaveTime(stats, [1, 2, 3], 4000), new Map([[1, 4000]]), 1), 1);
 }
 function wave2() {
-  let stats = markSold(resetWave(wave1()), 1);
-  stats = recordShots(stats, [shot(2, 13, 30), shot(3, 14, 10)], new Set([13]));
-  return endWave(withWaveElapsed(addWaveTime(stats, [2, 3], 2000), 2000), 2);
+  let stats = markSold(startWaveStats(wave1(), 2), 1);
+  stats = recordShots(stats, [shot(2, 13, 30), shot(3, 14, 10)], new Set([13]), () => 2);
+  return endWave(withWaveElapsed(addWaveTime(stats, [2, 3], 2000), new Map([[2, 2000]]), 2), 2);
 }
 const standing = [
   { id: 2, level: 2 },
@@ -120,15 +134,15 @@ describe('dpsBreakdown', () => {
 
 describe('meterElapsedMs', () => {
   it('is the current (or last) wave’s time for the wave scope', () => {
-    expect(meterElapsedMs(wave2(), 'wave', false)).toBe(2000);
+    expect(meterElapsedMs(wave2(), 'wave')).toBe(2000);
   });
 
   it('is every finished wave’s time for the whole game between waves', () => {
-    expect(meterElapsedMs(wave2(), 'total', false)).toBe(6000);
+    expect(meterElapsedMs(wave2(), 'total')).toBe(6000);
   });
 
   it('adds the running wave’s time during a wave', () => {
-    const running = withWaveElapsed(resetWave(wave1()), 1500);
-    expect(meterElapsedMs(running, 'total', true)).toBe(5500);
+    const running = withWaveElapsed(addWaveTime(startWaveStats(wave1(), 2), [], 1500), new Map([[2, 1500]]), 2);
+    expect(meterElapsedMs(running, 'total')).toBe(5500);
   });
 });

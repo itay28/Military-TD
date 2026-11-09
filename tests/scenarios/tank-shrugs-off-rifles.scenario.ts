@@ -8,7 +8,7 @@ export default defineScenario({
     { kind: 'rifleNest', tile: { col: 2, row: 0 } },
   ],
   waves: [{ groups: [{ kind: 'tank', count: 1, spacingMs: 0, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: 'end',
   expectations({ finalState, events }, expect) {
     const shots = events.filter((e) => e.type === 'towerFired');
