@@ -20,7 +20,7 @@ export default defineScenario({
   map: STRAIGHT,
   towers: [{ kind: 'mortar', tile: { col: 10, row: 4 } }],
   waves: [{ groups: [{ kind: 'infantry', count: 5, spacingMs: 400, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: { event: 'shellLanded' },
   expectations({ events, finalState }, expect) {
     const fired = events.filter((e) => e.type === 'shellFired');

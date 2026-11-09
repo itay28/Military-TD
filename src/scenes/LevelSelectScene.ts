@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { MAPS } from '../data/maps';
 import type { ProgressStore } from '../progress/progress';
+import type { SettingsStore } from '../settings/settings';
 import { isUnlocked } from '../sim/progression';
 import { mountLevelSelect } from '../ui/levelSelect';
 import { showDemo } from './demoMode';
@@ -14,6 +15,8 @@ export interface LevelSelectSceneOptions {
   readonly progress: ProgressStore;
   /** Test mode's `?unlock=all`: every map can be picked. */
   readonly unlockAll: boolean;
+  /** The player's settings: Tactical mode decides the "max 2 stars" note. */
+  readonly settings: Pick<SettingsStore, 'get'>;
 }
 
 /** The Level select: picking an unlocked map starts the Game scene on it; Back returns to the Main menu. DOM: src/ui/levelSelect.ts. */
@@ -23,12 +26,15 @@ export class LevelSelectScene extends Phaser.Scene {
   private readonly progress: ProgressStore;
   private readonly unlockAll: boolean;
 
-  constructor({ app, root, progress, unlockAll }: LevelSelectSceneOptions) {
+  private readonly settings: Pick<SettingsStore, 'get'>;
+
+  constructor({ app, root, progress, unlockAll, settings }: LevelSelectSceneOptions) {
     super('LevelSelect');
     this.app = app;
     this.root = root;
     this.progress = progress;
     this.unlockAll = unlockAll;
+    this.settings = settings;
   }
 
   /** Runs each time the scene starts, so it reads the progress as it is now, after any game since. */
@@ -46,6 +52,7 @@ export class LevelSelectScene extends Phaser.Scene {
       }),
       onPick: (mapId) => this.scene.start('Game', { mapId }),
       onBack: () => this.scene.start('Menu'),
+      tacticalMode: this.settings.get().tacticalMode,
     });
     // Starting another scene shuts this one down, which takes the screen away.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => screen.destroy());
