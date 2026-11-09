@@ -18,9 +18,10 @@ test('place a tower by clicking, start the first wave and play to Victory or Def
   expect(placed.money).toBe(money);
   await expect(page.getByTestId('hud-money')).toHaveText(`Money ${money}`);
 
-  await page.getByRole('button', { name: 'Start Wave' }).click();
+  await page.getByRole('button', { name: 'Call next wave' }).click();
   expect((await state(page)).phase).toBe('wave');
-  await expect(page.getByRole('button', { name: 'Start Wave' })).toBeDisabled();
+  // Timed mode (ADR-0011): the next wave can be called in during a wave too.
+  await expect(page.getByRole('button', { name: 'Call next wave' })).toBeEnabled();
 
   const end = await playToEnd(page);
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -39,7 +40,7 @@ test('Restart after the game ends starts a fresh game', async ({ page }) => {
   await openGame(page);
   await selectKind(page);
   await clickTile(page, BESIDE_PATH);
-  await page.getByRole('button', { name: 'Start Wave' }).click();
+  await page.getByRole('button', { name: 'Call next wave' }).click();
   await playToEnd(page);
   await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -49,7 +50,7 @@ test('Restart after the game ends starts a fresh game', async ({ page }) => {
   await expect(page.getByTestId('hud-money')).toHaveText(`Money ${START_MONEY}`);
   await expect(page.getByTestId('hud-lives')).toHaveText(`Lives ${START_LIVES}`);
   await expect(page.getByTestId('hud-wave')).toHaveText(`Wave 0 / ${WAVES.length}`);
-  await expect(page.getByRole('button', { name: 'Start Wave' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Call next wave' })).toBeEnabled();
   expect(await state(page)).toMatchObject({ phase: 'build', towers: [], enemies: [], timeMs: 0 });
 });
 
@@ -61,7 +62,7 @@ test('the DPS readout shows the wave figure and keeps it after the wave clears',
 
   await selectKind(page);
   await clickTile(page, BESIDE_PATH);
-  await page.getByRole('button', { name: 'Start Wave' }).click();
+  await page.getByRole('button', { name: 'Call next wave' }).click();
   for (let i = 0; i < 100 && (await state(page)).stats.total.kills === 0; i++)
     await page.evaluate(() => window.__TD__!.step(10));
   expect((await state(page)).stats.total.kills).toBeGreaterThan(0);

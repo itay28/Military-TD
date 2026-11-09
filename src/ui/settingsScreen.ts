@@ -20,6 +20,8 @@ export interface SettingsScreen {
 export type OpenSettings = (onBack: () => void) => SettingsScreen;
 
 const TITLE_ID = 'settings-title';
+const TACTICAL_HINT_ID = 'tactical-mode-hint';
+const TACTICAL_HINT = 'Call each wave yourself. Wins earn at most 2 stars.';
 
 /** Each volume slider's label, in the order they appear (#67). */
 const VOLUME_SLIDERS: readonly { field: VolumeField; label: string; id: string }[] = [
@@ -87,6 +89,17 @@ export function mountSettingsScreen(
     textSizes.append(labelled(radio, `${size} %`));
   }
 
+  // Tactical mode (ADR-0011): its cost is said next to it, so nobody turns it on without knowing.
+  const tactical = doc.createElement('input');
+  tactical.type = 'checkbox';
+  tactical.checked = current.tacticalMode;
+  tactical.setAttribute('aria-describedby', TACTICAL_HINT_ID);
+  tactical.addEventListener('change', () => settings.set({ tacticalMode: tactical.checked }));
+  const tacticalHint = doc.createElement('p');
+  tacticalHint.id = TACTICAL_HINT_ID;
+  tacticalHint.className = 'settings-hint';
+  tacticalHint.textContent = TACTICAL_HINT;
+
   const volumes = VOLUME_SLIDERS.map(({ field, label, id }) => {
     const row = doc.createElement('div');
     row.className = 'volume';
@@ -150,6 +163,8 @@ export function mountSettingsScreen(
     heading,
     speeds,
     labelled(showAllRanges, 'Always show tower ranges'),
+    labelled(tactical, 'Tactical mode'),
+    tacticalHint,
     ...volumes,
     labelled(reducedMotion, 'Reduce motion'),
     textSizes,

@@ -189,7 +189,7 @@ describe('waves and phases', () => {
     const game = newGame();
     const started: unknown[] = [];
     game.events.on('waveStarted', (e) => started.push(e));
-    expect(game.startWave()).toEqual({ ok: true });
+    expect(game.callNextWave()).toEqual({ ok: true });
     expect(game.state).toMatchObject({ phase: 'wave', waveNumber: 1 });
     expect(game.state.enemies).toEqual([expect.objectContaining({ kind: 'infantry', distance: 0 })]);
     expect(started).toEqual([{ waveNumber: 1, holdovers: 0 }]);
@@ -201,13 +201,13 @@ describe('waves and phases', () => {
     game.spawnEnemy('jeep');
     const started: unknown[] = [];
     game.events.on('waveStarted', (e) => started.push(e));
-    game.startWave();
+    game.callNextWave();
     expect(started).toEqual([{ waveNumber: 1, holdovers: 2 }]);
   });
 
   it("a wave's enemies spawn one every spacing ms on fixed ticks", () => {
     const game = newGame();
-    game.startWave();
+    game.callNextWave();
     for (let i = 0; i < 59; i++) game.tick(TICK_MS);
     expect(game.state.enemies).toHaveLength(1);
     game.tick(TICK_MS); // 60 ticks = 1000 ms
@@ -217,22 +217,22 @@ describe('waves and phases', () => {
 
   it('an enemy spawned mid-tick has already walked the rest of that tick', () => {
     const game = newGame();
-    game.startWave();
+    game.callNextWave();
     game.tick(1500); // the second spawn is due at 1000 and walks 500 ms
     expect(game.state.enemies.map((e) => e.distance)).toEqual([2.25, 0.75]);
   });
 
-  it('startWave fails with notBuildPhase during a wave', () => {
-    const game = newGame();
-    game.startWave();
-    expect(game.startWave()).toEqual({ ok: false, reason: 'notBuildPhase' });
+  it('in Tactical mode, callNextWave fails with notBuildPhase during a wave', () => {
+    const game = createGame({ map: SMALL, lives: 20, money: 100, waves: TWO_WAVES, tacticalMode: true });
+    game.callNextWave();
+    expect(game.callNextWave()).toEqual({ ok: false, reason: 'notBuildPhase' });
     expect(game.state).toMatchObject({ phase: 'wave', waveNumber: 1 });
     expect(game.state.enemies).toHaveLength(1);
   });
 
   it("a wave isn't cleared while spawns remain, even with no enemy alive", () => {
     const game = newGame(20, [{ groups: [{ kind: 'infantry', count: 2, spacingMs: 5000, delayMs: 0 }] }]);
-    game.startWave();
+    game.callNextWave();
     game.tick(4500); // the first leaked at 4000; the second is due at 5000
     expect(game.state.enemies).toEqual([]);
     expect(game.state.phase).toBe('wave');
@@ -242,7 +242,7 @@ describe('waves and phases', () => {
     const game = newGame();
     const cleared: unknown[] = [];
     game.events.on('waveCleared', (e) => cleared.push(e));
-    game.startWave();
+    game.callNextWave();
     game.tick(4999);
     expect(game.state.phase).toBe('wave');
     game.tick(1); // the second enemy leaks at 5000
@@ -258,7 +258,7 @@ describe('waves and phases', () => {
     game.events.on('waveCleared', () => seen.push('waveCleared'));
     // Tile (1, 2) is next to the Path start: three Rifle Nest shots, 500 ms apart, kill the 30 HP Infantry.
     game.placeTower('rifleNest', { col: 1, row: 2 });
-    game.startWave();
+    game.callNextWave();
     for (let i = 0; i < 120 && game.state.phase === 'wave'; i++) game.tick(TICK_MS);
     expect(seen).toEqual(['enemyKilled', 'waveCleared']);
     expect(game.state).toMatchObject({ phase: 'build', lives: 20, enemies: [] });
@@ -266,9 +266,9 @@ describe('waves and phases', () => {
 
   it('the next wave spawns its own count and spacing', () => {
     const game = newGame();
-    game.startWave();
+    game.callNextWave();
     game.tick(5000);
-    expect(game.startWave()).toEqual({ ok: true });
+    expect(game.callNextWave()).toEqual({ ok: true });
     expect(game.state.waveNumber).toBe(2);
     game.tick(2000);
     expect(game.state.enemies.map((e) => e.distance)).toEqual([3, 2.25, 1.5]);
@@ -279,9 +279,9 @@ describe('waves and phases', () => {
     const seen: unknown[] = [];
     game.events.on('waveCleared', (e) => seen.push(['waveCleared', e]));
     game.events.on('victory', (e) => seen.push(['victory', e]));
-    game.startWave();
+    game.callNextWave();
     game.tick(5000);
-    game.startWave();
+    game.callNextWave();
     game.tick(5000); // the last of 3 spawns at 1000 and leaks at 5000
     expect(game.state).toMatchObject({ phase: 'victory', waveNumber: 2, lives: 15 });
     expect(seen).toEqual([
@@ -291,12 +291,12 @@ describe('waves and phases', () => {
     ]);
   });
 
-  it('startWave fails with noWavesLeft after victory', () => {
+  it('callNextWave fails with noWavesLeft after victory', () => {
     const game = newGame(20, [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }]);
-    game.startWave();
+    game.callNextWave();
     game.tick(4000);
     expect(game.state.phase).toBe('victory');
-    expect(game.startWave()).toEqual({ ok: false, reason: 'noWavesLeft' });
+    expect(game.callNextWave()).toEqual({ ok: false, reason: 'noWavesLeft' });
     expect(game.state.waveNumber).toBe(1);
     game.tick(1000);
     expect(game.state.timeMs).toBe(4000);
@@ -305,7 +305,7 @@ describe('waves and phases', () => {
   it("a game with no waves can't start one", () => {
     const game = newGame(20, []);
     expect(game.state.totalWaves).toBe(0);
-    expect(game.startWave()).toEqual({ ok: false, reason: 'noWavesLeft' });
+    expect(game.callNextWave()).toEqual({ ok: false, reason: 'noWavesLeft' });
     expect(game.state.phase).toBe('build');
   });
 
@@ -313,7 +313,7 @@ describe('waves and phases', () => {
     const game = newGame(1);
     const defeats: unknown[] = [];
     game.events.on('defeat', (e) => defeats.push(e));
-    game.startWave();
+    game.callNextWave();
     game.tick(4000); // the first enemy leaks; the second is 3000 ms in
     expect(game.state).toMatchObject({ phase: 'defeat', lives: 0, timeMs: 4000 });
     expect(defeats).toEqual([{ waveNumber: 1 }]);
@@ -321,7 +321,7 @@ describe('waves and phases', () => {
     game.tick(1000);
     expect(game.state.timeMs).toBe(4000);
     expect(game.state.enemies).toBe(enemies);
-    expect(game.startWave()).toEqual({ ok: false, reason: 'notBuildPhase' });
+    expect(game.callNextWave()).toEqual({ ok: false, reason: 'gameEnded' });
     expect(defeats).toHaveLength(1);
   });
 
@@ -331,7 +331,7 @@ describe('waves and phases', () => {
     game.events.on('waveCleared', () => seen.push('waveCleared'));
     game.events.on('victory', () => seen.push('victory'));
     game.events.on('defeat', () => seen.push('defeat'));
-    game.startWave();
+    game.callNextWave();
     game.tick(5000);
     expect(game.state).toMatchObject({ phase: 'defeat', lives: 0, enemies: [] });
     expect(seen).toEqual(['defeat']);
@@ -345,7 +345,7 @@ describe('waves and phases', () => {
     const game = createGame({ map: MVP_MAP, lives: 20, money: 100, waves: WAVES.slice(0, 1) });
     let leaks = 0;
     game.events.on('enemyLeaked', () => leaks++);
-    game.startWave();
+    game.callNextWave();
     // The last Infantry spawns at 5600 ms (336 ticks) and walks 29 tiles in 1160 ticks.
     for (let i = 0; i < 1495; i++) game.tick(TICK_MS);
     expect(game.state.phase).toBe('wave');
@@ -363,25 +363,25 @@ describe('waves cleared', () => {
 
   it('clearing a wave adds 1', () => {
     const game = newGame();
-    game.startWave();
+    game.callNextWave();
     game.tick(5000); // both Infantry leak by 5000
     expect(game.state).toMatchObject({ phase: 'build', wavesCleared: 1 });
   });
 
   it('after Victory it is every wave', () => {
     const game = newGame();
-    game.startWave();
+    game.callNextWave();
     game.tick(5000);
-    game.startWave();
+    game.callNextWave();
     game.tick(5000);
     expect(game.state).toMatchObject({ phase: 'victory', wavesCleared: 2, totalWaves: 2 });
   });
 
   it("after Defeat it doesn't count the wave that was lost", () => {
     const game = newGame(3);
-    game.startWave();
+    game.callNextWave();
     game.tick(5000); // 2 leaks: 1 Life left
-    game.startWave();
+    game.callNextWave();
     game.tick(4000); // the first Infantry of wave 2 leaks
     expect(game.state).toMatchObject({ phase: 'defeat', waveNumber: 2, wavesCleared: 1 });
   });
@@ -396,7 +396,7 @@ describe('combat stats', () => {
   it('records a tower hit and the wave elapsed time', () => {
     const game = newGame();
     const placed = tower(game);
-    game.startWave();
+    game.callNextWave();
     run(game, 600);
     const { stats } = game.state;
     const id = placed.ok ? placed.towerId : -1;
@@ -408,20 +408,20 @@ describe('combat stats', () => {
   it('wave figures freeze once a wave is cleared and reset on the next wave', () => {
     const game = newGame();
     tower(game);
-    game.startWave();
+    game.callNextWave();
     while (game.state.phase === 'wave') game.tick(TICK_MS);
     const frozen = game.state.stats;
     expect(frozen.wave.damage).toBeGreaterThan(0);
     run(game, 120);
     expect(game.state.stats).toEqual(frozen);
-    game.startWave();
+    game.callNextWave();
     expect(game.state.stats.wave).toEqual({ damage: 0, kills: 0, elapsedMs: 0 });
     expect(game.state.stats.total).toEqual(frozen.total);
   });
 
   it('wave figures freeze on Defeat', () => {
     const game = newGame(1);
-    game.startWave();
+    game.callNextWave();
     while (game.state.phase === 'wave') game.tick(TICK_MS);
     expect(game.state.phase).toBe('defeat');
     const frozen = game.state.stats.wave.elapsedMs;
@@ -447,7 +447,7 @@ describe('combat stats', () => {
     const id = placed.ok ? placed.towerId : -1;
     run(game, 60);
     expect(game.state.stats.placed[id]!.waveMs).toBe(0);
-    game.startWave();
+    game.callNextWave();
     while (game.state.phase === 'wave') game.tick(TICK_MS);
     const { waveMs } = game.state.stats.placed[id]!;
     expect(waveMs).toBeCloseTo(game.state.stats.wave.elapsedMs);
@@ -459,7 +459,7 @@ describe('combat stats', () => {
     const game = newGame();
     const placed = tower(game);
     const id = placed.ok ? placed.towerId : -1;
-    game.startWave();
+    game.callNextWave();
     while (game.state.phase === 'wave') game.tick(TICK_MS);
     const { stats } = game.state;
     expect(stats.waves).toEqual([
@@ -476,7 +476,7 @@ describe('combat stats', () => {
 
   it('Defeat records the lost wave', () => {
     const game = newGame(1);
-    game.startWave();
+    game.callNextWave();
     while (game.state.phase === 'wave') game.tick(TICK_MS);
     expect(game.state.phase).toBe('defeat');
     expect(game.state.stats.waves).toHaveLength(1);
@@ -487,7 +487,7 @@ describe('combat stats', () => {
     const game = newGame();
     const placed = tower(game);
     const id = placed.ok ? placed.towerId : -1;
-    game.startWave();
+    game.callNextWave();
     while (game.state.phase === 'wave') game.tick(TICK_MS);
     const before = game.state.stats.towers[id];
     game.sellTower(id);
