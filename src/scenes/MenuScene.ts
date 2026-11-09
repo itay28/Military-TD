@@ -3,6 +3,7 @@ import { mountCredits, type Credits } from '../ui/credits';
 import { mountMainMenu, type MainMenu } from '../ui/mainMenu';
 import type { OpenHowToPlay } from '../ui/howToPlay';
 import type { OpenSettings } from '../ui/settingsScreen';
+import { showDemo } from './demoMode';
 
 export interface MenuSceneOptions {
   /** The page's `#app`, whose game UI the menu hides. */
@@ -31,6 +32,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The live battlefield plays behind the menu screens (#402); a running one carries on.
+    showDemo(this.scene);
     let screen: MainMenu | Credits | undefined;
     const showMenu = (initialFocus: 'play' | 'credits') => {
       screen?.destroy();
