@@ -10,13 +10,18 @@ import {
 
 export const PROGRESS_KEY = 'military-td.progress';
 /** Bump when the saved shape changes, and teach `migrate` the step from the old version. */
-export const PROGRESS_VERSION = 1;
+export const PROGRESS_VERSION = 2;
 
 /** Brings progress saved at `version` up to the current shape. `null` for a version this build can't read. */
 export function migrate(version: number, data: unknown): unknown {
   if (!Number.isInteger(version) || version < 0 || version > PROGRESS_VERSION) return null;
-  // v1 is the first shape: nothing to change yet. Later versions add a step per version here.
-  return data;
+  let migrated = data;
+  // v1 → v2 adds `hintsDone`: a player who has won a map already knows the first actions, so the hints count as done.
+  if (version < 2 && isRecord(migrated)) {
+    const maps = isRecord(migrated.maps) ? Object.values(migrated.maps) : [];
+    migrated = { ...migrated, hintsDone: maps.some((entry) => isRecord(entry) && entry.completed === true) };
+  }
+  return migrated;
 }
 
 const STARS: readonly Stars[] = [0, 1, 2, 3];
@@ -39,7 +44,7 @@ function sanitize(data: unknown): Progress {
     const map = sanitizeMap(entry);
     if (map !== null) maps[id] = map;
   }
-  return { maps };
+  return { maps, hintsDone: data.hintsDone === true };
 }
 
 /** The saved progress, or empty for anything missing, corrupt, too new or unreadable. Never throws. */
@@ -56,18 +61,25 @@ export function loadProgress(storage: KeyValueStorage): Progress {
   }
 }
 
-/** Progress loaded from `storage` and saved back as `{ version, progress }` on every result. A failed save is ignored. */
+/** Progress loaded from `storage` and saved back as `{ version, progress }` on every change. A failed save is ignored. */
 export function createPersistedProgress(storage: KeyValueStorage): ProgressStore {
   const store = createProgress(loadProgress(storage));
+  const save = () => {
+    try {
+      storage.setItem(PROGRESS_KEY, JSON.stringify({ version: PROGRESS_VERSION, progress: store.get() }));
+    } catch {
+      // Storage is full or blocked: the progress still holds for this visit.
+    }
+  };
   return {
     get: store.get,
     recordResult(mapId, stars) {
       store.recordResult(mapId, stars);
-      try {
-        storage.setItem(PROGRESS_KEY, JSON.stringify({ version: PROGRESS_VERSION, progress: store.get() }));
-      } catch {
-        // Storage is full or blocked: the progress still holds for this visit.
-      }
+      save();
+    },
+    setHintsDone(done) {
+      store.setHintsDone(done);
+      save();
     },
   };
 }

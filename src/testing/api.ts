@@ -16,6 +16,8 @@ export interface TestHooks {
   load(setup: GameSetup): Promise<void>;
   /** What the scene draws now, read from its display objects. */
   view(): TestView;
+  /** Forces the onboarding hints on (from the start, any map, saved flag ignored) or off, for this game and the next. */
+  setHints(on: boolean): void;
 }
 
 /** Named scenarios' setups, loaded on demand. */
@@ -102,6 +104,11 @@ export interface TestApi {
   loadScenario(name: string): Promise<void>;
   /** A copy of what the Game scene draws now. It changes on the next frame; tracers fade on frame time even when paused. */
   view(): TestView;
+  /**
+   * Forces the onboarding hints (#68) on or off. Test mode starts with them off, so specs that don't test hints never
+   * see one. On, they restart from the first hint whatever the map or saved flag; a skip or finish still saves the flag.
+   */
+  setHints(on: boolean): void;
 }
 
 declare global {
@@ -130,5 +137,6 @@ export function createTestApi(hooks: TestHooks, scenarios: ScenarioLoaders): Tes
       await hooks.load(await load());
     },
     view: () => structuredClone(hooks.view()),
+    setHints: (on) => hooks.setHints(on),
   };
 }
