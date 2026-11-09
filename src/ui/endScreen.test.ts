@@ -31,7 +31,7 @@ const newGame = (lives = 20): Game =>
 
 /** Starts the next wave and lets its one Infantry leak, which clears the wave (or loses the game). */
 const playWave = (game: Game) => {
-  game.startWave();
+  game.callNextWave();
   game.tick(LEAK_MS);
 };
 
@@ -50,7 +50,7 @@ describe('End screen', () => {
     const game = newGame();
     const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     expect(root.hidden).toBe(true);
-    game.startWave();
+    game.callNextWave();
     end.update();
     expect(game.state.phase).toBe('wave');
     expect(root.hidden).toBe(true);
@@ -102,6 +102,16 @@ describe('End screen', () => {
     end.update();
     expect(game.state.phase).toBe('victory');
   };
+
+  it('after a Tactical mode Victory says the stars were capped (#413)', () => {
+    winWith(() => ({ stars: 2, tactical: true }));
+    expect(byTestId('tactical-cap')?.textContent).toBe('Tactical: max 2 stars');
+  });
+
+  it('says nothing of a cap after a timed Victory', () => {
+    winWith(() => ({ stars: 3 }));
+    expect(byTestId('tactical-cap')).toBeNull();
+  });
 
   it('after Victory shows the stars earned as text, with the star glyphs hidden from screen readers', () => {
     winWith(() => ({ stars: 2 }));
@@ -224,7 +234,7 @@ describe('damage report', () => {
     const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
     game.placeTower('rifleNest', { col: 2, row: 2 });
     const second = game.placeTower('rifleNest', { col: 4, row: 2 });
-    game.startWave();
+    game.callNextWave();
     if (second.ok) game.sellTower(second.towerId);
     for (let t = 0; t < LEAK_MS; t += 50) game.tick(50);
     playWave(game);

@@ -8,7 +8,7 @@ const BESIDE_PATH = { col: 1, row: 3 };
 /** Starts wave 1 and steps 3 s in, so Infantry walk the Path; returns the first one's id. */
 async function midWave(page: Page): Promise<number> {
   await openGame(page);
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await page.evaluate(() => window.__TD__!.step(180));
   const infantry = (await state(page)).enemies.find((e) => e.kind === 'infantry');
   if (!infantry) throw new Error('No Infantry on the map 3 s into wave 1');

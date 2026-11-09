@@ -78,9 +78,9 @@ export function dpsBreakdown(
   return { dps: dps(damage), damage, kills, kinds: kinds.sort((a, b) => b.dps - a.dps) };
 }
 
-/** The time the meter divides by: the current (or last) wave's, or, for the whole game, every wave's so far. */
-export function meterElapsedMs(stats: CombatStats, scope: DpsScope, inWave: boolean): number {
+/** The time the meter divides by: the current (or last) wave's, or, for the whole game, the time with a wave on the field. */
+export function meterElapsedMs(stats: CombatStats, scope: DpsScope): number {
   if (scope === 'wave') return stats.wave.elapsedMs;
-  const finished = stats.waves.reduce((sum, wave) => sum + wave.elapsedMs, 0);
-  return finished + (inWave ? stats.wave.elapsedMs : 0);
+  // Overlapping waves (ADR-0011) count once: the time with a wave on the field.
+  return stats.waveTimeMs;
 }

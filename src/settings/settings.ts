@@ -6,6 +6,8 @@ export interface Settings {
   readonly defaultSpeed: GameSpeed;
   /** Draw every tower's range ring, not just the hovered or selected tower's. */
   readonly showAllRanges: boolean;
+  /** Draw the tactical map grid with its lettered columns and numbered rows (#400). */
+  readonly showMapGrid: boolean;
   /** Scales every sound, 0–100 (#67). What plays is master × channel (`effectiveVolume`, src/audio/volume.ts). */
   readonly masterVolume: number;
   /** The music channel, 0–100. */
@@ -19,6 +21,8 @@ export interface Settings {
   readonly reducedMotion: boolean;
   /** Scales all DOM UI text, in percent (#354). */
   readonly textSize: TextSize;
+  /** Tactical mode (ADR-0011): no wave timers, each wave called by the player; a win earns at most 2 stars. Next game. */
+  readonly tacticalMode: boolean;
 }
 
 /** The text sizes the player can pick, in percent. */
@@ -33,11 +37,13 @@ export const MAX_VOLUME = 100;
 export const DEFAULT_SETTINGS: Settings = {
   defaultSpeed: 1,
   showAllRanges: false,
+  showMapGrid: true,
   masterVolume: 80,
   musicVolume: 60,
   sfxVolume: 80,
   reducedMotion: false,
   textSize: 100,
+  tacticalMode: false,
 };
 
 /** The defaults for this device: reduced motion follows the system's `prefers-reduced-motion`. */

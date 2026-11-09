@@ -8,10 +8,11 @@ import {
   ENEMY_HIT_PX,
   ENEMY_NAMES,
   FLOATING_TEXT,
+  HIGHLIGHT,
   MAP_CURSOR,
+  MAP_GRID,
   SPRITE_SCALE,
   TILE_PX,
-  HIGHLIGHT,
   TOWER_STYLE,
   formatFunds,
 } from '../data/display';
@@ -73,6 +74,7 @@ import {
   drawTracers,
 } from './drawEntities';
 import { drawGrid, drawMap } from './drawMap';
+import { edgeLabels } from './mapGrid';
 import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, nextSpeed, type GameSpeed, type GameSpeedControl } from './gameSpeed';
@@ -103,6 +105,7 @@ import {
   type Hints,
   type HintState,
 } from '../ui/hints';
+import type { OpenFieldManual } from '../ui/fieldManual';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
 import { describeTile, enemiesOn, mountMapKeys, type MapKeys } from '../ui/mapCursor';
 import { mountShortcuts } from '../ui/shortcuts';
@@ -124,6 +127,7 @@ const ringKeyTowerId = (key: string): number => Number(key.split('@')[0]);
 /** Draw order, back to front. */
 const DEPTH = {
   map: 0,
+  mapGrid: 0.4,
   decals: 0.5,
   towers: 1,
   enemies: 2,
@@ -204,6 +208,8 @@ export interface GameSceneOptions {
   readonly audioMix: AudioMix;
   /** Opens the Settings screen, from the pause menu. */
   readonly openSettings: OpenSettings;
+  /** Opens the Field manual from the pause menu (#408). */
+  readonly openFieldManual?: OpenFieldManual;
   readonly openHowToPlay: OpenHowToPlay;
   /** Saved progress: each Victory records its Stars here. */
   readonly progress: ProgressStore;
@@ -229,6 +235,7 @@ export class GameScene extends Phaser.Scene {
   private readonly settings: SettingsStore;
   private readonly audioMix: AudioMix;
   private readonly openSettings: OpenSettings;
+  private readonly openFieldManual: OpenFieldManual | undefined;
   private readonly openHowToPlay: OpenHowToPlay;
   private readonly progress: ProgressStore;
   private readonly onCreate: (() => void) | undefined;
@@ -284,6 +291,9 @@ export class GameScene extends Phaser.Scene {
   private tracerGraphics!: Phaser.GameObjects.Graphics;
   private blasts!: Blasts;
   private shellGraphics!: Phaser.GameObjects.Graphics;
+  /** The tactical grid's lines (world space) and its edge labels, pooled (#400). */
+  private mapGridLines!: Phaser.GameObjects.Graphics;
+  private mapGridLabels: Phaser.GameObjects.Text[] = [];
   private rangeRing!: Phaser.GameObjects.Graphics;
   private selectedRing!: Phaser.GameObjects.Graphics;
   /** With Always show tower ranges: every tower's range ring but the selected one's, which `selectedRing` draws. */
@@ -335,6 +345,7 @@ export class GameScene extends Phaser.Scene {
     settings,
     audioMix,
     openSettings,
+    openFieldManual,
     openHowToPlay,
     progress,
     onCreate,
@@ -354,6 +365,7 @@ export class GameScene extends Phaser.Scene {
     this.settings = settings;
     this.audioMix = audioMix;
     this.openSettings = openSettings;
+    this.openFieldManual = openFieldManual;
     this.openHowToPlay = openHowToPlay;
     this.progress = progress;
     this.onCreate = onCreate;
@@ -671,13 +683,16 @@ export class GameScene extends Phaser.Scene {
     else {
       // A real game ends the demo behind the menu.
       stopDemo(this.scene);
-      this.sim = setUpGame({ map: mapById(this.mapId).data, ...this.setup });
+      // Tactical mode is fixed for the game, from the settings when it starts; a loaded scenario can set its own.
+      const { tacticalMode } = this.settings.get();
+      this.sim = setUpGame({ map: mapById(this.mapId).data, tacticalMode, ...this.setup });
       // A Victory records its Stars against the map played (a loaded scenario's own map included); Defeat records nothing.
       const { lives: startLives, map } = this.sim.state;
       this.sim.events.on('victory', ({ lives }) => {
         // Victory always leaves Lives, so at least 1 star.
-        const stars = starsFor(lives, startLives);
-        if (stars !== 0) this.result = this.recordWin(map.id, stars);
+        const tactical = this.sim.state.tacticalMode;
+        const stars = starsFor(lives, startLives, { tactical });
+        if (stars !== 0) this.result = { ...this.recordWin(map.id, stars), ...(tactical ? { tactical } : {}) };
       });
     }
     this.gameSpeed = this.settings.get().defaultSpeed;
@@ -830,6 +845,7 @@ export class GameScene extends Phaser.Scene {
     });
     if (this.demo) return this.setUpDemoCamera();
     this.setUpCamera();
+    this.setUpMapGrid();
 
     this.sim.events.on('towerSold', ({ tile, refund }) =>
       this.floatingTexts.add(`+${formatFunds(refund)}`, toPixels(tileCenter(tile))),
@@ -877,6 +893,7 @@ export class GameScene extends Phaser.Scene {
       onRestart: () => this.scene.restart(),
       onQuit: () => this.scene.start('LevelSelect'),
       openSettings: this.openSettings,
+      openFieldManual: this.openFieldManual,
       openHowToPlay: this.openHowToPlay,
       speed,
     });
@@ -1190,6 +1207,11 @@ export class GameScene extends Phaser.Scene {
     if (refusal) this.floatingTexts.add(refusal, at);
   }
 
+  /** Unlocks each enemy kind in the Field manual the first time one is on the map (#408). */
+  private recordMetEnemies(): void {
+    for (const enemy of this.sim.state.enemies) this.progress.recordMet(enemy.kind);
+  }
+
   /** One fixed tick of the game, from the real-time loop or test mode's step(). */
   private tickOnce(): void {
     this.previousPositions = snapshotPositions(this.sim.state.enemies);
@@ -1234,6 +1256,7 @@ export class GameScene extends Phaser.Scene {
       this.enemyCard.update();
       this.pauseMenu.update();
       this.updateHints();
+      this.recordMetEnemies();
     }
 
     const { enemies, towers } = this.sim.state;
@@ -1251,6 +1274,7 @@ export class GameScene extends Phaser.Scene {
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);
     this.selectedRingKey = this.showRing(this.selectedRing, this.selectedRingKey, selected, true);
+    this.updateMapGrid();
     // Every frame too, so a setting switched on the Settings screen shows at once.
     const { showAllRanges } = this.settings.get();
     this.showAllRings(showAllRanges ? towers.filter((tower) => tower !== selected) : []);
@@ -1304,6 +1328,49 @@ export class GameScene extends Phaser.Scene {
     drawRangeRing(ring.setPosition(x, y), tower);
     if (selected) drawSelection(ring);
     return key;
+  }
+
+  /** The grid lines, drawn once; the labels are placed by `updateMapGrid`. */
+  private setUpMapGrid(): void {
+    const { map } = this.sim.state;
+    const cellPx = MAP_GRID.cellTiles * TILE_PX;
+    const { color, alpha, width } = MAP_GRID.line;
+    const lines = onLayer(this.add.graphics(), 'mapGrid').lineStyle(width, color, alpha);
+    const worldW = map.cols * TILE_PX;
+    const worldH = map.rows * TILE_PX;
+    for (let x = 0; x <= worldW; x += cellPx) lines.lineBetween(x, 0, x, worldH);
+    for (let y = 0; y <= worldH; y += cellPx) lines.lineBetween(0, y, worldW, y);
+    this.mapGridLines = lines;
+  }
+
+  /**
+   * Shows or hides the grid by the setting, and keeps its labels on the visible top and left edges at a constant
+   * on-screen size: they live in world space, so each is placed at its screen pixel and scaled by 1 / zoom.
+   */
+  private updateMapGrid(): void {
+    const show = this.settings.get().showMapGrid;
+    this.mapGridLines.setVisible(show);
+    const { columns, rows } = show ? edgeLabels(this.view, this.cameraBounds()) : { columns: [], rows: [] };
+    const { insetPx } = MAP_GRID.label;
+    const labels = [
+      ...columns.map(({ text, x, y }) => ({ text, x, y: y + insetPx, origin: [0.5, 0] as const })),
+      ...rows.map(({ text, x, y }) => ({ text, x: x + insetPx, y, origin: [0, 0.5] as const })),
+    ];
+    while (this.mapGridLabels.length < labels.length) {
+      const text = this.add.text(0, 0, '', MAP_GRID.label.style).setAlpha(MAP_GRID.label.alpha);
+      this.mapGridLabels.push(onLayer(text, 'mapGrid'));
+    }
+    this.mapGridLabels.forEach((object, i) => {
+      const label = labels[i];
+      object.setVisible(label !== undefined);
+      if (!label) return;
+      const at = screenToWorld(this.view, label);
+      object
+        .setText(label.text)
+        .setOrigin(...label.origin)
+        .setScale(1 / this.view.zoom)
+        .setPosition(at.x, at.y);
+    });
   }
 
   /** Draws the range rings of `towers` on `allRings`, redrawing only when the towers or their ranges change. */
