@@ -144,6 +144,58 @@ describe('mountPauseMenu', () => {
     expect(button('settings')!.disabled).toBe(true);
   });
 
+  describe('How to play', () => {
+    let onBack: () => void;
+    let screen: { close: Mock<() => void>; back: Mock<() => void> };
+    const openHowToPlay = vi.fn((back: () => void) => {
+      onBack = back;
+      return screen;
+    });
+    beforeEach(() => {
+      openHowToPlay.mockClear();
+      screen = { close: vi.fn(), back: vi.fn(() => onBack()) };
+    });
+
+    it('is disabled when it is given no screen to open', () => {
+      mount().open();
+      expect(button('how-to-play')!.disabled).toBe(true);
+    });
+
+    it('opens in place of the Paused dialog, still paused', () => {
+      const menu = mount({ openHowToPlay });
+      menu.open();
+      button('how-to-play')!.click();
+      expect(openHowToPlay).toHaveBeenCalledOnce();
+      expect(dialog()!.hidden).toBe(true);
+      expect(menu.paused).toBe(true);
+    });
+
+    it('comes back to the Paused dialog with its button focused', () => {
+      mount({ openHowToPlay }).open();
+      button('how-to-play')!.click();
+      onBack();
+      expect(dialog()!.hidden).toBe(false);
+      expect(document.activeElement).toBe(button('how-to-play'));
+    });
+
+    it('makes Esc go back rather than resume', () => {
+      const menu = mount({ openHowToPlay });
+      menu.open();
+      button('how-to-play')!.click();
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(screen.back).toHaveBeenCalledOnce();
+      expect(menu.paused).toBe(true);
+    });
+
+    it('closes an open screen when destroyed', () => {
+      const menu = mount({ openHowToPlay });
+      menu.open();
+      button('how-to-play')!.click();
+      menu.destroy();
+      expect(screen.close).toHaveBeenCalled();
+    });
+  });
+
   describe('Settings', () => {
     let onBack: () => void;
     let screen: { close: Mock<() => void>; back: Mock<() => void> };
@@ -201,10 +253,10 @@ describe('mountPauseMenu', () => {
   describe('Keys (help overlay)', () => {
     const help = () => root.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="help-title"]');
 
-    it('has a Keys button after Settings', () => {
+    it('has a Keys button after How to play', () => {
       mount({ openSettings: vi.fn() });
       const labels = [...dialog()!.querySelectorAll(':scope > button')].map((b) => b.textContent);
-      expect(labels.indexOf('Keys')).toBe(labels.indexOf('Settings') + 1);
+      expect(labels.indexOf('Keys')).toBe(labels.indexOf('How to play') + 1);
     });
 
     it('opens the help overlay in place of the Paused dialog, still paused', () => {

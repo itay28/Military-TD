@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Military TD</title>
+    <title>Hold the Perimeter</title>
     <link rel="stylesheet" href="/src/ui/fonts.css" />
     <style>
       /* The military look (#399): the palette and faces of src/data/theme.ts (theme.test.ts keeps them in step). Rules
@@ -481,7 +481,7 @@
       }
       #build-bar .build-grid {
         display: grid;
-        gap: 4px;
+        gap: 2px;
       }
       #build-bar .build-grid[hidden] {
         display: none;
@@ -868,6 +868,24 @@
       #level-select > :last-child {
         margin-bottom: auto;
       }
+      /* While the live battlefield plays behind them (#402), the page is marked data-demo and the canvas shows through:
+         a dark scrim that is darkest behind the menu column, so its buttons stay readable over the battle. */
+      :root[data-demo] #menu {
+        background: radial-gradient(
+          ellipse 60% 75% at center,
+          color-mix(in srgb, var(--olive-900) 90%, transparent) 0%,
+          color-mix(in srgb, var(--olive-900) 78%, transparent) 45%,
+          color-mix(in srgb, var(--olive-900) 35%, transparent) 100%
+        );
+      }
+      :root[data-demo] #level-select {
+        background: color-mix(in srgb, var(--olive-900) 78%, transparent);
+      }
+      /* The battlefield fills the window, edge to edge, while the menu screens hide the HUD and build bar around it. */
+      :root[data-demo] #app[data-screen] {
+        gap: 0;
+        padding: 0;
+      }
       /* `display: flex` above would otherwise override the hidden attribute. */
       #menu[hidden],
       #level-select[hidden] {
@@ -962,6 +980,9 @@
         color: var(--amber);
       }
       #level-select .locked {
+        max-width: 100%;
+        text-align: center;
+        overflow-wrap: anywhere;
         font-size: 0.875rem;
         color: var(--bone-dim);
       }
@@ -979,7 +1000,8 @@
         max-width: 100%;
       }
       /* The Settings screen covers the whole page, over the Main menu or the paused game, whichever opened it. */
-      #settings {
+      #settings,
+      #how-to-play {
         position: fixed;
         inset: 0;
         z-index: 3; /* over the Pause overlay (2), which is over the DPS meter (1) */
@@ -991,10 +1013,12 @@
         color: var(--bone);
       }
       /* `display: flex` above would otherwise override the hidden attribute. */
-      #settings[hidden] {
+      #settings[hidden],
+      #how-to-play[hidden] {
         display: none;
       }
-      #settings [role='dialog'] {
+      #settings [role='dialog'],
+      #how-to-play [role='dialog'] {
         display: flex;
         flex-direction: column;
         gap: 14px;
@@ -1006,7 +1030,8 @@
         background: var(--olive-800);
         border: 2px solid var(--tan);
       }
-      #settings h2 {
+      #settings h2,
+      #how-to-play h2 {
         margin: 0;
         font-size: 1.375rem;
         text-align: center;
@@ -1059,7 +1084,8 @@
         height: 24px;
         cursor: pointer;
       }
-      #settings button {
+      #settings button,
+      #how-to-play button {
         align-self: center;
         width: 160px;
         padding: 6px 0;
@@ -1068,6 +1094,57 @@
         background: var(--tan);
         border: 0;
         cursor: pointer;
+      }
+      /* How to play: the dialog is as tall as the page allows; its body scrolls on its own, Back stays in view. */
+      #how-to-play [role='dialog'] {
+        width: min(640px, calc(100% - 32px));
+        overflow-y: hidden;
+      }
+      #how-to-play .how-to-play-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 8px;
+      }
+      #how-to-play h3 {
+        margin: 12px 0 4px;
+        font-size: 1rem;
+        color: var(--amber);
+      }
+      #how-to-play section:first-child h3 {
+        margin-top: 0;
+      }
+      #how-to-play p {
+        margin: 2px 0;
+      }
+      #how-to-play ul {
+        margin: 2px 0;
+        padding-left: 20px;
+      }
+      #how-to-play li {
+        margin: 3px 0;
+      }
+      #how-to-play table {
+        border-collapse: collapse;
+      }
+      #how-to-play th,
+      #how-to-play td {
+        padding: 3px 12px 3px 0;
+        text-align: left;
+        font-weight: normal;
+      }
+      #how-to-play thead th {
+        color: var(--tan);
+      }
+      #how-to-play kbd {
+        padding: 1px 6px;
+        font: 0.875rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
+      }
+      #how-to-play :is(button, .how-to-play-body):focus-visible {
+        outline: 2px solid var(--amber);
+        outline-offset: 2px;
       }
       #settings :is(button, input):focus-visible {
         outline: 2px solid var(--amber);
@@ -1163,6 +1240,38 @@
       #tower-panel dd {
         color: var(--amber);
       }
+      /* Touch (#72): every button is at least 32 px both ways, so a finger can hit it. After the rules above. */
+      @media (max-width: 640px), (max-height: 480px), (pointer: coarse) {
+        #hud button {
+          min-width: 32px;
+          min-height: 32px;
+        }
+        #build-bar[data-collapsed='true'] {
+          width: 32px;
+        }
+        #build-bar .build-toggle {
+          width: 32px;
+          height: 32px;
+        }
+        #tower-panel button[aria-label='Close'],
+        #enemy-card button[aria-label='Close'] {
+          width: 32px;
+          height: 32px;
+          top: 0;
+          right: 0;
+        }
+        #tower-panel [data-testid='tower-upgrade'],
+        #tower-panel [data-testid='tower-sell'] {
+          min-height: 32px;
+        }
+      }
+      #tower-panel [data-testid='tower-upgrade-reason'] {
+        margin: 4px 0 0;
+        color: var(--tan-light);
+      }
+      #tower-panel [data-testid='tower-upgrade-reason'][hidden] {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -1180,6 +1289,7 @@
     <main id="menu" hidden></main>
     <main id="level-select" hidden></main>
     <div id="settings" hidden></div>
+    <div id="how-to-play" hidden></div>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

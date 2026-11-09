@@ -99,7 +99,7 @@ for (const [name, viewport] of [
       await backButton.scrollIntoViewIfNeeded();
       await expect(backButton).toBeInViewport();
       await page.getByRole('button', { name: 'Back' }).click();
-      await page.getByRole('button', { name: 'Deploy' }).click();
+      await page.getByRole('button', { name: 'Deploy', exact: true }).click();
       await page.getByRole('heading', { name: 'Operations' }).waitFor();
       expect(await fits(page, ['#level-select'])).toContain('#level-select');
 
