@@ -36,6 +36,9 @@ if (!enemyCardRoot) throw new Error('index.html has no #enemy-card element');
 const pauseMenuRoot = document.getElementById('pause-menu');
 if (!pauseMenuRoot) throw new Error('index.html has no #pause-menu element');
 
+const hintsRoot = document.getElementById('hints');
+if (!hintsRoot) throw new Error('index.html has no #hints element');
+
 const app = document.getElementById('app');
 if (!app) throw new Error('index.html has no #app element');
 const menuRoot = document.getElementById('menu');
@@ -61,7 +64,7 @@ applyDisplaySettings(settings, document.documentElement);
 const progress = createPersistedProgress(storage);
 // Volume (#67): master × channel from the settings, silent while the tab is hidden. Music and sound effects both read it.
 const audioMix = createAudioMix(settings, document);
-const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
+const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack, progress });
 const openHowToPlay: OpenHowToPlay = (onBack) => mountHowToPlay(howToPlayRoot, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
@@ -73,6 +76,7 @@ const gameOptions = {
   towerPanelRoot,
   enemyCardRoot,
   pauseMenuRoot,
+  hintsRoot,
   flags,
   settings,
   audioMix,
@@ -109,7 +113,7 @@ const game = new Phaser.Game({
   scene: [
     new BootScene(flags),
     new MenuScene({ app, menuRoot, openSettings, openHowToPlay }),
-    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
+    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll, settings }),
     gameScene,
     ...demoScenes,
   ],

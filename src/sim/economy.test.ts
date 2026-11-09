@@ -43,7 +43,7 @@ describe('Money', () => {
     game.events.on('enemyKilled', ({ reward }) => seen.push({ reward, money: game.state.money }));
     // Tile (1, 2) is next to the Path start: three shots kill the 30 HP Infantry.
     game.placeTower('rifleNest', { col: 1, row: 2 });
-    game.startWave();
+    game.callNextWave();
     runWave(game);
     expect(seen).toEqual([{ reward: 4, money: 54 }]);
     expect(game.state.money).toBe(54);
@@ -51,7 +51,7 @@ describe('Money', () => {
 
   it('a leaked enemy pays no Reward', () => {
     const game = newGame(100, ONE_INFANTRY);
-    game.startWave();
+    game.callNextWave();
     runWave(game);
     expect(game.state).toMatchObject({ lives: 19, money: 100 });
   });
@@ -93,7 +93,7 @@ describe('placeTower refusals', () => {
 
   it('placement is allowed during a wave', () => {
     const game = newGame(100, [{ groups: [{ kind: 'infantry', count: 3, spacingMs: 1000, delayMs: 0 }] }]);
-    game.startWave();
+    game.callNextWave();
     expect(game.state.phase).toBe('wave');
     expect(game.placeTower('rifleNest', { col: 2, row: 2 })).toMatchObject({ ok: true });
   });
@@ -101,7 +101,7 @@ describe('placeTower refusals', () => {
   it('placement after Victory is gameEnded', () => {
     const game = newGame(100, ONE_INFANTRY);
     game.placeTower('rifleNest', { col: 1, row: 2 });
-    game.startWave();
+    game.callNextWave();
     runWave(game);
     expect(game.state.phase).toBe('victory');
     expectRefused(game, { col: 4, row: 4 }, 'gameEnded');
@@ -109,7 +109,7 @@ describe('placeTower refusals', () => {
 
   it('placement after Defeat is gameEnded', () => {
     const game = createGame({ map: SMALL, lives: 1, money: 100, waves: ONE_INFANTRY });
-    game.startWave();
+    game.callNextWave();
     runWave(game);
     expect(game.state.phase).toBe('defeat');
     expectRefused(game, { col: 4, row: 4 }, 'gameEnded');
@@ -125,7 +125,7 @@ describe('canPlaceTower', () => {
 
   it('says yes during a wave', () => {
     const game = newGame(100, [{ groups: [{ kind: 'infantry', count: 3, spacingMs: 1000, delayMs: 0 }] }]);
-    game.startWave();
+    game.callNextWave();
     expect(game.canPlaceTower('rifleNest', { col: 2, row: 2 })).toEqual({ ok: true });
   });
 });

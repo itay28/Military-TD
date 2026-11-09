@@ -69,6 +69,13 @@ describe('mountShortcuts', () => {
     for (const fn of Object.values(handlers)) expect(fn).not.toHaveBeenCalled();
   });
 
+  it('skips a key something else already handled, such as Space placing at the map cursor', () => {
+    const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    event.preventDefault();
+    document.body.dispatchEvent(event);
+    expect(handlers.startWave).not.toHaveBeenCalled();
+  });
+
   it('stops listening once destroyed', () => {
     destroy();
     press('u');

@@ -21,6 +21,8 @@ export interface Settings {
   readonly reducedMotion: boolean;
   /** Scales all DOM UI text, in percent (#354). */
   readonly textSize: TextSize;
+  /** Tactical mode (ADR-0011): no wave timers, each wave called by the player; a win earns at most 2 stars. Next game. */
+  readonly tacticalMode: boolean;
 }
 
 /** The text sizes the player can pick, in percent. */
@@ -41,6 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sfxVolume: 80,
   reducedMotion: false,
   textSize: 100,
+  tacticalMode: false,
 };
 
 /** The defaults for this device: reduced motion follows the system's `prefers-reduced-motion`. */
