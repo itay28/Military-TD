@@ -13,7 +13,7 @@ export default defineScenario({
     { kind: 'mortar', tile: { col: 4, row: 4 } },
   ],
   waves: [{ groups: [{ kind: 'apc', count: 1, spacingMs: 0, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: 'end',
   expectations({ outcome, finalState, events }, expect) {
     expect(outcome).toBe('victory');

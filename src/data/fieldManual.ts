@@ -1,6 +1,6 @@
 import { counteredBy, poorAgainst, resists, strongAgainst } from './counters';
 import { ENEMY_NAMES, ENEMY_WEAKNESS, LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES } from './display';
-import { ENEMY_STATS, type EnemyKind } from './enemies';
+import { ENEMY_STATS, NOT_IN_PLAY, type EnemyKind } from './enemies';
 import { TOWER_LEVELS, TOWER_STATS, type TowerKind } from './towers';
 
 /**
@@ -15,6 +15,7 @@ export const CLASS_LINES = {
   infantry: 'Rifle squad on foot: assault rifles, body armor and helmets',
   jeep: 'Light four-wheel-drive utility vehicle, unarmored',
   helicopter: 'Medium transport helicopter: twin turbines, a light armored cabin',
+  apc: 'Armored personnel carrier: wheeled hull with a troop compartment, carries a rifle squad',
   tank: 'Main battle tank: large-calibre gun, heavy composite armor',
 } as const satisfies Record<TowerKind | EnemyKind, string>;
 
@@ -99,6 +100,6 @@ function enemyEntry(kind: EnemyKind): FieldManualEntry {
 export function fieldManualEntries(): FieldManualEntry[] {
   return [
     ...(Object.keys(TOWER_STATS) as TowerKind[]).map(towerEntry),
-    ...(Object.keys(ENEMY_STATS) as EnemyKind[]).map(enemyEntry),
+    ...(Object.keys(ENEMY_STATS) as EnemyKind[]).filter((k) => !NOT_IN_PLAY.includes(k)).map(enemyEntry),
   ];
 }

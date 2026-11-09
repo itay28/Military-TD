@@ -69,7 +69,7 @@ describe('the APC', () => {
   it('dismounts 3 full-HP Infantry where it dies, spread out, and reports it after the kill', () => {
     const game = gameWithNests();
     const log = record(game);
-    game.startWave();
+    game.callNextWave();
     tickUntil(game, () => log.dismounted.length > 0);
 
     const apc = log.killed.find((e) => e.enemy.kind === 'apc')!.enemy;
@@ -92,7 +92,7 @@ describe('the APC', () => {
   it('the squad walks on toward the exit', () => {
     const game = gameWithNests();
     const log = record(game);
-    game.startWave();
+    game.callNextWave();
     tickUntil(game, () => log.dismounted.length > 0);
     const before = new Map(log.dismounted[0]!.spawned.map((e) => [e.id, e.distance]));
     game.tick(TICK_MS);
@@ -107,7 +107,7 @@ describe('the APC', () => {
     const log = record(game);
     const leaked: GameEvents['enemyLeaked'][] = [];
     game.events.on('enemyLeaked', (e) => leaked.push(e));
-    game.startWave();
+    game.callNextWave();
     tickUntil(game, () => game.state.phase !== 'wave');
     expect(leaked.map((e) => e.enemy.kind)).toEqual(['apc']);
     expect(log.dismounted).toEqual([]);
@@ -118,7 +118,7 @@ describe('the APC', () => {
   it('pays the APC and each soldier their own reward, and the kill totals add up', () => {
     const game = gameWithNests();
     const log = record(game);
-    game.startWave();
+    game.callNextWave();
     const money = game.state.money;
     tickUntil(game, () => game.state.phase === 'victory');
     expect(log.killed.map((e) => e.enemy.kind).sort()).toEqual(['apc', 'infantry', 'infantry', 'infantry']);
@@ -135,7 +135,7 @@ describe('the APC', () => {
     const run = () => {
       const game = gameWithNests();
       const log = record(game);
-      game.startWave();
+      game.callNextWave();
       tickUntil(game, () => game.state.phase === 'victory');
       return { dismounted: log.dismounted, money: game.state.money, timeMs: game.state.timeMs };
     };
