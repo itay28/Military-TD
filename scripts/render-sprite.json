@@ -186,12 +186,12 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.55,
+      "lengthTiles": 0.9,
       "pose": {
         "action": "walking_firing",
         "frame": 10
       },
-      "canvasTiles": 0.95,
+      "canvasTiles": 1.6,
       "tint": {
         "color": [1.0, 1.0, 1.0],
         "skip": ["Eyewear"],
@@ -402,12 +402,12 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.55,
+      "lengthTiles": 0.9,
       "pose": {
         "action": "walking_firing",
         "frame": 10
       },
-      "canvasTiles": 0.95,
+      "canvasTiles": 1.6,
       "tint": {
         "color": [1.0, 1.0, 1.0],
         "skip": ["Eyewear"],
@@ -582,12 +582,12 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.55,
+      "lengthTiles": 0.9,
       "pose": {
         "action": "walking_firing",
         "frame": 10
       },
-      "canvasTiles": 0.95,
+      "canvasTiles": 1.6,
       "tint": {
         "color": [1.0, 1.0, 1.0],
         "skip": ["Eyewear"],
@@ -805,12 +805,12 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.55,
+      "lengthTiles": 0.9,
       "pose": {
         "action": "walking_firing",
         "frame": 10
       },
-      "canvasTiles": 0.95,
+      "canvasTiles": 1.6,
       "tint": {
         "color": [1.0, 1.0, 1.0],
         "skip": ["Eyewear"],
