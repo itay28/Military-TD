@@ -1,4 +1,5 @@
 import type { Layer } from '../sim/combat';
+import type { Faction } from '../sim/factions';
 import type { PlaceTowerRefusal, UpgradeTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
@@ -22,6 +23,20 @@ export const MAP_STYLE = {
   /** Tints the blocked ground sprite, so it reads darker than buildable grass even before its decoration. */
   blockedTint: 0xa8b0a0,
   grid: { color: 0x000000, alpha: 0.15, width: 1 },
+} as const;
+
+/** The tactical map grid (#400): grid squares of `cellTiles` × `cellTiles` tiles, thin low-alpha lines, and edge labels. Not `MAP_STYLE.grid`, the per-tile grid. */
+export const MAP_GRID = {
+  cellTiles: 4,
+  line: { color: 0xffffff, alpha: 0.18, width: 1 },
+  label: {
+    style: { fontFamily: 'monospace', fontSize: '12px', color: '#f1ecd2', stroke: '#1d2410', strokeThickness: 3 },
+    alpha: 0.85,
+    /** Screen pixels between a label and the canvas edge. */
+    insetPx: 3,
+    /** A cell showing fewer screen pixels than this on an axis gets no label. */
+    minVisiblePx: 16,
+  },
 } as const;
 
 /** Enemies as filled shapes, by kind (before the v0.4 sprites). Radius in pixels: a circle's radius, or half a square's side. */
@@ -242,6 +257,20 @@ export const DPS_METER_REFRESH_MS = 250;
 
 /** Below this width, in CSS pixels, the DPS meter starts with its kinds collapsed (the HUD's phone layout). */
 export const DPS_METER_NARROW_PX = 640;
+
+/** What the player calls each Faction (ADR-0009), as on the Field manual's faction switcher. */
+export const FACTION_NAMES = {
+  us: 'US',
+  russia: 'Russia',
+  china: 'China',
+  insurgents: 'Insurgents',
+} as const satisfies Record<Faction, string>;
+
+/**
+ * The Field manual's model view: it spins `spinDegPerS` on its own (not with reduced motion); each arrow key or Rotate
+ * button turns it `keyStepDeg`, and a drag `dragDegPerPx` per pixel across.
+ */
+export const FIELD_MANUAL = { spinDegPerS: 30, keyStepDeg: 15, dragDegPerPx: 0.5 } as const;
 
 /** What a fight leaves on the ground (#403): a vehicle's wreck, an aircraft's crash mark, a shell crater, fallen infantry. */
 export type DecalKind = 'wreck' | 'crashMark' | 'crater' | 'fallen';

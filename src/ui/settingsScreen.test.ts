@@ -70,6 +70,18 @@ describe('mountSettingsScreen', () => {
     expect(settings.get().showAllRanges).toBe(false);
   });
 
+  it('has a labelled Show map grid checkbox, on at first, that switches the setting at once (#400)', () => {
+    mount();
+    const box = [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find(
+      (input) => labelOf(input) === 'Show map grid',
+    )!;
+    expect(box.checked).toBe(true);
+    box.click();
+    expect(settings.get().showMapGrid).toBe(false);
+    box.click();
+    expect(settings.get().showMapGrid).toBe(true);
+  });
+
   it('has a labelled Tactical mode checkbox, with its one-line cost, that switches the setting at once (#413)', () => {
     mount();
     const tactical = [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((box) =>
