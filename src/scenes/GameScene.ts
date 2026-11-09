@@ -1,14 +1,17 @@
 import Phaser from 'phaser';
 import atlasPngUrl from '../../assets/atlas/sprites.png';
 import {
+  AFTERMATH,
+  AFTERMATH_OF,
   CAMERA,
   DISMANTLE,
   ENEMY_HIT_PX,
   ENEMY_NAMES,
   FLOATING_TEXT,
-  HIGHLIGHT,
+  MAP_CURSOR,
   SPRITE_SCALE,
   TILE_PX,
+  HIGHLIGHT,
   TOWER_STYLE,
   formatFunds,
 } from '../data/display';
@@ -45,6 +48,7 @@ import {
   demoView,
   fitView,
   panBy,
+  revealTile,
   panToReveal,
   screenToWorld,
   worldToScreen,
@@ -73,6 +77,8 @@ import { animFrame, bobScale, rotorAngle } from './enemyAnim';
 import { createFixedStep, type FixedStep } from './fixedStep';
 import { MAX_GAME_SPEED, nextSpeed, type GameSpeed, type GameSpeedControl } from './gameSpeed';
 import { createGestures, hoverFrom, type Gesture, type Gestures } from './gestures';
+import { aftermathTimings, createAftermath, type Aftermath } from './aftermath';
+import { drawAftermath } from './drawAftermath';
 import { createEffects, type Effects } from './effects';
 import { createFloatingTexts, type FloatingTexts, type FloatingTextView } from './floatingTexts';
 import { headingOf, spriteRotation } from './heading';
@@ -98,6 +104,7 @@ import {
   type HintState,
 } from '../ui/hints';
 import { mountPauseMenu, type PauseMenu } from '../ui/pauseMenu';
+import { describeTile, enemiesOn, mountMapKeys, type MapKeys } from '../ui/mapCursor';
 import { mountShortcuts } from '../ui/shortcuts';
 import type { OpenHowToPlay } from '../ui/howToPlay';
 import type { OpenSettings } from '../ui/settingsScreen';
@@ -117,6 +124,7 @@ const ringKeyTowerId = (key: string): number => Number(key.split('@')[0]);
 /** Draw order, back to front. */
 const DEPTH = {
   map: 0,
+  decals: 0.5,
   towers: 1,
   enemies: 2,
   air: 3,
@@ -269,6 +277,8 @@ export class GameScene extends Phaser.Scene {
   /** Each tower's view by id, for `view()`'s turret angles. */
   private readonly towerViewById = new Map<number, TowerView>();
   private effects!: Effects;
+  private aftermath!: Aftermath;
+  private aftermathGraphics!: Phaser.GameObjects.Graphics;
   private effectGraphics!: Phaser.GameObjects.Graphics;
   private tracers!: Tracers;
   private tracerGraphics!: Phaser.GameObjects.Graphics;
@@ -279,6 +289,10 @@ export class GameScene extends Phaser.Scene {
   /** With Always show tower ranges: every tower's range ring but the selected one's, which `selectedRing` draws. */
   private allRings!: Phaser.GameObjects.Graphics;
   private ghostGraphics!: Phaser.GameObjects.Graphics;
+  /** The map cursor's tile highlight (#356), and the tile it is drawn on, or undefined while hidden. */
+  private cursorGraphics!: Phaser.GameObjects.Graphics;
+  private cursorDrawn: Tile | undefined;
+  private mapKeys!: MapKeys;
   /** A view-only glow on every tower of the kind highlighted in the DPS meter (#244). */
   private highlightGraphics!: Phaser.GameObjects.Graphics;
   private highlightedKind: TowerKind | undefined;
@@ -392,8 +406,10 @@ export class GameScene extends Phaser.Scene {
       ].sort((a, b) => a - b),
       tracers: this.tracers.active(),
       effects: this.effects.active(),
+      decals: this.aftermath.active().map(({ kind, alpha }) => ({ kind, alpha })),
       highlight: { kind: this.highlightedKind ?? null, towerIds: [...this.highlightedIds] },
       ghost: { visible: this.ghostGraphics.visible, tile: this.ghost?.tile ?? null },
+      cursor: { ...this.mapKeys.cursor, shown: this.cursorGraphics.visible },
       camera: { scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom },
       drawOrder: layers.filter((name, i) => name !== layers[i - 1]),
       sprites: this.textures.exists(ATLAS_KEY),
@@ -474,6 +490,28 @@ export class GameScene extends Phaser.Scene {
     const sprite = onLayer(this.add.container(0, 0, [hull, turret]), layer);
     const graphics = onLayer(this.add.graphics(), layer);
     return { sprite, graphics, rendered: true, spriteScale: 1, facing: RENDER_FACING };
+  }
+
+  /**
+   * What fights leave on the ground (#403): a wreck, crash mark or fallen soldier where an enemy died, turned the way it
+   * was heading, and a crater where a shell landed. Cosmetic, so off with `?anim=0`; reduced motion follows the
+   * player's setting (#354) at the start of the run (no fire, no fall, faster fades).
+   */
+  private setUpAftermath(): void {
+    const { reducedMotion } = this.settings.get();
+    this.aftermath = createAftermath({
+      cap: AFTERMATH.cap,
+      timings: aftermathTimings({ anim: this.flags.anim, reducedMotion }),
+    });
+    this.aftermathGraphics = onLayer(this.add.graphics(), 'decals');
+    this.sim.events.on('enemyKilled', ({ enemy }) => {
+      const { decal, size } = AFTERMATH_OF[enemy.kind];
+      const view = this.enemyViews.views().find(({ id }) => id === enemy.id);
+      this.aftermath.add(decal, toPixels(enemy.position), { heading: view?.heading ?? 0, size });
+    });
+    this.sim.events.on('shellLanded', ({ position }) =>
+      this.aftermath.add('crater', toPixels(position), { heading: 0, size: AFTERMATH.crater.size }),
+    );
   }
 
   /** Where `tower`'s shots start now: its barrel tips, turned with the turret to the sim's heading. */
@@ -747,6 +785,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.sim.events.on('shellLanded', ({ position }) => this.effects.add('explosion', toPixels(position)));
     this.sim.events.on('enemyKilled', ({ enemy }) => this.effects.add('puff', toPixels(enemy.position)));
+    this.setUpAftermath();
     this.tracers = createTracers(() => this.motion().tracerFadeMs);
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
@@ -778,6 +817,8 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.ghostGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
+    this.cursorGraphics = onLayer(this.add.graphics(), 'ghost').setVisible(false);
+    this.cursorDrawn = undefined;
     this.highlightGraphics = onLayer(this.add.graphics(), 'highlight');
     this.highlightedKind = undefined;
     this.highlightedIds = [];
@@ -852,7 +893,21 @@ export class GameScene extends Phaser.Scene {
       cycleSpeed: () => (this.gameSpeed = nextSpeed(this.gameSpeed)),
       openHelp: () => this.pauseMenu.openHelp(),
     });
+    // The map cursor (#356): arrows move it, Enter acts on its tile through the same path as a tap there. Mounted after
+    // the build bar and shortcuts, but it listens on <body>, so they see the keys it took as prevented.
+    this.mapKeys = mountMapKeys(this.game.canvas.parentElement!, this.sim, {
+      start: { col: Math.floor(this.sim.state.map.cols / 2), row: Math.floor(this.sim.state.map.rows / 2) },
+      kindPicked: () => this.buildBar.selected !== undefined,
+      towerSelected: () => this.towerPanel.selectedId !== undefined,
+      describe: (tile) => describeTile(this.sim.state, tile),
+      onMove: (tile) => this.revealCursor(tile),
+      onActivate: (tile) => {
+        this.revealCursor(tile);
+        this.tapAt(toPixels(tileCenter(tile)), true, enemiesOn(this.sim.state.enemies, tile)[0]?.id);
+      },
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.mapKeys.destroy();
       shortcuts.destroy();
       this.hints.destroy();
       this.hud.destroy();
@@ -995,6 +1050,15 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  /** The camera follows the map cursor when it leaves the screen. */
+  private revealCursor(tile: Tile): void {
+    const { x, y } = tileTopLeft(tile);
+    const view = revealTile(this.view, this.cameraBounds(), { x, y, width: TILE_PX, height: TILE_PX });
+    if (view === this.view) return;
+    this.fitted = false;
+    this.setView(view);
+  }
+
   private setView(view: CameraView): void {
     this.view = view;
     this.cameras.main.setZoom(view.zoom).setScroll(view.scrollX, view.scrollY);
@@ -1088,16 +1152,17 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * A tap on the map at world pixel `at`. A tap on a tower selects it, and one on an enemy opens its card. Otherwise
-   * the sim decides whether it places one, so this works in the Build and Wave phases alike.
+   * the sim decides whether it places one, so this works in the Build and Wave phases alike. The map cursor passes the
+   * enemy on its tile, which may stand off the tile's centre.
    */
-  private tapAt(at: Pixel, canPlace: boolean): void {
+  private tapAt(at: Pixel, canPlace: boolean, enemyId = this.enemyUnder(at)?.id): void {
     const action = resolveClick(
       this.sim.state.towers,
       this.towerPanel.selectedId,
       pixelToTile(at),
       this.buildBar.selected,
       {
-        enemyId: this.enemyUnder(at)?.id,
+        enemyId,
         cardOpen: this.enemyCard.pinnedId !== undefined,
       },
     );
@@ -1145,6 +1210,7 @@ export class GameScene extends Phaser.Scene {
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
     this.effects.advance(deltaMs);
+    this.aftermath.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     if (this.motion().enemyWalk) this.animMs += deltaMs;
     // The demo plays in real time whatever test mode's stepping and speed: it isn't the game under test.
@@ -1177,6 +1243,8 @@ export class GameScene extends Phaser.Scene {
     drawTracers(this.tracerGraphics, this.tracers.active());
     this.effectGraphics.clear();
     drawEffects(this.effectGraphics, this.effects.active());
+    this.aftermathGraphics.clear();
+    drawAftermath(this.aftermathGraphics, this.aftermath.active());
     this.drawShells();
     if (this.demo) return this.panDemoCamera(deltaMs);
     this.drawHighlights(towers);
@@ -1196,8 +1264,11 @@ export class GameScene extends Phaser.Scene {
     );
     // Every frame too, so the ghost turns green when Money arrives under a still pointer.
     // None while a tower is selected, since a click then only deselects.
+    // The map cursor aims the Ghost too while the mouse isn't over the map.
+    const cursor = this.mapKeys.shown ? this.mapKeys.cursor : undefined;
+    this.showCursor(cursor);
     const kind = this.buildBar.selected;
-    this.showGhost(kind, selected ? undefined : ghostAt(this.sim, kind, this.pointerTile));
+    this.showGhost(kind, selected ? undefined : ghostAt(this.sim, kind, this.pointerTile ?? cursor));
     this.floatingTextViews.sync(this.floatingTexts.active());
   }
 
@@ -1259,6 +1330,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Draws `ghost` as a `kind` tower on its tile, or hides it when there is none or no kind is selected. */
+  /** Draws the map cursor's highlight on `tile`, or hides it; redrawn only when the tile changes. */
+  private showCursor(tile: Tile | undefined): void {
+    const drawn = this.cursorDrawn;
+    if (tile === drawn || (tile && drawn && tile.col === drawn.col && tile.row === drawn.row)) return;
+    this.cursorDrawn = tile;
+    this.cursorGraphics.clear().setVisible(tile !== undefined);
+    if (!tile) return;
+    const { x, y } = tileTopLeft(tile);
+    const inset = MAP_CURSOR.width / 2;
+    this.cursorGraphics
+      .lineStyle(MAP_CURSOR.width, MAP_CURSOR.color, 1)
+      .strokeRect(x + inset, y + inset, TILE_PX - MAP_CURSOR.width, TILE_PX - MAP_CURSOR.width);
+  }
+
   private showGhost(kind: TowerKind | undefined, ghost: Ghost | undefined): void {
     const shown = kind && ghost ? { ...ghost, kind } : undefined;
     const unchanged = shown

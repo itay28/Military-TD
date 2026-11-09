@@ -415,6 +415,14 @@
         position: absolute;
         inset: 0;
       }
+      /* The map is a focus stop for the map cursor (#356): the outline says the arrow keys work. */
+      #game:focus {
+        outline: none;
+      }
+      #game:focus-visible {
+        outline: 3px solid #ffc400;
+        outline-offset: -3px;
+      }
       /* Drags and pinches on the map move the camera, not the page. */
       #game canvas {
         display: block;
@@ -1242,6 +1250,8 @@
   <body>
     <div id="app">
       <div id="hud"></div>
+      <!-- Before the stage, so Tab goes HUD, build bar, map, then the open panel; the grid areas place it. -->
+      <nav id="build-bar" aria-label="Build"></nav>
       <div id="stage">
         <div id="game"></div>
         <div id="tower-panel" hidden></div>
@@ -1249,7 +1259,6 @@
         <div id="end-screen" hidden></div>
         <div id="pause-menu" hidden></div>
       </div>
-      <nav id="build-bar" aria-label="Build"></nav>
       <div id="hints" hidden></div>
     </div>
     <main id="menu" hidden></main>

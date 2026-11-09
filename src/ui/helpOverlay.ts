@@ -1,4 +1,4 @@
-import { KEY_MAP } from './keymap';
+import { KEY_MAP, MAP_KEY_HELP } from './keymap';
 
 export interface HelpOverlay {
   /** What Back does: closes the overlay, then calls `onBack`. */
@@ -10,7 +10,7 @@ export interface HelpOverlay {
 const TITLE_ID = 'help-title';
 
 /**
- * Builds the Keys help overlay inside `root`: a modal dialog with a table of every `KEY_MAP` row and a Back button.
+ * Builds the Keys help overlay inside `root`: a modal dialog with a table of every `KEY_MAP` row, then the map cursor's keys (`MAP_KEY_HELP`), and a Back button.
  * Its opener (the pause menu) handles Esc and calls back().
  */
 export function mountHelpOverlay(root: HTMLElement, { onBack }: { readonly onBack: () => void }): HelpOverlay {
@@ -32,7 +32,7 @@ export function mountHelpOverlay(root: HTMLElement, { onBack }: { readonly onBac
     head.append(th);
   }
   const body = table.createTBody();
-  for (const { label, description } of KEY_MAP) {
+  for (const { label, description } of [...KEY_MAP, ...MAP_KEY_HELP]) {
     const row = body.insertRow();
     const key = doc.createElement('th');
     key.scope = 'row';
