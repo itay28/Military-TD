@@ -92,5 +92,5 @@ test('Back returns to the Main menu', async ({ page }) => {
   await page.getByRole('button', { name: 'Back', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Operations' })).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Deploy' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Deploy', exact: true })).toBeFocused();
 });

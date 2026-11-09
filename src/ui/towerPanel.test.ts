@@ -229,6 +229,9 @@ describe('Tower panel upgrades', () => {
     mountTowerPanel(root, game).select(id);
     expect(upgradeButton().disabled).toBe(true);
     expect(upgradeButton().title).toBe('Not enough funds');
+    // A finger can't hover a title, so the reason is written on the panel too.
+    expect(value('tower-upgrade-reason')).toBe('Not enough funds');
+    expect(root.querySelector<HTMLElement>('[data-testid="tower-upgrade-reason"]')!.hidden).toBe(false);
     upgradeButton().click();
     expect(game.state.towers[0]).toMatchObject({ level: 1 });
   });
@@ -242,6 +245,7 @@ describe('Tower panel upgrades', () => {
     panel.update();
     expect(upgradeButton().disabled).toBe(false);
     expect(upgradeButton().title).toBe('');
+    expect(root.querySelector<HTMLElement>('[data-testid="tower-upgrade-reason"]')!.hidden).toBe(true);
   });
 
   it('upgrade() does what a click does, for the U key', () => {

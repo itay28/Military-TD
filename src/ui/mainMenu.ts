@@ -1,5 +1,7 @@
 import { TERMS } from '../data/display';
+import type { OpenHowToPlay, HowToPlayScreen } from './howToPlay';
 import type { OpenSettings, SettingsScreen } from './settingsScreen';
+import { GAME_TITLE } from './gameTitle';
 
 export interface MainMenuOptions {
   /** The page's `#app`: marked `data-screen="menu"` while the menu shows, which hides the HUD, build bar and tower panel. */
@@ -12,6 +14,8 @@ export interface MainMenuOptions {
   readonly initialFocus?: 'play' | 'credits';
   /** Opens the Settings screen over the menu. Without it, Settings is disabled. */
   readonly openSettings?: OpenSettings;
+  /** Opens the How to play screen over the menu. Without it, How to play is disabled. */
+  readonly openHowToPlay?: OpenHowToPlay;
 }
 
 export interface MainMenu {
@@ -22,11 +26,11 @@ export interface MainMenu {
 /** Builds the Main menu inside `root`, a screen over the whole page. It's DOM, so tests can query it (ADR-0003). */
 export function mountMainMenu(
   root: HTMLElement,
-  { app, onPlay, onCredits, openSettings, initialFocus = 'play' }: MainMenuOptions,
+  { app, onPlay, onCredits, openSettings, openHowToPlay, initialFocus = 'play' }: MainMenuOptions,
 ): MainMenu {
   const doc = root.ownerDocument;
   const title = doc.createElement('h1');
-  title.textContent = 'Military TD';
+  title.textContent = GAME_TITLE;
   const play = doc.createElement('button');
   play.type = 'button';
   play.textContent = TERMS.play;
@@ -48,12 +52,27 @@ export function mountMainMenu(
   };
   if (openSettings) settings.addEventListener('click', onSettings);
   else settings.disabled = true;
+  const howTo = doc.createElement('button');
+  howTo.type = 'button';
+  howTo.textContent = 'How to play';
+  let howToScreen: HowToPlayScreen | undefined;
+  const onHowTo = () => {
+    if (!openHowToPlay) return;
+    root.inert = true;
+    howToScreen = openHowToPlay(() => {
+      howToScreen = undefined;
+      root.inert = false;
+      howTo.focus();
+    });
+  };
+  if (openHowToPlay) howTo.addEventListener('click', onHowTo);
+  else howTo.disabled = true;
   const credits = doc.createElement('button');
   credits.type = 'button';
   credits.textContent = 'Credits';
   const onCreditsClick = () => onCredits();
   credits.addEventListener('click', onCreditsClick);
-  root.append(title, play, settings, credits);
+  root.append(title, play, settings, howTo, credits);
   root.hidden = false;
   app.dataset.screen = 'menu';
   (initialFocus === 'credits' ? credits : play).focus();
@@ -61,10 +80,13 @@ export function mountMainMenu(
     destroy() {
       settingsScreen?.close();
       settingsScreen = undefined;
+      howToScreen?.close();
+      howToScreen = undefined;
       root.inert = false;
       play.removeEventListener('click', onClick);
       credits.removeEventListener('click', onCreditsClick);
       settings.removeEventListener('click', onSettings);
+      howTo.removeEventListener('click', onHowTo);
       root.replaceChildren();
       root.hidden = true;
       delete app.dataset.screen;

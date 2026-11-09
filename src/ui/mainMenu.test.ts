@@ -14,10 +14,10 @@ beforeEach(() => {
 });
 
 describe('Main menu', () => {
-  it('shows the title and a Deploy, a Settings and a Credits button', () => {
+  it('shows the game title Hold the Perimeter and a Deploy, a Settings and a Credits button', () => {
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
     expect(root.hidden).toBe(false);
-    expect(root.querySelector('h1')?.textContent).toBe('Military TD');
+    expect(root.querySelector('h1')?.textContent).toBe('Hold the Perimeter');
     expect(button('Deploy')?.type).toBe('button');
     expect(button('Settings')?.type).toBe('button');
     expect(button('Credits')?.type).toBe('button');
@@ -49,6 +49,51 @@ describe('Main menu', () => {
     button('Settings')!.click();
     expect(openSettings).toHaveBeenCalledOnce();
     expect(root.inert).toBe(true);
+  });
+
+  it('disables How to play when it is given no screen to open', () => {
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
+    expect(button('How to play')?.disabled).toBe(true);
+  });
+
+  it('puts How to play between Settings and Credits, and opens it with the menu inert behind it', () => {
+    const openHowToPlay = vi.fn(() => ({ close: () => {}, back: () => {} }));
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {}, openHowToPlay });
+    const labels = [...root.querySelectorAll('button')].map((b) => b.textContent);
+    expect(labels).toEqual(['Deploy', 'Settings', 'How to play', 'Credits']);
+    button('How to play')!.click();
+    expect(openHowToPlay).toHaveBeenCalledOnce();
+    expect(root.inert).toBe(true);
+  });
+
+  it('comes back from How to play with the menu usable and its button focused', () => {
+    let onBack = () => {};
+    mountMainMenu(root, {
+      app,
+      onPlay: () => {},
+      onCredits: () => {},
+      openHowToPlay: (back) => {
+        onBack = back;
+        return { close: () => {}, back: () => {} };
+      },
+    });
+    button('How to play')!.click();
+    onBack();
+    expect(root.inert).toBe(false);
+    expect(document.activeElement).toBe(button('How to play'));
+  });
+
+  it('closes an open How to play screen when destroyed', () => {
+    const close = vi.fn();
+    const menu = mountMainMenu(root, {
+      app,
+      onPlay: () => {},
+      onCredits: () => {},
+      openHowToPlay: () => ({ close, back: () => {} }),
+    });
+    button('How to play')!.click();
+    menu.destroy();
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it('comes back from Settings with the menu usable and Settings focused', () => {
