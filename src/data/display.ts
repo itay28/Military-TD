@@ -274,5 +274,6 @@ export const AFTERMATH_OF = {
   infantry: { decal: 'fallen', size: 8 },
   jeep: { decal: 'wreck', size: 8 },
   tank: { decal: 'wreck', size: 14 },
+  apc: { decal: 'wreck', size: 12 },
   helicopter: { decal: 'crashMark', size: 12 },
 } as const satisfies Record<EnemyKind, { decal: Exclude<DecalKind, 'crater'>; size: number }>;
