@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { WAVE_BANNER_MS } from '../../src/data/display';
 import { DEFAULT_WAVE_AFTER_MS } from '../../src/data/waves';
 import { TICK_MS } from '../../src/sim/game';
 import { openGame, state, stepToEnd } from './helpers';
@@ -58,8 +59,10 @@ for (const viewport of [
     await page.getByTestId('start-wave').click();
     await page.getByTestId('start-wave').click();
     await expect(page.getByTestId('hud-wave')).toHaveText(/^Waves 1–2 \//);
+    // Let the CONTACT banner (WAVE_BANNER_MS) time out, so the slot holds the countdown alone.
+    await step(page, Math.ceil(WAVE_BANNER_MS / TICK_MS) + 1);
     await expect(page.getByTestId('hud-next-wave')).toHaveText(/^Next \d+s$/);
-    // Nothing else is in the slot yet (no banner), so any overflow is the countdown being cut off.
+    // Nothing else is in the slot (no banner), so any overflow is the countdown being cut off.
     const fits = await page.evaluate(() => {
       const slot = document.querySelector<HTMLElement>('#hud .hud-message')!;
       return slot.scrollWidth <= slot.clientWidth;
@@ -71,7 +74,7 @@ for (const viewport of [
 test('Tactical mode: no timer, and a wave starts only when the player calls it', async ({ page }) => {
   await openGame(page);
   await turnOnTactical(page);
-  await expect(page.getByTestId('start-wave')).toHaveText('Start Wave');
+  await expect(page.getByTestId('start-wave')).toHaveText('Start wave');
   await expect(page.getByTestId('hud-next-wave')).toHaveText('');
 
   expect(await step(page, TIMER_TICKS * 3)).toMatchObject({ phase: 'build', waveNumber: 0, tacticalMode: true });

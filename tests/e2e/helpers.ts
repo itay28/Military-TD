@@ -58,14 +58,14 @@ export async function openMenu(page: Page, { progress, unlockAll = false, demo =
     );
   }
   await page.goto(`/?${params}`);
-  await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).waitFor();
 }
 
 /** Opens the Level select in test mode: the Main menu, then Play. */
 export async function openLevelSelect(page: Page, options: MenuOptions = {}) {
   await openMenu(page, options);
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
-  await page.getByRole('heading', { name: 'Select map' }).waitFor();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
+  await page.getByRole('heading', { name: 'Operations' }).waitFor();
 }
 
 /** The page coordinates of `tile`'s center, through the camera's pan and zoom, so a test clicks the canvas like a player. */

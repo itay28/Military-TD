@@ -48,10 +48,10 @@ test('picking a map starts a new game on it, in the Build phase', async ({ page 
   await page.getByRole('button', { name: `${first.name}, no stars yet` }).click();
 
   await page.waitForFunction(() => window.__TD__ !== undefined);
-  await expect(page.getByRole('heading', { name: 'Select map' })).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Call next wave' })).toBeEnabled();
   await expect(page.locator('#build-bar')).toBeVisible();
-  await expect(page.getByTestId('hud-money')).toHaveText(`Money ${START_MONEY}`);
+  await expect(page.getByTestId('hud-money')).toHaveText(`Funds $${START_MONEY}`);
   expect(await state(page)).toMatchObject({
     mapId: first.id,
     phase: 'build',
@@ -91,6 +91,6 @@ test('Back returns to the Main menu', async ({ page }) => {
   await openLevelSelect(page);
   await page.getByRole('button', { name: 'Back', exact: true }).click();
 
-  await expect(page.getByRole('heading', { name: 'Select map' })).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Deploy', exact: true })).toBeFocused();
 });
