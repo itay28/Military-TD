@@ -1,6 +1,8 @@
+import type { TowerKind } from '../data/towers';
 import type { EnemyKind } from '../data/enemies';
 import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
+import type { DecalKind } from '../data/display';
 import type { EffectKind } from '../scenes/effects';
 import type { Game, GameState } from '../sim/game';
 import type { Tile } from '../sim/map';
@@ -15,6 +17,8 @@ export interface TestHooks {
   load(setup: GameSetup): Promise<void>;
   /** What the scene draws now, read from its display objects. */
   view(): TestView;
+  /** Forces the onboarding hints on (from the start, any map, saved flag ignored) or off, for this game and the next. */
+  setHints(on: boolean): void;
 }
 
 /** Named scenarios' setups, loaded on demand. */
@@ -37,11 +41,17 @@ export interface TestView {
     readonly at: Pixel;
     readonly progress: number;
   }[];
+  /** The aftermath decals (wrecks, crash marks, craters, fallen infantry) drawn on the next frame; none with ?anim=0. */
+  readonly decals: readonly { readonly kind: DecalKind; readonly alpha: number }[];
+  /** The DPS meter's highlight (#244): the kind clicked there, and the id of every tower of it that is outlined. */
+  readonly highlight: { readonly kind: TowerKind | null; readonly towerIds: readonly number[] };
   /**
    * The Ghost under the pointer: shown only while a mouse hovers, or a finger drags over, a tile with a build kind
    * selected. `tile` is null when it is hidden.
    */
   readonly ghost: { readonly visible: boolean; readonly tile: Tile | null };
+  /** The map cursor (#356): its tile, and whether its highlight is drawn (the map has keyboard focus). */
+  readonly cursor: { readonly col: number; readonly row: number; readonly shown: boolean };
   /** The camera over the map: the world pixel at the canvas's top-left corner, and the zoom. */
   readonly camera: { readonly scrollX: number; readonly scrollY: number; readonly zoom: number };
   /** Each display object's layer (`map`, `towers`, `enemies`, …), back to front as Phaser renders them; repeats collapsed. */
@@ -97,6 +107,11 @@ export interface TestApi {
   loadScenario(name: string): Promise<void>;
   /** A copy of what the Game scene draws now. It changes on the next frame; tracers fade on frame time even when paused. */
   view(): TestView;
+  /**
+   * Forces the onboarding hints (#68) on or off. Test mode starts with them off, so specs that don't test hints never
+   * see one. On, they restart from the first hint whatever the map or saved flag; a skip or finish still saves the flag.
+   */
+  setHints(on: boolean): void;
 }
 
 declare global {
@@ -125,5 +140,6 @@ export function createTestApi(hooks: TestHooks, scenarios: ScenarioLoaders): Tes
       await hooks.load(await load());
     },
     view: () => structuredClone(hooks.view()),
+    setHints: (on) => hooks.setHints(on),
   };
 }

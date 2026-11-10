@@ -6,6 +6,30 @@ describe('createProgress', () => {
     expect(createProgress().get()).toEqual(EMPTY_PROGRESS);
   });
 
+  it('starts with hints not done', () => {
+    expect(createProgress().get().hintsDone).toBe(false);
+  });
+
+  it('sets and clears the hints flag', () => {
+    const progress = createProgress();
+    progress.setHintsDone(true);
+    expect(progress.get().hintsDone).toBe(true);
+    progress.setHintsDone(false);
+    expect(progress.get().hintsDone).toBe(false);
+  });
+
+  it('keeps the hints flag through a win, and the maps through the flag', () => {
+    const progress = createProgress();
+    progress.setHintsDone(true);
+    progress.recordResult('a', 2);
+    progress.setHintsDone(true);
+    expect(progress.get()).toEqual({
+      maps: { a: { completed: true, bestStars: 2 } },
+      hintsDone: true,
+      metEnemies: [],
+    });
+  });
+
   it('records a win as completed with its stars', () => {
     const progress = createProgress();
     progress.recordResult('crossroads', 2);
@@ -40,5 +64,16 @@ describe('createProgress', () => {
     const progress = createProgress();
     expect(() => progress.recordResult('a', 0 as never)).toThrow(RangeError);
     expect(() => progress.recordResult('a', 4 as never)).toThrow(RangeError);
+  });
+
+  it('records each enemy kind met once, in the order met', () => {
+    const progress = createProgress();
+    expect(progress.get().metEnemies).toEqual([]);
+    progress.recordMet('tank');
+    progress.recordMet('infantry');
+    const before = progress.get();
+    progress.recordMet('tank');
+    expect(progress.get().metEnemies).toEqual(['tank', 'infantry']);
+    expect(progress.get()).toBe(before);
   });
 });

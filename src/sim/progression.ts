@@ -6,11 +6,17 @@ export interface CompletedMaps {
   readonly maps: Readonly<Record<string, { readonly completed: boolean }>>;
 }
 
-/** The Stars a game ending with `livesLeft` of `startLives` earns. 0 Lives left is a Defeat. */
-export function starsFor(livesLeft: number, startLives: number): Stars {
+/** The most Stars a win in Tactical mode earns (ADR-0011): the player called every wave in their own time. */
+export const TACTICAL_MAX_STARS = 2;
+
+/**
+ * The Stars a game ending with `livesLeft` of `startLives` earns. 0 Lives left is a Defeat. In Tactical mode the
+ * rating is capped at `TACTICAL_MAX_STARS`.
+ */
+export function starsFor(livesLeft: number, startLives: number, { tactical = false } = {}): Stars {
   if (livesLeft <= 0) return 0;
-  if (livesLeft >= startLives) return 3;
-  return livesLeft * 2 >= startLives ? 2 : 1;
+  const stars: Stars = livesLeft >= startLives ? 3 : livesLeft * 2 >= startLives ? 2 : 1;
+  return tactical ? (Math.min(stars, TACTICAL_MAX_STARS) as Stars) : stars;
 }
 
 /**

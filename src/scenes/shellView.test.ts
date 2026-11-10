@@ -36,4 +36,15 @@ describe('createBlasts', () => {
     blasts.add({ x: 5, y: 5 }, 30);
     expect(blasts.active()).toEqual([]);
   });
+
+  it('reads a live fade time each time, so a change applies at once', () => {
+    let fadeMs = 300;
+    const blasts = createBlasts(() => fadeMs);
+    blasts.add({ x: 0, y: 0 }, 20);
+    blasts.advance(75);
+    fadeMs = 150;
+    expect(blasts.active()[0]?.alpha).toBeCloseTo(0.5);
+    blasts.advance(75);
+    expect(blasts.active()).toEqual([]);
+  });
 });

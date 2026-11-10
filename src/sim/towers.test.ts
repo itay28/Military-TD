@@ -53,6 +53,7 @@ describe('placeTower', () => {
         level: 1,
         spent: 50,
         heading: START_HEADING,
+        coverage: expect.any(Array),
       },
     ]);
     expect(place(game, { col: 1, row: 2 })).not.toBe(id);

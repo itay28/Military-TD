@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TOWER_NAMES, TOWER_ROLES } from '../data/display';
 import { TOWER_STATS } from '../data/towers';
 import { createGame, TICK_MS, type GameState } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { emptyStats, type CombatStats } from '../sim/stats';
 import type { Tower } from '../sim/towers';
-import { mountTowerPanel, type TowerPanelGame } from './towerPanel';
+import { designator, mountTowerPanel, type TowerPanelGame } from './towerPanel';
 
 const SMALL: MapData = {
   id: 'small',
@@ -65,7 +65,7 @@ describe('Tower panel', () => {
   it("leads with the kind's name and its role line", () => {
     const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]));
     panel.select(1);
-    expect(root.querySelector('h2')?.textContent).toBe(TOWER_NAMES.rifleNest);
+    expect(root.querySelector('h2')?.textContent).toBe(`1-1 ${TOWER_NAMES.rifleNest}`);
     expect(value('tower-role')).toBe(TOWER_ROLES.rifleNest);
     expect(root.querySelector('h2')?.nextElementSibling?.nextElementSibling).toBe(
       root.querySelector('[data-testid="tower-role"]'),
@@ -76,6 +76,16 @@ describe('Tower panel', () => {
     const panel = mountTowerPanel(root, fakeGame([rifleNest(1)]));
     expect(root.hidden).toBe(true);
     expect(panel.selectedId).toBeUndefined();
+  });
+
+  it('titles the tower with its unit designator: its build-bar number, a dash and its id', () => {
+    expect(designator('rifleNest', 1)).toBe('1-1');
+    expect(designator('aaGun', 2)).toBe('2-2');
+    expect(designator('cannon', 7)).toBe('3-7');
+    expect(designator('mortar', 12)).toBe('4-12');
+    const panel = mountTowerPanel(root, fakeGame([rifleNest(3)]));
+    panel.select(3);
+    expect(root.querySelector('h2 .designator')?.textContent).toBe('1-3');
   });
 
   it('rounds a long fire rate to two decimals so it fits the panel', () => {
@@ -90,7 +100,7 @@ describe('Tower panel', () => {
     expect(root.hidden).toBe(false);
     expect(panel.selectedId).toBe(1);
     expect(dialog().getAttribute('aria-labelledby')).toBe(root.querySelector('h2')?.id);
-    expect(root.querySelector('h2')?.textContent).toBe('Rifle Nest');
+    expect(root.querySelector('h2')?.textContent).toBe('1-1 Rifle Nest');
     expect(value('tower-level')).toBe('Level 1');
     expect(value('tower-damage')).toBe('10');
     expect(value('tower-fire-rate')).toBe('2/s');
@@ -209,7 +219,7 @@ describe('Tower panel upgrades', () => {
   it('names the next level and its cost on the Upgrade button', () => {
     const { game, id } = gameWithTower(100);
     mountTowerPanel(root, game).select(id);
-    expect(upgradeButton().textContent).toBe('Optics (40)');
+    expect(upgradeButton().textContent).toBe('Optics ($40)');
     expect(upgradeButton().hidden).toBe(false);
     expect(upgradeButton().disabled).toBe(false);
   });
@@ -221,14 +231,17 @@ describe('Tower panel upgrades', () => {
     expect(game.state.money).toBe(60);
     expect(value('tower-level')).toBe('Level 2');
     expect(value('tower-range')).toBe('3 tiles');
-    expect(upgradeButton().textContent).toBe('Heavier weapon (70)');
+    expect(upgradeButton().textContent).toBe('Heavier weapon ($70)');
   });
 
   it('is disabled, saying why, while the upgrade would be refused', () => {
     const { game, id } = gameWithTower(39);
     mountTowerPanel(root, game).select(id);
     expect(upgradeButton().disabled).toBe(true);
-    expect(upgradeButton().title).toBe('Not enough money');
+    expect(upgradeButton().title).toBe('Not enough funds');
+    // A finger can't hover a title, so the reason is written on the panel too.
+    expect(value('tower-upgrade-reason')).toBe('Not enough funds');
+    expect(root.querySelector<HTMLElement>('[data-testid="tower-upgrade-reason"]')!.hidden).toBe(false);
     upgradeButton().click();
     expect(game.state.towers[0]).toMatchObject({ level: 1 });
   });
@@ -242,6 +255,26 @@ describe('Tower panel upgrades', () => {
     panel.update();
     expect(upgradeButton().disabled).toBe(false);
     expect(upgradeButton().title).toBe('');
+    expect(root.querySelector<HTMLElement>('[data-testid="tower-upgrade-reason"]')!.hidden).toBe(true);
+  });
+
+  it('upgrade() does what a click does, for the U key', () => {
+    const { game, id } = gameWithTower(100);
+    const panel = mountTowerPanel(root, game);
+    panel.select(id);
+    panel.upgrade();
+    expect(game.state.money).toBe(60);
+    expect(value('tower-level')).toBe('Level 2');
+  });
+
+  it('upgrade() does nothing while the button is disabled, or with nothing selected', () => {
+    const { game, id } = gameWithTower(39);
+    const panel = mountTowerPanel(root, game);
+    panel.upgrade();
+    panel.select(id);
+    panel.upgrade();
+    expect(game.state.towers[0]).toMatchObject({ level: 1 });
+    expect(game.state.money).toBe(39);
   });
 
   it('is hidden at the top level', () => {
@@ -264,7 +297,7 @@ describe('Tower panel Sell button', () => {
     const panel = mountTowerPanel(root, game);
     panel.select(placed.towerId);
     const button = root.querySelector<HTMLButtonElement>('[data-testid="tower-sell"]')!;
-    expect(button.textContent).toBe('Sell (+35)');
+    expect(button.textContent).toBe('Sell (+$35)');
     button.click();
     expect(button.textContent).toBe('Dismantling…');
     expect(button.disabled).toBe(true);
@@ -275,6 +308,24 @@ describe('Tower panel Sell button', () => {
     expect(game.state.money).toBe(85);
     expect(panel.selectedId).toBeUndefined();
     expect(root.hidden).toBe(true);
+  });
+});
+
+describe('Tower panel sell()', () => {
+  it('does what a click on Sell does, for the S key, once', () => {
+    const game = createGame({ map: SMALL, money: 50, lives: 20, waves: [] });
+    const placed = game.placeTower('rifleNest', { col: 1, row: 3 });
+    if (!placed.ok) throw new Error(placed.reason);
+    const sellTower = vi.spyOn(game, 'sellTower');
+    const panel = mountTowerPanel(root, game);
+    panel.sell();
+    expect(sellTower).not.toHaveBeenCalled();
+    panel.select(placed.towerId);
+    panel.sell();
+    expect(sellTower).toHaveBeenCalledOnce();
+    // Now dismantling: Sell is disabled, so a second press does nothing.
+    panel.sell();
+    expect(sellTower).toHaveBeenCalledOnce();
   });
 });
 

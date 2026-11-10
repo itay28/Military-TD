@@ -2,5 +2,5 @@
   "id": "us-infantry",
   "kind": "infantry",
   "pxPerTile": 128,
-  "canvasPx": 160
+  "canvasPx": 205
 }

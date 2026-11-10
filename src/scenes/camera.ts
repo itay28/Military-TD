@@ -86,3 +86,58 @@ export function canPlaceAt(view: CameraView, { viewport, world }: CameraBounds, 
   const point = screenToWorld(view, at);
   return point.x >= 0 && point.y >= 0 && point.x < world.width && point.y < world.height;
 }
+
+/** A rectangle in world pixels. */
+export interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** The smallest pan that brings `rect` on screen (the camera following the map cursor), kept inside the map. */
+export function revealTile(view: CameraView, bounds: CameraBounds, rect: Rect): CameraView {
+  const reveal = (scroll: number, visible: number, start: number, size: number) =>
+    start < scroll ? start : start + size > scroll + visible ? start + size - visible : scroll;
+  const scrollX = reveal(view.scrollX, bounds.viewport.width / view.zoom, rect.x, rect.width);
+  const scrollY = reveal(view.scrollY, bounds.viewport.height / view.zoom, rect.y, rect.height);
+  if (scrollX === view.scrollX && scrollY === view.scrollY) return view;
+  return clampView({ ...view, scrollX, scrollY }, bounds);
+}
+
+/** The zoom that fills the screen with the map, cropping it on the longer side. */
+export function coverZoom(viewport: Size, world: Size): number {
+  return Math.max(viewport.width / world.width, viewport.height / world.height);
+}
+
+/**
+ * The demo camera behind the menu (#402): `factor` times the cover zoom (past the player's zoom limit if need be),
+ * centred on the world point `center` but kept inside the map, so no margin ever shows.
+ */
+export function demoView(
+  { viewport, world }: Pick<CameraBounds, 'viewport' | 'world'>,
+  center: Pixel,
+  factor: number,
+): CameraView {
+  const zoom = coverZoom(viewport, world) * Math.max(factor, 1);
+  const axis = (at: number, visible: number, size: number) => Math.min(Math.max(at - visible / 2, 0), size - visible);
+  return {
+    scrollX: axis(center.x, viewport.width / zoom, world.width),
+    scrollY: axis(center.y, viewport.height / zoom, world.height),
+    zoom,
+  };
+}
+
+/**
+ * `view` as it is when the world point `at` is at least `margin` screen pixels inside the canvas, else centred on it
+ * (within the map). Returns `view` itself when nothing needs to move.
+ */
+export function panToReveal(view: CameraView, at: Pixel, margin: number, bounds: CameraBounds): CameraView {
+  const { x, y } = worldToScreen(view, at);
+  const { width, height } = bounds.viewport;
+  if (x >= margin && y >= margin && x <= width - margin && y <= height - margin) return view;
+  return clampView(
+    { ...view, scrollX: at.x - width / (2 * view.zoom), scrollY: at.y - height / (2 * view.zoom) },
+    bounds,
+  );
+}

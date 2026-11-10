@@ -102,6 +102,17 @@ An enemy sprite turns to face the way it travels: `SPRITE_HEADING` in `src/data/
 - **Kenney Tower Defense** `td245`/`td247`/`td269` (first picks): at 48 px they don't read as a soldier or a jeep, so they were replaced.
 - **itch.io free packs**: mostly "free for personal use", rejected.
 
+## Music (#66)
+
+Downloaded 2026-11-02 from [War on Water tracks](https://opengameart.org/content/war-on-water-tracks) by yd, CC0-1.0 (`assets/yd-war-on-water/`, `License.txt` copies the page's notice). Two tracks, each as OGG Vorbis (played first) and an MP3 fallback for browsers without Vorbis:
+
+| File | Source file | Plays on |
+| --- | --- | --- |
+| `menu.{ogg,mp3}` | `wowmenu.ogg` | Main menu, Level select, Settings, Credits |
+| `game.{ogg,mp3}` | `wowchapter1.ogg` | the Game, End screen included |
+
+Each had its trailing silence (~0.1 s) trimmed and a 10 ms fade at both ends (ffmpeg), so the loop has no gap or click. `trackFor` in `src/audio/music.ts` maps scenes to tracks; a change of track crossfades over 1 s. Music starts on the first input, is muted in test mode, and a file that fails to load stays silent.
+
 ## Sound effects (#45)
 
 Downloaded 2026-11-02, CC0 only. kenney.nl wasn't reachable from the cloud session, so each pack comes from its author's own OpenGameArt upload. Only the `.ogg` files below are committed. Rubberduck's packs ship no license file, so their `License.txt` copies the source page's notice. The files were picked by name and length, not by ear: swap any that sound wrong in `src/data/sounds.ts`.
@@ -203,7 +214,7 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | `render-russia-cannon/` | "ZiS-2 57mm anti-tank gun" by sergey.s.filin, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
-| `render-russia-jeep/` | "uaz 469" by Okopchi, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-jeep/` | "UAZ-469 Low Poly" by lebedeventerprise, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-helicopter/` | "Mi-8" by tiunov.se, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |

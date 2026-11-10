@@ -1,4 +1,4 @@
-# Military-TD — Plan
+# Hold the Perimeter — Plan
 
 A military-themed tower defense game that runs in the browser.
 
@@ -110,7 +110,7 @@ From v0.3.0: Boot → Main menu (Play, Settings; Credits joins it in v0.4.0, #61
 ```
 src/
   sim/        Pure TS, deterministic, no Phaser, no Math.random/Date.now/performance.now. Unit + scenario tested.
-    game.ts     createGame(config) → { tick(dtMs), placeTower(kind, tile), startWave(), state, events }
+    game.ts     createGame(config) → { tick(dtMs), placeTower(kind, tile), callNextWave(), state, events }
     map.ts      grid, path waypoints, buildable tiles
     enemies.ts  movement along the path, leaking
     events.ts   typed event emitter behind game.events
@@ -132,7 +132,7 @@ tests/
   e2e/        Playwright UI tests
 ```
 
-- **The Simulation decides everything.** Scenes and the UI never change game state directly. They call commands (`placeTower`, `startWave`, later `upgradeTower`, `sellTower`), and each command returns success or a reason for failure.
+- **The Simulation decides everything.** Scenes and the UI never change game state directly. They call commands (`placeTower`, `callNextWave`, later `upgradeTower`, `sellTower`), and each command returns success or a reason for failure.
 - **Fixed timestep.** The Game scene calls `sim.tick(1000/60)` a whole number of times per frame. Tests step ticks directly. The same inputs always produce the same result.
 - **Units.** Positions are in tiles (floats), speeds in tiles/second, times in ms. Only Scenes convert tiles to pixels (`TILE_PX = 48`).
 - **Events.** The sim emits `enemyKilled`, `enemyLeaked`, `towerFired`, `waveStarted`, `waveCleared`, `victory`, `defeat` for the scenes and UI to use in visuals and HUD updates.

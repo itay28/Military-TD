@@ -6,7 +6,7 @@ import {
   endWave,
   markSold,
   recordShots,
-  resetWave,
+  startWaveStats,
   waveDps,
   withWaveElapsed,
 } from './stats';
@@ -62,18 +62,34 @@ describe('totals', () => {
 describe('waves', () => {
   const played = recordShots(emptyStats(), [shot(1, [10, 7])], new Set([10]));
 
-  it('resetWave clears wave figures but not totals', () => {
-    const stats = resetWave(withWaveElapsed(played, 4000));
+  it('startWaveStats clears the latest-wave figures but not totals', () => {
+    const stats = startWaveStats(withWaveElapsed(played, new Map(), 0), 1);
     expect(stats.wave).toEqual({ damage: 0, kills: 0, elapsedMs: 0 });
     expect(stats.towers[1]!.wave).toEqual({ damage: 0, kills: 0 });
     expect(stats.total).toEqual({ damage: 7, kills: 1 });
     expect(stats.towers[1]!.total).toEqual({ damage: 7, kills: 1 });
+    expect(stats.running[1]).toEqual({ waveNumber: 1, damage: 0, kills: 0, elapsedMs: 0, towers: {} });
   });
 
   it('keeps a tower entry with no further shots, as a sold tower does', () => {
-    const next = recordShots(resetWave(played), [shot(2, [11, 4])], new Set());
+    const next = recordShots(startWaveStats(played, 1), [shot(2, [11, 4])], new Set());
     expect(next.towers[1]!.total).toEqual({ damage: 7, kills: 1 });
     expect(next.total.damage).toBe(11);
+  });
+
+  it('a hit counts for the hit enemy’s wave only, so overlapping waves keep their own figures', () => {
+    const both = startWaveStats(startWaveStats(emptyStats(), 1), 2);
+    const waveOf = (enemyId: number) => (enemyId < 20 ? 1 : 2);
+    const stats = recordShots(both, [shot(1, [10, 7], [20, 5])], new Set([20]), waveOf);
+    expect(stats.running[1]).toMatchObject({ damage: 7, kills: 0, towers: { 1: { damage: 7, kills: 0 } } });
+    expect(stats.running[2]).toMatchObject({ damage: 5, kills: 1, towers: { 1: { damage: 5, kills: 1 } } });
+    expect(stats.total).toEqual({ damage: 12, kills: 1 });
+  });
+
+  it('a hit on an enemy outside any wave counts only overall', () => {
+    const stats = recordShots(startWaveStats(emptyStats(), 1), [shot(1, [10, 7])], new Set());
+    expect(stats.running[1]).toMatchObject({ damage: 0 });
+    expect(stats.total.damage).toBe(7);
   });
 });
 
@@ -91,17 +107,19 @@ describe('placed towers', () => {
     expect(stats.placed[2]!.sold).toBe(false);
   });
 
-  it('wave time adds only to the towers given', () => {
+  it('wave time adds only to the towers given, and to the game’s wave time once', () => {
     const stats = addWaveTime(addWaveTime(placed, [1, 2], 500), [2], 250);
     expect(stats.placed[1]!.waveMs).toBe(500);
     expect(stats.placed[2]!.waveMs).toBe(750);
+    expect(stats.waveTimeMs).toBe(750);
   });
 });
 
 describe('endWave', () => {
   const firstWave = withWaveElapsed(
-    recordShots(emptyStats(), [shot(1, [10, 7]), shot(2, [11, 3])], new Set([10])),
-    4000,
+    recordShots(startWaveStats(emptyStats(), 1), [shot(1, [10, 7]), shot(2, [11, 3])], new Set([10]), () => 1),
+    new Map([[1, 4000]]),
+    1,
   );
 
   it('appends the wave’s totals, duration and per-tower figures', () => {
@@ -118,7 +136,11 @@ describe('endWave', () => {
   });
 
   it('keeps earlier waves, and a tower idle in a wave shows 0 for it', () => {
-    const second = withWaveElapsed(recordShots(resetWave(endWave(firstWave, 1)), [shot(2, [12, 5])], new Set()), 2000);
+    const second = withWaveElapsed(
+      recordShots(startWaveStats(endWave(firstWave, 1), 2), [shot(2, [12, 5])], new Set(), () => 2),
+      new Map([[2, 2000]]),
+      2,
+    );
     const stats = endWave(second, 2);
     expect(stats.waves.map((w) => w.waveNumber)).toEqual([1, 2]);
     expect(stats.waves[1]).toEqual({
