@@ -1,6 +1,6 @@
 # 9. Satellite-style milsim art and factions per map
 
-Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286)
+Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Heavy tank (boss) row for its renders (#362)
 
 ## Context
 
@@ -36,6 +36,9 @@ The maintainer also wants each map to pit two sides against each other, picked f
 | **Jeep** (unarmored, fast) | M1097 soft-top Humvee | UAZ-469 | BJ2022 Brave Warrior | Toyota Hilux technical with a DShK |
 | **Tank** | M1A2 SEPv3 Abrams | T-72B3 | Type 99A | T-55 (captured) |
 | **Helicopter** (light armor) | UH-60 Black Hawk | Mi-8AMTSh | Z-20 | Mi-8 (captured) |
+| **Heavy tank** (boss) | M1A2 SEPv3 with TUSK (urban kit) | T-14 Armata | Type 99A with add-on armor | T-72 (captured, ideally with improvised slat armor) |
+
+The Heavy tank is rendered about 1.4 tiles long, bigger than the Tank's 1.3, so the boss reads at a glance. Its renders were made ahead of its gameplay (#78), so it's listed as an upcoming kind until it joins the waves.
 
 Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind), and the AA Gun is a fast-firing gun that also hits ground targets.
 

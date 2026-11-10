@@ -3,6 +3,15 @@ import type { Faction } from '../sim/factions';
 import type { EnemyKind } from './enemies';
 import type { TowerKind } from './towers';
 
+/**
+ * Kinds whose renders land before their gameplay (art and rules are separate issues): the Heavy tank boss (#362).
+ * A kind leaves this list when it joins `ENEMY_STATS` or the tower stats (a test checks it).
+ */
+export const UPCOMING_KINDS = ['heavyTank'] as const;
+
+/** A kind with a render: one in play, or one whose art is ahead of its gameplay. */
+export type ModelKind = TowerKind | EnemyKind | (typeof UPCOMING_KINDS)[number];
+
 /** A turntable sheet (#407, `render-sprite.py --turntable`): `frames` square frames of `frameSize` px, `columns` per row. */
 export interface Turntable {
   readonly url: string;
@@ -35,7 +44,7 @@ const SHEET_META = import.meta.glob<Omit<Turntable, 'url'>>('../../assets/render
 });
 
 /** The model view of `kind` for `faction`, from the render list (`scripts/render-sprite.json`). */
-export function modelFor(faction: Faction, kind: TowerKind | EnemyKind): ModelView {
+export function modelFor(faction: Faction, kind: ModelKind): ModelView {
   const model = renderList.models.find((m) => m.faction === faction && m.kind === kind);
   if (!model) return { layers: [] };
   const dir = `../../assets/render-${model.id}/${model.id}`;

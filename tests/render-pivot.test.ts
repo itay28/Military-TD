@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
+import { UPCOMING_KINDS } from '../src/data/modelViews';
 import { SPRITES } from '../src/data/sprites';
 import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
@@ -98,7 +99,8 @@ describe('the committed render data', () => {
 });
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  const kinds = Object.keys(SPRITES).sort();
+  // Every kind in play, plus the kinds whose art lands before their gameplay (the Heavy tank, #362).
+  const kinds = [...Object.keys(SPRITES), ...UPCOMING_KINDS].sort();
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
@@ -106,4 +108,8 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
       expect(models.map((m) => m.kind).sort()).toEqual(kinds);
     });
   }
+
+  it('lists a kind as upcoming only until it is in play (then drop it from UPCOMING_KINDS)', () => {
+    for (const kind of UPCOMING_KINDS) expect(Object.keys(SPRITES), kind).not.toContain(kind);
+  });
 });
