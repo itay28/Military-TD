@@ -27,6 +27,11 @@ export interface StaleIssue {
   readonly activity: readonly string[];
 }
 
+/** Never flagged: trackers, and issues owned by auto-start or already waiting on the maintainer. */
+export function isStaleExempt(labels: readonly string[], tracker: boolean): boolean {
+  return tracker || labels.some((l) => [AUTO_AGENT_LABEL, HOLD_LABEL, NEEDS_YOU_LABEL, NEEDS_INFO_LABEL].includes(l));
+}
+
 /**
  * The issues to flag: assigned by hand (never `auto-agent`: the retry covers those), in the current or
  * next milestone (`scope`) or milestone-less infra, with no open PR, not already waiting on the
@@ -40,13 +45,11 @@ export function planStaleClaims(
 ): number[] {
   return issues
     .filter((i) => {
-      if (!i.assigned || i.tracker || i.hasPr) return false;
-      if (i.labels.some((l) => [AUTO_AGENT_LABEL, HOLD_LABEL, NEEDS_YOU_LABEL, NEEDS_INFO_LABEL].includes(l)))
-        return false;
+      if (!i.assigned || i.hasPr || isStaleExempt(i.labels, i.tracker)) return false;
       if (!(i.milestone === null ? i.infra : scope.includes(i.milestone))) return false;
       if (i.comments.some((c) => c.body.includes(STALE_MARKER))) return false;
       const last = Math.max(...i.activity.map(Date.parse), ...i.comments.map((c) => Date.parse(c.createdAt)));
-      return now - last >= idleMs;
+      return Number.isFinite(last) && now - last >= idleMs;
     })
     .map((i) => i.number);
 }
@@ -56,7 +59,7 @@ export function staleQuery(numbers: readonly number[]): string {
   const parts = numbers.map(
     (n, k) =>
       `i${k}: issue(number: ${n}) { updatedAt comments(last: 100) { nodes { body createdAt } } ` +
-      `refs(refPrefix: "refs/heads/", query: "${n}-", first: 10) { nodes { name target { ... on Commit { committedDate } } } } }`,
+      `refs(refPrefix: "refs/heads/", query: "${n}-", first: 100) { nodes { name target { ... on Commit { committedDate } } } } }`,
   );
   return `query($owner: String!, $name: String!) {\n  repository(owner: $owner, name: $name) {\n    ${parts.join('\n    ')}\n  }\n}`;
 }
@@ -85,17 +88,19 @@ export function readStale(
   };
 }
 
-/** Flag a stale claim once: the marker comment, then `needs-you` (whose event pushes). True if it flagged. */
+/** Flag a stale claim once: `needs-you` first (whose event pushes), then the marker comment. True if it flagged. */
 export async function flagStale(issue: number, token: string, fetchFn: Fetch = fetch): Promise<boolean> {
   const comments = (await (await github(fetchFn, token, 'GET', `issues/${issue}/comments?per_page=100`)).json()) as {
     body?: string;
   }[];
   if (comments.some((c) => c.body?.includes(STALE_MARKER))) return false;
+  // Label first: if the comment then fails, `needs-you` keeps the issue out of the next sweep's candidates
+  // and the maintainer was still pushed; the marker only ever follows a label.
+  await github(fetchFn, token, 'POST', `issues/${issue}/labels`, { labels: [NEEDS_YOU_LABEL] });
   await github(fetchFn, token, 'POST', `issues/${issue}/comments`, {
     body:
       'Assigned with no PR and no activity for 3 days. Unassign to let auto-start take it, or carry on ' +
       `(docs/agents/issue-tracker.md → Board sync).\n\n${STALE_MARKER}`,
   });
-  await github(fetchFn, token, 'POST', `issues/${issue}/labels`, { labels: [NEEDS_YOU_LABEL] });
   return true;
 }

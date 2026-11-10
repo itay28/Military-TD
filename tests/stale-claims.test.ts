@@ -3,6 +3,7 @@ import type { Fetch } from '../scripts/auto-start';
 import { idleReasons } from '../scripts/pipeline-idle';
 import {
   flagStale,
+  isStaleExempt,
   planStaleClaims,
   readStale,
   STALE_MARKER,
@@ -99,6 +100,18 @@ describe('staleQuery / readStale', () => {
   });
 });
 
+describe('no data', () => {
+  it('is not stale when the issue returned no timestamps', () => {
+    expect(planStaleClaims([issue(1, { activity: [], comments: [] })], scope, now)).toEqual([]);
+  });
+  it('shares one exclusion predicate with board sync', () => {
+    expect(isStaleExempt(['auto-agent'], false)).toBe(true);
+    expect(isStaleExempt(['needs-you'], false)).toBe(true);
+    expect(isStaleExempt(['enhancement'], true)).toBe(true);
+    expect(isStaleExempt(['enhancement'], false)).toBe(false);
+  });
+});
+
 describe('flagStale', () => {
   const respond = (comments: { body: string }[]) =>
     vi.fn<Fetch>(async (_url, init) => {
@@ -106,15 +119,15 @@ describe('flagStale', () => {
       const body = method === 'GET' ? comments : {};
       return new Response(JSON.stringify(body), { status: 200 });
     });
-  it('comments with the marker, then labels needs-you', async () => {
+  it('labels needs-you first, then comments with the marker', async () => {
     const fetchFn = respond([]);
     expect(await flagStale(5, 'tok', fetchFn)).toBe(true);
     const calls = fetchFn.mock.calls.filter(([, init]) => init.method === 'POST');
-    expect(calls[0]![0]).toContain('issues/5/comments');
-    expect(String(calls[0]![1].body)).toContain(STALE_MARKER);
-    expect(String(calls[0]![1].body)).toContain('Unassign to let auto-start take it');
-    expect(calls[1]![0]).toContain('issues/5/labels');
-    expect(String(calls[1]![1].body)).toContain('needs-you');
+    expect(calls[0]![0]).toContain('issues/5/labels');
+    expect(String(calls[0]![1].body)).toContain('needs-you');
+    expect(calls[1]![0]).toContain('issues/5/comments');
+    expect(String(calls[1]![1].body)).toContain(STALE_MARKER);
+    expect(String(calls[1]![1].body)).toContain('Unassign to let auto-start take it');
   });
   it('does nothing when the marker is already there', async () => {
     const fetchFn = respond([{ body: STALE_MARKER }]);
