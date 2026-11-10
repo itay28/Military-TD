@@ -1,6 +1,6 @@
 # 9. Satellite-style milsim art and factions per map
 
-Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286)
+Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Gunship row (#363)
 
 ## Context
 
@@ -36,8 +36,9 @@ The maintainer also wants each map to pit two sides against each other, picked f
 | **Jeep** (unarmored, fast) | M1097 soft-top Humvee | UAZ-469 | BJ2022 Brave Warrior | Toyota Hilux technical with a DShK |
 | **Tank** | M1A2 SEPv3 Abrams | T-72B3 | Type 99A | T-55 (captured) |
 | **Helicopter** (light armor) | UH-60 Black Hawk | Mi-8AMTSh | Z-20 | Mi-8 (captured) |
+| **Gunship** (boss) | AH-64D Apache | Mi-28N | Z-10 (a Tiger stand-in, re-coloured) | Mi-24D (captured) |
 
-Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind), and the AA Gun is a fast-firing gun that also hits ground targets.
+Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind; those are the Gunship boss, about 1.4 tiles so it reads bigger), and the AA Gun is a fast-firing gun that also hits ground targets.
 
 ## Consequences
 

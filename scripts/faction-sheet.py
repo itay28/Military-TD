@@ -18,8 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 RENDER_TILE = 128  # render-sprite.json pxPerTile
 GAME_TILE = 48
 NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in its own pixels (sprite-compare.py)
-CELL = 1.6  # tiles per cell, enough for the largest canvas (1.5)
-KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "helicopter"]
+CELL = 1.8  # tiles per cell, enough for the largest canvas (the Gunship's 1.75)
+KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "helicopter", "gunship"]
 
 
 def grass(px: int) -> Image.Image:

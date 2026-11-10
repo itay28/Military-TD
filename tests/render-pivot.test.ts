@@ -102,8 +102,10 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
-      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
-      expect(models.map((m) => m.kind).sort()).toEqual(kinds);
+      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction).map((m) => m.kind);
+      expect(new Set(models).size, 'one render per kind').toBe(models.length);
+      // A kind can get its art before its gameplay (the Gunship, #363), so the set may run ahead of SPRITES.
+      expect(models).toEqual(expect.arrayContaining(kinds));
     });
   }
 });
