@@ -32,6 +32,10 @@ describe('counter matrix', () => {
     expect(efficiency('cannon', 'jeep')).toBeCloseTo((0.5 * 20) / 100);
   });
 
+  it('the Heavy tank boss keeps the Cannon and the Sniper as efficient counters', () => {
+    expect(efficientCounters('heavyTank')).toEqual(expect.arrayContaining(['cannon', 'sniper']));
+  });
+
   it('the Sniper chips Tanks (an efficient counter) but the Cannon stays the best against them', () => {
     expect(efficientCounters('tank')).toContain('sniper');
     const best = towerKinds.reduce((a, b) => (efficiency(b, 'tank') > efficiency(a, 'tank') ? b : a));

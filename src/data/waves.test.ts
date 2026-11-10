@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { validateWaves } from '../sim/waves';
-import { ENEMY_STATS, type EnemyKind } from './enemies';
+import { ENEMY_STATS, NOT_IN_PLAY, type EnemyKind } from './enemies';
 import { WAVES } from './waves';
 
 const kindsIn = (wave: (typeof WAVES)[number]) => new Set(wave.groups.map((g) => g.kind));
@@ -17,10 +17,11 @@ describe('the wave schedule', () => {
 
   it('every enemy kind appears', () => {
     const seen = new Set(WAVES.flatMap((wave) => [...kindsIn(wave)]));
-    expect([...seen].sort()).toEqual(Object.keys(ENEMY_STATS).sort());
+    const inPlay = (Object.keys(ENEMY_STATS) as EnemyKind[]).filter((k) => !NOT_IN_PLAY.has(k));
+    expect([...seen].sort()).toEqual(inPlay.sort());
   });
 
-  it.each(Object.keys(ENEMY_STATS).filter((k) => k !== 'infantry') as EnemyKind[])(
+  it.each((Object.keys(ENEMY_STATS) as EnemyKind[]).filter((k) => k !== 'infantry' && !NOT_IN_PLAY.has(k)))(
     '%s first appears alone, at most 3 of it',
     (kind) => {
       const first = WAVES.find((wave) => kindsIn(wave).has(kind));
