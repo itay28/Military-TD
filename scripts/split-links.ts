@@ -162,6 +162,12 @@ async function handOff(plan: SplitPlan, problem: Problem, runUrl: string): Promi
   await api('POST', `/issues/${problem.issue}/labels`, { labels: ['needs-you'] });
 }
 
+/** A failed comment or label call must not stop the other parts' hand-offs or the push. */
+const handOffSafely = (plan: SplitPlan, problem: Problem, runUrl: string): Promise<void> =>
+  handOff(plan, problem, runUrl).catch((e: unknown) =>
+    console.error(`::error::hand-off to #${problem.issue} failed: ${reason(e)}`),
+  );
+
 /** One push for the run, since a label set with GITHUB_TOKEN doesn't start notify.yml. */
 const push = (plan: SplitPlan, problems: Problem[]): Promise<void> =>
   send(process.env['NTFY_TOPIC'], {
@@ -187,13 +193,14 @@ async function main(file: string): Promise<void> {
   try {
     plan = parsePlan(text);
   } catch (error) {
-    // Hand the original over when the plan at least names it.
-    const original = originalOf(text);
+    // Hand the original over: the plan's own, or else the issue the workflow was started for.
+    const fromEnv = Number(process.env['ISSUE']);
+    const original = originalOf(text) ?? (isIssue(fromEnv) ? fromEnv : null);
     if (original !== null) {
       const stub = { original, epic: null, parts: [] };
       const problem = { issue: original, message: `the split plan is invalid (${reason(error)})` };
-      await handOff(stub, problem, runUrl);
-      await push(stub, [problem]);
+      await handOffSafely(stub, problem, runUrl);
+      await push(stub, [problem]).catch((e: unknown) => console.error(reason(e)));
     }
     throw error;
   }
@@ -201,10 +208,10 @@ async function main(file: string): Promise<void> {
   console.log(added.length ? `Linked: ${added.join(', ')}.` : 'Every link was already there.');
   for (const problem of problems) {
     console.log(`::error::#${problem.issue}: ${problem.message}`);
-    await handOff(plan, problem, runUrl);
+    await handOffSafely(plan, problem, runUrl);
   }
   if (problems.length) {
-    await push(plan, problems);
+    await push(plan, problems).catch((e: unknown) => console.error(reason(e)));
     process.exitCode = 1;
   }
 }

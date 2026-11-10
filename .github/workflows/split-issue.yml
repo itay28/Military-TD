@@ -82,6 +82,7 @@ jobs:
 
       # Issues made and labels set with GITHUB_TOKEN start no workflow, but a dispatch does.
       - name: Run Board sync
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run board-sync.yml --repo ${{ github.repository }}
