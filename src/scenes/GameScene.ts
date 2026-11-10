@@ -585,7 +585,8 @@ export class GameScene extends Phaser.Scene {
       if (tint !== undefined) image.setTint(tint);
       return image;
     });
-    ground.draw(stamps);
+    // Phaser 4 only queues draws until render() runs them: without it the stamps are gone and the map is blank.
+    ground.draw(stamps).render();
     stamps.forEach((image) => image.destroy());
     drawGrid(onLayer(this.add.graphics(), 'map'), map);
     for (const { tile, decoration } of art) {
