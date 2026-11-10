@@ -125,6 +125,29 @@ describe('map registry', () => {
   });
 });
 
+describe('briefings (#401)', () => {
+  const sentences = (text: string) => text.split(/(?<=[.!?])\s+/).filter((s) => s.trim() !== '');
+
+  it.each(MAPS)(
+    '$id: has an operation name, a Situation of one or two sentences and a one-line Terrain note',
+    (entry) => {
+      const { operation, situation, terrain } = entry.briefing;
+      expect(operation).toMatch(/^Operation [A-Z][a-z]+( [A-Z][a-z]+)*$/);
+      expect(sentences(situation).length).toBeGreaterThanOrEqual(1);
+      expect(sentences(situation).length).toBeLessThanOrEqual(2);
+      expect(situation).toMatch(/[.!?]$/);
+      expect(sentences(terrain)).toHaveLength(1);
+      expect(terrain).not.toMatch(/\n/);
+      expect(terrain.length).toBeLessThanOrEqual(90);
+    },
+  );
+
+  it('gives every map its own operation name', () => {
+    const names = MAPS.map((entry) => entry.briefing.operation);
+    expect(new Set(names).size).toBe(names.length);
+  });
+});
+
 describe('ground images (#312)', () => {
   it('gives every map with a ground-image layer its image URL', () => {
     for (const entry of MAPS) {
