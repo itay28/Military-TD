@@ -45,12 +45,12 @@ describe('throttleAudio', () => {
     const sink = createRecordingAudio();
     const time = clock();
     const audio = throttleAudio(sink, { maxPlays: 2, windowMs: 100 }, time.now);
-    audio.play('aaGunShot'); // t=0
+    audio.play('aaGunBurst'); // t=0
     time.advance(60);
-    audio.play('aaGunShot'); // t=60
+    audio.play('aaGunBurst'); // t=60
     time.advance(50);
-    audio.play('aaGunShot'); // t=110: the t=0 play has left the window
-    audio.play('aaGunShot'); // still two in (10, 110]
+    audio.play('aaGunBurst'); // t=110: the t=0 play has left the window
+    audio.play('aaGunBurst'); // still two in (10, 110]
     expect(sink.played).toHaveLength(3);
   });
 
@@ -59,8 +59,44 @@ describe('throttleAudio', () => {
     const audio = throttleAudio(sink, { maxPlays: 1, windowMs: 100 }, clock().now);
     audio.play('rifleShot');
     audio.play('rifleShot');
-    audio.play('shellExplosion');
+    audio.play('mortarBlast');
     audio.play('waveStart');
-    expect(sink.played).toEqual(['rifleShot', 'shellExplosion', 'waveStart']);
+    expect(sink.played).toEqual(['rifleShot', 'mortarBlast', 'waveStart']);
+  });
+});
+
+describe('throttleAudio per-sound limits (#405)', () => {
+  it('plays a burst of leak calls once, and leaves other sounds on the default limit', () => {
+    const sink = createRecordingAudio();
+    const time = clock();
+    const audio = throttleAudio(sink, { maxPlays: 3, windowMs: 100 }, time.now, {
+      leak: { maxPlays: 1, windowMs: 5000 },
+    });
+    for (let i = 0; i < 5; i++) audio.play('leak');
+    for (let i = 0; i < 5; i++) audio.play('rifleShot');
+    expect(sink.played).toEqual(['leak', 'rifleShot', 'rifleShot', 'rifleShot']);
+    time.advance(4999);
+    audio.play('leak');
+    time.advance(1);
+    audio.play('leak');
+    expect(sink.played.filter((id) => id === 'leak')).toHaveLength(2);
+  });
+});
+
+describe('volume (#404)', () => {
+  it('records each play at full volume unless told otherwise', () => {
+    const audio = createRecordingAudio();
+    audio.play('rifleShot');
+    audio.play('mortarBlast', 0.4);
+    expect(audio.volumes).toEqual([1, 0.4]);
+  });
+
+  it('passes the volume through the throttle', () => {
+    const sink = createRecordingAudio();
+    const audio = throttleAudio(sink, { maxPlays: 1, windowMs: 100 }, clock().now);
+    audio.play('vehicleExplosion', 0.3);
+    audio.play('vehicleExplosion', 1);
+    expect(sink.played).toEqual(['vehicleExplosion']);
+    expect(sink.volumes).toEqual([0.3]);
   });
 });

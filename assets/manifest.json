@@ -197,12 +197,12 @@
     },
     {
       "id": "render-russia-jeep",
-      "name": "uaz 469 (top-down render)",
-      "author": "Okopchi",
-      "source": "https://sketchfab.com/3d-models/1f58a38deb854829bd1b1ba1c15555d0",
+      "name": "UAZ-469 Low Poly (top-down render)",
+      "author": "lebedeventerprise",
+      "source": "https://sketchfab.com/3d-models/77bdfa6804334b2794e65654e9dd8f3a",
       "license": "CC-BY-4.0",
-      "attribution": "\"uaz 469\" by Okopchi (sketchfab.com), CC-BY 4.0, rendered top-down",
-      "downloaded": "2026-11-02",
+      "attribution": "\"UAZ-469 Low Poly\" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down, its recoilless rifle and machine gun removed, repainted olive",
+      "downloaded": "2026-11-03",
       "files": ["assets/render-russia-jeep/**"]
     },
     {
@@ -366,34 +366,124 @@
       "files": ["assets/render-insurgents-helicopter/**"]
     },
     {
-      "id": "rubberduck-bang-sfx",
-      "name": "25 CC0 bang / firework SFX",
-      "author": "rubberduck",
-      "source": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+      "id": "free-firearm-sfx",
+      "name": "The Free Firearm Sound Library",
+      "author": "Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney",
+      "source": "https://opengameart.org/content/the-free-firearm-sound-library",
       "license": "CC0-1.0",
-      "attribution": "25 CC0 bang / firework SFX by rubberduck (OpenGameArt.org), CC0",
-      "downloaded": "2026-11-02",
-      "files": ["assets/rubberduck-bang-sfx/**"]
+      "attribution": "The Free Firearm Sound Library by Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0, three excerpts",
+      "downloaded": "2026-11-03",
+      "files": ["assets/free-firearm-sfx/**"]
     },
     {
-      "id": "rubberduck-100-sfx",
-      "name": "100 CC0 SFX",
-      "author": "rubberduck",
-      "source": "https://opengameart.org/content/100-cc0-sfx",
+      "id": "mikeask-missile",
+      "name": "Missile Sound",
+      "author": "mikeask",
+      "source": "https://opengameart.org/content/missile-sound",
       "license": "CC0-1.0",
-      "attribution": "100 CC0 SFX by rubberduck (OpenGameArt.org), CC0",
-      "downloaded": "2026-11-02",
-      "files": ["assets/rubberduck-100-sfx/**"]
+      "attribution": "Missile Sound by mikeask (OpenGameArt.org), CC0",
+      "downloaded": "2026-11-03",
+      "files": ["assets/mikeask-missile/**"]
     },
     {
-      "id": "kenney-jingles",
-      "name": "85 Short music jingles",
-      "author": "Kenney",
-      "source": "https://opengameart.org/content/85-short-music-jingles",
+      "id": "thimras-cannon",
+      "name": "Cannon Fire",
+      "author": "Thimras",
+      "source": "https://opengameart.org/content/cannon-fire",
       "license": "CC0-1.0",
-      "attribution": "85 Short music jingles by Kenney (kenney.nl), CC0",
+      "attribution": "Cannon Fire by Thimras (OpenGameArt.org), CC0",
+      "downloaded": "2026-11-03",
+      "files": ["assets/thimras-cannon/**"]
+    },
+    {
+      "id": "ezduzziteh-explosions",
+      "name": "Explosions",
+      "author": "EZduzziteh",
+      "source": "https://opengameart.org/content/explosions-4",
+      "license": "CC0-1.0",
+      "attribution": "Explosions by EZduzziteh (OpenGameArt.org), CC0",
+      "downloaded": "2026-11-03",
+      "files": ["assets/ezduzziteh-explosions/**"]
+    },
+    {
+      "id": "weapon-sounds",
+      "name": "Weapon sounds",
+      "author": "Hold the Perimeter, from the four items above",
+      "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+      "license": "CC0-1.0",
+      "attribution": "Built by scripts/weapon-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Missile Sound by mikeask, Cannon Fire by Thimras and Explosions by EZduzziteh, all CC0",
+      "downloaded": "2026-11-03",
+      "files": ["assets/weapon-sounds/**"]
+    },
+    {
+      "id": "yd-war-on-water",
+      "name": "War on Water tracks",
+      "author": "yd",
+      "source": "https://opengameart.org/content/war-on-water-tracks",
+      "license": "CC0-1.0",
+      "attribution": "War on Water tracks by yd (opengameart.org), CC0",
       "downloaded": "2026-11-02",
-      "files": ["assets/kenney-jingles/**"]
+      "files": ["assets/yd-war-on-water/**"]
+    },
+    {
+      "id": "kresiek-radio-noise",
+      "name": "Radio Noise 1",
+      "author": "Kresiek The Furry",
+      "source": "https://opengameart.org/content/radio-noise-1",
+      "license": "CC0-1.0",
+      "attribution": "Radio Noise 1 by Kresiek The Furry (OpenGameArt.org), CC0, an 8 s excerpt",
+      "downloaded": "2026-11-03",
+      "files": ["assets/kresiek-radio-noise/**"]
+    },
+    {
+      "id": "radio-voice",
+      "name": "Radio voice takes",
+      "author": "Hold the Perimeter, generated with Chatterbox (Resemble AI) from Kenney's Voiceover Pack",
+      "source": "https://opengameart.org/content/voiceover-pack-40-lines",
+      "license": "CC0-1.0",
+      "attribution": "Generated by scripts/radio-voice.py with Chatterbox (Resemble AI, MIT), voiced from Voiceover Pack by Kenney (kenney.nl), CC0",
+      "downloaded": "2026-11-04",
+      "files": ["assets/radio-voice/**"]
+    },
+    {
+      "id": "radio-cues",
+      "name": "Radio comms cues",
+      "author": "Hold the Perimeter, from its radio voice takes, Kresiek The Furry's Radio Noise 1, The Free Firearm Sound Library and EZduzziteh's Explosions",
+      "source": "https://opengameart.org/content/voiceover-pack-40-lines",
+      "license": "CC0-1.0",
+      "attribution": "Built by scripts/radio-fx.ts from the radio voice takes (voiced from Voiceover Pack by Kenney), Radio Noise 1 by Kresiek The Furry, The Free Firearm Sound Library (Ben Jaszczak et al.) and Explosions by EZduzziteh, all CC0",
+      "downloaded": "2026-11-04",
+      "files": ["assets/radio-cues/**"]
+    },
+    {
+      "id": "battlefield-ambience",
+      "name": "Battlefield ambience",
+      "author": "Hold the Perimeter, from The Free Firearm Sound Library, EZduzziteh's Explosions, Kresiek The Furry's Radio Noise 1 and its radio voice takes",
+      "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+      "license": "CC0-1.0",
+      "attribution": "Built by scripts/ambience-fx.ts from The Free Firearm Sound Library (Ben Jaszczak et al.), Explosions by EZduzziteh, Radio Noise 1 by Kresiek The Furry and the radio voice takes (voiced from Voiceover Pack by Kenney), with synthesized wind, all CC0",
+      "downloaded": "2026-11-05",
+      "files": ["assets/battlefield-ambience/**"]
+    },
+    {
+      "id": "allerta-stencil",
+      "name": "Allerta Stencil",
+      "author": "Matt McInerney",
+      "source": "https://github.com/google/fonts/tree/main/ofl/allertastencil",
+      "license": "OFL-1.1",
+      "attribution": "Allerta Stencil by Matt McInerney, SIL Open Font License 1.1",
+      "downloaded": "2026-11-05",
+      "files": ["assets/allerta-stencil/**"]
+    },
+    {
+      "id": "ibm-plex-mono",
+      "name": "IBM Plex Mono",
+      "author": "IBM Corp.",
+      "source": "https://github.com/google/fonts/tree/main/ofl/ibmplexmono",
+      "license": "OFL-1.1",
+      "attribution": "IBM Plex Mono by IBM Corp., SIL Open Font License 1.1 (Regular and Bold)",
+      "downloaded": "2026-11-05",
+      "files": ["assets/ibm-plex-mono/**"]
     }
   ]
 }

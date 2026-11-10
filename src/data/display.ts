@@ -1,7 +1,10 @@
 import type { Layer } from '../sim/combat';
+import type { Faction } from '../sim/factions';
 import type { PlaceTowerRefusal, UpgradeTowerRefusal } from '../sim/game';
 import type { EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
+import { FONT_STACK } from './theme';
+import { PALETTE } from './palette';
 import type { TowerKind } from './towers';
 
 /** Size of one tile in pixels. Only Scenes convert tiles to pixels. */
@@ -21,6 +24,20 @@ export const MAP_STYLE = {
   /** Tints the blocked ground sprite, so it reads darker than buildable grass even before its decoration. */
   blockedTint: 0xa8b0a0,
   grid: { color: 0x000000, alpha: 0.15, width: 1 },
+} as const;
+
+/** The tactical map grid (#400): grid squares of `cellTiles` × `cellTiles` tiles, thin low-alpha lines, and edge labels. Not `MAP_STYLE.grid`, the per-tile grid. */
+export const MAP_GRID = {
+  cellTiles: 4,
+  line: { color: 0xffffff, alpha: 0.18, width: 1 },
+  label: {
+    style: { fontFamily: 'monospace', fontSize: '12px', color: '#f1ecd2', stroke: '#1d2410', strokeThickness: 3 },
+    alpha: 0.85,
+    /** Screen pixels between a label and the canvas edge. */
+    insetPx: 3,
+    /** A cell showing fewer screen pixels than this on an axis gets no label. */
+    minVisiblePx: 16,
+  },
 } as const;
 
 /** Enemies as filled shapes, by kind (before the v0.4 sprites). Radius in pixels: a circle's radius, or half a square's side. */
@@ -46,8 +63,20 @@ const ENEMY_BOB = [1, 1.06, 1.03] as const;
 /** `frames` is the length of `bob`, so the two cannot drift apart. */
 export const ENEMY_ANIM = { frameMs: 120, frames: ENEMY_BOB.length, phaseMs: 130, bob: ENEMY_BOB } as const;
 
-/** The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. */
-export const HP_BAR = { width: 24, height: 4, gap: 4, back: 0x1a1a1a, backAlpha: 0.7, fill: 0x6fcf4f } as const;
+/**
+ * The HP bar above each enemy. `gap` is the space between the bar and the top of the shape. Its length is the main
+ * cue; at or below `lowAt` of max HP it also turns from `fill` to `low`.
+ */
+export const HP_BAR = {
+  width: 24,
+  height: 4,
+  gap: 4,
+  back: 0x1a1a1a,
+  backAlpha: 0.7,
+  fill: PALETTE.hpFull,
+  low: PALETTE.hpLow,
+  lowAt: 1 / 3,
+} as const;
 
 /** How a tower kind is drawn (before the v0.4 sprites). */
 export interface TowerStyle {
@@ -67,6 +96,42 @@ export const TOWER_STYLE = {
   mortar: { shape: 'circle', size: 34, fill: 0x4a3f2a, outline: 0xd9b45a, outlineWidth: 2 }, // dug-in brown pit, brass rim
 } as const satisfies Record<TowerKind, TowerStyle>;
 
+/**
+ * What the player reads for the game's terms (ADR-0010): military, but clear first. Display text only; the code and
+ * the sim keep `money`, `lives`, Victory and Defeat. Every screen, hint and tooltip takes its words from here.
+ */
+export const TERMS = {
+  money: 'Funds',
+  lives: 'HQ',
+  startWave: 'Start wave',
+  play: 'Deploy',
+  levelSelect: 'Operations',
+  victory: 'MISSION COMPLETE',
+  defeat: 'MISSION FAILED',
+  report: 'After-action report',
+} as const;
+
+/** An amount of Money as the player reads it: "$100". */
+export const formatFunds = (amount: number): string => `$${amount}`;
+
+/** The HUD banner when a wave starts. */
+export const contactBanner = (waveNumber: number): string => `CONTACT — WAVE ${waveNumber}`;
+
+/** What a locked map on the Operations screen says, naming the map that unlocks it. */
+export const lockedLine = (previous: string | undefined): string => `Locked: complete ${previous ?? 'the map before'}`;
+
+/** The HQ bar's state: `low` at or under `low` of the start Lives, `critical` at or under `critical`. */
+export const HQ_BAR = { low: 0.5, critical: 0.25 } as const;
+
+export type HqLevel = 'ok' | 'low' | 'critical';
+
+/** How the HQ bar reads with `lives` of `maxLives` left. */
+export function hqLevel(lives: number, maxLives: number): HqLevel {
+  const share = maxLives > 0 ? lives / maxLives : 0;
+  if (share <= HQ_BAR.critical) return 'critical';
+  return share <= HQ_BAR.low ? 'low' : 'ok';
+}
+
 /** What the player calls each tower kind. Every kind needs one. */
 export const TOWER_NAMES = {
   rifleNest: 'Rifle Nest',
@@ -75,6 +140,36 @@ export const TOWER_NAMES = {
   mortar: 'Mortar',
 } as const satisfies Record<TowerKind, string>;
 
+/** What each tower kind is for, in one line: the tower panel leads with it. Every kind needs one; keep it true to the stats. */
+export const TOWER_ROLES = {
+  rifleNest: 'Cheap all-rounder: hits ground and air. Light rounds that armor soaks.',
+  aaGun: 'Built for aircraft: fast, light rounds. Hits ground too.',
+  cannon: 'Slow, heavy shells that punch through armor. Ground only.',
+  mortar: 'Long-range shells that hit everything in the blast. Ground only, not up close.',
+} as const satisfies Record<TowerKind, string>;
+
+/** What the player calls each enemy kind. Every kind needs one. */
+export const ENEMY_NAMES = {
+  infantry: 'Infantry',
+  jeep: 'Jeep',
+  helicopter: 'Helicopter',
+  tank: 'Tank',
+} as const satisfies Record<EnemyKind, string>;
+
+/**
+ * What hurts each enemy kind, in one plain line on its enemy card. Every kind needs one; keep it true to the stats
+ * (armor, layer, and each tower's damage, pierce and targets).
+ */
+export const ENEMY_WEAKNESS = {
+  infantry: 'No armor: every tower hurts it. Mortar blasts catch whole squads.',
+  jeep: 'Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it.',
+  helicopter: 'Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best.',
+  tank: 'Armor: Rifle Nests barely scratch it. Cannons and Mortars work.',
+} as const satisfies Record<EnemyKind, string>;
+
+/** The smallest tap area of an enemy, as a diameter in screen pixels, so a small one is easy to hit on a phone. */
+export const ENEMY_HIT_PX = 32;
+
 /** The build bar right of the canvas shows its tower buttons in this many columns. */
 export const BUILD_BAR_COLUMNS = 2;
 
@@ -82,6 +177,9 @@ export const BUILD_BAR_COLUMNS = 2;
 export const LEVEL_NAME: Readonly<Record<number, string>> = { 2: 'Optics', 3: 'Heavier weapon' };
 
 /** The small squares along a tower's bottom edge, one per upgrade. Pixels, from the tower square's corner. */
+/** The map cursor's tile outline (#356): a bright amber that stands out on grass, dirt and the Path. */
+export const MAP_CURSOR = { color: 0xffc400, width: 3 } as const;
+
 export const LEVEL_PIP = { size: 4, gap: 3, inset: 4, color: 0xe5e1cf } as const; // bone, like the outline
 
 /** What the tower panel calls each layer a tower can hit. */
@@ -91,12 +189,31 @@ export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Re
 export const DISMANTLE = { alpha: 0.4, color: 0xe5e1cf, radius: 28, width: 2 } as const;
 
 /** The range ring shown while the pointer is over a tower, or while it is selected, with an inner ring at its minimum range if it has one. */
-export const RANGE_RING = { color: 0xffffff, alpha: 0.6, width: 1 } as const;
+export const RANGE_RING = { color: PALETTE.rangeRing, alpha: 0.6, width: 1 } as const;
 
-/** The ghost tower and range ring under the pointer: green where placement would succeed, red where it wouldn't. */
+/** The glow around every tower of the kind clicked in the DPS meter (#244): a bright outline that pulses, on both shapes. */
+export const HIGHLIGHT = { color: 0x4fd1ff, width: 3, glowWidth: 8, glowAlpha: 0.35, pad: 5, pulseMs: 1200 } as const;
+
+/**
+ * The brackets at the corners of the selected tower's tile, `inset` px inside it with arms `arm` px long, over a dark
+ * edge: the selection is a shape, not only the range ring the hovered tower has too.
+ */
+export const SELECTION = {
+  color: PALETTE.selection,
+  width: 2,
+  inset: 2,
+  arm: 10,
+  outline: { color: 0x1b2412, alpha: 0.6, width: 4 },
+} as const;
+
+/**
+ * The ghost tower and range ring under the pointer: green where placement would succeed, raspberry red with a cross
+ * over the shape where it wouldn't. The cross reaches `reach` of the way from the centre to the shape's edge.
+ */
 export const GHOST = {
-  placeable: 0x6fcf4f,
-  blocked: 0xe0533d,
+  placeable: PALETTE.valid,
+  blocked: PALETTE.invalid,
+  cross: { width: 3, reach: 0.7 },
   fillAlpha: 0.35,
   ringAlpha: 0.8,
   ringWidth: 1,
@@ -108,7 +225,7 @@ export const GHOST = {
 export const FLOATING_TEXT = {
   durationMs: 900,
   risePx: 24,
-  style: { fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 },
+  style: { fontFamily: FONT_STACK.mono, fontSize: '14px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 },
 } as const;
 
 /** What a refused placement says. */
@@ -116,7 +233,7 @@ export const PLACEMENT_REFUSAL_TEXT = {
   gameEnded: 'The game has ended',
   notBuildable: "Can't build here",
   occupied: 'Tile occupied',
-  insufficientMoney: 'Not enough money',
+  insufficientMoney: 'Not enough funds',
 } as const satisfies Record<PlaceTowerRefusal, string>;
 
 /** Why the Upgrade button is disabled, as its tooltip. `maxLevel` never shows: the button is hidden then. */
@@ -125,7 +242,7 @@ export const UPGRADE_REFUSAL_TEXT = {
   noSuchTower: 'The tower is gone',
   dismantling: 'Being dismantled',
   maxLevel: 'Top level',
-  insufficientMoney: 'Not enough money',
+  insufficientMoney: 'Not enough funds',
 } as const satisfies Record<UpgradeTowerRefusal, string>;
 
 /** The line drawn for each hit, from the tower to the target. */
@@ -147,9 +264,15 @@ export const SHELL = { color: 0xd9d9d9, radius: 4, blastColor: 0xff8a3d, blastWi
  * moves less than `dragThresholdPx` screen pixels is a click, not a drag; each wheel pixel zooms by `wheelZoomPerPx`
  * (as an exponent, so in and out are symmetric).
  */
-export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015 } as const;
+export const CAMERA = { maxZoom: 2.5, dragThresholdPx: 8, wheelZoomPerPx: 0.0015, revealMarginPx: 40 } as const;
 
-/** How long the HUD's "Wave N cleared" banner stays up, in sim ms. */
+/**
+ * With the reduced-motion setting on (#354): flashes, tracers and blasts carry information (ADR-0009), so they stay,
+ * shorter. The text drift and walk cycle stop (`motionTimings`, src/scenes/motion.ts).
+ */
+export const REDUCED_MOTION = { effectLifeMs: 120, tracerFadeMs: 50, blastFadeMs: 150 } as const;
+
+/** How long the HUD's "CONTACT — WAVE N" and "Wave N cleared" banners stay up, in sim ms. */
 export const WAVE_BANNER_MS = 2000;
 
 /**
@@ -162,3 +285,57 @@ export const EFFECT = {
   explosion: { color: 0xff8a3d, radius: 8, growth: 1.6 },
   puff: { color: 0xc9c9c9, radius: 6, growth: 1.5 },
 } as const;
+
+/** The DPS meter rewrites its figures at most this often, in ms of real time (a few times a second). */
+export const DPS_METER_REFRESH_MS = 250;
+
+/** Below this width, in CSS pixels, the DPS meter starts with its kinds collapsed (the HUD's phone layout). */
+export const DPS_METER_NARROW_PX = 640;
+
+/** What the player calls each Faction (ADR-0009), as on the Field manual's faction switcher. */
+export const FACTION_NAMES = {
+  us: 'US',
+  russia: 'Russia',
+  china: 'China',
+  insurgents: 'Insurgents',
+} as const satisfies Record<Faction, string>;
+
+/**
+ * The Field manual's model view: it spins `spinDegPerS` on its own (not with reduced motion); each arrow key or Rotate
+ * button turns it `keyStepDeg`, and a drag `dragDegPerPx` per pixel across.
+ */
+export const FIELD_MANUAL = { spinDegPerS: 30, keyStepDeg: 15, dragDegPerPx: 0.5 } as const;
+
+/** What a fight leaves on the ground (#403): a vehicle's wreck, an aircraft's crash mark, a shell crater, fallen infantry. */
+export type DecalKind = 'wreck' | 'crashMark' | 'crater' | 'fallen';
+
+/**
+ * The battlefield's aftermath (#403), on real time. Wrecks and crash marks burn for `burnMs`, then fade over `fadeMs`;
+ * craters only fade; fallen infantry tip over in `fallMs` and are gone by `fadeMs`. At most `cap` decals stay (the
+ * performance budget, #73): the oldest fades out over `evictFadeMs` to make room. Reduced motion has no fire, no fall,
+ * and fades `reducedFade` times as long.
+ */
+export const AFTERMATH = {
+  cap: 40,
+  burnMs: 3000,
+  wreckFadeMs: 5000,
+  craterFadeMs: 10000,
+  fallenFadeMs: 3000,
+  fallMs: 250,
+  evictFadeMs: 300,
+  reducedFade: 0.5,
+  hull: { color: 0x2b2722, turret: 0x1c1a17, alpha: 0.9 }, // burnt-out steel
+  scorch: { color: 0x14110e, alpha: 0.45 },
+  crater: { color: 0x3a2f24, rim: 0x5a4a38, alpha: 0.6, size: 9 },
+  fallen: { color: 0x3b3a2a, head: 0x5a4f40, alpha: 0.85 }, // a dark uniform, no blood
+  fire: { colors: [0xff7a1a, 0xffc04d], radius: 3.5, flickerMs: 90 },
+  smoke: { color: 0x6b6660, alpha: 0.45, riseMs: 1200, risePx: 18, puffs: 3 },
+} as const;
+
+/** The decal an enemy leaves when it dies, and its size in pixels. Every new kind (APC, jet, bosses) picks one. */
+export const AFTERMATH_OF = {
+  infantry: { decal: 'fallen', size: 8 },
+  jeep: { decal: 'wreck', size: 8 },
+  tank: { decal: 'wreck', size: 14 },
+  helicopter: { decal: 'crashMark', size: 12 },
+} as const satisfies Record<EnemyKind, { decal: Exclude<DecalKind, 'crater'>; size: number }>;

@@ -134,6 +134,10 @@ const RELEASE_TITLE = /^chore\(main\): release (\d+\.\d+\.\d+)$/;
 /** The milestone report PR's branch (scripts/milestone-report.ts): `chore/release-0.2.0`. */
 const REPORT_BRANCH = /^chore\/release-(\d+\.\d+\.\d+)$/;
 const NEEDS_YOU_LABEL = 'needs-you';
+/** The approval hand-off's own label (#417), so "approve this" and "the steward gave up" read apart. */
+const NEEDS_APPROVAL_LABEL = 'needs-approval';
+/** The labels a hand-off leaves: the PR waits on the maintainer while it has one. */
+const HAND_OFF_LABELS = [NEEDS_YOU_LABEL, NEEDS_APPROVAL_LABEL] as const;
 /** Rounds a PR gets before it's handed off; a maintainer comment gives it fresh ones (#165). */
 export const MAX_ROUNDS = 2;
 /** A round with no done marker after this long has died (e.g. its session hit a usage limit) and is retried, not counted (#200). Real rounds take minutes (#196). */
@@ -218,8 +222,8 @@ export interface StewardPr {
   }[];
   /** Changed paths; null when the PR has more files than were read. */
   readonly files: readonly string[] | null;
-  /** Renamed files, by their new path: the old one isn't known, so they're gated (#206). */
-  readonly renamed: readonly string[];
+  /** Renamed files: the new path, and the old one (null when it couldn't be read, so it's gated: #206, #417). */
+  readonly renamed: readonly Rename[];
   /** When the latest commit that isn't a merge was made: an approval must come after it. */
   readonly codeCommittedAt: string | null;
   /** When the latest commit of any kind was made (a draft's activity, #326). */
@@ -231,9 +235,27 @@ export interface StewardPr {
 /** Why a round is needed, in the order they're listed. */
 export type Reason = 'conflict' | 'ci' | 'review' | 'comment' | 'threads';
 
+/**
+ * What a `wait` waits on, so its status label (#419) doesn't depend on the wording of `why`:
+ * an agent or automation (`mergeability`, `round`, `checks`, `review`), the maintainer
+ * (`needs-info`, `release`: a release PR to merge by hand, or a broken report PR), CI on main
+ * (`main-ci`), or something queued ahead of it (`milestone`, `stacked`, `blocked`).
+ */
+export type WaitCause =
+  | 'mergeability'
+  | 'round'
+  | 'checks'
+  | 'review'
+  | 'stacked'
+  | 'blocked'
+  | 'needs-info'
+  | 'milestone'
+  | 'main-ci'
+  | 'release';
+
 export type Decision =
   | { readonly kind: 'skip'; readonly why: string }
-  | { readonly kind: 'wait'; readonly why: string }
+  | { readonly kind: 'wait'; readonly cause: WaitCause; readonly why: string }
   /** `unknown`: mergeability stayed UNKNOWN for over an hour (#487), so a marker comment goes with the merge. */
   | { readonly kind: 'update'; readonly unknown?: boolean }
   /** A draft whose steward round ended green (#326): mark it ready for review. */
@@ -246,8 +268,8 @@ export type Decision =
       readonly round: number;
       /** The latest round died without its done marker; this one fires it again (#200). */
       readonly retry: boolean;
-      /** A maintainer comment restarted a handed-off PR. */
-      readonly clearNeedsYou: boolean;
+      /** A maintainer comment restarted a handed-off PR: the hand-off labels to remove. */
+      readonly clearHandOff: readonly string[];
     }
   | {
       readonly kind: 'stuck';
@@ -283,7 +305,7 @@ function heldByRedMain(pr: StewardPr, decision: Decision, mainRed: MainRed | nul
   if (decision.kind !== 'merge' || !mainRed) return decision;
   if (mainRed.issue !== null && pr.closes.some((i) => i.number === mainRed.issue)) return decision;
   const issue = mainRed.issue === null ? '' : ` (#${mainRed.issue})`;
-  return { kind: 'wait', why: `main CI is failing${issue}: merges once main is green` };
+  return { kind: 'wait', cause: 'main-ci', why: `main CI is failing${issue}: merges once main is green` };
 }
 
 const isMaintainer = (c: PrComment) =>
@@ -342,7 +364,7 @@ const checksGreen = (pr: StewardPr) => {
  */
 function draftStage(pr: StewardPr, now: Date): Decision | 'stranded' {
   const skip: Decision = { kind: 'skip', why: 'draft' };
-  if (pr.labels.includes(NEEDS_YOU_LABEL)) return skip;
+  if (HAND_OFF_LABELS.some((l) => pr.labels.includes(l))) return skip;
   const lastRound = lastCommentAt(pr, (c) => c.body.includes(ROUND_MARKER));
   const lastDone = lastCommentAt(pr, (c) => c.body.includes(DONE_MARKER));
   if (lastRound > 0 && lastDone >= lastRound && checksGreen(pr)) return { kind: 'ready' };
@@ -379,8 +401,8 @@ function decideIgnoringMain(
   // A review with no findings needs no answer, so it starts no round (#303).
   const lastFindings = last((c) => c.body.startsWith(REVIEW_HEADING) && !c.body.includes(CLEAN_REVIEW_MARKER));
 
-  const clearNeedsYou = pr.labels.includes(NEEDS_YOU_LABEL);
-  if (clearNeedsYou) {
+  const clearHandOff = HAND_OFF_LABELS.filter((l) => pr.labels.includes(l));
+  if (clearHandOff.length) {
     const lastStuck = last((c) => c.body.includes(STUCK_MARKER));
     if (!lastStuck || lastMaintainer <= lastStuck)
       return { kind: 'skip', why: 'handed off, waiting on the maintainer' };
@@ -392,12 +414,13 @@ function decideIgnoringMain(
       lastCommentAt(pr, () => true),
       pr.lastCommitAt ? Date.parse(pr.lastCommitAt) : 0,
     );
-    if (now.getTime() - lastActivity < UNKNOWN_MS) return { kind: 'wait', why: 'GitHub is computing mergeability' };
+    if (now.getTime() - lastActivity < UNKNOWN_MS)
+      return { kind: 'wait', cause: 'mergeability', why: 'GitHub is computing mergeability' };
     const updated = last((c) => c.body.includes(UNKNOWN_UPDATE_MARKER)) > lastMaintainer;
     return pr.behind && !updated ? { kind: 'update', unknown: true } : { kind: 'stuck', reasons: [], unknown: true };
   }
   if (lastRound > lastDone && now.getTime() - lastRound < ROUND_TIMEOUT_MS)
-    return { kind: 'wait', why: 'a steward round is in flight' };
+    return { kind: 'wait', cause: 'round', why: 'a steward round is in flight' };
 
   const relevant = relevantChecks(pr);
   const conflict = pr.mergeable === 'CONFLICTING';
@@ -406,7 +429,7 @@ function decideIgnoringMain(
     checks.some((c) => c.name === 'claude-review' && c.state === 'pending');
   // Running checks may still fail or post a review: wait so one round handles it all, unless
   // there's a conflict, which no check result changes.
-  if (pending && !conflict) return { kind: 'wait', why: 'checks are running' };
+  if (pending && !conflict) return { kind: 'wait', cause: 'checks', why: 'checks are running' };
 
   const reasons: Reason[] = [];
   if (conflict) reasons.push('conflict');
@@ -425,19 +448,25 @@ function decideIgnoringMain(
     const latest = since.at(-1);
     return used >= MAX_ROUNDS
       ? { kind: 'stuck', reasons }
-      : { kind: 'steward', reasons, round: used + 1, retry: !!latest && !finished(latest), clearNeedsYou };
+      : { kind: 'steward', reasons, round: used + 1, retry: !!latest && !finished(latest), clearHandOff };
   }
   if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.behind) return { kind: 'update' };
   if (!lastReview)
     return pr.comments.some((c) => c.body.includes(reviewRequestMarker(pr.headSha)))
-      ? { kind: 'wait', why: 'no CI review yet (requested for this commit; add `review-again` to ask again)' }
+      ? {
+          kind: 'wait',
+          cause: 'review',
+          why: 'no CI review yet (requested for this commit; add `review-again` to ask again)',
+        }
       : { kind: 'review' };
-  if (pr.base !== defaultBranch) return { kind: 'wait', why: `stacked on ${pr.base}: merges after its parent` };
+  if (pr.base !== defaultBranch)
+    return { kind: 'wait', cause: 'stacked', why: `stacked on ${pr.base}: merges after its parent` };
   const held = pr.closes.find((i) => i.blocked || i.needsInfo);
   if (held)
     return {
       kind: 'wait',
+      cause: held.blocked ? 'blocked' : 'needs-info',
       why: held.blocked
         ? `#${held.number} is still blocked by open issues`
         : `#${held.number} has an open question (needs-info)`,
@@ -447,11 +476,12 @@ function decideIgnoringMain(
   if (ahead && current)
     return {
       kind: 'wait',
+      cause: 'milestone',
       why: `#${ahead.number} is in ${ahead.milestone!.title}: merges after ${current.title} ships`,
     };
   const paths = [
     ...(pr.files ? criticalFiles(pr.files) : ['(more files than were read)']),
-    ...pr.renamed.map((p) => `${p} (renamed: its old path may be critical)`),
+    ...renamedCritical(pr.renamed),
   ];
   const approvedAfter = Math.max(lastRound, pr.codeCommittedAt ? Date.parse(pr.codeCommittedAt) : 0);
   if (paths.length && last(isApproval) <= approvedAfter) return { kind: 'approval', paths };
@@ -467,10 +497,16 @@ const lastParagraph = (text: string) =>
     ?.trim();
 
 /** The version release-please's PR or the milestone report PR ships, against the current milestone's. */
-function wrongVersion(name: string, version: string, current: CurrentMilestone | null): Decision | null {
+function wrongVersion(
+  name: string,
+  version: string,
+  current: CurrentMilestone | null,
+  cause: WaitCause,
+): Decision | null {
   if (current && version === releaseVersion(current.title)) return null;
   return {
     kind: 'wait',
+    cause,
     why: `${name} ${version}: ${current ? `ships with ${current.title}` : 'no open milestone'}; merge it by hand to release now`,
   };
 }
@@ -478,9 +514,10 @@ function wrongVersion(name: string, version: string, current: CurrentMilestone |
 /** A generated PR merges once its checks are green (some must have run), and is brought up to date when behind. */
 function whenGreen(pr: StewardPr, name: string, unmergeable: string): Decision {
   const relevant = relevantChecks(pr);
-  if (pr.mergeable !== 'MERGEABLE') return { kind: 'wait', why: `${name}: ${unmergeable}` };
-  if (!relevant.length) return { kind: 'wait', why: `${name}: no checks ran on it` };
-  if (relevant.some((c) => c.state !== 'success')) return { kind: 'wait', why: `${name}: checks running or failing` };
+  if (pr.mergeable !== 'MERGEABLE') return { kind: 'wait', cause: 'mergeability', why: `${name}: ${unmergeable}` };
+  if (!relevant.length) return { kind: 'wait', cause: 'checks', why: `${name}: no checks ran on it` };
+  if (relevant.some((c) => c.state !== 'success'))
+    return { kind: 'wait', cause: 'checks', why: `${name}: checks running or failing` };
   if (pr.behind) return { kind: 'update' };
   return { kind: 'merge' };
 }
@@ -492,9 +529,9 @@ function whenGreen(pr: StewardPr, name: string, unmergeable: string): Decision {
  */
 function decideRelease(pr: StewardPr, current: CurrentMilestone | null): Decision {
   const version = RELEASE_TITLE.exec(pr.title)?.[1];
-  if (!version) return { kind: 'wait', why: 'release PR: no version in its title' };
+  if (!version) return { kind: 'wait', cause: 'release', why: 'release PR: no version in its title' };
   return (
-    wrongVersion('release PR', version, current) ??
+    wrongVersion('release PR', version, current, 'release') ??
     whenGreen(pr, 'release PR', 'waiting for release-please to refresh it')
   );
 }
@@ -506,12 +543,17 @@ function decideRelease(pr: StewardPr, current: CurrentMilestone | null): Decisio
  */
 function decideReport(pr: StewardPr, current: CurrentMilestone | null, version: string): Decision {
   const name = `report PR ${version}`;
-  const wrong = wrongVersion('report PR', version, current);
+  const wrong = wrongVersion('report PR', version, current, 'milestone');
   if (wrong) return wrong;
-  if (!current) return { kind: 'wait', why: `${name}: no open milestone` };
-  if (!current.done) return { kind: 'wait', why: `${name}: ${current.title} still has open issues` };
+  if (!current) return { kind: 'wait', cause: 'milestone', why: `${name}: no open milestone` };
+  if (!current.done)
+    return { kind: 'wait', cause: 'milestone', why: `${name}: ${current.title} still has open issues` };
   if (lastParagraph(pr.body) !== `Release-As: ${version}`)
-    return { kind: 'wait', why: `${name}: its body doesn't end with Release-As: ${version}` };
+    return {
+      kind: 'wait',
+      cause: 'release',
+      why: `${name}: its body doesn't end with Release-As: ${version}`,
+    };
   return whenGreen(pr, 'report PR', 'not mergeable');
 }
 
@@ -538,10 +580,16 @@ export const stewardText = (pr: StewardPr, reasons: readonly Reason[], round: nu
 const stuckBody = (summary: string) =>
   `**PR steward: handing this PR to you.** ${summary}\n\nComment on the PR to give it ${MAX_ROUNDS} more steward rounds, or fix it yourself.\n\n${STUCK_MARKER}`;
 
-async function handOff(pr: StewardPr, body: string, token: string, fetchFn: Fetch): Promise<void> {
-  // Summary first: the needs-you push (scripts/notify.ts) reads it when the label lands.
+async function handOff(
+  pr: StewardPr,
+  body: string,
+  token: string,
+  fetchFn: Fetch,
+  label: (typeof HAND_OFF_LABELS)[number] = NEEDS_YOU_LABEL,
+): Promise<void> {
+  // Summary first: the hand-off push (scripts/notify.ts) reads it when the label lands.
   await github(fetchFn, token, 'POST', `issues/${pr.number}/comments`, { body });
-  await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [NEEDS_YOU_LABEL] });
+  await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [label] });
 }
 
 /** Whether a decision's switch is on: AUTO_MERGE for merging and asking to merge, AUTO_STEWARD for the rest. */
@@ -581,7 +629,7 @@ export async function act(
         );
         throw new Error(`#${n}: firing the PR steward failed, handed off: ${String(error)}`, { cause: error });
       }
-      if (decision.clearNeedsYou) await github(fetchFn, token, 'DELETE', `issues/${n}/labels/${NEEDS_YOU_LABEL}`);
+      for (const label of decision.clearHandOff) await github(fetchFn, token, 'DELETE', `issues/${n}/labels/${label}`);
       const retry = decision.retry
         ? ' (a retry: the last round ended without reporting, most likely out of tokens)'
         : '';
@@ -616,6 +664,7 @@ ${STUCK_MARKER}
 ${APPROVAL_MARKER}`,
         token,
         fetchFn,
+        NEEDS_APPROVAL_LABEL,
       );
       return;
     }
@@ -670,6 +719,117 @@ ${APPROVAL_MARKER}`,
 }
 
 /**
+ * The status labels (#419): every open PR that isn't a draft, a fork or on `hold` carries exactly
+ * one, so the PR list shows why each PR waits. Red needs the maintainer, orange is main's CI,
+ * yellow is an agent or a check at work, grey is queued behind something else, green is mergeable.
+ * They mirror the hand-off labels (`needs-you`, `needs-approval`) and never replace them.
+ */
+export const STATUS_LABELS = {
+  'waiting: you': {
+    color: 'b60205',
+    description: 'PR steward: waiting on the maintainer (an answer, an approval or a hand-off)',
+  },
+  'waiting: main CI': { color: 'd93f0b', description: "PR steward: ready, but main's CI is failing" },
+  'waiting: agent': { color: 'fbca04', description: 'PR steward: an agent, a check or the CI review is at work' },
+  'waiting: milestone': { color: 'cfd3d7', description: 'PR steward: its issue is in a later milestone' },
+  'waiting: parent PR': { color: 'cfd3d7', description: 'PR steward: stacked, merges after its parent PR' },
+  'waiting: blocker': { color: 'cfd3d7', description: 'PR steward: its issue is still blocked by open issues' },
+  'ready to merge': { color: '0e8a16', description: 'PR steward: green and answered, merges next' },
+} as const satisfies Record<string, { color: string; description: string }>;
+export type StatusLabel = keyof typeof STATUS_LABELS;
+const STATUS_LABEL_NAMES = Object.keys(STATUS_LABELS) as StatusLabel[];
+
+const WAIT_LABEL: Readonly<Record<WaitCause, StatusLabel>> = {
+  'needs-info': 'waiting: you',
+  release: 'waiting: you',
+  'main-ci': 'waiting: main CI',
+  mergeability: 'waiting: agent',
+  round: 'waiting: agent',
+  checks: 'waiting: agent',
+  review: 'waiting: agent',
+  milestone: 'waiting: milestone',
+  stacked: 'waiting: parent PR',
+  blocked: 'waiting: blocker',
+};
+
+/** The status label a PR gets for this decision: none for a draft, a fork or a `hold` PR. */
+export function statusLabel(decision: Decision, pr: StewardPr): StatusLabel | null {
+  if (pr.isDraft || pr.fork || pr.labels.includes(HOLD_LABEL)) return null;
+  switch (decision.kind) {
+    // The only skip left once drafts, forks and `hold` are out: a hand-off the maintainer hasn't answered.
+    case 'skip':
+    case 'stuck':
+    case 'approval':
+      return 'waiting: you';
+    case 'wait':
+      return WAIT_LABEL[decision.cause];
+    case 'steward':
+    case 'update':
+    case 'review':
+    case 'ready':
+      return 'waiting: agent';
+    case 'merge':
+      return 'ready to merge';
+  }
+}
+
+/** The label writes that take a PR from `labels` to the status `label`: nothing when it's already right. */
+export function labelChanges(
+  labels: readonly string[],
+  label: StatusLabel | null,
+): { add: StatusLabel | null; remove: StatusLabel[] } {
+  return {
+    add: label && !labels.includes(label) ? label : null,
+    remove: STATUS_LABEL_NAMES.filter((l) => l !== label && labels.includes(l)),
+  };
+}
+
+/** Rethrows `error` unless it is a GitHub API error with this HTTP status. */
+function ignoreStatus(error: unknown, status: number): void {
+  if ((error as { status?: number }).status !== status) throw error;
+}
+
+/**
+ * Gives a PR its status label and removes the stale one. No request when it's already right, so a
+ * run with no changes makes no label calls (#293). Two separate writes rather than one `PUT` of the
+ * whole set, which would undo a label someone changed since the PR was read. Returns whether it wrote.
+ */
+export async function applyStatusLabel(
+  pr: StewardPr,
+  label: StatusLabel | null,
+  token: string,
+  fetchFn: Fetch = fetch,
+): Promise<boolean> {
+  const { add, remove } = labelChanges(pr.labels, label);
+  if (add) await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [add] });
+  for (const stale of remove) {
+    try {
+      await github(fetchFn, token, 'DELETE', `issues/${pr.number}/labels/${encodeURIComponent(stale)}`);
+    } catch (error) {
+      // Someone removed it since the PR was read.
+      ignoreStatus(error, 404);
+    }
+  }
+  return add !== null || remove.length > 0;
+}
+
+/** Creates the status labels the repo lacks (`existing` comes from PR_QUERY), so they get their colours. */
+export async function ensureStatusLabels(
+  existing: readonly string[],
+  token: string,
+  fetchFn: Fetch = fetch,
+): Promise<void> {
+  for (const name of STATUS_LABEL_NAMES.filter((l) => !existing.includes(l))) {
+    try {
+      await github(fetchFn, token, 'POST', 'labels', { name, ...STATUS_LABELS[name] });
+    } catch (error) {
+      // 422: it exists (a list cut short at 100 labels, or another run made it).
+      ignoreStatus(error, 422);
+    }
+  }
+}
+
+/**
  * The steward's settings from the environment. A missing steward secret with AUTO_STEWARD on is an
  * error, so a misconfigured steward fails loudly.
  */
@@ -692,6 +852,7 @@ export function settingsFromEnv(env: Readonly<Record<string, string | undefined>
 // milestone was most of this query's cost, run on every CI result and comment (#293).
 export const PR_QUERY = `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
+    labels(first: 100) { nodes { name } }
     defaultBranchRef { name target { ... on Commit { statusCheckRollup { contexts(first: 100) { nodes { ...Context } } } } } }
     issues(states: OPEN, labels: ["bug"], first: 50) { nodes { number body } }
     milestones(states: OPEN, first: 50) {
@@ -791,9 +952,51 @@ interface RecentCommit {
 export const changedFiles = (files: ChangedFiles | null): string[] | null =>
   files && files.totalCount <= files.nodes.length ? files.nodes.map((f) => f.path) : null;
 
-/** The new paths of the files a PR renames. */
-export const renamedFiles = (files: ChangedFiles | null): string[] =>
-  (files?.nodes ?? []).filter((f) => f.changeType === 'RENAMED').map((f) => f.path);
+/** A renamed file. GraphQL gives only its new path; `from` comes from the REST file list (#417). */
+export interface Rename {
+  readonly path: string;
+  readonly from: string | null;
+}
+
+/** The files a PR renames, by their new path; their old paths aren't known yet. */
+export const renamedFiles = (files: ChangedFiles | null): Rename[] =>
+  (files?.nodes ?? []).filter((f) => f.changeType === 'RENAMED').map((f) => ({ path: f.path, from: null }));
+
+/** One entry of REST `GET pulls/{n}/files`. */
+export interface RestFile {
+  readonly filename: string;
+  readonly status: string;
+  readonly previous_filename?: string;
+}
+
+/** Fills in each rename's old path from the REST file list; one it doesn't list stays unknown. */
+export const renameSources = (renamed: readonly Rename[], rest: readonly RestFile[]): Rename[] =>
+  renamed.map((r) => ({
+    path: r.path,
+    from: rest.find((f) => f.filename === r.path && f.status === 'renamed')?.previous_filename ?? r.from,
+  }));
+
+/** The renames that need an approval: away from a critical path, or from a path that isn't known. */
+const renamedCritical = (renamed: readonly Rename[]): string[] =>
+  renamed.flatMap((r) =>
+    r.from === null
+      ? [`${r.path} (renamed: its old path is unknown)`]
+      : criticalFiles([r.from]).length
+        ? [`${r.path} (renamed from ${r.from})`]
+        : [],
+  );
+
+/** Reads the old paths of a PR's renames (one request, only for a PR that renames something). */
+async function withRenameSources(pr: StewardPr, token: string): Promise<StewardPr> {
+  if (!pr.renamed.length) return pr;
+  try {
+    const res = await github(fetch, token, 'GET', `pulls/${pr.number}/files?per_page=100`);
+    return { ...pr, renamed: renameSources(pr.renamed, (await res.json()) as RestFile[]) };
+  } catch (error) {
+    console.log(`#${pr.number}: couldn't read the renamed files' old paths, so they stay gated: ${String(error)}`);
+    return pr;
+  }
+}
 
 /**
  * When the latest commit (oldest first) that isn't a merge was made, or the latest commit's time if
@@ -804,6 +1007,7 @@ export const codeCommittedAt = (commits: readonly RecentCommit[]): string | null
 
 interface PrData {
   repository: {
+    labels: { nodes: { name: string }[] };
     defaultBranchRef: {
       name: string;
       target: { statusCheckRollup: { contexts: { nodes: ContextNode[] } } | null } | null;
@@ -892,7 +1096,20 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
   const mainChecks = (repository.defaultBranchRef.target?.statusCheckRollup?.contexts.nodes ?? []).map(toCheck);
   const mainRed = mainRedFrom(currentChecks(mainChecks), repository.issues.nodes);
   if (mainRed) console.log(`${repository.defaultBranchRef.name} CI is failing: only its fix merges (#220).`);
-  for (const pr of nodes.map(toStewardPr)) {
+  // Labelling is reporting, not acting: it runs with AUTO_STEWARD and AUTO_MERGE off too (#419).
+  // A failure here is recorded, never allowed to stop the PRs from being acted on.
+  if (!dryRun) {
+    try {
+      await ensureStatusLabels(
+        repository.labels.nodes.map((l) => l.name),
+        token,
+      );
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  let relabelled = 0;
+  for (const pr of await Promise.all(nodes.map((node) => withRenameSources(toStewardPr(node), token)))) {
     const decision = decide(
       pr,
       now,
@@ -917,14 +1134,27 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
               ? decision.paths.join(', ')
               : '';
     const note = dryRun ? ' (dry run)' : switchedOff ? ' (switched off)' : '';
-    console.log(`#${pr.number}: ${decision.kind}${detail ? ` (${detail})` : ''}${note}`);
+    const label = statusLabel(decision, pr);
+    const { add, remove } = labelChanges(pr.labels, label);
+    const relabel =
+      add || remove.length ? `; label ${add ?? 'none'}${remove.length ? `, was ${remove.join(', ')}` : ''}` : '';
+    console.log(`#${pr.number}: ${decision.kind}${detail ? ` (${detail})` : ''}${note}${relabel}`);
     if (dryRun) continue;
+    // A merge about to happen closes the PR, so its label would be a wasted write.
+    if (!(decision.kind === 'merge' && settings.merge)) {
+      try {
+        if (await applyStatusLabel(pr, label, token)) relabelled++;
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : String(error));
+      }
+    }
     try {
       await act(pr, decision, token, settings);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));
     }
   }
+  console.log(`Status labels: ${relabelled} PR${relabelled === 1 ? '' : 's'} relabelled.`);
   if (failures.length) throw new Error(failures.join('\n'));
 }
 

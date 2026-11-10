@@ -13,11 +13,19 @@ name: PR steward
 # PROJECT_TOKEN (classic PAT) does the writes, so its pushes and merges start CI.
 #
 # API quota (#293): PROJECT_TOKEN's requests count against the maintainer's own hourly quota,
-# shared with Board sync and every other workflow that uses it. So an event run first waits 60 s
-# in the debounce job, where a newer event cancels it: a burst (CI and the review finishing, an
-# agent's comments) ends in one sweep, and nothing is ever cancelled mid-write. The hourly schedule
-# skips the wait. Each run logs the requests it made and the quota left; an exhausted quota logs
-# its reset time and passes green (scripts/rate-limit.ts).
+# shared with Board sync and every other workflow that uses it. So every run first passes the
+# debounce job (scripts/debounce.ts, #417): it sweeps at once when no other run is active, yields
+# green to a newer run that will sweep, and waits for an older one that is still sweeping. A burst
+# (CI and the review finishing, an agent's comments) ends in at most two sweeps, nothing is
+# cancelled (a cancelled run shows as a red ✗ on the PR), and runs never overlap. Each run logs the
+# requests it made and the quota left; an exhausted quota logs its reset time and passes green
+# (scripts/rate-limit.ts).
+#
+# Status labels (#419): every run gives each open PR one `waiting: …` / `ready to merge` label, even
+# with the switches off. So a label follows within one run, it also runs when a PR turns draft or
+# ready or closes, when an issue's labels, milestone or state change (a `needs-info` answered, a
+# blocker closed), and on the maintainer's comment on a `needs-info` issue. Not on
+# `pull_request: labeled`: its own label writes would wake it again.
 on:
   workflow_run:
     workflows: [CI, Claude Code Review]
@@ -26,6 +34,10 @@ on:
     types: [created]
   pull_request_review:
     types: [submitted]
+  pull_request:
+    types: [converted_to_draft, ready_for_review, closed]
+  issues:
+    types: [labeled, unlabeled, milestoned, demilestoned, closed]
   push:
     branches: [main]
   schedule:
@@ -38,27 +50,42 @@ permissions:
 jobs:
   debounce:
     name: debounce
-    # Comments on plain issues don't concern PRs; fork PRs get no secrets. In a public repo anyone
-    # can comment, so only the maintainer's comments and reviews start a run (#221).
+    # Comments on plain issues don't concern PRs, except an answer on a `needs-info` issue (it
+    # holds the PR that closes it, #419); fork PRs get no secrets. In a public repo anyone can
+    # comment, so only the maintainer's comments and reviews start a run (#221).
     if: >-
-      github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' &&
-      (github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
+      (github.event_name != 'issue_comment' ||
+        ((github.event.issue.pull_request || contains(github.event.issue.labels.*.name, 'needs-info')) &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))) &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) &&
       (github.event_name != 'pull_request_review' || (!github.event.pull_request.head.repo.fork &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)))
-    # A newer event cancels this wait, so only the last run of a burst goes on to sweep.
-    concurrency:
-      group: pr-steward-debounce
-      cancel-in-progress: true
+    # Lets only the newest run of a burst sweep, with no fixed wait and nothing cancelled (#417):
+    # older runs pass green and their sweep is skipped (scripts/debounce.ts).
+    permissions:
+      actions: read
+    outputs:
+      go: ${{ steps.gate.outputs.go }}
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for the burst to settle
-        run: sleep 60
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Let the newest run of a burst sweep
+        id: gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/debounce.ts
 
   pr-steward:
     name: pr-steward
     needs: debounce
-    if: always() && (needs.debounce.result == 'success' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: needs.debounce.outputs.go == 'true'
     # Runs queue instead of overlapping; each one reads the PRs fresh.
     concurrency:
       group: pr-steward

@@ -9,7 +9,7 @@ import {
   SETTINGS_VERSION,
   type KeyValueStorage,
 } from './persist';
-import { DEFAULT_SETTINGS } from './settings';
+import { DEFAULT_SETTINGS, defaultSettings } from './settings';
 
 const saved = (storage: KeyValueStorage) => JSON.parse(storage.getItem(SETTINGS_KEY) ?? 'null');
 const withRaw = (raw: string) => {
@@ -32,15 +32,29 @@ describe('createPersistedSettings', () => {
     const storage = createMemoryStorage();
     const settings = createPersistedSettings(storage);
     settings.set({ defaultSpeed: 2 });
-    expect(saved(storage)).toEqual({ version: SETTINGS_VERSION, settings: { defaultSpeed: 2, showAllRanges: false } });
+    expect(saved(storage)).toEqual({ version: SETTINGS_VERSION, settings: { ...DEFAULT_SETTINGS, defaultSpeed: 2 } });
     settings.set({ showAllRanges: true });
-    expect(saved(storage)).toEqual({ version: SETTINGS_VERSION, settings: { defaultSpeed: 2, showAllRanges: true } });
+    expect(saved(storage)).toEqual({
+      version: SETTINGS_VERSION,
+      settings: { ...DEFAULT_SETTINGS, defaultSpeed: 2, showAllRanges: true },
+    });
   });
 
   it('loads the saved settings at boot', () => {
     const storage = createMemoryStorage();
-    createPersistedSettings(storage).set({ defaultSpeed: 3, showAllRanges: true });
-    expect(createPersistedSettings(storage).get()).toEqual({ defaultSpeed: 3, showAllRanges: true });
+    const chosen = {
+      defaultSpeed: 3,
+      showAllRanges: true,
+      showMapGrid: false,
+      masterVolume: 50,
+      musicVolume: 0,
+      sfxVolume: 100,
+      reducedMotion: true,
+      textSize: 125,
+      tacticalMode: true,
+    } as const;
+    createPersistedSettings(storage).set(chosen);
+    expect(createPersistedSettings(storage).get()).toEqual(chosen);
   });
 
   it('does not save a change that set rejects', () => {
@@ -81,16 +95,45 @@ describe('loadSettings', () => {
     expect(loadSettings(withRaw(raw))).toEqual(DEFAULT_SETTINGS);
   });
 
+  const v2 = (settings: object) => withRaw(JSON.stringify({ version: 2, settings }));
+
   it('falls back to the default field by field', () => {
-    const raw = JSON.stringify({ version: 1, settings: { defaultSpeed: 4, showAllRanges: true } });
-    expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 1, showAllRanges: true });
-    const raw2 = JSON.stringify({ version: 1, settings: { defaultSpeed: 3, showAllRanges: 'yes' } });
-    expect(loadSettings(withRaw(raw2))).toEqual({ defaultSpeed: 3, showAllRanges: false });
+    expect(loadSettings(v2({ defaultSpeed: 4, showAllRanges: true }))).toEqual({
+      ...DEFAULT_SETTINGS,
+      showAllRanges: true,
+    });
+    expect(loadSettings(v2({ defaultSpeed: 3, showAllRanges: 'yes' }))).toEqual({
+      ...DEFAULT_SETTINGS,
+      defaultSpeed: 3,
+    });
+  });
+
+  it('keeps a saved Show map grid choice, and defaults to on for a missing or invalid one (#400)', () => {
+    expect(loadSettings(v2({ showMapGrid: false })).showMapGrid).toBe(false);
+    expect(loadSettings(v2({})).showMapGrid).toBe(true);
+    expect(loadSettings(v2({ showMapGrid: 'no' })).showMapGrid).toBe(true);
+  });
+
+  it('clamps an out-of-range volume to 0–100 and rounds it to a whole number', () => {
+    expect(loadSettings(v2({ masterVolume: 150, musicVolume: -5, sfxVolume: 42.6 }))).toEqual({
+      ...DEFAULT_SETTINGS,
+      masterVolume: 100,
+      musicVolume: 0,
+      sfxVolume: 43,
+    });
+  });
+
+  it.each([
+    ['a string', '50'],
+    ['null', null],
+    ['NaN (saved as null)', Number.NaN],
+    ['a boolean', true],
+  ])('gives a volume that is %s its default', (_name, value) => {
+    expect(loadSettings(v2({ masterVolume: value, musicVolume: value, sfxVolume: value }))).toEqual(DEFAULT_SETTINGS);
   });
 
   it('drops unknown fields', () => {
-    const raw = JSON.stringify({ version: 1, settings: { defaultSpeed: 2, volume: 11 } });
-    expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 2, showAllRanges: false });
+    expect(loadSettings(v2({ defaultSpeed: 2, volume: 11 }))).toEqual({ ...DEFAULT_SETTINGS, defaultSpeed: 2 });
   });
 
   it('returns the defaults for a version newer than this build knows', () => {
@@ -98,9 +141,56 @@ describe('loadSettings', () => {
     expect(loadSettings(withRaw(raw))).toEqual(DEFAULT_SETTINGS);
   });
 
+  it('migrates a v1 save: its speed and ranges stay, the volumes take their defaults', () => {
+    const raw = JSON.stringify({ version: 1, settings: { defaultSpeed: 3, showAllRanges: true } });
+    expect(loadSettings(withRaw(raw))).toEqual({ ...DEFAULT_SETTINGS, defaultSpeed: 3, showAllRanges: true });
+  });
+
   it('migrates an older version', () => {
     const raw = JSON.stringify({ version: 0, settings: { defaultSpeed: 3, showAllRanges: true } });
-    expect(loadSettings(withRaw(raw))).toEqual({ defaultSpeed: 3, showAllRanges: true });
+    expect(loadSettings(withRaw(raw))).toEqual({ ...DEFAULT_SETTINGS, defaultSpeed: 3, showAllRanges: true });
+  });
+
+  it('migrates a v2 save: its values stay, text size is 100 and reduced motion follows the system', () => {
+    const v2 = { defaultSpeed: 2, showAllRanges: true, masterVolume: 40, musicVolume: 30, sfxVolume: 20 } as const;
+    const raw = JSON.stringify({ version: 2, settings: v2 });
+    expect(loadSettings(withRaw(raw))).toEqual({
+      ...v2,
+      showMapGrid: true,
+      reducedMotion: false,
+      textSize: 100,
+      tacticalMode: false,
+    });
+    const prefersLess = defaultSettings({ prefersReducedMotion: true });
+    expect(loadSettings(withRaw(raw), prefersLess)).toEqual({
+      ...v2,
+      showMapGrid: true,
+      reducedMotion: true,
+      textSize: 100,
+      tacticalMode: false,
+    });
+  });
+
+  it.each([110, '150', null, 1.5])('falls back to text size 100 for a saved %j', (textSize) => {
+    const raw = JSON.stringify({ version: SETTINGS_VERSION, settings: { ...DEFAULT_SETTINGS, textSize } });
+    expect(loadSettings(withRaw(raw))).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it.each(['yes', 1, null])('falls back to the system preference for a saved reducedMotion of %j', (reducedMotion) => {
+    const raw = JSON.stringify({ version: SETTINGS_VERSION, settings: { ...DEFAULT_SETTINGS, reducedMotion } });
+    expect(loadSettings(withRaw(raw))).toEqual(DEFAULT_SETTINGS);
+    const prefersLess = defaultSettings({ prefersReducedMotion: true });
+    expect(loadSettings(withRaw(raw), prefersLess)).toEqual(prefersLess);
+  });
+
+  it('keeps a saved reducedMotion of false even when the system prefers less motion: the player chose it', () => {
+    const raw = JSON.stringify({ version: SETTINGS_VERSION, settings: { ...DEFAULT_SETTINGS, reducedMotion: false } });
+    expect(loadSettings(withRaw(raw), defaultSettings({ prefersReducedMotion: true })).reducedMotion).toBe(false);
+  });
+
+  it('starts at the given defaults with nothing saved', () => {
+    const prefersLess = defaultSettings({ prefersReducedMotion: true });
+    expect(createPersistedSettings(createMemoryStorage(), prefersLess).get()).toEqual(prefersLess);
   });
 
   it('returns the defaults when reading storage throws', () => {
@@ -109,10 +199,58 @@ describe('loadSettings', () => {
 });
 
 describe('migrate', () => {
-  it('brings an older version up to the current one (v1 has nothing to change)', () => {
-    const data = { defaultSpeed: 2, showAllRanges: true };
-    expect(migrate(0, data)).toEqual(data);
-    expect(migrate(SETTINGS_VERSION, data)).toEqual(data);
+  it('is at version 4, the first with Tactical mode', () => {
+    expect(SETTINGS_VERSION).toBe(4);
+  });
+
+  it('brings v1 (and v0) up to v4 by adding the default volumes, text size and Tactical mode off', () => {
+    const v1 = { defaultSpeed: 2, showAllRanges: true };
+    const v4 = { ...v1, masterVolume: 80, musicVolume: 60, sfxVolume: 80, textSize: 100, tacticalMode: false };
+    expect(migrate(1, v1)).toEqual(v4);
+    expect(migrate(0, v1)).toEqual(v4);
+  });
+
+  it('brings v2 up to v4 by adding text size 100 and Tactical mode off; reduced motion stays unset, to follow the system', () => {
+    const v2 = { defaultSpeed: 2, showAllRanges: true, masterVolume: 1, musicVolume: 2, sfxVolume: 3 };
+    expect(migrate(2, v2)).toEqual({ ...v2, textSize: 100, tacticalMode: false });
+  });
+
+  it('brings v3 up to v4 with Tactical mode off, keeping the rest (#413)', () => {
+    const v3 = { ...DEFAULT_SETTINGS, textSize: 150, reducedMotion: true, tacticalMode: undefined };
+    expect(migrate(3, v3)).toEqual({ ...v3, tacticalMode: false });
+  });
+
+  it('keeps a saved Tactical mode, and replaces one that is not a boolean', () => {
+    const v4 = (tacticalMode: unknown) =>
+      withRaw(JSON.stringify({ version: 4, settings: { ...DEFAULT_SETTINGS, tacticalMode } }));
+    expect(loadSettings(v4(true)).tacticalMode).toBe(true);
+    expect(loadSettings(v4('yes')).tacticalMode).toBe(false);
+  });
+
+  it('keeps a v1 save’s other fields for sanitize to judge, and leaves a v4 save as it is', () => {
+    expect(migrate(1, { defaultSpeed: 9 })).toEqual({
+      defaultSpeed: 9,
+      masterVolume: 80,
+      musicVolume: 60,
+      sfxVolume: 80,
+      textSize: 100,
+      tacticalMode: false,
+    });
+    const data = {
+      defaultSpeed: 2,
+      showAllRanges: true,
+      masterVolume: 1,
+      musicVolume: 2,
+      sfxVolume: 3,
+      reducedMotion: true,
+      textSize: 150,
+      tacticalMode: true,
+    };
+    expect(migrate(4, data)).toEqual(data);
+  });
+
+  it('passes a v1 save that is not an object on, for sanitize to replace', () => {
+    expect(migrate(1, 'fast')).toBe('fast');
   });
 
   it('refuses a newer or malformed version', () => {

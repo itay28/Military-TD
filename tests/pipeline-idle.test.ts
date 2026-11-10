@@ -68,6 +68,20 @@ describe('isStarved', () => {
   it('is not starved when the run planned a start or a retry', () => {
     expect(isStarved([], 1)).toBe(false);
   });
+
+  it('ignores parked agents (needs-info, needs-you, hold)', () => {
+    const parked = { autoAgent: true, status: 'In progress' };
+    expect(
+      isStarved(
+        [
+          { ...parked, needsInfo: true },
+          { ...parked, needsYou: true },
+          { ...parked, hold: true },
+        ],
+        0,
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('idleReasons: waiting on you', () => {
@@ -78,6 +92,12 @@ describe('idleReasons: waiting on you', () => {
     );
     expect(keys(rs.filter((r) => r.group === 'waiting'))).toEqual(['waiting:#5', 'waiting:#6', 'waiting:PR#213']);
     expect(texts(rs, 'waiting').join('\n')).toContain('PR #213');
+  });
+
+  it('lists a PR waiting for an approval (needs-approval, #417)', () => {
+    const rs = reasons([], [pr(214, [7], { labels: ['needs-approval'] })]);
+    expect(keys(rs.filter((r) => r.group === 'waiting'))).toEqual(['waiting:PR#214']);
+    expect(texts(rs, 'waiting').join('\n')).toContain('needs-approval');
   });
 
   it('lists ready-for-human issues in the current milestone only', () => {

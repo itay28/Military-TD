@@ -41,7 +41,7 @@ describe('ghostAt', () => {
 
   it('shows a ghost that is not placeable once the game has ended', () => {
     const game = newGame(100, 1);
-    game.startWave();
+    game.callNextWave();
     for (let t = 0; t < 20_000 && game.state.phase === 'wave'; t += TICK_MS) game.tick(TICK_MS);
     expect(game.state.phase).toBe('defeat');
     expect(ghostAt(game, 'rifleNest', EMPTY)).toEqual({ tile: EMPTY, placeable: false });
@@ -73,7 +73,7 @@ describe('placeAt', () => {
 
   it('places during a wave too', () => {
     const game = newGame();
-    game.startWave();
+    game.callNextWave();
     expect(game.state.phase).toBe('wave');
     expect(ghostAt(game, 'rifleNest', EMPTY)).toEqual({ tile: EMPTY, placeable: true });
     expect(placeAt(game, 'rifleNest', EMPTY)).toBeUndefined();
@@ -81,7 +81,7 @@ describe('placeAt', () => {
   });
 
   it('says why when the sim refuses', () => {
-    expect(placeAt(newGame(49), 'rifleNest', EMPTY)).toBe('Not enough money');
+    expect(placeAt(newGame(49), 'rifleNest', EMPTY)).toBe('Not enough funds');
     expect(placeAt(newGame(), 'rifleNest', PATH)).toBe("Can't build here");
     const game = newGame();
     placeAt(game, 'rifleNest', EMPTY);

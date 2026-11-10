@@ -1,12 +1,21 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { PNG } from 'pngjs';
 import { openGame, state, stepToEnd, view } from './helpers';
 
 const LAYERS = ['map', 'towers', 'enemies'];
 
+/** The share of the canvas that is near black: an empty map is all dark fill and faint grid; the tileset is not. */
+async function darkShare(page: Page): Promise<number> {
+  const { data } = PNG.sync.read(await page.locator('#game canvas').screenshot());
+  let dark = 0;
+  for (let i = 0; i < data.length; i += 4) if (Math.max(data[i]!, data[i + 1]!, data[i + 2]!) < 48) dark++;
+  return dark / (data.length / 4);
+}
+
 /** Loads a one-tower game and steps into its wave until the enemy is drawn. */
-async function startWave(page: import('@playwright/test').Page) {
+async function callNextWave(page: import('@playwright/test').Page) {
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
-  await page.evaluate(() => window.__TD__!.command({ type: 'startWave' }));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
   await page.evaluate(() => window.__TD__!.step(10));
   // Enemy views are made on the next frame, so wait for one.
   await expect.poll(async () => (await view(page)).drawOrder).toContain('enemies');
@@ -14,7 +23,7 @@ async function startWave(page: import('@playwright/test').Page) {
 
 test('the atlas loads: sprites on, same draw order, the game plays to Victory', async ({ page }) => {
   await openGame(page);
-  await startWave(page);
+  await callNextWave(page);
   const { sprites, mapTiles, drawOrder } = await view(page);
   expect(sprites).toBe(true);
   expect(mapTiles).toBe('image');
@@ -30,10 +39,11 @@ test('a blocked ground image falls back to the tileset (#312)', async ({ page })
   });
   await openGame(page);
   expect(blocked.length).toBeGreaterThan(0);
-  await startWave(page);
+  await callNextWave(page);
   const { sprites, mapTiles } = await view(page);
   expect(sprites).toBe(true);
   expect(mapTiles).toBe('sprites');
+  expect(await darkShare(page)).toBeLessThan(0.5);
   expect((await stepToEnd(page)).phase).toBe('victory');
 });
 
@@ -45,7 +55,7 @@ test('a blocked atlas and ground image fall back to shapes and never break the g
   });
   await openGame(page);
   expect(blocked.length).toBeGreaterThan(0);
-  await startWave(page);
+  await callNextWave(page);
   const { sprites, mapTiles, drawOrder } = await view(page);
   expect(sprites).toBe(false);
   expect(mapTiles).toBe('shapes');
@@ -55,7 +65,7 @@ test('a blocked atlas and ground image fall back to shapes and never break the g
 
 test("a tower's turret turns to face its target", async ({ page }) => {
   await openGame(page);
-  await startWave(page);
+  await callNextWave(page);
   // Step until the Infantry is in the Rifle Nest's range; the game then waits (?step=manual) while the turret turns.
   let gap = Infinity;
   let aim = 0;

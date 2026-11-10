@@ -3,14 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Military TD</title>
+    <title>Hold the Perimeter</title>
+    <link rel="stylesheet" href="/src/ui/fonts.css" />
     <style>
+      /* The military look (#399): the palette and faces of src/data/theme.ts (theme.test.ts keeps them in step). Rules
+         use only these tokens, and size text in rem, so the text-size setting (#354) scales it from the root size. */
+      :root {
+        --olive-950: #14170f;
+        --olive-900: #1b1e16;
+        --olive-800: #232820;
+        --olive-700: #343a29;
+        --olive-600: #4a4f3c;
+        --olive-500: #5e6350;
+        --green-600: #5b6b3a;
+        --tan: #c2a46b;
+        --tan-light: #e8d9b0;
+        --bone: #e4e0c8;
+        --bone-dim: #a2a58f;
+        --bone-muted: #959179;
+        --amber: #f0c95a;
+        --danger: #e0533d;
+        --ok: #6fcf4f;
+        --link: #9cc8e8;
+        --font-stencil: 'Allerta Stencil', 'Allerta Stencil Fallback', sans-serif;
+        --font-mono: 'IBM Plex Mono', 'IBM Plex Mono Fallback', monospace;
+        /* Corner brackets: an L in tan at each corner of a frame, drawn as background layers so they stay put when
+           a dialog's content scrolls. Put before the frame's own background. */
+        --brackets:
+          linear-gradient(var(--tan), var(--tan)) left top / 10px 2px no-repeat,
+          linear-gradient(var(--tan), var(--tan)) left top / 2px 10px no-repeat,
+          linear-gradient(var(--tan), var(--tan)) right top / 10px 2px no-repeat,
+          linear-gradient(var(--tan), var(--tan)) right top / 2px 10px no-repeat,
+          linear-gradient(var(--tan), var(--tan)) left bottom / 10px 2px no-repeat,
+          linear-gradient(var(--tan), var(--tan)) left bottom / 2px 10px no-repeat,
+          linear-gradient(var(--tan), var(--tan)) right bottom / 10px 2px no-repeat,
+          linear-gradient(var(--tan), var(--tan)) right bottom / 2px 10px no-repeat;
+      }
+      /* Text size (#354): the Settings screen sets --text-scale on <html> (1, 1.25 or 1.5); the root font size follows
+         it, so every rem size below scales with it. */
+      :root {
+        --text-scale: 1;
+      }
+      html {
+        font-size: calc(16px * var(--text-scale));
+      }
+      /* Reduced motion (#354): no CSS transition or animation while the setting is on (src/settings/display.ts). */
+      :root[data-reduced-motion] *,
+      :root[data-reduced-motion] *::before,
+      :root[data-reduced-motion] *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
       html,
       body {
         margin: 0;
         height: 100%;
         overflow: hidden;
-        background: #1b1e16;
+        background: var(--olive-950);
+        font-family: var(--font-mono);
       }
       /* The HUD and build bar are DOM, not Phaser text (ADR-0003): the HUD along the top and the build bar against
          the right edge, so neither covers the map. The stage takes the rest of the window, and the camera fits the map
@@ -29,39 +80,68 @@
         padding: 6px;
       }
       /* Three fixed groups (#274): the stats, a message slot and the controls. The slot takes the leftover space and
-         clips its text, so nothing the HUD says can move a button or make the HUD taller. */
+         clips its text, so nothing the HUD says can move a button or make the HUD taller. Only bigger text (#354) that
+         leaves no room on one line wraps the controls onto a second; the stats and controls have fixed widths, so that
+         depends on the text size, not on what the HUD says. */
       #hud {
         grid-area: hud;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 20px;
+        gap: 4px 6px;
         box-sizing: border-box;
         min-height: 36px;
         padding: 0 8px;
-        font: 16px monospace;
-        color: #e4e0c8;
+        font: 1rem var(--font-mono);
+        color: var(--bone);
       }
       #hud .hud-stats {
         display: flex;
         flex: none;
-        gap: 12px;
+        gap: 4px;
       }
-      /* Fixed widths, so Money 100 → 75 or DPS – → DPS 12 doesn't shift its neighbours. */
+      /* Fixed widths, so Funds $100 → $75 or DPS – → DPS 12 doesn't shift its neighbours. */
       #hud .hud-stats > span {
         display: block;
         white-space: nowrap;
       }
       #hud [data-testid='hud-money'] {
-        min-width: 11ch;
+        min-width: 10ch;
       }
-      #hud [data-testid='hud-lives'] {
-        min-width: 8ch;
+      /* The HQ: label, a bar of the Lives left and "14/20". The digits keep a fixed width, so a leak shifts nothing.
+         The bar turns amber at half and red at a quarter; the number says the same without colour. */
+      #hud .hud-stats > .hq {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      #hud .hq-bar {
+        position: relative;
+        width: 24px;
+        height: 10px;
+        box-sizing: border-box;
+        border: 1px solid var(--bone-dim);
+        background: var(--olive-950);
+      }
+      #hud .hq-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: var(--ok);
+      }
+      #hud .hq[data-level='low'] .hq-fill {
+        background: var(--amber);
+      }
+      #hud .hq[data-level='critical'] .hq-fill {
+        background: var(--danger);
+      }
+      #hud .hq-count {
+        min-width: 5ch;
       }
       #hud [data-testid='hud-wave'] {
         min-width: 12ch;
       }
       #hud [data-testid='hud-dps'] {
-        min-width: 9ch;
+        min-width: 8ch;
       }
       #hud .hud-message {
         flex: 1;
@@ -72,13 +152,15 @@
         white-space: nowrap;
         text-overflow: ellipsis;
       }
+      /* Inline, one after the other: the countdown first, so it shows whole; the banner after it, cut off if need be. */
       #hud .hud-message > * {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        display: inline;
+      }
+      #hud .hud-message > :not(:empty) + * {
+        margin-left: 1ch;
       }
       #hud .hud-banner {
-        color: #f0c95a;
+        color: var(--amber);
         font-weight: bold;
       }
       #hud .hud-controls {
@@ -88,12 +170,11 @@
         gap: 6px;
       }
       #hud button {
-        padding: 4px 14px;
-        font: bold 15px monospace;
-        color: #1b1e16;
-        background: #c2a46b;
+        padding: 4px 10px;
+        font: bold 0.9375rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
         border: 0;
-        border-radius: 3px;
         cursor: pointer;
       }
       .speed-group {
@@ -102,18 +183,18 @@
       }
       #hud .speed-group button {
         padding: 4px 5px;
-        color: #c2a46b;
+        color: var(--tan);
         background: transparent;
-        box-shadow: inset 0 0 0 2px #c2a46b;
+        box-shadow: inset 0 0 0 2px var(--tan);
       }
       #hud .speed-group button[aria-pressed='true'] {
-        color: #1b1e16;
-        background: #c2a46b;
+        color: var(--olive-900);
+        background: var(--tan);
       }
       #hud .speed-group button:disabled {
-        color: #5e6350;
+        color: var(--olive-500);
         background: transparent;
-        box-shadow: inset 0 0 0 2px #5e6350;
+        box-shadow: inset 0 0 0 2px var(--olive-500);
       }
       #pause-menu .speed-group {
         justify-content: center;
@@ -122,51 +203,211 @@
       #pause-menu .speed-group button {
         min-width: 0;
         padding: 6px 14px;
-        color: #c2a46b;
+        color: var(--tan);
         background: transparent;
-        box-shadow: inset 0 0 0 2px #c2a46b;
+        box-shadow: inset 0 0 0 2px var(--tan);
       }
       #pause-menu .speed-group button[aria-pressed='true'] {
-        color: #1b1e16;
-        background: #c2a46b;
+        color: var(--olive-900);
+        background: var(--tan);
       }
       #hud button:disabled {
-        background: #5e6350;
-        color: #a2a58f;
+        background: var(--olive-500);
+        color: var(--bone-dim);
         cursor: default;
       }
       #hud button:focus-visible {
-        outline: 2px solid #f0c95a;
+        outline: 2px solid var(--amber);
         outline-offset: 2px;
       }
       /* A toggle: outlined when off, filled when on. */
       #hud .hud-toggle {
-        color: #c2a46b;
+        color: var(--tan);
         background: transparent;
-        box-shadow: inset 0 0 0 2px #c2a46b;
+        box-shadow: inset 0 0 0 2px var(--tan);
       }
       #hud .hud-toggle[aria-pressed='true'] {
-        color: #1b1e16;
-        background: #c2a46b;
+        color: var(--olive-900);
+        background: var(--tan);
       }
       #hud .hud-toggle:disabled {
-        color: #5e6350;
+        color: var(--olive-500);
         background: transparent;
-        box-shadow: inset 0 0 0 2px #5e6350;
+        box-shadow: inset 0 0 0 2px var(--olive-500);
+      }
+      /* The DPS figure is a button that opens the DPS meter (#243): it reads as the figure, underlined. */
+      #hud {
+        position: relative;
+      }
+      #hud .hud-stats > button.hud-dps {
+        min-width: 9ch;
+        padding: 0;
+        font: inherit;
+        text-align: left;
+        white-space: nowrap;
+        color: inherit;
+        background: none;
+        text-decoration: underline dotted;
+        text-underline-offset: 3px;
+      }
+      #hud .hud-stats > button.hud-dps[aria-expanded='true'] {
+        color: var(--amber);
+      }
+      /* The DPS meter hangs under the HUD at the map's top-left corner, clear of its centre and of the tower panel
+         (top-right); it scrolls when it is taller than its cap. Under the End screen and Pause overlays. */
+      #hud .dps-meter {
+        position: absolute;
+        top: calc(100% + 14px);
+        left: 8px;
+        z-index: 1;
+        box-sizing: border-box;
+        width: 280px;
+        max-width: calc(100vw - 32px);
+        max-height: 55vh;
+        overflow-y: auto;
+        padding: 6px;
+        font: 0.75rem var(--font-mono);
+        background: color-mix(in srgb, var(--olive-900) 88%, transparent);
+        border: 1px solid var(--bone-muted);
+        border-radius: 3px;
+      }
+      #hud .dps-meter[hidden] {
+        display: none;
+      }
+      #hud .dps-scope {
+        display: flex;
+        gap: 3px;
+        margin-bottom: 6px;
+      }
+      #hud .dps-scope button {
+        flex: 1;
+        padding: 2px 4px;
+        font: bold 0.75rem var(--font-mono);
+        color: var(--tan);
+        background: transparent;
+        box-shadow: inset 0 0 0 2px var(--tan);
+      }
+      #hud .dps-scope button[aria-pressed='true'] {
+        color: var(--olive-900);
+        background: var(--tan);
+      }
+      #hud .dps-empty {
+        margin: 4px 2px;
+        color: var(--bone-dim);
+      }
+      #hud .dps-kinds,
+      #hud .dps-towers {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      #hud .dps-kind + .dps-kind {
+        margin-top: 4px;
+      }
+      /* The kind's row highlights its towers on the map; a small button beside it expands the tower list. */
+      #hud .dps-kind-head {
+        display: flex;
+        gap: 2px;
+      }
+      #hud .dps-meter button.dps-kind-row {
+        flex: 1;
+        min-width: 0;
+      }
+      #hud .dps-meter button.dps-kind-row[aria-pressed='true'] {
+        box-shadow: inset 0 0 0 2px var(--link);
+      }
+      #hud .dps-meter button.dps-kind-expand {
+        flex: none;
+        padding: 3px 8px;
+        font: 0.75rem var(--font-mono);
+        color: var(--bone);
+        background: color-mix(in srgb, var(--bone) 6%, transparent);
+        border-radius: 2px;
+      }
+      #hud .dps-meter button.dps-kind-expand::before {
+        content: '▸';
+      }
+      #hud .dps-meter button.dps-kind-expand[aria-expanded='true']::before {
+        content: '▾';
+      }
+      #hud .dps-meter button.dps-tower-button {
+        display: block;
+        width: 100%;
+        padding: 1px 4px 1px 22px;
+        font: inherit;
+        text-align: left;
+        color: inherit;
+        background: transparent;
+        white-space: nowrap;
+      }
+      #hud .dps-meter button.dps-tower-button:disabled {
+        cursor: default;
+      }
+      /* One kind: swatch, name, DPS, kills and share on a line, the share bar under it. */
+      #hud .dps-meter button.dps-kind-row {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr) auto auto 4ch;
+        align-items: center;
+        gap: 2px 6px;
+        width: 100%;
+        padding: 3px 4px;
+        font: 0.75rem var(--font-mono);
+        text-align: left;
+        color: var(--bone);
+        background: color-mix(in srgb, var(--bone) 6%, transparent);
+        border-radius: 2px;
+      }
+      #hud .dps-swatch {
+        box-sizing: border-box;
+        width: 12px;
+        height: 12px;
+        border: 2px solid;
+      }
+      #hud .dps-swatch[data-shape='circle'] {
+        border-radius: 50%;
+      }
+      #hud .dps-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #hud .dps-share {
+        text-align: right;
+      }
+      #hud .dps-bar {
+        grid-column: 1 / -1;
+        height: 3px;
+        background: color-mix(in srgb, var(--bone) 12%, transparent);
+      }
+      #hud .dps-bar-fill {
+        display: block;
+        height: 100%;
+        background: var(--tan);
+      }
+      #hud .dps-towers[hidden] {
+        display: none;
+      }
+      #hud .dps-tower {
+        padding: 0;
+        color: var(--bone-dim);
+        white-space: nowrap;
+      }
+      #hud .dps-tower[data-sold='true'] {
+        color: var(--bone-muted);
       }
       /* A phone: smaller type. After the base rules, so it wins. */
       @media (max-width: 640px), (max-height: 480px) {
         #hud {
-          gap: 4px 12px;
+          gap: 4px 10px;
           min-height: 28px;
-          font-size: 13px;
+          font-size: 0.8125rem;
         }
         #hud .hud-stats {
           gap: 12px;
         }
         #hud button {
           padding: 3px 10px;
-          font-size: 13px;
+          font-size: 0.8125rem;
         }
       }
       /* A narrow screen: three fixed rows, stats / controls / message. The message row is kept when empty. */
@@ -176,15 +417,33 @@
           grid-template-columns: minmax(0, 1fr);
           align-items: start;
         }
+        /* Stats and controls wrap onto a second line only when bigger text (#354) leaves no room on one. Each stat
+           keeps its fixed width, so a wrap depends on the text size, not on what the HUD says. */
         #hud .hud-stats {
-          flex-wrap: nowrap;
-          gap: 8px;
+          flex-wrap: wrap;
+          gap: 2px 8px;
+        }
+        /* Room for "Waves 10–11 / 12" (overlapping waves), so the stats don't re-wrap when a second wave arrives. */
+        #hud [data-testid='hud-wave'] {
+          min-width: 14ch;
         }
         #hud .hud-controls {
           order: 1;
+          flex-wrap: wrap;
         }
         #hud .hud-message {
           order: 2;
+        }
+        /* As wide as the map's column, clear of the build bar beside it. */
+        #hud .dps-meter {
+          width: calc(100vw - 132px);
+          max-height: 45vh;
+        }
+        #hud .dps-meter button.dps-kind-row {
+          grid-template-columns: 12px minmax(0, 1fr) auto 4ch;
+        }
+        #hud .dps-kills {
+          display: none;
         }
       }
       /* The End screen covers the canvas, so the map takes no clicks while it's open. */
@@ -198,6 +457,14 @@
       #game {
         position: absolute;
         inset: 0;
+      }
+      /* The map is a focus stop for the map cursor (#356): the outline says the arrow keys work. */
+      #game:focus {
+        outline: none;
+      }
+      #game:focus-visible {
+        outline: 3px solid var(--amber);
+        outline-offset: -3px;
       }
       /* Drags and pinches on the map move the camera, not the page. */
       #game canvas {
@@ -223,46 +490,46 @@
         width: 28px;
         height: 28px;
         padding: 0;
-        font: 12px monospace;
+        font: 0.75rem var(--font-mono);
         border-width: 1px;
       }
       #build-bar .build-grid {
         display: grid;
-        gap: 4px;
+        gap: 2px;
       }
       #build-bar .build-grid[hidden] {
         display: none;
       }
       #build-bar button {
         position: relative;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 4px;
         padding: 8px 0 5px;
-        font: bold 13px monospace;
-        color: #e4e0c8;
-        background: #262a1f;
-        border: 2px solid #4a4f3c;
-        border-radius: 3px;
+        font: bold 0.8125rem var(--font-mono);
+        color: var(--bone);
+        background: var(--olive-800);
+        border: 2px solid var(--olive-600);
         cursor: pointer;
       }
       #build-bar button[aria-pressed='true'] {
-        border-color: #f0c95a;
-        background: #343a29;
+        border-color: var(--amber);
+        background: var(--olive-700);
       }
       #build-bar button:disabled {
         cursor: default;
       }
       /* Unaffordable: a selected kind stays clickable (to clear it) but looks the same. */
       #build-bar button[aria-disabled='true'] {
-        color: #8a8670;
+        color: var(--bone-muted);
       }
       #build-bar button[aria-disabled='true'] .build-icon {
         opacity: 0.4;
       }
       #build-bar button:focus-visible {
-        outline: 2px solid #f0c95a;
+        outline: 2px solid var(--amber);
         outline-offset: 2px;
       }
       #build-bar .build-icon {
@@ -272,23 +539,64 @@
         height: 24px;
         border: 2px solid;
       }
+      /* A tower's stats, left of its button over the map; placed by buildBar.ts, which keeps the tile under the
+         pointer or finger clear. Taps go through it. */
+      #build-bar .build-tip {
+        position: fixed;
+        z-index: 5;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: 180px;
+        padding: 6px 8px;
+        font: 0.6875rem/1.35 var(--font-mono);
+        color: var(--bone);
+        background: color-mix(in srgb, var(--olive-900) 94%, transparent);
+        border: 1px solid var(--olive-600);
+        border-radius: 3px;
+        pointer-events: none;
+      }
+      #build-bar .build-tip[hidden] {
+        display: none;
+      }
+      #build-bar .build-tip strong {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--amber);
+      }
+      #build-bar .build-tip p {
+        margin: 2px 0 4px;
+        color: var(--bone-dim);
+      }
+      #build-bar .build-tip dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0 8px;
+        margin: 0;
+      }
+      #build-bar .build-tip dt {
+        color: var(--bone-dim);
+      }
+      #build-bar .build-tip dd {
+        margin: 0;
+      }
       #build-bar kbd {
         position: absolute;
         top: 1px;
         left: 3px;
-        font: 10px monospace;
-        color: #a2a58f;
+        font: 0.625rem var(--font-mono);
+        color: var(--bone-dim);
       }
       #end-screen,
       #pause-menu {
         position: absolute;
         inset: 0;
+        z-index: 2;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgb(27 30 22 / 0.72);
-        font: 16px monospace;
-        color: #e4e0c8;
+        background: color-mix(in srgb, var(--olive-900) 72%, transparent);
+        font: 1rem var(--font-mono);
+        color: var(--bone);
       }
       /* `display: flex` above would otherwise override the hidden attribute. The pause menu is styled like the End screen. */
       #end-screen[hidden],
@@ -309,29 +617,35 @@
         max-height: calc(100% - 16px);
         overflow-y: auto;
         padding: 16px 24px;
-        background: #262a1f;
-        border: 2px solid #c2a46b;
-        border-radius: 4px;
+        background: var(--olive-800);
+        border: 2px solid var(--tan);
       }
       /* Scroll cue: a glow on an edge with hidden content.
          The `local` cover layers hide it where nothing is clipped. */
       #end-screen [role='dialog'] {
         background:
-          linear-gradient(#262a1f 30%, rgb(38 42 31 / 0)) top / 100% 24px local no-repeat,
-          linear-gradient(rgb(38 42 31 / 0), #262a1f 70%) bottom / 100% 24px local no-repeat,
-          radial-gradient(farthest-side at 50% 0, rgb(240 201 90 / 0.5), rgb(240 201 90 / 0)) top / 100% 10px scroll
-            no-repeat,
-          radial-gradient(farthest-side at 50% 100%, rgb(240 201 90 / 0.5), rgb(240 201 90 / 0)) bottom / 100% 10px
-            scroll no-repeat,
-          #262a1f;
+          var(--brackets),
+          linear-gradient(var(--olive-800) 30%, transparent) top / 100% 24px local no-repeat,
+          linear-gradient(transparent, var(--olive-800) 70%) bottom / 100% 24px local no-repeat,
+          radial-gradient(farthest-side at 50% 0, color-mix(in srgb, var(--amber) 50%, transparent), transparent) top /
+            100% 10px scroll no-repeat,
+          radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, var(--amber) 50%, transparent), transparent)
+            bottom / 100% 10px scroll no-repeat,
+          var(--olive-800);
       }
       #end-screen h2,
       #pause-menu h2 {
         margin: 0;
-        font-size: 32px;
+        font-size: 2rem;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: #f0c95a;
+        color: var(--amber);
+      }
+      #end-screen h3 {
+        margin: 0;
+        font-size: 0.9375rem;
+        letter-spacing: 0.06em;
+        color: var(--tan);
       }
       #end-screen p,
       #pause-menu p {
@@ -339,10 +653,33 @@
       }
       /* A win's Stars, big enough to read at a glance; the words after them say the same for screen readers. */
       #end-screen .star-glyphs {
-        font-size: 28px;
+        font-size: 1.75rem;
         letter-spacing: 0.1em;
-        color: #f0c95a;
+        color: var(--amber);
         vertical-align: middle;
+      }
+      /* The Keys help overlay: its wrapper adds no box, so the dialog sizes against the pause menu like the Paused one. */
+      #pause-menu .help:not([hidden]) {
+        display: contents;
+      }
+      #pause-menu .help table {
+        border-collapse: collapse;
+        font-size: 0.875rem;
+      }
+      #pause-menu .help th,
+      #pause-menu .help td {
+        padding: 3px 10px;
+        text-align: left;
+        font-weight: normal;
+      }
+      #pause-menu .help thead th {
+        border-bottom: 1px solid var(--green-600);
+        color: var(--bone-dim);
+      }
+      #pause-menu .help kbd {
+        font: bold 0.875rem var(--font-mono);
+        color: var(--amber);
+        white-space: nowrap;
       }
       /* The damage report: small tables side by side, wrapping as the dialog narrows. */
       #end-screen .report {
@@ -351,7 +688,7 @@
         justify-content: center;
         align-items: flex-start;
         gap: 10px 20px;
-        font-size: 12px;
+        font-size: 0.75rem;
       }
       #end-screen table {
         border-collapse: collapse;
@@ -360,7 +697,7 @@
         padding-bottom: 2px;
         text-align: left;
         font-weight: bold;
-        color: #c2a46b;
+        color: var(--tan);
       }
       #end-screen th,
       #end-screen td {
@@ -374,39 +711,39 @@
         text-align: left;
       }
       #end-screen thead th {
-        border-bottom: 1px solid #5b6b3a;
-        color: #a2a58f;
+        border-bottom: 1px solid var(--green-600);
+        color: var(--bone-dim);
       }
       #end-screen tfoot th,
       #end-screen tfoot td {
-        border-top: 1px solid #5b6b3a;
+        border-top: 1px solid var(--green-600);
         font-weight: bold;
       }
       #end-screen button,
       #pause-menu button {
         padding: 6px 22px;
-        font: bold 16px monospace;
-        color: #1b1e16;
-        background: #c2a46b;
+        font: bold 1rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
         border: 0;
-        border-radius: 3px;
         cursor: pointer;
       }
       #end-screen button:focus-visible,
       #pause-menu button:focus-visible {
-        outline: 2px solid #f0c95a;
+        outline: 2px solid var(--amber);
         outline-offset: 2px;
       }
       #pause-menu button {
         min-width: 180px;
       }
       #pause-menu button:disabled {
-        color: #a2a58f;
-        background: #5e6350;
+        color: var(--bone-dim);
+        background: var(--olive-500);
         cursor: default;
       }
-      /* The tower panel sits over the top-right of the map; the End screen, after it, covers it. */
-      #tower-panel {
+      /* The tower panel (or the enemy card: one at a time) sits over the top-right of the map; the End screen, after it, covers it. */
+      #tower-panel,
+      #enemy-card {
         position: absolute;
         top: 8px;
         right: 8px;
@@ -414,80 +751,94 @@
         max-width: calc(100% - 16px);
         max-height: calc(100% - 16px);
         overflow-y: auto;
-        font: 13px monospace;
+        font: 0.8125rem var(--font-mono);
         overflow-wrap: anywhere;
-        color: #e4e0c8;
+        color: var(--bone);
       }
-      #tower-panel [role='dialog'] {
+      #tower-panel [role='dialog'],
+      #enemy-card [role='dialog'] {
         position: relative;
         box-sizing: border-box;
         padding: 10px 12px;
-        background: rgb(38 42 31 / 0.92);
-        border: 2px solid #c2a46b;
-        border-radius: 4px;
+        background: color-mix(in srgb, var(--olive-800) 92%, transparent);
+        border: 2px solid var(--tan);
       }
-      #tower-panel h2 {
+      #tower-panel h2,
+      #enemy-card h2 {
         margin: 0 24px 2px 0;
-        font-size: 15px;
-        color: #f0c95a;
+        font-size: 0.9375rem;
+        color: var(--amber);
       }
-      #tower-panel p {
+      #tower-panel p,
+      #enemy-card p {
         margin: 0 0 8px;
-        color: #a2a58f;
+        color: var(--bone-dim);
       }
-      #tower-panel dl {
+      #tower-panel dl,
+      #enemy-card dl {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         gap: 2px 10px;
         margin: 0;
       }
-      #tower-panel dt {
-        color: #a2a58f;
+      #tower-panel dt,
+      #enemy-card dt {
+        color: var(--bone-dim);
       }
-      #tower-panel dd {
+      #tower-panel dd,
+      #enemy-card dd {
         margin: 0;
         text-align: right;
       }
-      #tower-panel button[aria-label='Close'] {
+      #tower-panel button[aria-label='Close'],
+      #enemy-card button[aria-label='Close'] {
         position: absolute;
         top: 4px;
         right: 4px;
         width: 24px;
         height: 24px;
         padding: 0;
-        font: bold 16px monospace;
-        color: #e4e0c8;
+        font: bold 1rem var(--font-mono);
+        color: var(--bone);
         background: transparent;
         border: 0;
         cursor: pointer;
       }
       @media (max-width: 640px), (max-height: 480px) {
-        #tower-panel {
+        #tower-panel,
+        #enemy-card {
           width: 190px;
-          font-size: 12px;
+          font-size: 0.75rem;
         }
       }
-      #tower-panel button:focus-visible {
-        outline: 2px solid #f0c95a;
+      #tower-panel p.role,
+      #enemy-card p.role {
+        color: var(--bone);
+      }
+      #enemy-card p.role {
+        margin: 8px 0 0;
+      }
+      #tower-panel button:focus-visible,
+      #enemy-card button:focus-visible {
+        outline: 2px solid var(--amber);
       }
       #tower-panel [data-testid='tower-upgrade'] {
         display: block;
         width: 100%;
         margin-top: 10px;
         padding: 4px 8px;
-        font: bold 13px monospace;
-        color: #1b1e16;
-        background: #c2a46b;
+        font: bold 0.8125rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
         border: 0;
-        border-radius: 3px;
         cursor: pointer;
       }
       #tower-panel [data-testid='tower-upgrade'][hidden] {
         display: none;
       }
       #tower-panel [data-testid='tower-upgrade']:disabled {
-        color: #8a8670;
-        background: #3b4030;
+        color: var(--bone-muted);
+        background: var(--olive-700);
         cursor: not-allowed;
       }
       #tower-panel [data-testid='tower-sell'] {
@@ -495,15 +846,14 @@
         width: 100%;
         margin-top: 6px;
         padding: 4px 8px;
-        font: bold 13px monospace;
-        color: #e8d9b0;
+        font: bold 0.8125rem var(--font-mono);
+        color: var(--tan-light);
         background: transparent;
-        border: 1px solid #8a8670;
-        border-radius: 3px;
+        border: 1px solid var(--bone-muted);
         cursor: pointer;
       }
       /* The Main menu and Level select cover the whole page; the game's UI is hidden behind them, out of the accessibility tree too. */
-      #app[data-screen] :is(#hud, #build-bar, #tower-panel) {
+      #app[data-screen] :is(#hud, #build-bar, #tower-panel, #enemy-card, #hints) {
         display: none;
       }
       #menu,
@@ -515,9 +865,9 @@
         align-items: center;
         gap: 14px;
         overflow-y: auto;
-        background: #1b1e16;
-        font: 16px monospace;
-        color: #e4e0c8;
+        background: var(--olive-900);
+        font: 1rem var(--font-mono);
+        color: var(--bone);
       }
       /* Centred when it fits; a taller screen scrolls from its top (plain `justify-content: center` would clip both ends). */
       #level-select {
@@ -532,6 +882,24 @@
       #level-select > :last-child {
         margin-bottom: auto;
       }
+      /* While the live battlefield plays behind them (#402), the page is marked data-demo and the canvas shows through:
+         a dark scrim that is darkest behind the menu column, so its buttons stay readable over the battle. */
+      :root[data-demo] #menu {
+        background: radial-gradient(
+          ellipse 60% 75% at center,
+          color-mix(in srgb, var(--olive-900) 90%, transparent) 0%,
+          color-mix(in srgb, var(--olive-900) 78%, transparent) 45%,
+          color-mix(in srgb, var(--olive-900) 35%, transparent) 100%
+        );
+      }
+      :root[data-demo] #level-select {
+        background: color-mix(in srgb, var(--olive-900) 78%, transparent);
+      }
+      /* The battlefield fills the window, edge to edge, while the menu screens hide the HUD and build bar around it. */
+      :root[data-demo] #app[data-screen] {
+        gap: 0;
+        padding: 0;
+      }
       /* `display: flex` above would otherwise override the hidden attribute. */
       #menu[hidden],
       #level-select[hidden] {
@@ -540,25 +908,26 @@
       #menu h1,
       #level-select h1 {
         margin: 0 0 18px;
-        font-size: 40px;
+        font-size: 2.5rem;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: #f0c95a;
+        color: var(--amber);
+        max-width: 100%;
+        overflow-wrap: anywhere;
       }
       #menu button,
       #level-select > button {
         width: 200px;
         padding: 8px 0;
-        font: bold 18px monospace;
-        color: #1b1e16;
-        background: #c2a46b;
+        font: bold 1.125rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
         border: 0;
-        border-radius: 3px;
         cursor: pointer;
       }
       #menu button:disabled {
-        background: #5e6350;
-        color: #a2a58f;
+        background: var(--olive-500);
+        color: var(--bone-dim);
         cursor: default;
       }
       /* The Credits screen: the list takes the height left between the title and Back and scrolls when it's longer. */
@@ -580,19 +949,19 @@
       }
       #menu .credits-list h2 {
         margin: 0 0 4px;
-        font-size: 16px;
-        color: #f0c95a;
+        font-size: 1rem;
+        color: var(--amber);
       }
       #menu .credits-list p {
         margin: 2px 0;
       }
       #menu .credits-list a {
-        color: #9cc8e8;
+        color: var(--link);
         overflow-wrap: anywhere;
       }
       #menu button:focus-visible,
       #level-select button:focus-visible {
-        outline: 2px solid #f0c95a;
+        outline: 2px solid var(--amber);
         outline-offset: 2px;
       }
       #level-select ul {
@@ -611,30 +980,32 @@
         align-items: center;
         gap: 8px;
         padding: 8px;
-        font: bold 16px monospace;
-        color: #e4e0c8;
-        background: #262a1f;
-        border: 2px solid #5e6350;
-        border-radius: 4px;
+        font: bold 1rem var(--font-mono);
+        color: var(--bone);
+        background: var(--olive-800);
+        border: 2px solid var(--olive-500);
         cursor: pointer;
       }
       #level-select button.map:hover {
-        border-color: #c2a46b;
+        border-color: var(--tan);
       }
       /* Best Stars, or the lock mark and "Locked", under the name. */
       #level-select .stars {
-        font-size: 20px;
+        font-size: 1.25rem;
         letter-spacing: 0.1em;
-        color: #f0c95a;
+        color: var(--amber);
       }
       #level-select .locked {
-        font-size: 14px;
-        color: #a2a58f;
+        max-width: 100%;
+        text-align: center;
+        overflow-wrap: anywhere;
+        font-size: 0.875rem;
+        color: var(--bone-dim);
       }
       /* A locked map stays focusable (aria-disabled), but looks and acts disabled. */
       #level-select button.map[aria-disabled='true'] {
-        color: #a2a58f;
-        border-color: #3e4234;
+        color: var(--bone-dim);
+        border-color: var(--olive-600);
         cursor: default;
       }
       #level-select button.map[aria-disabled='true'] canvas {
@@ -645,21 +1016,25 @@
         max-width: 100%;
       }
       /* The Settings screen covers the whole page, over the Main menu or the paused game, whichever opened it. */
-      #settings {
+      #settings,
+      #how-to-play {
         position: fixed;
         inset: 0;
+        z-index: 3; /* over the Pause overlay (2), which is over the DPS meter (1) */
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgb(27 30 22 / 0.88);
-        font: 16px monospace;
-        color: #e4e0c8;
+        background: color-mix(in srgb, var(--olive-900) 88%, transparent);
+        font: 1rem var(--font-mono);
+        color: var(--bone);
       }
       /* `display: flex` above would otherwise override the hidden attribute. */
-      #settings[hidden] {
+      #settings[hidden],
+      #how-to-play[hidden] {
         display: none;
       }
-      #settings [role='dialog'] {
+      #settings [role='dialog'],
+      #how-to-play [role='dialog'] {
         display: flex;
         flex-direction: column;
         gap: 14px;
@@ -668,15 +1043,15 @@
         max-height: calc(100% - 16px);
         overflow-y: auto;
         padding: 16px 24px;
-        background: #262a1f;
-        border: 2px solid #c2a46b;
-        border-radius: 4px;
+        background: var(--olive-800);
+        border: 2px solid var(--tan);
       }
-      #settings h2 {
+      #settings h2,
+      #how-to-play h2 {
         margin: 0;
-        font-size: 22px;
+        font-size: 1.375rem;
         text-align: center;
-        color: #f0c95a;
+        color: var(--amber);
       }
       #settings fieldset {
         display: flex;
@@ -684,12 +1059,11 @@
         gap: 6px 18px;
         margin: 0;
         padding: 8px 12px 10px;
-        border: 1px solid #5e6350;
-        border-radius: 3px;
+        border: 1px solid var(--olive-500);
       }
       #settings legend {
         padding: 0 4px;
-        color: #c2a46b;
+        color: var(--tan);
       }
       #settings label {
         display: flex;
@@ -698,50 +1072,522 @@
         cursor: pointer;
       }
       #settings input {
-        accent-color: #c2a46b;
+        accent-color: var(--tan);
         width: 18px;
         height: 18px;
         margin: 0;
       }
-      #settings button {
+      /* A volume slider (#67): its name and value on one line, the slider full width under them. */
+      #settings .volume {
+        display: grid;
+        grid-template-areas: 'name value' 'slider slider';
+        grid-template-columns: 1fr auto;
+        gap: 4px 10px;
+      }
+      #settings .volume label {
+        grid-area: name;
+      }
+      #settings .volume output {
+        grid-area: value;
+        min-width: 4ch;
+        text-align: right;
+        color: var(--tan);
+      }
+      #settings .volume input {
+        grid-area: slider;
+        width: 100%;
+        min-width: 200px;
+        height: 24px;
+        cursor: pointer;
+      }
+      #settings button,
+      #how-to-play button {
         align-self: center;
         width: 160px;
         padding: 6px 0;
-        font: bold 16px monospace;
-        color: #1b1e16;
-        background: #c2a46b;
+        font: bold 1rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
+        border: 0;
+        cursor: pointer;
+      }
+      #settings .show-hints {
+        width: auto;
+        min-width: 160px;
+        padding: 6px 12px;
+      }
+      #settings .hints-note {
+        margin: 0;
+        text-align: center;
+      }
+      #settings .hints-note:empty {
+        display: none;
+      }
+      /* How to play: the dialog is as tall as the page allows; its body scrolls on its own, Back stays in view. */
+      #how-to-play [role='dialog'] {
+        width: min(640px, calc(100% - 32px));
+        overflow-y: hidden;
+      }
+      #how-to-play .how-to-play-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 8px;
+      }
+      #how-to-play h3 {
+        margin: 12px 0 4px;
+        font-size: 1rem;
+        color: var(--amber);
+      }
+      #how-to-play section:first-child h3 {
+        margin-top: 0;
+      }
+      #how-to-play p {
+        margin: 2px 0;
+      }
+      #how-to-play ul {
+        margin: 2px 0;
+        padding-left: 20px;
+      }
+      #how-to-play li {
+        margin: 3px 0;
+      }
+      #how-to-play table {
+        border-collapse: collapse;
+      }
+      #how-to-play th,
+      #how-to-play td {
+        padding: 3px 12px 3px 0;
+        text-align: left;
+        font-weight: normal;
+      }
+      #how-to-play thead th {
+        color: var(--tan);
+      }
+      #how-to-play kbd {
+        padding: 1px 6px;
+        font: 0.875rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
+      }
+      #how-to-play :is(button, .how-to-play-body):focus-visible {
+        outline: 2px solid var(--amber);
+        outline-offset: 2px;
+      }
+      #settings :is(button, input):focus-visible {
+        outline: 2px solid var(--amber);
+        outline-offset: 2px;
+      }
+      /* The Field manual (#408): over the Main menu or the paused game, like Settings. The list, the turning model and
+         its information side by side; on a phone the model sits on top and the information under it. */
+      #field-manual {
+        position: fixed;
+        inset: 0;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: color-mix(in srgb, var(--olive-900) 92%, transparent);
+        font: 0.9375rem var(--font-mono);
+        color: var(--bone);
+      }
+      #field-manual[hidden] {
+        display: none;
+      }
+      #field-manual .fm {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-sizing: border-box;
+        width: min(960px, calc(100% - 32px));
+        max-height: calc(100% - 16px);
+        overflow-y: auto;
+        padding: 14px 20px;
+        background: var(--olive-800);
+        border: 2px solid var(--tan);
+        border-radius: 4px;
+      }
+      #field-manual h2 {
+        margin: 0;
+        font-size: 1.375rem;
+        text-align: center;
+        color: var(--amber);
+      }
+      #field-manual .fm-body {
+        display: grid;
+        grid-template-columns: 150px 260px 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+      #field-manual .fm-list h3 {
+        margin: 0 0 4px;
+        font-size: 0.875rem;
+        color: var(--tan);
+        text-transform: uppercase;
+      }
+      #field-manual .fm-list ul {
+        margin: 0 0 10px;
+        padding: 0;
+        list-style: none;
+      }
+      #field-manual .fm-list button {
+        display: block;
+        width: 100%;
+        padding: 4px 6px;
+        font: 0.9375rem var(--font-mono);
+        text-align: left;
+        color: var(--bone);
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #field-manual .fm-list button[aria-current='true'] {
+        color: var(--olive-900);
+        background: var(--tan);
+        font-weight: bold;
+      }
+      #field-manual .fm-view {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      #field-manual .fm-model {
+        position: relative;
+        width: 240px;
+        height: 240px;
+        overflow: hidden;
+        background: radial-gradient(circle, var(--olive-700) 0%, var(--olive-800) 70%);
+        border: 1px solid var(--olive-500);
+        border-radius: 4px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+      }
+      #field-manual .fm-model img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        pointer-events: none;
+      }
+      #field-manual .fm-model.fm-turntable img {
+        height: auto;
+        object-fit: fill;
+      }
+      #field-manual .fm-model.classified img {
+        filter: brightness(0) opacity(0.75);
+      }
+      #field-manual .fm-loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        color: var(--bone-dim);
+      }
+      #field-manual .fm-loading[hidden] {
+        display: none;
+      }
+      #field-manual .fm-rotate,
+      #field-manual .fm-factions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+      }
+      #field-manual .fm-factions[hidden] {
+        display: none;
+      }
+      #field-manual .fm-view button {
+        padding: 4px 8px;
+        font: 0.875rem var(--font-mono);
+        color: var(--bone);
+        background: var(--olive-700);
+        border: 1px solid var(--olive-500);
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #field-manual .fm-factions button[aria-pressed='true'] {
+        color: var(--olive-900);
+        background: var(--tan);
+        border-color: var(--tan);
+        font-weight: bold;
+      }
+      #field-manual .fm-info h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--amber);
+      }
+      #field-manual .fm-info p {
+        margin: 6px 0;
+      }
+      #field-manual .fm-class {
+        font-style: italic;
+        color: var(--bone);
+      }
+      #field-manual .fm-classified {
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: var(--danger);
+      }
+      #field-manual dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+        margin: 8px 0;
+      }
+      #field-manual dt {
+        color: var(--tan);
+      }
+      #field-manual dd {
+        margin: 0;
+      }
+      #field-manual .fm > button {
+        align-self: center;
+        width: 160px;
+        padding: 6px 0;
+        font: bold 1rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
         border: 0;
         border-radius: 3px;
         cursor: pointer;
       }
-      #settings :is(button, input):focus-visible {
-        outline: 2px solid #f0c95a;
+      #field-manual :is(button, .fm-model):focus-visible {
+        outline: 2px solid var(--amber);
         outline-offset: 2px;
+      }
+      @media (max-width: 760px) {
+        #field-manual .fm-body {
+          grid-template-columns: 1fr;
+        }
+        #field-manual .fm-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0 12px;
+        }
+        #field-manual .fm-list ul {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+        #field-manual .fm-list h3 {
+          width: 100%;
+        }
+        #field-manual .fm-list button {
+          width: auto;
+        }
+        #field-manual .fm-view {
+          order: -1;
+        }
+      }
+      /* The first-map hints (#68): a layer over the whole page that never takes the pointer, but for Skip hints. The
+         callout is placed by script next to what it points at, with an arrow toward it. */
+      #hints {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+      }
+      #hints[hidden] {
+        display: none;
+      }
+      #hints .hint {
+        position: absolute;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: min(240px, calc(100vw - 16px));
+        padding: 8px 10px;
+        font: 0.8125rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--amber);
+        border-radius: 4px;
+        box-shadow: 0 2px 6px color-mix(in srgb, var(--olive-950) 50%, transparent);
+      }
+      #hints .hint p {
+        margin: 0 0 6px;
+      }
+      #hints .hint button {
+        pointer-events: auto;
+        padding: 2px 8px;
+        font: inherit;
+        color: var(--bone);
+        background: var(--olive-700);
+        border: 1px solid var(--olive-900);
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #hints .hint button:focus-visible {
+        outline: 2px solid var(--olive-900);
+        outline-offset: 2px;
+      }
+      #hints .hint::after {
+        content: '';
+        position: absolute;
+        border: 8px solid transparent;
+      }
+      #hints .hint[data-side='below']::after {
+        bottom: 100%;
+        left: calc(var(--arrow-x, 50%) - 8px);
+        border-bottom-color: var(--amber);
+      }
+      #hints .hint[data-side='above']::after {
+        top: 100%;
+        left: calc(var(--arrow-x, 50%) - 8px);
+        border-top-color: var(--amber);
+      }
+      #hints .hint[data-side='left']::after {
+        left: 100%;
+        top: calc(50% - 8px);
+        border-left-color: var(--amber);
       }
       #version {
         position: fixed;
         right: 6px;
         bottom: 4px;
-        font: 12px monospace;
-        color: #8a8670;
+        font: 0.75rem var(--font-mono);
+        color: var(--bone-muted);
         pointer-events: none;
+      }
+      /* Field-terminal frames (#399): a thin olive line with tan corner brackets, square corners, stencil titles and
+         small-caps labels. After the rules above, so these win. */
+      #hud,
+      #tower-panel [role='dialog'],
+      #end-screen [role='dialog'],
+      #pause-menu [role='dialog'],
+      #settings [role='dialog'],
+      #level-select button.map {
+        border: 1px solid var(--olive-600);
+      }
+      #hud {
+        background: var(--brackets), var(--olive-800);
+      }
+      #pause-menu [role='dialog'],
+      #settings [role='dialog'],
+      #level-select button.map {
+        background: var(--brackets), var(--olive-800);
+      }
+      #tower-panel [role='dialog'] {
+        background: var(--brackets), color-mix(in srgb, var(--olive-800) 94%, transparent);
+      }
+      #level-select button.map:hover,
+      #level-select button.map:focus-visible {
+        border-color: var(--tan);
+      }
+      #level-select button.map[aria-disabled='true'] {
+        border-color: var(--olive-600);
+      }
+      :is(
+        #menu h1,
+        #level-select h1,
+        #end-screen h2,
+        #pause-menu h2,
+        #settings h2,
+        #tower-panel h2,
+        #menu .credits-list h2
+      ) {
+        font-family: var(--font-stencil);
+        font-weight: normal;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      #menu h1,
+      #level-select h1 {
+        font-size: 2.75rem;
+        letter-spacing: 0.12em;
+      }
+      /* Bigger text (#354) on a phone: a smaller title with tighter letter-spacing, and a break as the last resort. */
+      #menu h1,
+      #level-select h1 {
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 480px) {
+        #menu h1,
+        #level-select h1 {
+          font-size: 2rem;
+          letter-spacing: 0.06em;
+        }
+      }
+      /* A selected tower reads like a unit on a field order: "1-3 RIFLE NEST", its designator in amber. */
+      #tower-panel h2 {
+        color: var(--bone);
+      }
+      #tower-panel h2 .designator {
+        color: var(--amber);
+      }
+      :is(
+        #tower-panel dt,
+        #tower-panel [data-testid='tower-level'],
+        #settings legend,
+        #end-screen caption,
+        #end-screen thead th
+      ) {
+        font-variant-caps: small-caps;
+        letter-spacing: 0.06em;
+      }
+      #hud .hud-stats > span,
+      #tower-panel dd {
+        color: var(--amber);
+      }
+      /* Touch (#72): every button is at least 32 px both ways, so a finger can hit it. After the rules above. */
+      @media (max-width: 640px), (max-height: 480px), (pointer: coarse) {
+        #hud button {
+          min-width: 32px;
+          min-height: 32px;
+        }
+        #build-bar[data-collapsed='true'] {
+          width: 32px;
+        }
+        #build-bar .build-toggle {
+          width: 32px;
+          height: 32px;
+        }
+        #tower-panel button[aria-label='Close'],
+        #enemy-card button[aria-label='Close'] {
+          width: 32px;
+          height: 32px;
+          top: 0;
+          right: 0;
+        }
+        #tower-panel [data-testid='tower-upgrade'],
+        #tower-panel [data-testid='tower-sell'] {
+          min-height: 32px;
+        }
+      }
+      #tower-panel [data-testid='tower-upgrade-reason'] {
+        margin: 4px 0 0;
+        color: var(--tan-light);
+      }
+      #tower-panel [data-testid='tower-upgrade-reason'][hidden] {
+        display: none;
       }
     </style>
   </head>
   <body>
     <div id="app">
       <div id="hud"></div>
+      <!-- Before the stage, so Tab goes HUD, build bar, map, then the open panel; the grid areas place it. -->
+      <nav id="build-bar" aria-label="Build"></nav>
       <div id="stage">
         <div id="game"></div>
         <div id="tower-panel" hidden></div>
+        <div id="enemy-card" hidden></div>
         <div id="end-screen" hidden></div>
         <div id="pause-menu" hidden></div>
       </div>
-      <nav id="build-bar" aria-label="Build"></nav>
+      <div id="hints" hidden></div>
     </div>
     <main id="menu" hidden></main>
     <main id="level-select" hidden></main>
     <div id="settings" hidden></div>
+    <div id="field-manual" hidden></div>
+    <div id="how-to-play" hidden></div>
     <div id="version"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

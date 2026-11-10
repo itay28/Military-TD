@@ -1,9 +1,10 @@
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, SELL_REFUND, START_HEADING, TOWER_STATS, type TowerKind } from '../data/towers';
-import { AUTO_START_DELAY_MS } from '../data/waves';
+import { DEFAULT_WAVE_AFTER_MS } from '../data/waves';
+import { coverageIntervals } from './coverage';
 import { createPathLine, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
-import { createMap, type GameMap, type MapData, type Position, type Tile } from './map';
+import { createMap, tileCenter, type GameMap, type MapData, type Position, type Tile } from './map';
 import { createShell, landShells, type Shell, type ShellLanding } from './shells';
 import {
   addTower,
@@ -12,17 +13,17 @@ import {
   endWave,
   markSold,
   recordShots,
-  resetWave,
+  startWaveStats,
   withWaveElapsed,
   type CombatStats,
 } from './stats';
-import { fireTowers, nextLevel, towerAt, type Shot, type Tower } from './towers';
+import { fireTowers, nextLevel, towerAt, type Shot, type Tower, type TowerStats } from './towers';
 import { createSpawnSchedule, validateWaves, type SpawnSchedule, type WaveData } from './waves';
 
 /** The one fixed step, in ms. The Game scene and the scenario runner both tick with it. */
 export const TICK_MS = 1000 / 60;
 
-/** Slack for float sums of tick times, so a dismantle or an auto-start due on a tick happens on it. */
+/** Slack for float sums of tick times, so a dismantle or a wave due on a tick happens on it. */
 const TIME_EPSILON = 1e-9;
 
 export interface GameConfig {
@@ -31,9 +32,14 @@ export interface GameConfig {
   /** Money at the start. */
   readonly money: number;
   readonly waves: readonly WaveData[];
+  /**
+   * Tactical mode (ADR-0011): no wave timers, each wave starts only when called, one at a time. Off by default:
+   * waves arrive on their timers, overlapping. Fixed for the game.
+   */
+  readonly tacticalMode?: boolean;
 }
 
-/** Build phase between waves, Wave phase while one runs; Victory and Defeat end the game. */
+/** Build phase while no wave is on the field, Wave phase while one or more are; Victory and Defeat end the game. */
 export type Phase = 'build' | 'wave' | 'victory' | 'defeat';
 
 /** Whether the game has ended, in Victory or Defeat. */
@@ -60,10 +66,12 @@ export interface GameState {
   readonly totalWaves: number;
   /** Damage and kills, overall and per tower; wave figures freeze when the wave ends. */
   readonly stats: CombatStats;
-  /** Whether the next wave starts by itself after a wave is cleared (`setAutoStart`). Off in a new game. */
-  readonly autoStart: boolean;
-  /** The game time the next wave starts by itself; set only while auto-start counts down in the Build phase. */
-  readonly autoStartAtMs: number | undefined;
+  /** Tactical mode, fixed at game start (`GameConfig.tacticalMode`): no wave timers. */
+  readonly tacticalMode: boolean;
+  /** The game time the next wave arrives by itself: set in timed mode while a wave is left to start. */
+  readonly nextWaveAtMs: number | undefined;
+  /** The waves on the field (started, not cleared), oldest first. Several in timed mode when they overlap. */
+  readonly activeWaves: readonly number[];
 }
 
 export interface GameEvents {
@@ -84,7 +92,8 @@ export interface GameEvents {
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
   /** A tower finished dismantling and left `tile`. `refund` is the Money it gave back, already in `state.money`. */
   towerSold: { readonly towerId: number; readonly tile: Tile; readonly refund: number };
-  waveStarted: { readonly waveNumber: number };
+  /** A wave began. `holdovers` is how many enemies were already on the field before its first spawn. */
+  waveStarted: { readonly waveNumber: number; readonly holdovers: number };
   /** Every enemy of the wave has spawned and none is left alive. */
   waveCleared: { readonly waveNumber: number };
   /** The last wave was cleared with Lives left. The game is over. */
@@ -103,6 +112,9 @@ export type PlaceTowerRefusal = 'gameEnded' | 'notBuildable' | 'occupied' | 'ins
 /** Why upgradeTower refused, in the order it checks. */
 export type UpgradeTowerRefusal = 'gameEnded' | 'noSuchTower' | 'dismantling' | 'maxLevel' | 'insufficientMoney';
 
+/** Why callNextWave refused, in the order it checks. */
+export type CallNextWaveRefusal = 'noWavesLeft' | 'gameEnded' | 'notBuildPhase';
+
 /** Why sellTower refused, in the order it checks. */
 export type SellTowerRefusal = 'gameEnded' | 'noSuchTower' | 'dismantling';
 
@@ -114,17 +126,12 @@ export interface Game {
   /** Spawns an enemy at the Path start, outside any wave, and returns its id. For tests and scenarios. */
   spawnEnemy(kind: EnemyKind): number;
   /**
-   * Starts the next wave: its first enemy spawns at once, the rest one every spacing.
-   * Refuses with `noWavesLeft` once every wave has started (so after Victory too), else `notBuildPhase`
-   * outside the Build phase (during a wave, after Defeat).
+   * Calls in the next wave now: its first enemy spawns at once, the rest one every spacing. In timed mode this works
+   * during a wave too, and the wave after it is then due its `afterMs` from now; there is no bonus. Refuses with
+   * `noWavesLeft` once every wave has started (so after Victory too), `gameEnded` after Defeat, and in Tactical mode
+   * `notBuildPhase` while a wave is on the field.
    */
-  startWave(): CommandResult<'noWavesLeft' | 'notBuildPhase'>;
-  /**
-   * Turns auto-start on or off. While it's on, `AUTO_START_DELAY_MS` of game time after each wave is cleared (or
-   * after it's turned on in the Build phase) the next wave starts as if by `startWave`. Turning it off cancels the
-   * countdown. Nothing counts down once every wave has started. Refuses with `gameEnded` after Victory or Defeat.
-   */
-  setAutoStart(on: boolean): CommandResult<'gameEnded'>;
+  callNextWave(): CommandResult<CallNextWaveRefusal>;
   /**
    * Places a tower on `tile` for its cost, in the Build or Wave phase, and returns its id.
    * Refuses, in this order: `gameEnded` after Victory or Defeat, `notBuildable` off the grid or on the Path,
@@ -159,6 +166,9 @@ export function createGame(config: GameConfig): Game {
   const map = createMap(config.map);
   validateWaves(config.waves);
   const line = createPathLine(map.waypointPositions);
+  /** The Path stretches a tower on `tile` with `stats` can fire on, for pre-aiming. */
+  const coverageOf = (tile: Tile, { range, minRange }: Pick<TowerStats, 'range' | 'minRange'>) =>
+    coverageIntervals(line, tileCenter(tile), range, minRange);
   const state: { -readonly [K in keyof GameState]: GameState[K] } & {
     enemies: Enemy[];
     towers: Tower[];
@@ -176,36 +186,51 @@ export function createGame(config: GameConfig): Game {
     wavesCleared: 0,
     totalWaves: config.waves.length,
     stats: emptyStats(),
-    autoStart: false,
-    autoStartAtMs: undefined,
+    tacticalMode: config.tacticalMode ?? false,
+    nextWaveAtMs: undefined,
+    activeWaves: [],
   };
   const emitter = createEmitter<GameEvents>();
   let nextId = 1;
-  /** The running wave, from startWave until it is cleared. */
-  let wave: { readonly schedule: SpawnSchedule; readonly startMs: number } | undefined;
+  /** The waves on the field, oldest first, from their start until each is cleared. */
+  let waves: { readonly number: number; readonly schedule: SpawnSchedule; readonly startMs: number }[] = [];
+  /** Each wave enemy's wave number, by enemy id. */
+  const waveOfEnemy = new Map<number, number>();
+  const waveOf = (enemyId: number) => waveOfEnemy.get(enemyId);
 
-  const createEnemy = (kind: EnemyKind): Enemy => {
+  const createEnemy = (kind: EnemyKind, waveNumber?: number): Enemy => {
     const stats = ENEMY_STATS[kind];
-    return { ...stats, id: nextId++, kind, hp: stats.maxHp, distance: 0, position: line.positionAt(0) };
+    const enemy = { ...stats, id: nextId++, kind, hp: stats.maxHp, distance: 0, position: line.positionAt(0) };
+    if (waveNumber !== undefined) waveOfEnemy.set(enemy.id, waveNumber);
+    return enemy;
   };
 
-  /** Starts the auto-start countdown when it's on and a wave can start: in the Build phase, with waves left. */
-  const countDownToNextWave = () => {
-    if (state.autoStart && state.phase === 'build' && state.waveNumber < state.totalWaves)
-      state.autoStartAtMs = state.timeMs + AUTO_START_DELAY_MS;
+  /** In timed mode, the next wave is due its `afterMs` after `fromMs` (the latest wave start, or the game start). */
+  const scheduleNextWave = (fromMs: number) => {
+    const next = config.waves[state.waveNumber];
+    state.nextWaveAtMs = state.tacticalMode || !next ? undefined : fromMs + (next.afterMs ?? DEFAULT_WAVE_AFTER_MS);
+  };
+  scheduleNextWave(0);
+
+  const syncActiveWaves = () => {
+    state.activeWaves = waves.map((wave) => wave.number);
+    if (!isGameOver(state.phase)) state.phase = waves.length > 0 ? 'wave' : 'build';
   };
 
-  const startWave = (): CommandResult<'noWavesLeft' | 'notBuildPhase'> => {
+  const callNextWave = (): CommandResult<CallNextWaveRefusal> => {
     const next = config.waves[state.waveNumber];
     if (!next) return { ok: false, reason: 'noWavesLeft' };
-    if (state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
-    wave = { schedule: createSpawnSchedule(next), startMs: state.timeMs };
-    state.phase = 'wave';
-    state.autoStartAtMs = undefined;
-    state.stats = resetWave(state.stats);
+    if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' };
+    if (state.tacticalMode && state.phase !== 'build') return { ok: false, reason: 'notBuildPhase' };
     state.waveNumber++;
-    state.enemies.push(...wave.schedule.take(0).map((spawn) => createEnemy(spawn.kind)));
-    emitter.emit('waveStarted', { waveNumber: state.waveNumber });
+    const wave = { number: state.waveNumber, schedule: createSpawnSchedule(next), startMs: state.timeMs };
+    const holdovers = state.enemies.length;
+    waves = [...waves, wave];
+    syncActiveWaves();
+    state.stats = startWaveStats(state.stats, wave.number);
+    state.enemies.push(...wave.schedule.take(0).map((spawn) => createEnemy(spawn.kind, wave.number)));
+    scheduleNextWave(state.timeMs);
+    emitter.emit('waveStarted', { waveNumber: wave.number, holdovers });
     return { ok: true };
   };
 
@@ -247,11 +272,12 @@ export function createGame(config: GameConfig): Game {
       state.timeMs += dtMs;
       const { walking, leaked } = walkEnemies(state.enemies, line, dtMs);
       const enemies = [...walking];
-      if (wave) {
+      for (const wave of waves) {
         // A spawn due mid-tick walks the rest of the tick, so tick size doesn't change where enemies are.
         const elapsedMs = state.timeMs - wave.startMs;
         for (const spawn of wave.schedule.take(elapsedMs)) {
-          const spawned = walkEnemies([createEnemy(spawn.kind)], line, Math.max(0, elapsedMs - spawn.atMs));
+          const enemy = createEnemy(spawn.kind, wave.number);
+          const spawned = walkEnemies([enemy], line, Math.max(0, elapsedMs - spawn.atMs));
           enemies.push(...spawned.walking);
           leaked.push(...spawned.leaked);
         }
@@ -271,9 +297,10 @@ export function createGame(config: GameConfig): Game {
       for (const enemy of kills) state.money += enemy.reward;
       // Shells landed before towers fired, so their hits come first.
       const strikes = [...landing.landed, ...fired.shots];
-      state.stats = recordShots(state.stats, strikes, new Set(kills.map((enemy) => enemy.id)));
-      if (wave) {
-        state.stats = withWaveElapsed(state.stats, state.timeMs - wave.startMs);
+      state.stats = recordShots(state.stats, strikes, new Set(kills.map((enemy) => enemy.id)), waveOf);
+      if (waves.length > 0) {
+        const elapsed = new Map(waves.map((wave) => [wave.number, state.timeMs - wave.startMs]));
+        state.stats = withWaveElapsed(state.stats, elapsed, state.waveNumber);
         state.stats = addWaveTime(
           state.stats,
           state.towers.map((tower) => tower.id),
@@ -281,21 +308,30 @@ export function createGame(config: GameConfig): Game {
         );
       }
       const sold: { towerId: number; tile: Tile; refund: number }[] = [];
-      let cleared = false;
+      const cleared: number[] = [];
       if (state.lives === 0) {
-        if (wave) state.stats = endWave(state.stats, state.waveNumber);
-        wave = undefined;
+        for (const wave of waves) state.stats = endWave(state.stats, wave.number);
+        waves = [];
         state.phase = 'defeat';
+        state.nextWaveAtMs = undefined;
         state.shells = [];
-      } else if (wave?.schedule.finished && state.enemies.length === 0) {
-        cleared = true;
-        wave = undefined;
-        state.stats = endWave(state.stats, state.waveNumber);
-        state.wavesCleared++;
-        state.phase = state.waveNumber === state.totalWaves ? 'victory' : 'build';
-        if (state.phase === 'victory') state.shells = [];
-        countDownToNextWave();
+      } else {
+        const onField = new Set(state.enemies.map((enemy) => waveOf(enemy.id)));
+        for (const wave of waves)
+          if (wave.schedule.finished && !onField.has(wave.number)) {
+            cleared.push(wave.number);
+            state.stats = endWave(state.stats, wave.number);
+            state.wavesCleared++;
+          }
+        waves = waves.filter((wave) => !cleared.includes(wave.number));
+        // Victory once every wave has spawned and the field is clear (a game with no waves never ends).
+        const allSpawned = state.totalWaves > 0 && state.waveNumber === state.totalWaves && waves.length === 0;
+        if (allSpawned && state.enemies.length === 0) {
+          state.phase = 'victory';
+          state.shells = [];
+        }
       }
+      syncActiveWaves();
       // A tower whose dismantling ends is paid out, unless the game just ended.
       if (!isGameOver(state.phase)) {
         state.towers = state.towers.flatMap((tower) => {
@@ -322,26 +358,23 @@ export function createGame(config: GameConfig): Game {
       for (const landed of landing.landed) emitter.emit('shellLanded', landed);
       for (const enemy of kills) emitter.emit('enemyKilled', { enemy, reward: enemy.reward });
       for (const sale of sold) emitter.emit('towerSold', sale);
-      if (cleared) emitter.emit('waveCleared', { waveNumber: state.waveNumber });
+      for (const waveNumber of cleared) emitter.emit('waveCleared', { waveNumber });
       if (state.phase === 'victory') emitter.emit('victory', { lives: state.lives });
       if (state.phase === 'defeat') emitter.emit('defeat', { waveNumber: state.waveNumber });
-      // Last, so the waveCleared that started the countdown is out before the next waveStarted.
-      if (state.autoStartAtMs !== undefined && state.timeMs >= state.autoStartAtMs - TIME_EPSILON) startWave();
+      // Last, so this tick's waveCleared is out before the next waveStarted.
+      if (
+        !isGameOver(state.phase) &&
+        state.nextWaveAtMs !== undefined &&
+        state.timeMs >= state.nextWaveAtMs - TIME_EPSILON
+      )
+        callNextWave();
     },
     spawnEnemy(kind) {
       const enemy = createEnemy(kind);
       state.enemies.push(enemy);
       return enemy.id;
     },
-    startWave,
-    setAutoStart(on) {
-      if (isGameOver(state.phase)) return { ok: false, reason: 'gameEnded' };
-      if (on === state.autoStart) return { ok: true };
-      state.autoStart = on;
-      if (on) countDownToNextWave();
-      else state.autoStartAtMs = undefined;
-      return { ok: true };
-    },
+    callNextWave,
     placeTower(kind, tile) {
       const allowed = canPlaceTower(kind, tile);
       if (!allowed.ok) return allowed;
@@ -358,6 +391,7 @@ export function createGame(config: GameConfig): Game {
         level: 1,
         spent: stats.cost,
         heading: START_HEADING,
+        coverage: coverageOf(tile, stats),
       });
       return { ok: true, towerId };
     },
@@ -367,7 +401,13 @@ export function createGame(config: GameConfig): Game {
       if (!allowed.ok) return allowed;
       const { tower, next } = allowed;
       const { cost, ...stats } = next;
-      const upgraded: Tower = { ...tower, ...stats, level: tower.level + 1, spent: tower.spent + cost };
+      const upgraded: Tower = {
+        ...tower,
+        ...stats,
+        level: tower.level + 1,
+        spent: tower.spent + cost,
+        coverage: coverageOf(tower.tile, stats),
+      };
       state.money -= cost;
       state.towers = state.towers.map((t) => (t.id === towerId ? upgraded : t));
       return { ok: true, level: upgraded.level };

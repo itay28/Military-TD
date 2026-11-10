@@ -1,3 +1,5 @@
+import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
+import { MAPS } from '../data/maps';
 import { isRecord, type KeyValueStorage } from '../storage';
 import {
   createProgress,
@@ -10,14 +12,32 @@ import {
 
 export const PROGRESS_KEY = 'military-td.progress';
 /** Bump when the saved shape changes, and teach `migrate` the step from the old version. */
-export const PROGRESS_VERSION = 1;
+export const PROGRESS_VERSION = 3;
 
 /** Brings progress saved at `version` up to the current shape. `null` for a version this build can't read. */
 export function migrate(version: number, data: unknown): unknown {
   if (!Number.isInteger(version) || version < 0 || version > PROGRESS_VERSION) return null;
-  // v1 is the first shape: nothing to change yet. Later versions add a step per version here.
-  return data;
+  let migrated = data;
+  // v1 → v2 adds `hintsDone`: a player who has won a map already knows the first actions, so the hints count as done.
+  if (version < 2 && isRecord(migrated)) {
+    const maps = isRecord(migrated.maps) ? Object.values(migrated.maps) : [];
+    migrated = { ...migrated, hintsDone: maps.some((entry) => isRecord(entry) && entry.completed === true) };
+  }
+  // v2 → v3 adds `metEnemies` (#408): a map won means every kind in its waves was met.
+  if (version < 3 && isRecord(migrated)) {
+    const maps = isRecord(migrated.maps) ? migrated.maps : {};
+    const won = MAPS.filter((map) => {
+      const entry = maps[map.id];
+      return isRecord(entry) && entry.completed === true;
+    });
+    const kinds = new Set(won.flatMap((map) => map.waves.flatMap((wave) => wave.groups.map((group) => group.kind))));
+    migrated = { ...migrated, metEnemies: [...kinds] };
+  }
+  return migrated;
 }
+
+const isEnemyKind = (value: unknown): value is EnemyKind =>
+  typeof value === 'string' && Object.hasOwn(ENEMY_STATS, value);
 
 const STARS: readonly Stars[] = [0, 1, 2, 3];
 
@@ -39,7 +59,8 @@ function sanitize(data: unknown): Progress {
     const map = sanitizeMap(entry);
     if (map !== null) maps[id] = map;
   }
-  return { maps };
+  const met = Array.isArray(data.metEnemies) ? data.metEnemies.filter(isEnemyKind) : [];
+  return { maps, hintsDone: data.hintsDone === true, metEnemies: [...new Set(met)] };
 }
 
 /** The saved progress, or empty for anything missing, corrupt, too new or unreadable. Never throws. */
@@ -56,18 +77,30 @@ export function loadProgress(storage: KeyValueStorage): Progress {
   }
 }
 
-/** Progress loaded from `storage` and saved back as `{ version, progress }` on every result. A failed save is ignored. */
+/** Progress loaded from `storage` and saved back as `{ version, progress }` on every change. A failed save is ignored. */
 export function createPersistedProgress(storage: KeyValueStorage): ProgressStore {
   const store = createProgress(loadProgress(storage));
+  const save = () => {
+    try {
+      storage.setItem(PROGRESS_KEY, JSON.stringify({ version: PROGRESS_VERSION, progress: store.get() }));
+    } catch {
+      // Storage is full or blocked: the progress still holds for this visit.
+    }
+  };
   return {
     get: store.get,
     recordResult(mapId, stars) {
       store.recordResult(mapId, stars);
-      try {
-        storage.setItem(PROGRESS_KEY, JSON.stringify({ version: PROGRESS_VERSION, progress: store.get() }));
-      } catch {
-        // Storage is full or blocked: the progress still holds for this visit.
-      }
+      save();
+    },
+    setHintsDone(done) {
+      store.setHintsDone(done);
+      save();
+    },
+    recordMet(kind) {
+      const before = store.get();
+      store.recordMet(kind);
+      if (store.get() !== before) save();
     },
   };
 }

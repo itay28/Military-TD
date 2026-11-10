@@ -1,4 +1,5 @@
 import type { Pixel } from './coords';
+import { readLive, type Live } from './motion';
 
 /** The part of a Shell the view needs, with its points in pixels. */
 export interface FlightPath {
@@ -32,20 +33,23 @@ export interface Blasts {
 }
 
 /** Short-lived blast circles. Cosmetic only, so they run on frame time, not sim ticks. */
-export function createBlasts(fadeMs: number): Blasts {
+export function createBlasts(fade: Live<number>): Blasts {
   let blasts: { center: Pixel; radius: number; ageMs: number }[] = [];
   return {
     add(center, radius) {
       blasts.push({ center, radius, ageMs: 0 });
     },
     advance(dtMs) {
+      const fadeMs = readLive(fade);
       for (const blast of blasts) blast.ageMs += dtMs;
       blasts = blasts.filter((blast) => blast.ageMs < fadeMs);
     },
     // Filtered here too, so a fade time of 0 (?anim=0) never shows a blast added since the last advance.
-    active: () =>
-      blasts
+    active: () => {
+      const fadeMs = readLive(fade);
+      return blasts
         .filter((blast) => blast.ageMs < fadeMs)
-        .map(({ center, radius, ageMs }) => ({ center, radius, alpha: 1 - ageMs / fadeMs })),
+        .map(({ center, radius, ageMs }) => ({ center, radius, alpha: 1 - ageMs / fadeMs }));
+    },
   };
 }

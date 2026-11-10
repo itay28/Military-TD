@@ -58,9 +58,10 @@ describe('Credits screen', () => {
     expect(lines).toEqual(manifest.packs.map((p) => p.attribution));
   });
 
-  it("shows the game's own credits: the engine and the code license", () => {
+  it("shows the game's own credits under its name: the engine and the code license", () => {
     mountCredits(root, { app, onBack: () => {} });
     const game = root.querySelector('section.game-credits')!;
+    expect(game.querySelector('h2')?.textContent).toBe('Hold the Perimeter');
     expect(game.textContent).toContain('Phaser');
     expect(game.textContent).toContain(pkg.license);
   });
