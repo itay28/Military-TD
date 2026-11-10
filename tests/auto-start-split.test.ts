@@ -163,18 +163,18 @@ describe('retrySplit (#486)', () => {
 });
 
 describe('giveUpSplit (#486)', () => {
-  it('comments with the failed runs, then swaps needs-split for needs-you', async () => {
+  it('adds needs-you first, so a failed later call cannot post the comment twice', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await giveUpSplit({ issue: 79, failed: ['u1', 'u2'] }, 'gh-token', fetchFn);
     expect(calls(fetchFn)).toEqual([
-      `POST ${api}/issues/79/comments`,
       `POST ${api}/issues/79/labels`,
+      `POST ${api}/issues/79/comments`,
       `DELETE ${api}/issues/79/labels/${SPLIT_LABEL}`,
     ]);
-    const body = (JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string }).body;
+    const body = (JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string }).body;
     expect(body).toContain('u1');
     expect(body).toContain('u2');
-    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: [NEEDS_YOU_LABEL] });
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string)).toEqual({ labels: [NEEDS_YOU_LABEL] });
   });
 });
 

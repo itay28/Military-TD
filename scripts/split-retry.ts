@@ -174,6 +174,8 @@ export async function retrySplit(
  * then `needs-you` (which pushes) on and `needs-split` off, as the split agent does when it can't split.
  */
 export async function giveUpSplit(giveUp: SplitGiveUp, token: string, fetchFn: Fetch = fetch): Promise<void> {
+  // needs-you first: it stops the next run from handing the issue over again if a later call fails.
+  await github(fetchFn, token, 'POST', `issues/${giveUp.issue}/labels`, { labels: [NEEDS_YOU_LABEL] });
   const runs = giveUp.failed.map((url) => `- ${url}`).join('\n');
   await github(fetchFn, token, 'POST', `issues/${giveUp.issue}/comments`, {
     body:
@@ -181,6 +183,5 @@ export async function giveUpSplit(giveUp: SplitGiveUp, token: string, fetchFn: F
       `Split it yourself, or re-run *Split issue* (\`gh workflow run ${WORKFLOW} -f issue=${giveUp.issue}\`), ` +
       `then remove \`${NEEDS_YOU_LABEL}\`.`,
   });
-  await github(fetchFn, token, 'POST', `issues/${giveUp.issue}/labels`, { labels: [NEEDS_YOU_LABEL] });
   await github(fetchFn, token, 'DELETE', `issues/${giveUp.issue}/labels/${SPLIT_LABEL}`);
 }
