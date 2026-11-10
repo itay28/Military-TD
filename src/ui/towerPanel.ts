@@ -1,5 +1,7 @@
-import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES, UPGRADE_REFUSAL_TEXT } from '../data/display';
+import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES, UPGRADE_REFUSAL_TEXT, formatFunds } from '../data/display';
+import type { TowerKind } from '../data/towers';
 import type { Game } from '../sim/game';
+import { buildBarNumber } from './buildBar';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
 
@@ -11,6 +13,10 @@ export interface TowerPanel {
   readonly selectedId: number | undefined;
   /** Selects tower `id` and shows its panel, or with undefined deselects and hides it. */
   select(id: number | undefined): void;
+  /** What a click on Upgrade does (the U key): nothing while it is disabled, hidden or nothing is selected. */
+  upgrade(): void;
+  /** What a click on Sell does (the S key): nothing while it is disabled or nothing is selected. */
+  sell(): void;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. Deselects once the tower is gone. */
   update(): void;
   /** Removes the panel's elements and listeners and hides it; select() and update() do nothing after this. */
@@ -18,6 +24,14 @@ export interface TowerPanel {
 }
 
 const TITLE_ID = 'tower-panel-title';
+
+/**
+ * A tower's unit designator, as on a field order: its kind's number on the build bar (the hotkey), a dash, and the
+ * tower's id. The id stays the tower's whole life, so selling another tower never renumbers it.
+ */
+export function designator(kind: TowerKind, id: number): string {
+  return `${buildBarNumber(kind)}-${id}`;
+}
 
 /**
  * Builds the tower panel inside `root`, an overlay over the canvas. It owns the selection, which is UI state,
@@ -35,6 +49,8 @@ export function mountTowerPanel(
   dialog.setAttribute('aria-labelledby', TITLE_ID);
   const heading = doc.createElement('h2');
   heading.id = TITLE_ID;
+  const badge = doc.createElement('span');
+  badge.className = 'designator';
   const close = doc.createElement('button');
   close.type = 'button';
   close.setAttribute('aria-label', 'Close');
@@ -63,10 +79,16 @@ export function mountTowerPanel(
   const upgrade = doc.createElement('button');
   upgrade.type = 'button';
   upgrade.dataset.testid = 'tower-upgrade';
+  // A finger can't hover the button's `title`, so the refusal is also written on the panel.
+  const upgradeReason = doc.createElement('p');
+  upgradeReason.dataset.testid = 'tower-upgrade-reason';
+  upgradeReason.hidden = true;
+  upgradeReason.id = 'tower-upgrade-reason';
+  upgrade.setAttribute('aria-describedby', upgradeReason.id);
   const sell = doc.createElement('button');
   sell.type = 'button';
   sell.dataset.testid = 'tower-sell';
-  dialog.append(heading, close, role, level, list, upgrade, sell);
+  dialog.append(heading, close, role, level, list, upgrade, upgradeReason, sell);
   root.append(dialog);
   root.hidden = true;
   let selectedId: number | undefined;
@@ -89,7 +111,12 @@ export function mountTowerPanel(
     setHidden(root, !tower);
     if (!tower) return;
     const figures = stats.towers[tower.id];
-    setText(heading, TOWER_NAMES[tower.kind]);
+    const mark = designator(tower.kind, tower.id);
+    const title = `${mark} ${TOWER_NAMES[tower.kind]}`;
+    if (heading.textContent !== title) {
+      badge.textContent = mark;
+      heading.replaceChildren(badge, ` ${TOWER_NAMES[tower.kind]}`);
+    }
     setText(role, TOWER_ROLES[tower.kind]);
     setText(level, `Level ${tower.level}`);
     setText(damage, String(tower.damage));
@@ -101,17 +128,25 @@ export function mountTowerPanel(
     setText(kills, String(figures?.total.kills ?? 0));
     // The sim decides what selling pays and whether it is allowed (not while already dismantling).
     const sale = game.canSellTower(tower.id);
-    setText(sell, sale.ok ? `Sell (+${sale.refund})` : sale.reason === 'dismantling' ? 'Dismantling…' : 'Sell');
+    setText(
+      sell,
+      sale.ok ? `Sell (+${formatFunds(sale.refund)})` : sale.reason === 'dismantling' ? 'Dismantling…' : 'Sell',
+    );
     if (sell.disabled === sale.ok) sell.disabled = !sale.ok;
     // The sim decides whether the upgrade is allowed; the panel only names it and shows why not.
     const next = nextLevel(tower);
     setHidden(upgrade, !next);
-    if (!next) return;
-    setText(upgrade, `${LEVEL_NAME[tower.level + 1]} (${next.cost})`);
+    if (!next) {
+      setHidden(upgradeReason, true);
+      return;
+    }
+    setText(upgrade, `${LEVEL_NAME[tower.level + 1]} (${formatFunds(next.cost)})`);
     const allowed = game.canUpgradeTower(tower.id);
     if (upgrade.disabled === allowed.ok) upgrade.disabled = !allowed.ok;
     const reason = allowed.ok ? '' : UPGRADE_REFUSAL_TEXT[allowed.reason];
     if (upgrade.title !== reason) upgrade.title = reason;
+    setText(upgradeReason, reason);
+    setHidden(upgradeReason, allowed.ok);
   };
   const select = (id: number | undefined) => {
     if (destroyed) return;
@@ -121,12 +156,12 @@ export function mountTowerPanel(
   };
   const onClose = () => select(undefined);
   const onUpgrade = () => {
-    if (selectedId === undefined) return;
+    if (selectedId === undefined || upgrade.disabled || upgrade.hidden) return;
     game.upgradeTower(selectedId);
     update();
   };
   const onSell = () => {
-    if (selectedId === undefined) return;
+    if (selectedId === undefined || sell.disabled) return;
     game.sellTower(selectedId);
     update(); // now dismantling; the panel closes once the tower is gone
   };
@@ -144,6 +179,12 @@ export function mountTowerPanel(
       return selectedId;
     },
     select,
+    upgrade: () => {
+      if (!destroyed) onUpgrade();
+    },
+    sell: () => {
+      if (!destroyed) onSell();
+    },
     update,
     destroy() {
       destroyed = true;

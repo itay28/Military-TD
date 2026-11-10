@@ -1,4 +1,4 @@
-import { TOWER_NAMES } from '../data/display';
+import { TERMS, TOWER_NAMES } from '../data/display';
 import { isGameOver, type Game } from '../sim/game';
 import type { Stars } from '../sim/progression';
 import { damageReport, type DamageReport, type ReportFigures } from '../sim/report';
@@ -10,12 +10,17 @@ export type EndScreenGame = Pick<Game, 'state'>;
 export interface VictoryResult {
   readonly stars: Stars;
   readonly unlockedMap?: string;
+  /** Won in Tactical mode, so the Stars were capped (ADR-0011). */
+  readonly tactical?: boolean;
 }
+
+/** What the End screen and the Level select say while Tactical mode is on. */
+export const TACTICAL_CAP_TEXT = 'Tactical: max 2 stars';
 
 export interface EndScreenOptions {
   /** Called when the player presses Restart. */
   readonly onRestart: () => void;
-  /** Called when the player presses Level select. */
+  /** Called when the player presses Operations (the Level select). */
   readonly onLevelSelect: () => void;
   /** Read once when the overlay opens on a Victory; nothing is shown for it without one. */
   readonly result?: () => VictoryResult | undefined;
@@ -117,12 +122,21 @@ function buildStars(doc: Document, stars: Stars): HTMLElement {
   return line;
 }
 
-function buildResult(doc: Document, { stars, unlockedMap }: VictoryResult): HTMLElement[] {
-  if (unlockedMap === undefined) return [buildStars(doc, stars)];
-  const unlocked = doc.createElement('p');
-  unlocked.dataset.testid = 'unlocked';
-  unlocked.textContent = `New map unlocked: ${unlockedMap}`;
-  return [buildStars(doc, stars), unlocked];
+function buildResult(doc: Document, { stars, unlockedMap, tactical }: VictoryResult): HTMLElement[] {
+  const lines = [buildStars(doc, stars)];
+  if (tactical) {
+    const cap = doc.createElement('p');
+    cap.dataset.testid = 'tactical-cap';
+    cap.textContent = TACTICAL_CAP_TEXT;
+    lines.push(cap);
+  }
+  if (unlockedMap !== undefined) {
+    const unlocked = doc.createElement('p');
+    unlocked.dataset.testid = 'unlocked';
+    unlocked.textContent = `New map unlocked: ${unlockedMap}`;
+    lines.push(unlocked);
+  }
+  return lines;
 }
 
 /** Builds the End screen inside `root`, an overlay over the canvas. It's DOM, so tests can query it (ADR-0003). */
@@ -149,12 +163,14 @@ export function mountEndScreen(
   const levelSelect = doc.createElement('button');
   levelSelect.type = 'button';
   levelSelect.dataset.testid = 'level-select';
-  levelSelect.textContent = 'Level select';
+  levelSelect.textContent = TERMS.levelSelect;
   const onLevelSelectClick = () => onLevelSelect();
   levelSelect.addEventListener('click', onLevelSelectClick);
   const report = doc.createElement('div');
   report.className = 'report';
-  dialog.append(heading, wavesSurvived, report, restart, levelSelect);
+  const reportHeading = doc.createElement('h3');
+  reportHeading.textContent = TERMS.report;
+  dialog.append(heading, reportHeading, wavesSurvived, report, restart, levelSelect);
   root.append(dialog);
   root.hidden = true;
   let destroyed = false;
@@ -163,10 +179,10 @@ export function mountEndScreen(
   const update = () => {
     const { phase, wavesCleared, totalWaves } = game.state;
     if (destroyed || !root.hidden || !isGameOver(phase)) return;
-    heading.textContent = phase === 'victory' ? 'Victory' : 'Defeat';
+    heading.textContent = phase === 'victory' ? TERMS.victory : TERMS.defeat;
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
     const won = phase === 'victory' ? result?.() : undefined;
-    if (won) wavesSurvived.after(...buildResult(doc, won));
+    if (won) heading.after(...buildResult(doc, won));
     report.replaceChildren(...buildReport(doc, damageReport(game.state.stats)));
     root.hidden = false;
     // Focusing the last child would scroll a tall report to the bottom, hiding the title.

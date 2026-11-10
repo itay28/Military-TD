@@ -1,0 +1,51 @@
+- dialog "Field manual":
+  - heading "Field manual" [level=2]
+  - navigation "Entries":
+    - heading "Towers" [level=3]
+    - list:
+      - listitem:
+        - button "Rifle Nest"
+      - listitem:
+        - button "AA Gun"
+      - listitem:
+        - button "Cannon"
+      - listitem:
+        - button "Mortar"
+    - heading "Enemies" [level=3]
+    - list:
+      - listitem:
+        - button "Infantry"
+      - listitem:
+        - button "Tank"
+      - listitem:
+        - button "Jeep"
+      - listitem:
+        - button "Helicopter"
+  - img "Tank, US model"
+  - button "Rotate left"
+  - button "Rotate right"
+  - group "Faction":
+    - button "US" [pressed]
+    - button "Russia"
+    - button "China"
+    - button "Insurgents"
+  - heading "Tank" [level=3]
+  - paragraph: "Main battle tank: large-calibre gun, heavy composite armor"
+  - paragraph: "Armor: Rifle Nests barely scratch it. Cannons and Mortars work."
+  - term: HP
+  - definition: "250"
+  - term: Armor
+  - definition: "8"
+  - term: Speed
+  - definition: 0.6 tiles/s
+  - term: Layer
+  - definition: Ground
+  - term: Leak cost
+  - definition: 5 Lives
+  - paragraph:
+    - strong: "Weak against:"
+    - text: AA Gun, Cannon
+  - paragraph:
+    - strong: "Shrugs off:"
+    - text: Rifle Nest, Mortar
+  - button "Back"

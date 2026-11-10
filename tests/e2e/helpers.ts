@@ -11,18 +11,26 @@ export interface OpenOptions {
   readonly speed?: number;
   /** Saves settings to `localStorage` (`persist=1`); test mode keeps them in memory otherwise. */
   readonly persist?: boolean;
+  /** Starts at this text size (#354): saved as the settings before the page loads, so it implies `persist`. */
+  readonly textSize?: 100 | 125 | 150 | undefined;
 }
 
 /** Opens the game in test mode and waits until `window.__TD__` is ready. */
 export async function openGame(
   page: Page,
-  { manualStep = true, anim = false, speed, persist = false }: OpenOptions = {},
+  { manualStep = true, anim = false, speed, persist = false, textSize }: OpenOptions = {},
 ) {
   const params = new URLSearchParams({ test: '1' });
   if (manualStep) params.set('step', 'manual');
   if (!anim) params.set('anim', '0');
   if (speed !== undefined) params.set('speed', String(speed));
-  if (persist) params.set('persist', '1');
+  if (persist || textSize !== undefined) params.set('persist', '1');
+  if (textSize !== undefined)
+    await page.addInitScript(
+      (size) =>
+        localStorage.setItem('military-td.settings', JSON.stringify({ version: 3, settings: { textSize: size } })),
+      textSize,
+    );
   await page.goto(`/?${params}`);
   await page.waitForFunction(() => window.__TD__ !== undefined);
 }
@@ -33,12 +41,15 @@ export interface MenuOptions {
   readonly progress?: Readonly<Record<string, { completed: boolean; bestStars: number }>>;
   /** `unlock=all`: every map can be picked. */
   readonly unlockAll?: boolean;
+  /** `demo=1`: the live battlefield plays behind the menu (#402), as for a player. */
+  readonly demo?: boolean;
 }
 
 /** Opens the Main menu in test mode (`menu=1`). `window.__TD__` appears only once Play starts a game. */
-export async function openMenu(page: Page, { progress, unlockAll = false }: MenuOptions = {}) {
+export async function openMenu(page: Page, { progress, unlockAll = false, demo = false }: MenuOptions = {}) {
   const params = new URLSearchParams({ test: '1', menu: '1', step: 'manual', anim: '0' });
   if (unlockAll) params.set('unlock', 'all');
+  if (demo) params.set('demo', '1');
   if (progress !== undefined) {
     params.set('persist', '1');
     await page.addInitScript(
@@ -47,14 +58,14 @@ export async function openMenu(page: Page, { progress, unlockAll = false }: Menu
     );
   }
   await page.goto(`/?${params}`);
-  await page.getByRole('button', { name: 'Play' }).waitFor();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).waitFor();
 }
 
 /** Opens the Level select in test mode: the Main menu, then Play. */
 export async function openLevelSelect(page: Page, options: MenuOptions = {}) {
   await openMenu(page, options);
-  await page.getByRole('button', { name: 'Play' }).click();
-  await page.getByRole('heading', { name: 'Select map' }).waitFor();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
+  await page.getByRole('heading', { name: 'Operations' }).waitFor();
 }
 
 /** The page coordinates of `tile`'s center, through the camera's pan and zoom, so a test clicks the canvas like a player. */
@@ -111,7 +122,7 @@ export async function playToEnd(page: Page, maxTicks = 60 * 60 * 30): Promise<Te
   for (let ticks = 0; ticks < maxTicks; ticks += 600) {
     const now = await page.evaluate(() => {
       const td = window.__TD__!;
-      if (td.state().phase === 'build') td.command({ type: 'startWave' });
+      if (td.state().phase === 'build') td.command({ type: 'callNextWave' });
       return td.step(600);
     });
     if (now.phase === 'victory' || now.phase === 'defeat') return now;

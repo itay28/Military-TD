@@ -15,7 +15,7 @@ test('the Heavy load plays in real time above 30 fps (p95)', async ({ page }) =>
   await openGame(page, { manualStep: false, anim: true });
   await page.evaluate(() => window.__TD__!.loadScenario('heavy-load'));
   await page.evaluate((warmupTicks) => {
-    window.__TD__!.command({ type: 'startWave' });
+    window.__TD__!.command({ type: 'callNextWave' });
     window.__TD__!.step(warmupTicks);
   }, HEAVY_LOAD_WARMUP_TICKS);
 

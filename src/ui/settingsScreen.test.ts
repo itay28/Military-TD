@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createProgress } from '../progress/progress';
 import { createSettings, type SettingsStore } from '../settings/settings';
 import { mountSettingsScreen, type SettingsScreen } from './settingsScreen';
 
@@ -69,6 +70,32 @@ describe('mountSettingsScreen', () => {
     expect(settings.get().showAllRanges).toBe(false);
   });
 
+  it('has a labelled Show map grid checkbox, on at first, that switches the setting at once (#400)', () => {
+    mount();
+    const box = [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find(
+      (input) => labelOf(input) === 'Show map grid',
+    )!;
+    expect(box.checked).toBe(true);
+    box.click();
+    expect(settings.get().showMapGrid).toBe(false);
+    box.click();
+    expect(settings.get().showMapGrid).toBe(true);
+  });
+
+  it('has a labelled Tactical mode checkbox, with its one-line cost, that switches the setting at once (#413)', () => {
+    mount();
+    const tactical = [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((box) =>
+      labelOf(box)?.startsWith('Tactical mode'),
+    )!;
+    expect(tactical.checked).toBe(false);
+    const hint = document.getElementById(tactical.getAttribute('aria-describedby')!);
+    expect(hint?.textContent).toBe('Call each wave yourself. Wins earn at most 2 stars.');
+    tactical.click();
+    expect(settings.get().tacticalMode).toBe(true);
+    tactical.click();
+    expect(settings.get().tacticalMode).toBe(false);
+  });
+
   describe('volume sliders (#67)', () => {
     const sliders = () => [...root.querySelectorAll<HTMLInputElement>('input[type="range"]')];
     const nameOf = (input: HTMLInputElement) => root.querySelector(`label[for="${input.id}"]`)?.textContent;
@@ -122,6 +149,22 @@ describe('mountSettingsScreen', () => {
     expect(document.activeElement).toBe(speed('×1'));
   });
 
+  it('has no Show hints again without saved progress', () => {
+    mount();
+    expect(root.textContent).not.toContain('Show hints again');
+  });
+
+  it('Show hints again clears the saved hints flag and says so', () => {
+    const progress = createProgress();
+    progress.setHintsDone(true);
+    mounted.push(mountSettingsScreen(root, settings, { onBack: () => {}, progress }));
+    const button = [...root.querySelectorAll('button')].find((b) => b.textContent === 'Show hints again')!;
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('');
+    button.click();
+    expect(progress.get().hintsDone).toBe(false);
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('Hints will show on the first map.');
+  });
+
   it('closes and calls onBack when Back is pressed', () => {
     const onBack = vi.fn();
     mount(onBack);
@@ -152,5 +195,49 @@ describe('mountSettingsScreen', () => {
     expect(root.hidden).toBe(true);
     pressKey('Escape');
     expect(onBack).not.toHaveBeenCalled();
+  });
+
+  describe('reduce motion and text size (#354)', () => {
+    const checkboxNamed = (name: string) =>
+      [...root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((box) => labelOf(box) === name);
+    const textSizeGroup = () =>
+      [...root.querySelectorAll('fieldset')].find((set) => set.querySelector('legend')?.textContent === 'Text size');
+    const textSizes = () => [...textSizeGroup()!.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+
+    it('offers a labelled Reduce motion checkbox showing the current setting', () => {
+      settings.set({ reducedMotion: true });
+      mount();
+      expect(checkboxNamed('Reduce motion')?.checked).toBe(true);
+    });
+
+    it('switches reduced motion as soon as the box is toggled', () => {
+      mount();
+      checkboxNamed('Reduce motion')!.click();
+      expect(settings.get().reducedMotion).toBe(true);
+      checkboxNamed('Reduce motion')!.click();
+      expect(settings.get().reducedMotion).toBe(false);
+    });
+
+    it('offers 100 %, 125 % and 150 % as one labelled group, with the current size checked', () => {
+      settings.set({ textSize: 125 });
+      mount();
+      const radios = textSizes();
+      expect(radios.map(labelOf)).toEqual(['100 %', '125 %', '150 %']);
+      expect(new Set(radios.map((radio) => radio.name)).size).toBe(1);
+      expect(radios.map((radio) => radio.checked)).toEqual([false, true, false]);
+    });
+
+    it('sets the text size as soon as one is picked', () => {
+      mount();
+      textSizes()[2]!.click();
+      expect(settings.get().textSize).toBe(150);
+    });
+
+    it('keeps the speed and text size groups apart: picking a size leaves the speed alone', () => {
+      mount();
+      textSizes()[1]!.click();
+      expect(settings.get().defaultSpeed).toBe(1);
+      expect(speed('×1')!.checked).toBe(true);
+    });
   });
 });

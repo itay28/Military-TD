@@ -23,7 +23,7 @@ export default defineScenario({
   money: 1000,
   towers: [{ kind: 'cannon', tile: CANNON_TILE }],
   waves: [{ groups: [{ kind: 'tank', count: 1, spacingMs: 0, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: 'end',
   expectations({ events }, expect) {
     if (!back) throw new Error('the Cannon should cover the way back');

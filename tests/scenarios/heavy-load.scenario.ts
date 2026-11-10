@@ -7,7 +7,7 @@ import { defineScenario } from './define';
 export default defineScenario({
   description: `The Heavy load: ${HEAVY_LOAD.enemies} enemies against ${HEAVY_LOAD.towers} towers on Serpentine, seeded; the wave is still on after the measured ticks.`,
   ...heavyLoadSetup(),
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: { ticks: HEAVY_LOAD_WARMUP_TICKS + HEAVY_LOAD_MEASURE_TICKS },
   expectations({ outcome, finalState }, expect) {
     expect(outcome).toBe('stopped');

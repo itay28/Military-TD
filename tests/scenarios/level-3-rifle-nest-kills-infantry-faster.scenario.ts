@@ -10,7 +10,7 @@ export default defineScenario({
   script: [
     { atTick: 0, command: { type: 'upgradeTower', towerId: 1 } },
     { atTick: 0, command: { type: 'upgradeTower', towerId: 1 } },
-    { atTick: 0, command: { type: 'startWave' } },
+    { atTick: 0, command: { type: 'callNextWave' } },
   ],
   until: 'end',
   expectations({ outcome, finalState, events }, expect) {

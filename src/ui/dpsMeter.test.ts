@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DPS_METER_REFRESH_MS } from '../data/display';
-import { addTower, addWaveTime, emptyStats, endWave, recordShots, resetWave, withWaveElapsed } from '../sim/stats';
+import { addTower, addWaveTime, emptyStats, endWave, recordShots, startWaveStats, withWaveElapsed } from '../sim/stats';
 import type { CombatStats } from '../sim/stats';
 import type { Shot } from '../sim/towers';
 import { mountDpsMeter, type DpsMeterGame } from './dpsMeter';
@@ -17,8 +17,13 @@ const tile = { col: 0, row: 0 };
 // Wave 1 (4 s): Rifle Nest 1 deals 40 and kills, Cannon 2 deals 100, Rifle Nest 3 deals 20.
 function wave1(): CombatStats {
   let stats = addTower(addTower(addTower(emptyStats(), 1, 'rifleNest', tile), 2, 'cannon', tile), 3, 'rifleNest', tile);
-  stats = recordShots(stats, [shot(1, 10, 40), shot(2, 11, 100), shot(3, 12, 20)], new Set([10]));
-  return endWave(withWaveElapsed(addWaveTime(stats, [1, 2, 3], 4000), 4000), 1);
+  stats = recordShots(
+    startWaveStats(stats, 1),
+    [shot(1, 10, 40), shot(2, 11, 100), shot(3, 12, 20)],
+    new Set([10]),
+    () => 1,
+  );
+  return endWave(withWaveElapsed(addWaveTime(stats, [1, 2, 3], 4000), new Map([[1, 4000]]), 1), 1);
 }
 
 /** A game the test drives by hand: the meter only reads `state`. */
@@ -119,8 +124,16 @@ describe('DPS meter', () => {
     const meter = mountDpsMeter(root, game, { now, narrow: () => false });
     meter.toggle();
     // Wave 2 (1 s so far): only Rifle Nest 3 has fired.
-    let stats = resetWave(game.state.stats);
-    stats = withWaveElapsed(recordShots(stats, [shot(3, 13, 10)], new Set()), 1000);
+    let stats = startWaveStats(game.state.stats, 2);
+    stats = withWaveElapsed(
+      addWaveTime(
+        recordShots(stats, [shot(3, 13, 10)], new Set(), () => 2),
+        [3],
+        1000,
+      ),
+      new Map([[2, 1000]]),
+      2,
+    );
     game.state = { ...game.state, stats, phase: 'wave' };
     clock += DPS_METER_REFRESH_MS;
     meter.update();
@@ -180,6 +193,121 @@ describe('DPS meter', () => {
     const meter = mountDpsMeter(root, game, { now, narrow: () => false });
     meter.update();
     expect(root.querySelectorAll('[data-kind]')).toHaveLength(0);
+  });
+
+  describe('clicking rows (#244)', () => {
+    const kindButton = (kind: string) => q<HTMLButtonElement>(`dps-kind-highlight-${kind}`)!;
+    const towerButton = (id: number) => q<HTMLButtonElement>(`dps-tower-button-${id}`)!;
+    const mountWith = (game = fakeGame(wave1())) => {
+      const calls = { selected: [] as number[], highlighted: [] as (string | undefined)[] };
+      const meter = mountDpsMeter(root, game, {
+        now,
+        narrow: () => false,
+        onSelectTower: (id) => calls.selected.push(id),
+        onHighlightKind: (kind) => calls.highlighted.push(kind),
+      });
+      meter.toggle();
+      return { meter, calls };
+    };
+
+    it('names the buttons and starts with nothing highlighted', () => {
+      const { meter } = mountWith();
+      expect(kindButton('cannon').getAttribute('aria-label')).toBe('Highlight all Cannons');
+      expect(kindButton('rifleNest').getAttribute('aria-label')).toBe('Highlight all Rifle Nests');
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('false');
+      expect(towerButton(2).getAttribute('aria-label')).toBe('Select Cannon #2');
+      expect(towerButton(3).getAttribute('aria-label')).toBe('Select Rifle Nest #3');
+      expect(meter.highlightedKind).toBeUndefined();
+    });
+
+    it('highlights a kind on click and clears it on a second click', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      expect(meter.highlightedKind).toBe('cannon');
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('true');
+      kindButton('cannon').click();
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('false');
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('highlights one kind at a time', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      kindButton('rifleNest').click();
+      expect(meter.highlightedKind).toBe('rifleNest');
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('false');
+      expect(kindButton('rifleNest').getAttribute('aria-pressed')).toBe('true');
+      expect(calls.highlighted).toEqual(['cannon', 'rifleNest']);
+    });
+
+    it('clears the highlight on Escape, and ignores other keys', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+      expect(meter.highlightedKind).toBe('cannon');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(kindButton('cannon').getAttribute('aria-pressed')).toBe('false');
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('lets Escape reach other handlers when nothing is highlighted', () => {
+      mountWith();
+      const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+      document.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('selects the tower of a tower row', () => {
+      const { calls } = mountWith();
+      towerButton(2).click();
+      towerButton(3).click();
+      expect(calls.selected).toEqual([2, 3]);
+    });
+
+    it('does not let a sold tower be selected', () => {
+      const game = fakeGame(wave1());
+      game.state = { ...game.state, towers: game.state.towers.filter((t) => t.id !== 3) };
+      const { calls } = mountWith(game);
+      expect(towerButton(3).disabled).toBe(true);
+      expect(towerButton(1).disabled).toBe(false);
+      towerButton(3).click();
+      expect(calls.selected).toEqual([]);
+    });
+
+    it('clears the highlight when its kind leaves the meter', () => {
+      const game = fakeGame(wave1());
+      const { meter, calls } = mountWith(game);
+      kindButton('cannon').click();
+      game.state = { ...game.state, stats: emptyStats(), towers: [] };
+      clock += DPS_METER_REFRESH_MS;
+      meter.update();
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('clears the highlight when the meter is closed', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      meter.toggle();
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('clears the highlight when destroyed', () => {
+      const { meter, calls } = mountWith();
+      kindButton('cannon').click();
+      meter.destroy();
+      expect(calls.highlighted).toEqual(['cannon', undefined]);
+    });
+
+    it('keeps the expand button apart from the highlight button', () => {
+      const { meter, calls } = mountWith();
+      q<HTMLButtonElement>('dps-kind-toggle-cannon')!.click();
+      expect(meter.highlightedKind).toBeUndefined();
+      expect(calls.highlighted).toEqual([]);
+    });
   });
 
   it('removes its element on destroy', () => {

@@ -41,4 +41,15 @@ describe('createTracers', () => {
     tracers.add(FROM, TO, 'rifleNest');
     expect(tracers.active()).toEqual([]);
   });
+
+  it('reads a live fade time each time, so a change applies at once', () => {
+    let fadeMs = 100;
+    const tracers = createTracers(() => fadeMs);
+    tracers.add({ x: 0, y: 0 }, { x: 10, y: 0 }, 'rifleNest');
+    tracers.advance(25);
+    fadeMs = 50;
+    expect(tracers.active()[0]?.alpha).toBeCloseTo(0.5);
+    tracers.advance(25);
+    expect(tracers.active()).toEqual([]);
+  });
 });

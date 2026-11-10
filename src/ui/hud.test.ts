@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WAVE_BANNER_MS } from '../data/display';
-import { AUTO_START_DELAY_MS } from '../data/waves';
 import { createGame, type Game } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { waveDps } from '../sim/stats';
@@ -21,21 +20,25 @@ const SMALL: MapData = {
 };
 const LEAK_MS = 4000;
 
-// Two one-Infantry waves; nobody shoots, so each wave clears when its Infantry leaks.
-const newGame = (lives = 20): Game =>
+const TIMER_MS = 10_000;
+// Two one-Infantry waves, 10 s apart in timed mode; nobody shoots, so each wave clears when its Infantry leaks.
+// Tactical by default: most of these tests are about one wave at a time.
+const newGame = (lives = 20, tacticalMode = true): Game =>
   createGame({
     map: SMALL,
     money: 100,
     lives,
+    tacticalMode,
     waves: [
-      { groups: [{ kind: 'infantry', count: 1, spacingMs: 100, delayMs: 0 }] },
-      { groups: [{ kind: 'infantry', count: 1, spacingMs: 100, delayMs: 0 }] },
+      { groups: [{ kind: 'infantry', count: 1, spacingMs: 100, delayMs: 0 }], afterMs: TIMER_MS },
+      { groups: [{ kind: 'infantry', count: 1, spacingMs: 100, delayMs: 0 }], afterMs: TIMER_MS },
     ],
   });
+const timedGame = (lives = 20) => newGame(lives, false);
 
 /** Starts the next wave and lets its one Infantry leak, which clears the wave. */
 const playWave = (game: Game) => {
-  game.startWave();
+  game.callNextWave();
   game.tick(LEAK_MS);
 };
 
@@ -54,19 +57,60 @@ beforeEach(() => {
 });
 
 describe('HUD', () => {
-  it('shows the starting Money, Lives and "Wave 0 / N"', () => {
+  it('shows the starting Funds, HQ and "Wave 0 / N"', () => {
     mountHud(root, newGame(), fakeSpeed());
-    expect(byTestId('hud-money')?.textContent).toBe('Money 100');
-    expect(byTestId('hud-lives')?.textContent).toBe('Lives 20');
+    expect(byTestId('hud-money')?.textContent).toBe('Funds $100');
+    expect(byTestId('hud-lives')?.textContent).toBe('HQ20/20');
     expect(byTestId('hud-wave')?.textContent).toBe('Wave 0 / 2');
   });
 
-  it('Lives drop on the next update after a leak', () => {
+  it('HQ drops on the next update after a leak', () => {
     const game = newGame();
     const hud = mountHud(root, game, fakeSpeed());
     playWave(game);
     hud.update();
-    expect(byTestId('hud-lives')?.textContent).toBe('Lives 19');
+    expect(byTestId('hud-lives')?.textContent).toBe('HQ19/20');
+  });
+
+  describe('HQ bar', () => {
+    const hq = () => byTestId('hud-lives')!;
+    const fill = () => hq().querySelector<HTMLElement>('.hq-fill')!;
+
+    it('is a meter named HQ, read as "HQ 20 of 20"', () => {
+      mountHud(root, newGame(), fakeSpeed());
+      expect(hq().getAttribute('role')).toBe('meter');
+      expect(hq().getAttribute('aria-label')).toBe('HQ');
+      expect(hq().getAttribute('aria-valuemin')).toBe('0');
+      expect(hq().getAttribute('aria-valuemax')).toBe('20');
+      expect(hq().getAttribute('aria-valuenow')).toBe('20');
+      expect(hq().getAttribute('aria-valuetext')).toBe('HQ 20 of 20');
+    });
+
+    it('its max is the Lives the game started with', () => {
+      mountHud(root, newGame(8), fakeSpeed());
+      expect(hq().getAttribute('aria-valuemax')).toBe('8');
+      expect(hq().textContent).toBe('HQ8/8');
+    });
+
+    it('shrinks and is re-read after a leak', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      expect(fill().style.width).toBe('100%');
+      playWave(game);
+      hud.update();
+      expect(hq().getAttribute('aria-valuenow')).toBe('19');
+      expect(hq().getAttribute('aria-valuetext')).toBe('HQ 19 of 20');
+      expect(fill().style.width).toBe('95%');
+    });
+
+    it('marks its level: ok, then low at half, then critical', () => {
+      const game = newGame(2);
+      const hud = mountHud(root, game, fakeSpeed());
+      expect(hq().dataset.level).toBe('ok');
+      playWave(game);
+      hud.update();
+      expect(hq().dataset.level).toBe('low');
+    });
   });
 
   it('Money drops on the next update after a tower is placed', () => {
@@ -74,23 +118,23 @@ describe('HUD', () => {
     const hud = mountHud(root, game, fakeSpeed());
     expect(game.placeTower('rifleNest', { col: 1, row: 0 })).toMatchObject({ ok: true });
     hud.update();
-    expect(byTestId('hud-money')?.textContent).toBe('Money 50');
+    expect(byTestId('hud-money')?.textContent).toBe('Funds $50');
   });
 
   it('the wave counter shows the started wave', () => {
     const game = newGame();
     const hud = mountHud(root, game, fakeSpeed());
-    game.startWave();
+    game.callNextWave();
     hud.update();
     expect(byTestId('hud-wave')?.textContent).toBe('Wave 1 / 2');
   });
 
-  describe('Start Wave', () => {
+  describe('Start wave (Tactical mode)', () => {
     const button = () => root.querySelector<HTMLButtonElement>('button[data-testid="start-wave"]');
 
-    it('is a "Start Wave" button, enabled in the Build phase', () => {
+    it('is a "Start wave" button, enabled in the Build phase', () => {
       mountHud(root, newGame(), fakeSpeed());
-      expect(button()?.textContent).toBe('Start Wave');
+      expect(button()?.textContent).toBe('Start wave');
       expect(button()?.disabled).toBe(false);
     });
 
@@ -99,6 +143,24 @@ describe('HUD', () => {
       mountHud(root, game, fakeSpeed());
       button()!.click();
       expect(game.state.phase).toBe('wave');
+      expect(game.state.waveNumber).toBe(1);
+    });
+
+    it('startWave() does what a click does, for the Space key', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      hud.startWave();
+      expect(game.state.phase).toBe('wave');
+      expect(button()!.disabled).toBe(true);
+    });
+
+    it('startWave() does nothing while the button is disabled', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      const startWave = vi.spyOn(game, 'callNextWave');
+      hud.startWave();
+      hud.startWave();
+      expect(startWave).toHaveBeenCalledOnce();
       expect(game.state.waveNumber).toBe(1);
     });
 
@@ -177,7 +239,7 @@ describe('HUD', () => {
       const game = newGame();
       const speed = fakeSpeed();
       const hud = mountHud(root, game, speed);
-      game.startWave();
+      game.callNextWave();
       hud.update();
       button(2).click();
       expect(speed.get()).toBe(2);
@@ -218,6 +280,20 @@ describe('HUD', () => {
       game.tick(WAVE_BANNER_MS - 1);
       hud.update();
       expect(banner()?.textContent).toBe('Wave 1 cleared');
+      game.tick(1);
+      hud.update();
+      expect(banner()?.textContent).toBe('');
+    });
+
+    it('shows "CONTACT — WAVE N" when a wave starts, for WAVE_BANNER_MS', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      game.callNextWave();
+      hud.update();
+      expect(banner()?.textContent).toBe('CONTACT — WAVE 1');
+      game.tick(WAVE_BANNER_MS - 1);
+      hud.update();
+      expect(banner()?.textContent).toBe('CONTACT — WAVE 1');
       game.tick(1);
       hud.update();
       expect(banner()?.textContent).toBe('');
@@ -268,7 +344,7 @@ describe('HUD', () => {
     it('shows the rounded wave DPS during a wave', () => {
       const game = armed();
       const hud = mountHud(root, game, fakeSpeed());
-      game.startWave();
+      game.callNextWave();
       for (let t = 0; t < 1500; t += 100) game.tick(100);
       hud.update();
       expect(game.state.stats.wave.damage).toBeGreaterThan(0);
@@ -278,7 +354,7 @@ describe('HUD', () => {
     it("keeps the last wave's figure after waveCleared", () => {
       const game = armed();
       const hud = mountHud(root, game, fakeSpeed());
-      game.startWave();
+      game.callNextWave();
       for (let t = 0; t < LEAK_MS; t += 100) game.tick(100);
       hud.update();
       expect(game.state.phase).toBe('build');
@@ -293,7 +369,7 @@ describe('HUD', () => {
     it("doesn't write to the DOM while the rounded value is unchanged", async () => {
       const game = armed();
       const hud = mountHud(root, game, fakeSpeed());
-      game.startWave();
+      game.callNextWave();
       for (let t = 0; t < LEAK_MS; t += 100) game.tick(100);
       hud.update();
       const writes: string[] = [];
@@ -308,74 +384,71 @@ describe('HUD', () => {
     });
   });
 
-  describe('Auto-start', () => {
-    const toggle = () => root.querySelector<HTMLButtonElement>('button[data-testid="auto-start"]');
+  describe('wave timers (timed mode)', () => {
+    const button = () => root.querySelector<HTMLButtonElement>('button[data-testid="start-wave"]');
     const nextWave = () => byTestId('hud-next-wave');
 
-    it('is an "Auto-start" toggle button, off at first', () => {
-      mountHud(root, newGame(), fakeSpeed());
-      expect(toggle()?.textContent).toBe('Auto-start');
-      expect(toggle()?.getAttribute('aria-pressed')).toBe('false');
-    });
-
-    it('clicking it turns auto-start on in the sim, and clicking again turns it off', () => {
-      const game = newGame();
-      mountHud(root, game, fakeSpeed());
-      toggle()!.click();
-      expect(game.state.autoStart).toBe(true);
-      expect(toggle()?.getAttribute('aria-pressed')).toBe('true');
-      toggle()!.click();
-      expect(game.state.autoStart).toBe(false);
-      expect(toggle()?.getAttribute('aria-pressed')).toBe('false');
-    });
-
-    it('shows "Next wave in N", in whole seconds rounded up, while counting down', () => {
-      const game = newGame();
+    it('the button is "Call next wave", and calls the next wave in during a wave too', () => {
+      const game = timedGame();
       const hud = mountHud(root, game, fakeSpeed());
-      expect(nextWave()?.textContent).toBe('');
-      toggle()!.click();
-      expect(nextWave()?.textContent).toBe(`Next wave in ${AUTO_START_DELAY_MS / 1000}`);
-      game.tick(AUTO_START_DELAY_MS - 1500);
+      expect(button()?.textContent).toBe('Call next wave');
+      button()!.click();
+      expect(game.state.waveNumber).toBe(1);
       hud.update();
-      expect(nextWave()?.textContent).toBe('Next wave in 2');
+      expect(button()?.disabled).toBe(false);
+      button()!.click();
+      expect(game.state.activeWaves).toEqual([1, 2]);
     });
 
-    it('shows no countdown while the "Wave N cleared" banner is up, then counts down', () => {
-      const game = newGame();
+    it('is disabled once every wave has started', () => {
+      const game = timedGame();
       const hud = mountHud(root, game, fakeSpeed());
-      toggle()!.click();
-      game.tick(AUTO_START_DELAY_MS);
-      game.tick(LEAK_MS);
+      game.callNextWave();
+      game.callNextWave();
       hud.update();
-      expect(byTestId('wave-banner')?.textContent).toBe('Wave 1 cleared');
-      expect(nextWave()?.textContent).toBe('');
-      game.tick(WAVE_BANNER_MS);
-      hud.update();
-      expect(nextWave()?.textContent).toBe(`Next wave in ${(AUTO_START_DELAY_MS - WAVE_BANNER_MS) / 1000}`);
+      expect(button()?.disabled).toBe(true);
     });
 
-    it('shows no countdown once the wave has started, or after it is turned off', () => {
-      const game = newGame();
+    it('shows "Next Ns", in whole seconds rounded up, during the build window and during a wave', () => {
+      const game = timedGame();
       const hud = mountHud(root, game, fakeSpeed());
-      toggle()!.click();
-      game.tick(AUTO_START_DELAY_MS);
+      expect(nextWave()?.textContent).toBe('Next 10s');
+      game.tick(TIMER_MS - 1500);
+      hud.update();
+      expect(nextWave()?.textContent).toBe('Next 2s');
+      game.tick(1500);
       hud.update();
       expect(game.state.phase).toBe('wave');
-      expect(nextWave()?.textContent).toBe('');
-      game.tick(LEAK_MS);
-      game.tick(WAVE_BANNER_MS);
+      expect(nextWave()?.textContent).toBe('Next 10s');
+    });
+
+    it('shows no countdown once the last wave has started', () => {
+      const game = timedGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      game.callNextWave();
+      game.callNextWave();
       hud.update();
-      expect(nextWave()?.textContent).not.toBe('');
-      toggle()!.click();
       expect(nextWave()?.textContent).toBe('');
     });
 
-    it('is disabled once the game is over', () => {
-      const game = newGame(1);
+    it('shows overlapping waves in the counter: "Waves 1–2 / 2"', () => {
+      const game = timedGame();
       const hud = mountHud(root, game, fakeSpeed());
+      game.callNextWave();
+      hud.update();
+      expect(byTestId('hud-wave')?.textContent).toBe('Wave 1 / 2');
+      game.callNextWave();
+      hud.update();
+      expect(byTestId('hud-wave')?.textContent).toBe('Waves 1–2 / 2');
+    });
+
+    it('Tactical mode shows no countdown, ever', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      expect(nextWave()?.textContent).toBe('');
       playWave(game);
       hud.update();
-      expect(toggle()?.disabled).toBe(true);
+      expect(nextWave()?.textContent).toBe('');
     });
   });
 

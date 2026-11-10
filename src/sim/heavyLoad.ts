@@ -49,7 +49,7 @@ export function heavyLoadSetup(seed: number = HEAVY_LOAD.seed): GameSetup {
 /** A Heavy load game mid-wave: its setup, the wave started, and `HEAVY_LOAD_WARMUP_TICKS` run so every enemy has spawned. */
 export function createHeavyLoadGame(seed: number = HEAVY_LOAD.seed): Game {
   const game = setUpGame(heavyLoadSetup(seed));
-  const started = game.startWave();
+  const started = game.callNextWave();
   if (!started.ok) throw new Error(`Heavy load: the wave didn't start (${started.reason})`);
   for (let i = 0; i < HEAVY_LOAD_WARMUP_TICKS; i++) game.tick(TICK_MS);
   return game;

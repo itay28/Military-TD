@@ -4,7 +4,7 @@ import { defineScenario } from './define';
 export default defineScenario({
   description: 'One Infantry walks the MVP Path with no towers in the way and leaks; the game is still won.',
   waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: 'end',
   expectations({ outcome, finalState, events }, expect) {
     expect(outcome).toBe('victory');
