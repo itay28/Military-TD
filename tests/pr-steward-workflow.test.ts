@@ -30,6 +30,12 @@ describe('PR steward workflow', () => {
     expect(yaml).toMatch(/^ {4}- cron: '\d+ \* \* \* \*'\n/m);
   });
 
+  // The merge queue's conflict map runs `git merge-tree` on the PR heads (#473).
+  it('checks out the steward job with full history', () => {
+    const job = yaml.slice(yaml.indexOf('\n  pr-steward:\n'));
+    expect(job).toMatch(/uses: actions\/checkout@v4\n {8}with:\n {10}fetch-depth: 0\n/);
+  });
+
   it('never runs two at once', () => {
     expect(yaml).toMatch(/^ {4}concurrency:\n {6}group: pr-steward\n {6}cancel-in-progress: false\n/m);
   });
