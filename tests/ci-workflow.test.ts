@@ -29,7 +29,7 @@ describe('ci workflow', () => {
     }
   });
 
-  it('ci runs npm ci, then typecheck, lint, format check, asset licenses, test, build and the itch.io build check in that order', () => {
+  it('ci runs npm ci, then typecheck, lint, format check, asset licenses, test, the sim budget, build and the itch.io build check in that order', () => {
     expect(runs(job('ci'))).toEqual([
       'npm ci',
       'npm run typecheck',
@@ -37,14 +37,21 @@ describe('ci workflow', () => {
       'npm run format:check',
       'npm run check:assets',
       'npm test',
+      'npm run test:perf',
       'npm run build',
       'node scripts/itch-build.ts dist',
     ]);
   });
 
-  it('e2e runs npm ci, then the e2e tests', () => {
+  it('e2e runs npm ci, then the e2e tests, then the frame-time report', () => {
     expect(job('e2e')).toMatch(/^ {4}name: e2e$/m);
-    expect(runs(job('e2e'))).toEqual(['npm ci', 'npm run test:e2e']);
+    expect(runs(job('e2e'))).toEqual(['npm ci', 'npm run test:e2e', 'npm run test:perf:browser']);
+  });
+
+  it('the frame-time report runs even when an e2e test failed but never fails the e2e job: report only until rendering is faster (#73)', () => {
+    expect(job('e2e')).toMatch(
+      /name: Frame-time report\n\s+if: \$\{\{ !cancelled\(\) \}\}\n\s+continue-on-error: true\n/,
+    );
   });
 
   it('e2e runs in the Playwright container that matches the @playwright/test version', () => {
