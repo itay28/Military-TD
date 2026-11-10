@@ -13,6 +13,10 @@ describe('Update snapshots workflow', () => {
     expect(yaml).toContain("github.event.label.name == 'update-snapshots'");
   });
 
+  it('names each run after its PR, so the PR steward can wait on it (#471)', () => {
+    expect(yaml).toContain('run-name: Update snapshots #${{ github.event.pull_request.number || inputs.pr }}');
+  });
+
   it('renders in the same Playwright image as the e2e job', () => {
     expect(image(yaml)).toBeDefined();
     expect(image(yaml)).toBe(image(ci));

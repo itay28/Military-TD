@@ -17,6 +17,7 @@ import {
   renameSources,
   currentChecks,
   decide,
+  activeSnapshotRuns,
   mainCiRed,
   mainRedFrom,
   milestoneDone,
@@ -91,6 +92,7 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
   codeCommittedAt: at(40),
   lastCommitAt: at(40),
   comments: [review(60), agent(DONE_MARKER, 30)],
+  snapshotRunSince: null,
   ...over,
 });
 const kind = (p: StewardPr) => decide(p, now).kind;
@@ -366,6 +368,78 @@ describe('decide: request a missing CI review', () => {
   it('marks each request with the head commit it was made for', () => {
     expect(reviewRequestMarker('abc123')).toContain(REVIEW_REQUEST_MARKER);
     expect(reviewRequestMarker('abc123')).toContain('abc123');
+  });
+});
+
+describe('decide: an Update snapshots run is going (#471)', () => {
+  const red = { checks: [{ name: 'e2e', state: 'failure' as const }] };
+  const active = (minutesAgo: number) => ({ snapshotRunSince: at(minutesAgo) });
+
+  it('waits instead of starting a round or handing off', () => {
+    const d = decide(pr({ ...red, ...active(2) }), now);
+    expect(d).toMatchObject({ kind: 'wait', cause: 'snapshots' });
+    const spent = pr({
+      ...red,
+      ...active(2),
+      comments: [agent(ROUND_MARKER, 50), agent(DONE_MARKER, 49), agent(ROUND_MARKER, 20), agent(DONE_MARKER, 19)],
+    });
+    expect(kind(spent)).toBe('wait');
+  });
+
+  it('gives up waiting after 30 minutes: the normal decision', () => {
+    expect(kind(pr({ ...red, ...active(31) }))).toBe('steward');
+    const spent = pr({
+      ...red,
+      ...active(31),
+      comments: [agent(ROUND_MARKER, 50), agent(DONE_MARKER, 49), agent(ROUND_MARKER, 40), agent(DONE_MARKER, 39)],
+    });
+    expect(kind(spent)).toBe('stuck');
+  });
+
+  it('does not hold a PR with no run of its own', () => {
+    expect(kind(pr({ ...red, snapshotRunSince: null }))).toBe('steward');
+  });
+
+  it('does not hold a conflict', () => {
+    expect(reasons(pr({ ...red, ...active(2), mergeable: 'CONFLICTING' }))).toContain('conflict');
+  });
+
+  it('is an agent wait for the status label', () => {
+    const p = pr({ ...red, ...active(2) });
+    expect(statusLabel(decide(p, now), p)).toBe('waiting: agent');
+  });
+});
+
+describe('activeSnapshotRuns (#471)', () => {
+  const run = (title: string, status: string, started = '2026-10-26T11:58:00Z') => ({
+    display_title: title,
+    status,
+    run_started_at: started,
+  });
+
+  it('maps PR numbers to the start of their active runs', () => {
+    const runs = [
+      run('Update snapshots #431', 'in_progress'),
+      run('Update snapshots #12', 'queued', '2026-10-26T11:50:00Z'),
+      run('Update snapshots #13', 'waiting'),
+      run('Update snapshots #14', 'completed'),
+      run('something else', 'in_progress'),
+    ];
+    expect(activeSnapshotRuns(runs)).toEqual(
+      new Map([
+        [431, '2026-10-26T11:58:00Z'],
+        [12, '2026-10-26T11:50:00Z'],
+        [13, '2026-10-26T11:58:00Z'],
+      ]),
+    );
+  });
+
+  it('keeps the earliest start when a PR has several', () => {
+    const runs = [
+      run('Update snapshots #5', 'in_progress', '2026-10-26T11:58:00Z'),
+      run('Update snapshots #5', 'queued', '2026-10-26T11:40:00Z'),
+    ];
+    expect(activeSnapshotRuns(runs).get(5)).toBe('2026-10-26T11:40:00Z');
   });
 });
 

@@ -138,6 +138,8 @@ const HAND_OFF_LABELS = [NEEDS_YOU_LABEL, NEEDS_APPROVAL_LABEL] as const;
 export const MAX_ROUNDS = 2;
 /** A round with no done marker after this long has died (e.g. its session hit a usage limit) and is retried, not counted (#200). Real rounds take minutes (#196). */
 const ROUND_TIMEOUT_MS = 60 * 60 * 1000;
+/** An Update snapshots run is waited on this long; after that it counts as hung, and the normal decision applies (#471). */
+export const SNAPSHOTS_TIMEOUT_MS = 30 * 60 * 1000;
 /** A draft that is red and has had no commit or comment for this long is stranded, and gets a round (#326). */
 export const DRAFT_IDLE_MS = 60 * 60 * 1000;
 /** Checks that report on bookkeeping, not on the PR's code; the CI review is judged by its comment. */
@@ -224,6 +226,8 @@ export interface StewardPr {
   readonly codeCommittedAt: string | null;
   /** When the latest commit of any kind was made (a draft's activity, #326). */
   readonly lastCommitAt: string | null;
+  /** When the earliest active Update snapshots run for this PR started (#471); its push will fix the red check. */
+  readonly snapshotRunSince: string | null;
   /** Conversation comments, oldest first. */
   readonly comments: readonly PrComment[];
 }
@@ -233,7 +237,7 @@ export type Reason = 'conflict' | 'ci' | 'review' | 'comment' | 'threads';
 
 /**
  * What a `wait` waits on, so its status label (#419) doesn't depend on the wording of `why`:
- * an agent or automation (`mergeability`, `round`, `checks`, `review`), the maintainer
+ * an agent or automation (`mergeability`, `round`, `checks`, `snapshots`, `review`), the maintainer
  * (`needs-info`, `release`: a release PR to merge by hand, or a broken report PR), CI on main
  * (`main-ci`), or something queued ahead of it (`milestone`, `stacked`, `blocked`).
  */
@@ -241,6 +245,7 @@ export type WaitCause =
   | 'mergeability'
   | 'round'
   | 'checks'
+  | 'snapshots'
   | 'review'
   | 'stacked'
   | 'blocked'
@@ -413,6 +418,11 @@ function decideIgnoringMain(
   // Running checks may still fail or post a review: wait so one round handles it all, unless
   // there's a conflict, which no check result changes.
   if (pending && !conflict) return { kind: 'wait', cause: 'checks', why: 'checks are running' };
+
+  // A hand-started Update snapshots run pushes the baselines that fix a red e2e (#471). Like
+  // `checks`, it never holds a conflict; a run past SNAPSHOTS_TIMEOUT_MS is taken as hung.
+  if (pr.snapshotRunSince && !conflict && now.getTime() - Date.parse(pr.snapshotRunSince) < SNAPSHOTS_TIMEOUT_MS)
+    return { kind: 'wait', cause: 'snapshots', why: 'an Update snapshots run is going' };
 
   const reasons: Reason[] = [];
   if (conflict) reasons.push('conflict');
@@ -723,6 +733,7 @@ const WAIT_LABEL: Readonly<Record<WaitCause, StatusLabel>> = {
   mergeability: 'waiting: agent',
   round: 'waiting: agent',
   checks: 'waiting: agent',
+  snapshots: 'waiting: agent',
   review: 'waiting: agent',
   milestone: 'waiting: milestone',
   stacked: 'waiting: parent PR',
@@ -1018,7 +1029,7 @@ function toCheck(node: ContextNode): Check {
   return { name: node.context ?? '', state };
 }
 
-export function toStewardPr(node: PrNode): StewardPr {
+export function toStewardPr(node: PrNode, snapshotRunSince: string | null = null): StewardPr {
   return {
     id: node.id,
     number: node.number,
@@ -1047,6 +1058,7 @@ export function toStewardPr(node: PrNode): StewardPr {
     renamed: renamedFiles(node.files),
     codeCommittedAt: codeCommittedAt(node.recentCommits.nodes),
     lastCommitAt: node.recentCommits.nodes.at(-1)?.commit.committedDate ?? null,
+    snapshotRunSince,
     comments: node.comments.nodes.map((c) => ({
       author: c.author?.login ?? '',
       bot: c.author?.__typename === 'Bot',
@@ -1060,6 +1072,40 @@ export function toStewardPr(node: PrNode): StewardPr {
 /** From a milestone's open issues: only its release issue is left. A truncated list (more pages) is never done. */
 export const milestoneDone = (open: readonly { labels: { nodes: { name: string }[] } }[], truncated = false): boolean =>
   !truncated && isMilestoneDone(open.map((i) => ({ state: 'open', labels: i.labels.nodes.map((l) => l.name) })));
+
+interface WorkflowRun {
+  display_title: string;
+  status: string;
+  run_started_at?: string | null;
+}
+
+/**
+ * PR number → start of its earliest active (queued, in progress or waiting) Update snapshots run
+ * (#471). The workflow's `run-name` is `Update snapshots #<pr>`: a hand-started run isn't linked
+ * to the PR, so the title is the only way to match it.
+ */
+export function activeSnapshotRuns(runs: readonly WorkflowRun[]): Map<number, string> {
+  const active = new Map<number, string>();
+  for (const run of runs) {
+    if (!['queued', 'in_progress', 'waiting'].includes(run.status) || !run.run_started_at) continue;
+    const number = /^Update snapshots #(\d+)$/.exec(run.display_title)?.[1];
+    if (!number) continue;
+    const prev = active.get(Number(number));
+    if (!prev || run.run_started_at < prev) active.set(Number(number), run.run_started_at);
+  }
+  return active;
+}
+
+/** One request per sweep. A failure only means no PR is held (it hands off as before). */
+async function readSnapshotRuns(token: string): Promise<Map<number, string>> {
+  try {
+    const res = await github(fetch, token, 'GET', 'actions/workflows/update-snapshots.yml/runs?per_page=50');
+    return activeSnapshotRuns(((await res.json()) as { workflow_runs: WorkflowRun[] }).workflow_runs);
+  } catch (error) {
+    console.log(`Couldn't read the Update snapshots runs, so none holds a PR: ${String(error)}`);
+    return new Map();
+  }
+}
 
 async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun: boolean): Promise<void> {
   const { repository } = await graphql<PrData>(token, PR_QUERY, { owner: 'itay28', name: 'Military-TD' });
@@ -1086,7 +1132,10 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
     }
   }
   let relabelled = 0;
-  for (const pr of await Promise.all(nodes.map((node) => withRenameSources(toStewardPr(node), token)))) {
+  const snapshotRuns = await readSnapshotRuns(token);
+  for (const pr of await Promise.all(
+    nodes.map((node) => withRenameSources(toStewardPr(node, snapshotRuns.get(node.number) ?? null), token)),
+  )) {
     const decision = decide(
       pr,
       now,
