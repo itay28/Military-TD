@@ -300,6 +300,23 @@ export const FACTION_NAMES = {
   insurgents: 'Insurgents',
 } as const satisfies Record<Faction, string>;
 
+/** Each Faction's mark on the Operations briefing (#401): a plain shape, never a flag or national emblem (ADR-0009). */
+export const FACTION_INSIGNIA = {
+  us: '▲',
+  russia: '◆',
+  china: '■',
+  insurgents: '✕',
+} as const satisfies Record<Faction, string>;
+
+/** How the Operations screen's map cards draw their tactical overlay over the aerial image (#401). */
+export const MAP_CARD = {
+  grid: { color: '#f1ecd2', alpha: 0.35, width: 1 },
+  route: { color: '#e0302a', alpha: 0.95, width: 2, dash: [6, 4] },
+  entry: { color: '#e0302a', radius: 4 },
+  exit: { color: '#f2c14e', size: 8 },
+  label: { font: 'bold 10px monospace', color: '#f1ecd2', stroke: '#1d2410', insetPx: 4 },
+} as const;
+
 /**
  * The Field manual's model view: it spins `spinDegPerS` on its own (not with reduced motion); each arrow key or Rotate
  * button turns it `keyStepDeg`, and a drag `dragDegPerPx` per pixel across.
