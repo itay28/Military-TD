@@ -31,5 +31,7 @@ export function modelFor(faction: Faction, kind: TowerKind | EnemyKind): ModelVi
     ? [single]
     : [TOP_DOWN[`${dir}-hull.png`], TOP_DOWN[`${dir}-turret.png`]].filter((u): u is string => !!u);
   const t = TURNTABLES[model.id];
-  return t ? { turntable: { url: t.url, frames: t.frames, frameSize: t.frameSize, columns: t.columns }, layers } : { layers };
+  return t
+    ? { turntable: { url: t.url, frames: t.frames, frameSize: t.frameSize, columns: t.columns }, layers }
+    : { layers };
 }
