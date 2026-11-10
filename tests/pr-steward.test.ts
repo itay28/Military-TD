@@ -1390,6 +1390,13 @@ describe('update-snapshots request (#472)', () => {
     expect(snapshotsRequested(pr({ comments: [asks(20), started(10), asks(5)] }))).toBe(true);
   });
 
+  it('is not requested by a comment from outside the maintainer identity', () => {
+    const stranger = { ...asks(5), author: 'rando', association: 'NONE' };
+    const bot = { ...asks(5), bot: true };
+    expect(snapshotsRequested(pr({ comments: [stranger] }))).toBe(false);
+    expect(snapshotsRequested(pr({ comments: [bot] }))).toBe(false);
+  });
+
   it('is not requested on a fork or a held PR', () => {
     expect(snapshotsRequested(pr({ fork: true, comments: [asks(5)] }))).toBe(false);
     expect(snapshotsRequested(pr({ labels: ['hold'], comments: [asks(5)] }))).toBe(false);

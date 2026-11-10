@@ -779,7 +779,9 @@ function ignoreStatus(error: unknown, status: number): void {
 /** Whether a round asked for *Update snapshots* and no run was started for that request yet (#472). */
 export function snapshotsRequested(pr: StewardPr): boolean {
   if (pr.fork || pr.labels.includes(HOLD_LABEL)) return false;
-  const latest = (marker: string) => lastCommentAt(pr, (c) => c.body.includes(marker));
+  // Only the maintainer's identity (which the steward posts as) can ask: the label starts a workflow that commits.
+  const latest = (marker: string) =>
+    lastCommentAt(pr, (c) => !c.bot && MAINTAINER_ASSOCIATIONS.includes(c.association) && c.body.includes(marker));
   const asked = latest(SNAPSHOTS_MARKER);
   return asked > 0 && asked > latest(SNAPSHOTS_STARTED_MARKER);
 }
