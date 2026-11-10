@@ -25,6 +25,7 @@ import {
   type StartIssue,
   isFeatureFreeze,
 } from './auto-start.ts';
+import { flagStale, planStaleClaims, readStale, staleQuery, type StaleIssue } from './stale-claims.ts';
 import { ApiMeter, softFail } from './rate-limit.ts';
 import { applyIdle, findIdleIssue, idleReasons, isStarved, planIdle, type IdleIssue } from './pipeline-idle.ts';
 
@@ -449,6 +450,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
   const labelled: LabelledItem[] = [];
   const sizing: SizingCandidate[] = [];
   const claimed: Omit<RetryIssue, 'comments' | 'pr'>[] = [];
+  const assignedIssues: Omit<StaleIssue, 'hasPr' | 'comments' | 'activity'>[] = [];
   let project: BoardData['user']['projectV2'] | undefined;
   let cursor: string | null = null;
   do {
@@ -497,6 +499,15 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         priority: node.priority?.name,
         blockedBy: c.blockedBy?.nodes.filter((b) => b.state === 'OPEN').map((b) => b.number) ?? [],
       });
+      if (issues.at(-1)!.assigned)
+        assignedIssues.push({
+          number: c.number,
+          assigned: true,
+          labels,
+          tracker: issues.at(-1)!.tracker,
+          milestone: c.milestone?.number ?? null,
+          infra: issues.at(-1)!.infra,
+        });
       if (labels.includes(AUTO_AGENT_LABEL))
         claimed.push({
           number: c.number,
@@ -597,6 +608,8 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
       console.log(`::warning::#${issue}: asking the sizing agent failed: ${String(error)}`);
     }
   }
+
+  await flagStaleClaims(token, dryRun, assignedIssues, prs, order.slice(0, 2));
 
   if (!autoStart) return;
   // An unread open PR could close an issue that would then be started a second time.
@@ -730,6 +743,46 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     else if (await commentNoSize(issue, token)) console.log(`#${issue}: no Size, asked for one`);
   }
   if (failures.length) throw new Error(failures.join('\n'));
+}
+
+/**
+ * Flag assigned issues with no PR and no activity for 3 days (#489), once each. Not fatal to the sweep:
+ * a failure is logged as a warning.
+ */
+async function flagStaleClaims(
+  token: string,
+  dryRun: boolean,
+  assigned: readonly Omit<StaleIssue, 'hasPr' | 'comments' | 'activity'>[],
+  prs: readonly { state: string; issues: readonly number[] }[],
+  scope: readonly number[],
+): Promise<void> {
+  try {
+    const open = prs.filter((pr) => pr.state === 'OPEN');
+    const candidates = assigned.filter(
+      (i) =>
+        !i.tracker &&
+        !i.labels.some((l) => [AUTO_AGENT_LABEL, HOLD_LABEL, NEEDS_YOU_LABEL, NEEDS_INFO_LABEL].includes(l)) &&
+        !open.some((pr) => pr.issues.includes(i.number)),
+    );
+    if (!candidates.length) return;
+    const { repository } = await graphql<{ repository: Parameters<typeof readStale>[0] }>(
+      token,
+      staleQuery(candidates.map((i) => i.number)),
+      { owner: OWNER, name: REPO },
+    );
+    const stale = planStaleClaims(
+      candidates.map((i, k) => ({ ...i, hasPr: false, ...readStale(repository, k, i.number) })),
+      scope,
+      Date.now(),
+    );
+    for (const issue of stale) {
+      if (dryRun) console.log(`#${issue}: assigned, no PR, no activity for 3 days, would flag it (dry run)`);
+      else if (await flagStale(issue, token))
+        console.log(`#${issue}: assigned, no PR, no activity for 3 days, flagged`);
+    }
+  } catch (error) {
+    console.log(`::warning::flagging stale claims failed: ${String(error)}`);
+  }
 }
 
 /**
