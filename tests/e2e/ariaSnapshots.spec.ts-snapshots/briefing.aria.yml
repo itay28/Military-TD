@@ -1,0 +1,13 @@
+- main:
+  - heading "Operations" [level=1]
+  - region "Operation First Light":
+    - heading "Operation First Light" [level=2]
+    - paragraph: Training Ground · HQ grid D2
+    - term: Situation
+    - definition: Enemy forces are probing the farmland from the west. Hold the road before they reach HQ on the east edge.
+    - term: Forces
+    - definition: "Enemy: Russia Friendly: US"
+    - term: Terrain
+    - definition: Open fields cut by one winding dirt road, with little cover.
+    - button "Deploy"
+    - button "Back"
