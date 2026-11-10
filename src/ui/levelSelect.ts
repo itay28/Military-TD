@@ -1,9 +1,9 @@
 import { TERMS, lockedLine } from '../data/display';
 import type { MapEntry } from '../data/maps';
-import { createMap } from '../sim/map';
 import type { Stars } from '../sim/progression';
+import { buildBriefing } from './briefing';
 import { TACTICAL_CAP_TEXT } from './endScreen';
-import { drawMapPreview } from './mapPreview';
+import { buildMapCard } from './mapCard';
 
 /** What the Level select shows of one map: whether it can be picked, and its best Stars so far. */
 export interface MapStatus {
@@ -18,7 +18,7 @@ export interface LevelSelectOptions {
   readonly app: HTMLElement;
   /** The maps to offer, in order. */
   readonly maps: readonly MapEntry[];
-  /** Called with a map's id when the player picks it. */
+  /** Called with a map's id when the player deploys from its briefing. */
   readonly onPick: (id: string) => void;
   /** The map at this index's status; a locked one can't be picked. By default every map is unlocked, with no stars. */
   readonly statusOf?: (mapIndex: number) => MapStatus;
@@ -56,8 +56,9 @@ function accessibleName(name: string, { unlocked, bestStars }: MapStatus, previo
 }
 
 /**
- * Builds the Level select inside `root`: one button per map, with its preview, name and best Stars (or "Locked" and
- * `aria-disabled` while locked), then Back. Focus starts on the last unlocked map. DOM (ADR-0003).
+ * Builds the Level select inside `root`: one button per map, with its aerial card, name and best Stars (or "Locked" and
+ * `aria-disabled` while locked), then Back. Focus starts on the last unlocked map. Picking an unlocked map swaps the
+ * cards for its briefing (#401), whose Deploy calls `onPick`; its Back or Escape returns to the cards. DOM (ADR-0003).
  */
 export function mountLevelSelect(
   root: HTMLElement,
@@ -67,8 +68,37 @@ export function mountLevelSelect(
   let live = true;
   const title = doc.createElement('h1');
   title.textContent = TERMS.levelSelect;
+  const back = doc.createElement('button');
+  back.type = 'button';
+  back.textContent = 'Back';
+  back.addEventListener('click', () => live && onBack());
   const list = doc.createElement('ul');
-  const mapButtons = maps.map(({ id, name, data }, index) => {
+  let briefing: { panel: HTMLElement; card: HTMLButtonElement } | undefined;
+  const closeBriefing = () => {
+    if (!briefing) return;
+    const { panel, card } = briefing;
+    briefing = undefined;
+    panel.remove();
+    list.hidden = false;
+    back.hidden = false;
+    card.focus();
+  };
+  const openBriefing = (entry: MapEntry, card: HTMLButtonElement) => {
+    const panel = buildBriefing(doc, entry, {
+      onDeploy: () => live && onPick(entry.id),
+      onBack: () => live && closeBriefing(),
+    });
+    panel.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !event.repeat && live) closeBriefing();
+    });
+    list.hidden = true;
+    back.hidden = true;
+    back.before(panel);
+    briefing = { panel, card };
+    panel.querySelector<HTMLButtonElement>('button.deploy')?.focus();
+  };
+  const mapButtons = maps.map((entry, index) => {
+    const { name } = entry;
     const status = statusOf(index);
     const button = doc.createElement('button');
     button.type = 'button';
@@ -76,23 +106,15 @@ export function mountLevelSelect(
     // aria-disabled rather than disabled: a locked map stays focusable, so a screen reader hears what unlocks it.
     if (!status.unlocked) button.setAttribute('aria-disabled', 'true');
     button.setAttribute('aria-label', accessibleName(name, status, maps[index - 1]));
-    const preview = doc.createElement('canvas');
-    // The label is the button's accessible name; the picture is for sighted players.
-    preview.setAttribute('aria-hidden', 'true');
-    drawMapPreview(preview, createMap(data));
     const label = doc.createElement('span');
     label.textContent = name;
-    button.append(preview, label, buildStatus(doc, status, maps[index - 1]));
-    button.addEventListener('click', () => live && status.unlocked && onPick(id));
+    button.append(buildMapCard(doc, entry), label, buildStatus(doc, status, maps[index - 1]));
+    button.addEventListener('click', () => live && status.unlocked && openBriefing(entry, button));
     const item = doc.createElement('li');
     item.append(button);
     list.append(item);
     return button;
   });
-  const back = doc.createElement('button');
-  back.type = 'button';
-  back.textContent = 'Back';
-  back.addEventListener('click', () => live && onBack());
   root.append(title);
   if (tacticalMode) {
     const cap = doc.createElement('p');

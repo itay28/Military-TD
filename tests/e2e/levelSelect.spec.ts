@@ -43,9 +43,40 @@ test('a map’s best stars from saved progress show on its button', async ({ pag
   await expect(page.getByRole('button', { name: `${SECOND_MAP.name}, no stars yet` })).toBeFocused();
 });
 
-test('picking a map starts a new game on it, in the Build phase', async ({ page }) => {
+test('a map card shows its aerial ground image under the tactical overlay (#401)', async ({ page }) => {
+  await openLevelSelect(page);
+  const ground = page.getByRole('button', { name: `${first.name}, no stars yet` }).getByTestId('map-ground');
+  await expect(ground).toBeVisible();
+  // The image loaded: a broken one has no natural size.
+  await expect.poll(() => ground.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+});
+
+test('picking a map opens its briefing; Back returns to the cards with that map focused (#401)', async ({ page }) => {
   await openLevelSelect(page);
   await page.getByRole('button', { name: `${first.name}, no stars yet` }).click();
+
+  const briefing = page.getByRole('region', { name: 'Operation First Light' });
+  await expect(briefing).toBeVisible();
+  await expect(briefing.getByTestId('briefing-grid')).toHaveText(`${first.name} · HQ grid D2`);
+  await expect(briefing.getByRole('button', { name: 'Deploy', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: `${first.name}, no stars yet` })).toBeHidden();
+
+  await page.keyboard.press('Escape');
+  await expect(briefing).toBeHidden();
+  await expect(page.getByRole('button', { name: `${first.name}, no stars yet` })).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  await briefing.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(briefing).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
+});
+
+test('picking a map and pressing Deploy on its briefing starts a new game on it, in the Build phase', async ({
+  page,
+}) => {
+  await openLevelSelect(page);
+  await page.getByRole('button', { name: `${first.name}, no stars yet` }).click();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
 
   await page.waitForFunction(() => window.__TD__ !== undefined);
   await expect(page.getByRole('heading', { name: 'Operations' })).toBeHidden();
@@ -71,6 +102,7 @@ test('the Level select lists every map in registry order', async ({ page }) => {
 test('picking the second map starts a game on its Path, with its own waves', async ({ page }) => {
   await openLevelSelect(page, { unlockAll: true });
   await page.getByRole('button', { name: `${SECOND_MAP.name}, no stars yet` }).click();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
 
   await page.waitForFunction(() => window.__TD__ !== undefined);
   await expect(page.getByRole('button', { name: 'Call next wave' })).toBeEnabled();
@@ -93,4 +125,16 @@ test('Back returns to the Main menu', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Operations' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Deploy', exact: true })).toBeFocused();
+});
+
+test('on a phone the briefing fits the width and Deploy is on screen (#401)', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await openLevelSelect(page);
+  await page.getByRole('button', { name: `${first.name}, no stars yet` }).click();
+  const briefing = page.getByTestId('briefing');
+  const box = await briefing.boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await expect(briefing.getByRole('button', { name: 'Deploy', exact: true })).toBeInViewport();
 });
