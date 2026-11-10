@@ -14,6 +14,7 @@
 // GITHUB_OUTPUT. Uses GITHUB_TOKEN (`actions: read`), whose quota is separate from PROJECT_TOKEN's.
 import { appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { didSweep, lastSweepStart, scheduleDue, scheduleLateness, type SweepCandidate } from './schedule-gate.ts';
 
 /** Another run of the same workflow, as the gate sees it. */
 export interface OtherRun {
@@ -42,6 +43,9 @@ interface ApiRun {
   id: number;
   run_number: number;
   status: string;
+  event: string;
+  run_started_at: string;
+  conclusion: string | null;
 }
 interface ApiJob {
   name: string;
@@ -77,6 +81,44 @@ async function otherRuns(workflowId: number, me: number, token: string): Promise
   );
 }
 
+/** A scheduled run sweeps only when no sweep started in the last 20 min (cron fires 3x an hour, #328). */
+const SCHEDULE_MIN_GAP_MS = 20 * 60_000;
+/** Warn when the last scheduled run is older than this: GitHub dropped some. */
+const SCHEDULE_LATE_MS = 2 * 3_600_000;
+
+/** Applies the schedule gate; logs when GitHub skipped scheduled runs. Returns whether to sweep. */
+async function scheduleGate(workflowId: number, me: number, token: string): Promise<boolean> {
+  const now = Date.now();
+  const start = (r: ApiRun) => Date.parse(r.run_started_at);
+  // The lateness check has its own query: on a busy repo the newest 50 runs of all events may not reach back 2 h.
+  const scheduled = await api<{ workflow_runs: ApiRun[] }>(
+    `actions/workflows/${workflowId}/runs?event=schedule&per_page=5`,
+    token,
+  );
+  const lastScheduled = scheduled.workflow_runs.filter((r) => r.run_number !== me).map(start);
+  const late = scheduleLateness(now, lastScheduled.length ? Math.max(...lastScheduled) : undefined, SCHEDULE_LATE_MS);
+  if (late !== undefined)
+    console.log(`::warning::The last scheduled run was ${late} h ago: GitHub skipped scheduled runs (#328).`);
+  const { workflow_runs } = await api<{ workflow_runs: ApiRun[] }>(
+    `actions/workflows/${workflowId}/runs?per_page=50`,
+    token,
+  );
+  // Only runs started within the gap can block this one. A run counts only if its sweep job ran or runs:
+  // a run stopped by its own gate (or one that yielded) ends "success" with the sweep job skipped.
+  const recent = workflow_runs.filter(
+    (r) => r.run_number !== me && r.conclusion !== 'cancelled' && now - start(r) < SCHEDULE_MIN_GAP_MS,
+  );
+  const candidates = await Promise.all(
+    recent.map(async (r): Promise<SweepCandidate> => {
+      const { jobs } = await api<{ jobs: ApiJob[] }>(`actions/runs/${r.id}/jobs`, token);
+      return { startMs: start(r), swept: didSweep(jobs) };
+    }),
+  );
+  if (scheduleDue(now, lastSweepStart(candidates), SCHEDULE_MIN_GAP_MS)) return true;
+  console.log('A sweep started in the last 20 min: skipping this scheduled run.');
+  return false;
+}
+
 async function main(): Promise<void> {
   const token = process.env['GITHUB_TOKEN'] ?? '';
   const runId = process.env['GITHUB_RUN_ID'];
@@ -84,6 +126,11 @@ async function main(): Promise<void> {
   let go = true;
   try {
     const { workflow_id } = await api<{ workflow_id: number }>(`actions/runs/${runId}`, token);
+    if (process.env['GITHUB_EVENT_NAME'] === 'schedule' && !(await scheduleGate(workflow_id, me, token))) {
+      console.log('go=false');
+      if (process.env['GITHUB_OUTPUT']) appendFileSync(process.env['GITHUB_OUTPUT'], 'go=false\n');
+      return;
+    }
     const started = Date.now();
     for (;;) {
       const step = debounceStep(me, await otherRuns(workflow_id, me, token));
