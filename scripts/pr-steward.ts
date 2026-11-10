@@ -31,6 +31,16 @@ export const ROUND_MARKER = '<!-- pr-steward:round -->';
 /** Posted by the steward (or implement) agent when it has finished a round. */
 export const DONE_MARKER = '<!-- pr-steward:done -->';
 
+/**
+ * A round puts this in its done comment when the only red checks are screenshot baselines that
+ * changed on purpose (#472). The script then starts *Update snapshots*, so it doesn't depend on
+ * what the session is allowed to call.
+ */
+export const SNAPSHOTS_MARKER = '<!-- pr-steward:update-snapshots -->';
+/** Posted by the Action when it starts the run: answers the latest request, so one request starts one run. */
+export const SNAPSHOTS_STARTED_MARKER = '<!-- pr-steward:update-snapshots-started -->';
+const SNAPSHOTS_LABEL = 'update-snapshots';
+
 const ROUND_META = '<!-- pr-steward:round-meta';
 /** The hidden line under a round marker: why the round fired, and the base branch's head then (#183). */
 export const roundMeta = (reasons: readonly Reason[], baseSha: string) =>
@@ -766,6 +776,32 @@ function ignoreStatus(error: unknown, status: number): void {
   if ((error as { status?: number }).status !== status) throw error;
 }
 
+/** Whether a round asked for *Update snapshots* and no run was started for that request yet (#472). */
+export function snapshotsRequested(pr: StewardPr): boolean {
+  if (pr.fork || pr.labels.includes(HOLD_LABEL)) return false;
+  const latest = (marker: string) => lastCommentAt(pr, (c) => c.body.includes(marker));
+  const asked = latest(SNAPSHOTS_MARKER);
+  return asked > 0 && asked > latest(SNAPSHOTS_STARTED_MARKER);
+}
+
+/**
+ * Starts *Update snapshots* for a PR: the comment first (so a failed label call is retried as a
+ * fresh run, not looped on), then the label, removed first because a label left from a hand-started
+ * run adds no event (#470). Written with PROJECT_TOKEN, so the label starts the workflow.
+ */
+export async function startSnapshots(pr: StewardPr, token: string, fetchFn: Fetch = fetch): Promise<void> {
+  const n = pr.number;
+  await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+    body: `PR steward: the round found only screenshot baselines that changed on purpose, so I added \`${SNAPSHOTS_LABEL}\` to remake them. Check the new PNGs show the intended change.\n\n${SNAPSHOTS_STARTED_MARKER}`,
+  });
+  try {
+    await github(fetchFn, token, 'DELETE', `issues/${n}/labels/${SNAPSHOTS_LABEL}`);
+  } catch (error) {
+    ignoreStatus(error, 404);
+  }
+  await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [SNAPSHOTS_LABEL] });
+}
+
 /**
  * Gives a PR its status label and removes the stale one. No request when it's already right, so a
  * run with no changes makes no label calls (#293). Two separate writes rather than one `PUT` of the
@@ -1129,6 +1165,14 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
       await act(pr, decision, token, settings);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));
+    }
+    if (settings.steward && snapshotsRequested(pr)) {
+      try {
+        await startSnapshots(pr, token);
+        console.log(`#${pr.number}: started Update snapshots`);
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : String(error));
+      }
     }
   }
   console.log(`Status labels: ${relabelled} PR${relabelled === 1 ? '' : 's'} relabelled.`);

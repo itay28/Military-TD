@@ -9,6 +9,10 @@ import {
   roundMeta,
   STUCK_MARKER,
   APPROVAL_MARKER,
+  SNAPSHOTS_MARKER,
+  SNAPSHOTS_STARTED_MARKER,
+  snapshotsRequested,
+  startSnapshots,
   act,
   changedFiles,
   codeCommittedAt,
@@ -1361,5 +1365,54 @@ describe('ensureStatusLabels', () => {
 
   it('reads the repo labels in the PR query, so checking costs no request', () => {
     expect(PR_QUERY).toMatch(/labels\(first: 100\) \{ nodes \{ name \} \}/);
+  });
+});
+
+// A round that finds only stale screenshot baselines says so with a marker; the script starts
+// *Update snapshots*, so no session call can be denied (#472).
+describe('update-snapshots request (#472)', () => {
+  const asks = (minutesAgo: number) => agent(`${SNAPSHOTS_MARKER}\n${DONE_MARKER}`, minutesAgo);
+  const started = (minutesAgo: number) => action(SNAPSHOTS_STARTED_MARKER, minutesAgo);
+
+  it('is not requested without the marker', () => {
+    expect(snapshotsRequested(pr({ comments: [agent(DONE_MARKER, 5)] }))).toBe(false);
+  });
+
+  it('is requested by a done comment carrying the marker', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(5)] }))).toBe(true);
+  });
+
+  it('is requested once: a start after the request answers it', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(10), started(5)] }))).toBe(false);
+  });
+
+  it('is requested again by a newer marker after a start', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(20), started(10), asks(5)] }))).toBe(true);
+  });
+
+  it('is not requested on a fork or a held PR', () => {
+    expect(snapshotsRequested(pr({ fork: true, comments: [asks(5)] }))).toBe(false);
+    expect(snapshotsRequested(pr({ labels: ['hold'], comments: [asks(5)] }))).toBe(false);
+  });
+
+  it('starts the run: comment first, then a fresh label', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await startSnapshots(pr(), 'gh-token', fetchFn);
+    expect(calls(fetchFn)).toEqual([
+      `POST ${api}/issues/7/comments`,
+      `DELETE ${api}/issues/7/labels/update-snapshots`,
+      `POST ${api}/issues/7/labels`,
+    ]);
+    const body = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
+    expect(body.body).toContain(SNAPSHOTS_STARTED_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[2]![1].body as string)).toEqual({ labels: ['update-snapshots'] });
+  });
+
+  it('adds the label even when there was none to remove', async () => {
+    const fetchFn = vi.fn<Fetch>(async (_url, init) =>
+      init.method === 'DELETE' ? new Response('{}', { status: 404 }) : ok(),
+    );
+    await startSnapshots(pr(), 'gh-token', fetchFn);
+    expect(calls(fetchFn).at(-1)).toBe(`POST ${api}/issues/7/labels`);
   });
 });
