@@ -1,4 +1,6 @@
 name: Split issue
+# Names each run after its issue: Board sync matches runs to issues by it to retry a failed split (#486).
+run-name: Split issue #${{ github.event.issue.number || inputs.issue }}
 
 # The split agent (#303): when an implement session dies twice on an issue (the first fire and
 # its one retry), auto-start gives up on it and labels it `needs-split` (with PROJECT_TOKEN, so
