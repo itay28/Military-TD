@@ -9,6 +9,7 @@ import {
   roundMeta,
   STUCK_MARKER,
   APPROVAL_MARKER,
+  AUTO_RESOLVED_MARKER,
   act,
   changedFiles,
   codeCommittedAt,
@@ -1361,5 +1362,67 @@ describe('ensureStatusLabels', () => {
 
   it('reads the repo labels in the PR query, so checking costs no request', () => {
     expect(PR_QUERY).toMatch(/labels\(first: 100\) \{ nodes \{ name \} \}/);
+  });
+});
+
+// Conflicts only in generated files are merged by a script, not an agent round (#474).
+describe('act: mechanical conflict resolution', () => {
+  const conflict: Decision = { kind: 'steward', reasons: ['conflict'], round: 1, retry: false, clearHandOff: [] };
+  const bodies = (fetchFn: Mock<Fetch>) =>
+    fetchFn.mock.calls.map(([, init]) => (init.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : {}));
+
+  it('fires no round when every conflict was resolved, and says so without a round marker', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => ({
+      kind: 'resolved' as const,
+      files: ['CREDITS.md', 'assets/manifest.json'],
+      baselines: false,
+    }));
+    await act(pr(), conflict, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(autoResolve).toHaveBeenCalledWith(expect.objectContaining({ number: 7 }));
+    expect(calls(fireOk)).toEqual([`POST ${api}/issues/7/comments`]);
+    const { body } = bodies(fireOk)[0] as { body: string };
+    expect(body).toContain(AUTO_RESOLVED_MARKER);
+    expect(body).toContain('`CREDITS.md`');
+    expect(body).not.toContain(ROUND_MARKER);
+  });
+
+  it('starts Update snapshots when a screenshot baseline took the base version', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => ({ kind: 'resolved' as const, files: ['x.png'], baselines: true }));
+    await act(pr(), conflict, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(calls(fireOk)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
+    expect(bodies(fireOk)[1]).toEqual({ labels: ['update-snapshots'] });
+  });
+
+  it('fires the round as before when a conflict has no rule', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => ({ kind: 'aborted' as const, why: 'src/a.ts has no mechanical rule' }));
+    await act(pr(), conflict, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(calls(fireOk)).toEqual(['POST https://fire.example/steward', `POST ${api}/issues/7/comments`]);
+  });
+
+  it('fires the round as before when the resolver itself fails', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => {
+      throw new Error('git broke');
+    });
+    await act(pr(), conflict, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(calls(fireOk)[0]).toBe('POST https://fire.example/steward');
+  });
+
+  it('tries it before handing off a conflict a round left behind', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => ({ kind: 'resolved' as const, files: ['GLOSSARY.md'], baselines: false }));
+    await act(pr(), { kind: 'stuck', reasons: ['conflict'], conflict: true }, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(calls(fireOk)).toEqual([`POST ${api}/issues/7/comments`]);
+    expect(bodies(fireOk)[0]!['labels']).toBeUndefined();
+  });
+
+  it('is not tried without a conflict, or with AUTO_STEWARD off', async () => {
+    const autoResolve = vi.fn(async () => ({ kind: 'aborted' as const, why: '' }));
+    await act(pr(), { ...conflict, reasons: ['ci'] }, 'gh-token', { ...settings, autoResolve }, fireOk);
+    await act(pr(), conflict, 'gh-token', { merge: true, autoResolve }, fireOk);
+    expect(autoResolve).not.toHaveBeenCalled();
   });
 });
