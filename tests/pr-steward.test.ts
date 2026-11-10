@@ -1015,6 +1015,14 @@ describe('act', () => {
     expect(body).toContain(roundMeta(['ci', 'review'], 'base-1'));
   });
 
+  it('marks a free front-of-queue round in its comment and meta line (#473)', async () => {
+    fireOk.mockClear();
+    await act(pr(), { ...steward, reasons: ['ci'], free: true }, 'gh-token', settings, fireOk);
+    const { body } = JSON.parse(fireOk.mock.calls[1]![1].body as string) as { body: string };
+    expect(body).toContain("doesn't count toward the limit");
+    expect(body).toContain(roundMeta(['ci'], 'base-1', true));
+  });
+
   it('removes the hand-off labels when a maintainer comment restarted the PR', async () => {
     fireOk.mockClear();
     await act(pr(), { ...steward, clearHandOff: ['needs-you', 'needs-approval'] }, 'gh-token', settings, fireOk);
@@ -1243,6 +1251,7 @@ describe('statusLabel', () => {
         'waiting: main CI',
         'waiting: milestone',
         'waiting: parent PR',
+        'waiting: queue',
         'waiting: you',
       ].sort(),
     );
@@ -1426,7 +1435,9 @@ describe('merge queue', () => {
     });
 
     it('leaves out look-ahead work for a later milestone', () => {
-      const later = pr({ closes: [{ number: 3, blocked: false, needsInfo: false, milestone: { number: 4, title: 'v0.3.0' } }] });
+      const later = pr({
+        closes: [{ number: 3, blocked: false, needsInfo: false, milestone: { number: 4, title: 'v0.3.0' } }],
+      });
       expect(inQueue(later, 'main', { number: 2, title: 'v0.2.0', after: [4], done: false })).toBe(false);
     });
   });
@@ -1460,7 +1471,10 @@ describe('merge queue', () => {
     const repo = () => {
       const dir = mkdtempSync(join(tmpdir(), 'merge-tree-'));
       const git = (...args: string[]) =>
-        execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd: dir, encoding: 'utf8' }).trim();
+        execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
+          cwd: dir,
+          encoding: 'utf8',
+        }).trim();
       const commit = (file: string, text: string) => {
         writeFileSync(join(dir, file), text);
         git('add', file);
