@@ -1,9 +1,12 @@
 import { GAME_SPEEDS } from '../scenes/gameSpeed';
-import { MAX_VOLUME, type SettingsStore, type VolumeField } from '../settings/settings';
+import type { ProgressStore } from '../progress/progress';
+import { MAX_VOLUME, TEXT_SIZES, type SettingsStore, type VolumeField } from '../settings/settings';
 
 export interface SettingsScreenOptions {
   /** Called when the player presses Back (or Esc), after the screen has closed. */
   readonly onBack: () => void;
+  /** Saved progress, for Show hints again (#68), which clears its hints flag. No button without it. */
+  readonly progress?: Pick<ProgressStore, 'setHintsDone'>;
 }
 
 export interface SettingsScreen {
@@ -17,6 +20,8 @@ export interface SettingsScreen {
 export type OpenSettings = (onBack: () => void) => SettingsScreen;
 
 const TITLE_ID = 'settings-title';
+const TACTICAL_HINT_ID = 'tactical-mode-hint';
+const TACTICAL_HINT = 'Call each wave yourself. Wins earn at most 2 stars.';
 
 /** Each volume slider's label, in the order they appear (#67). */
 const VOLUME_SLIDERS: readonly { field: VolumeField; label: string; id: string }[] = [
@@ -35,7 +40,7 @@ const VOLUME_STEP = 5;
 export function mountSettingsScreen(
   root: HTMLElement,
   settings: SettingsStore,
-  { onBack }: SettingsScreenOptions,
+  { onBack, progress }: SettingsScreenOptions,
 ): SettingsScreen {
   const doc = root.ownerDocument;
   const labelled = (input: HTMLInputElement, text: string) => {
@@ -63,6 +68,42 @@ export function mountSettingsScreen(
   showAllRanges.type = 'checkbox';
   showAllRanges.checked = current.showAllRanges;
   showAllRanges.addEventListener('change', () => settings.set({ showAllRanges: showAllRanges.checked }));
+
+  const showMapGrid = doc.createElement('input');
+  showMapGrid.type = 'checkbox';
+  showMapGrid.checked = current.showMapGrid;
+  showMapGrid.addEventListener('change', () => settings.set({ showMapGrid: showMapGrid.checked }));
+
+  const reducedMotion = doc.createElement('input');
+  reducedMotion.type = 'checkbox';
+  reducedMotion.checked = current.reducedMotion;
+  reducedMotion.addEventListener('change', () => settings.set({ reducedMotion: reducedMotion.checked }));
+
+  // Text size (#354): radios, like the speed, so the arrow keys move between sizes and each applies at once.
+  const textSizes = doc.createElement('fieldset');
+  const textSizeLegend = doc.createElement('legend');
+  textSizeLegend.textContent = 'Text size';
+  textSizes.append(textSizeLegend);
+  for (const size of TEXT_SIZES) {
+    const radio = doc.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'text-size';
+    radio.value = String(size);
+    radio.checked = size === current.textSize;
+    radio.addEventListener('change', () => settings.set({ textSize: size }));
+    textSizes.append(labelled(radio, `${size} %`));
+  }
+
+  // Tactical mode (ADR-0011): its cost is said next to it, so nobody turns it on without knowing.
+  const tactical = doc.createElement('input');
+  tactical.type = 'checkbox';
+  tactical.checked = current.tacticalMode;
+  tactical.setAttribute('aria-describedby', TACTICAL_HINT_ID);
+  tactical.addEventListener('change', () => settings.set({ tacticalMode: tactical.checked }));
+  const tacticalHint = doc.createElement('p');
+  tacticalHint.id = TACTICAL_HINT_ID;
+  tacticalHint.className = 'settings-hint';
+  tacticalHint.textContent = TACTICAL_HINT;
 
   const volumes = VOLUME_SLIDERS.map(({ field, label, id }) => {
     const row = doc.createElement('div');
@@ -95,6 +136,22 @@ export function mountSettingsScreen(
     row.append(name, slider, shown);
     return row;
   });
+  // Show hints again: the first map's hints come back on its next game. A status line confirms it, the button stays.
+  const hintControls: HTMLElement[] = [];
+  if (progress) {
+    const showHints = doc.createElement('button');
+    showHints.type = 'button';
+    showHints.textContent = 'Show hints again';
+    showHints.className = 'show-hints';
+    const note = doc.createElement('p');
+    note.setAttribute('role', 'status');
+    note.className = 'hints-note';
+    showHints.addEventListener('click', () => {
+      progress.setHintsDone(false);
+      note.textContent = 'Hints will show on the first map.';
+    });
+    hintControls.push(showHints, note);
+  }
 
   const backButton = doc.createElement('button');
   backButton.type = 'button';
@@ -107,7 +164,19 @@ export function mountSettingsScreen(
   const heading = doc.createElement('h2');
   heading.id = TITLE_ID;
   heading.textContent = 'Settings';
-  dialog.append(heading, speeds, labelled(showAllRanges, 'Always show tower ranges'), ...volumes, backButton);
+  dialog.append(
+    heading,
+    speeds,
+    labelled(showAllRanges, 'Always show tower ranges'),
+    labelled(showMapGrid, 'Show map grid'),
+    labelled(tactical, 'Tactical mode'),
+    tacticalHint,
+    ...volumes,
+    labelled(reducedMotion, 'Reduce motion'),
+    textSizes,
+    ...hintControls,
+    backButton,
+  );
   root.append(dialog);
   root.hidden = false;
   speeds.querySelector<HTMLInputElement>('input:checked')?.focus();

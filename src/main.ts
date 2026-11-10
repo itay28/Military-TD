@@ -4,14 +4,19 @@ import { createPhaserMusicBackend, type LoopingSound } from './audio/phaserMusic
 import { MUSIC_REGISTRY_KEY } from './audio/radio';
 import { createAudioMix } from './audio/volume';
 import { BootScene } from './scenes/BootScene';
+import { DEMO_SCENE_KEY, demoMode } from './scenes/demoMode';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
 import { createPersistedProgress } from './progress/persist';
 import { createTestApi } from './testing/api';
 import { parseTestFlags } from './testing/flags';
+import { applyDisplaySettings, prefersReducedMotion } from './settings/display';
 import { browserStorage, createMemoryStorage, createPersistedSettings } from './settings/persist';
+import { defaultSettings } from './settings/settings';
 import { SCENARIOS } from './testing/scenarios';
+import { mountFieldManual, type OpenFieldManual } from './ui/fieldManual';
+import { mountHowToPlay, type OpenHowToPlay } from './ui/howToPlay';
 import { mountSettingsScreen, type OpenSettings } from './ui/settingsScreen';
 import { showVersion } from './ui/version';
 
@@ -27,8 +32,13 @@ const endScreenRoot = document.getElementById('end-screen');
 if (!endScreenRoot) throw new Error('index.html has no #end-screen element');
 const towerPanelRoot = document.getElementById('tower-panel');
 if (!towerPanelRoot) throw new Error('index.html has no #tower-panel element');
+const enemyCardRoot = document.getElementById('enemy-card');
+if (!enemyCardRoot) throw new Error('index.html has no #enemy-card element');
 const pauseMenuRoot = document.getElementById('pause-menu');
 if (!pauseMenuRoot) throw new Error('index.html has no #pause-menu element');
+
+const hintsRoot = document.getElementById('hints');
+if (!hintsRoot) throw new Error('index.html has no #hints element');
 
 const app = document.getElementById('app');
 if (!app) throw new Error('index.html has no #app element');
@@ -37,35 +47,68 @@ if (!menuRoot) throw new Error('index.html has no #menu element');
 const settingsRoot = document.getElementById('settings');
 if (!settingsRoot) throw new Error('index.html has no #settings element');
 
+const howToPlayRoot = document.getElementById('how-to-play');
+if (!howToPlayRoot) throw new Error('index.html has no #how-to-play element');
+
 const flags = parseTestFlags(window.location.search);
 // One set of settings, shared by both menus and every game, saved between visits. Test mode keeps them in memory
 // unless ?persist=1, so e2e runs don't leak into each other.
 const storage = flags.test && !flags.persist ? createMemoryStorage() : browserStorage();
-const settings = createPersistedSettings(storage);
+// Reduced motion defaults to the system's preference until the player picks (#354).
+const settings = createPersistedSettings(
+  storage,
+  defaultSettings({ prefersReducedMotion: prefersReducedMotion(window) }),
+);
+// Text size and reduced motion apply to the whole page, and follow every change.
+applyDisplaySettings(settings, document.documentElement);
 // Saved progress (maps won, best stars) lives under its own key: the Game records wins, the Level select unlocks from it.
 const progress = createPersistedProgress(storage);
 // Volume (#67): master × channel from the settings, silent while the tab is hidden. Music and sound effects both read it.
 const audioMix = createAudioMix(settings, document);
-const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack });
+const openSettings: OpenSettings = (onBack) => mountSettingsScreen(settingsRoot, settings, { onBack, progress });
+const fieldManualRoot = document.getElementById('field-manual');
+if (!fieldManualRoot) throw new Error('index.html has no #field-manual element');
+// Over the Main menu or the paused game; it shows only the enemy kinds already met (#408).
+const openFieldManual: OpenFieldManual = (onBack) =>
+  mountFieldManual(fieldManualRoot, {
+    onBack,
+    progress,
+    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  });
+const openHowToPlay: OpenHowToPlay = (onBack) => mountHowToPlay(howToPlayRoot, { onBack });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 
-const gameScene = new GameScene({
+const gameOptions = {
   hudRoot,
   buildBarRoot,
   endScreenRoot,
   towerPanelRoot,
+  enemyCardRoot,
   pauseMenuRoot,
+  hintsRoot,
   flags,
   settings,
   audioMix,
   openSettings,
+  openFieldManual,
+  openHowToPlay,
   progress,
+};
+const gameScene = new GameScene({
+  ...gameOptions,
   // Installed once the first game exists, so a test that waits for __TD__ can use it at once.
   onCreate: () => {
     if (flags.test) window.__TD__ ??= createTestApi(gameScene.testHooks(), SCENARIOS);
   },
 });
+
+// The live battlefield behind the menu (#402): a second Game scene playing a scripted demo, unless it's off.
+const demo = demoMode(flags, {
+  reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+});
+const demoScenes = demo === 'off' ? [] : [new GameScene({ ...gameOptions, demo })];
 
 const gameRoot = document.getElementById('game');
 if (!gameRoot) throw new Error('index.html has no #game element');
@@ -80,9 +123,10 @@ const game = new Phaser.Game({
   backgroundColor: '#1b1e16',
   scene: [
     new BootScene(flags),
-    new MenuScene({ app, menuRoot, openSettings }),
-    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll }),
+    new MenuScene({ app, menuRoot, openSettings, openFieldManual, openHowToPlay }),
+    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll, settings }),
     gameScene,
+    ...demoScenes,
   ],
 });
 // Phaser resizes on window resizes only; collapsing the build bar or the HUD wrapping resizes the stage without one.
@@ -109,6 +153,8 @@ game.registry.set(MUSIC_REGISTRY_KEY, music);
 audioMix.subscribe(() => music.refreshVolume());
 game.events.once(Phaser.Core.Events.READY, () => {
   for (const scene of game.scene.getScenes(false)) {
+    // The demo plays under the Main menu and Level select, which pick the music.
+    if (scene.scene.key === DEMO_SCENE_KEY) continue;
     scene.events.on(Phaser.Scenes.Events.START, () => music.enterScene(scene.scene.key));
   }
 });

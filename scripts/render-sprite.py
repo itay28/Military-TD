@@ -30,6 +30,11 @@ A model's optional `exclude` lists meshes to delete before rendering (e.g. add-o
 silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`; `overrides` gives a
 material its own `color` and `specular`), for a model painted in the wrong colour.
 
+`sun` (optional) overrides keys of the global sun for one model: soldiers use a higher sun so the shadow stays short
+(issue #342). The global `alphaFloor` zeroes the faint alpha the shadow catcher leaves over the whole ground plane
+(sky occlusion), so a sprite has no baked haze and its frame can be cropped to the figure. It applies to every model:
+only the soldier sets were re-rendered for #342, so re-rendering a vehicle or tower changes its alpha the same way.
+
 `turnDeg` turns a model clockwise after `frontAxis`, for one set down at an angle (not along an axis).
 
 `pose` freezes a rigged model at one frame of one of its animations (`action`, `frame`), e.g. a soldier crouched
@@ -121,22 +126,31 @@ def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) 
 
     `skip` keeps materials whose name starts with an entry. `overrides` gives a material (by name prefix) its own
     `color` and, optionally, `specular` (Principled "Specular IOR Level"), for a part that renders lighter than
-    the rest: a pale texture, or flat tops mirroring the sky.
+    the rest: a pale texture, or flat tops mirroring the sky. An override with `"flat": true` on an untextured
+    material (a flat base colour) sets that colour (and `specular`) instead, for a low-poly model painted in plain
+    colours; without it, untextured materials are left alone.
     """
     for mat in bpy.data.materials:
         tree = mat.node_tree
         bsdf = tree.nodes.get("Principled BSDF") if tree else None
-        if not bsdf or not bsdf.inputs["Base Color"].links or any(mat.name.startswith(s) for s in skip):
+        if not bsdf or any(mat.name.startswith(s) for s in skip):
+            continue
+        own = next((o for prefix, o in overrides.items() if mat.name.startswith(prefix)), {})
+        flat = not bsdf.inputs["Base Color"].links
+        if flat and not own.get("flat"):
+            continue
+        if "specular" in own:
+            bsdf.inputs["Specular IOR Level"].default_value = own["specular"]
+        if flat:
+            if "color" in own:
+                bsdf.inputs["Base Color"].default_value = (*own["color"], 1.0)
             continue
         link = bsdf.inputs["Base Color"].links[0]
         mix = tree.nodes.new("ShaderNodeMix")
         mix.data_type = "RGBA"
         mix.blend_type = "MULTIPLY"
         mix.inputs["Factor"].default_value = 1.0
-        own = next((o for prefix, o in overrides.items() if mat.name.startswith(prefix)), {})
         mix.inputs["B"].default_value = (*own.get("color", color), 1.0)
-        if "specular" in own:
-            bsdf.inputs["Specular IOR Level"].default_value = own["specular"]
         tree.links.new(link.from_socket, mix.inputs["A"])
         tree.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
 
@@ -289,7 +303,7 @@ def build_stage(cfg: dict, spec: dict) -> object:
     scene.collection.objects.link(cam)
     scene.camera = cam
 
-    sun_cfg = cfg["sun"]
+    sun_cfg = {**cfg["sun"], **spec.get("sun", {})}
     sun_data = bpy.data.lights.new("Sun", "SUN")
     sun_data.energy = sun_cfg["strength"]
     sun_data.angle = math.radians(sun_cfg["softnessDeg"])
@@ -315,14 +329,17 @@ def build_stage(cfg: dict, spec: dict) -> object:
     return ground
 
 
-def desaturate(path: Path, amount: float) -> None:
-    """Mix each pixel's colour `amount` of the way to its grey (Rec. 709 luma); alpha is untouched."""
+def desaturate(path: Path, amount: float, alpha_floor: float) -> None:
+    """Mix each pixel's colour `amount` of the way to its grey (Rec. 709 luma); alpha at or below `alpha_floor`
+    (0..1) becomes 0 (the shadow catcher's ground-wide haze), the rest is untouched."""
     img = bpy.data.images.load(str(path))
     px = list(img.pixels)
     for i in range(0, len(px), 4):
         r, g, b = px[i], px[i + 1], px[i + 2]
         y = 0.2126 * r + 0.7152 * g + 0.0722 * b
         px[i], px[i + 1], px[i + 2] = r + (y - r) * amount, g + (y - g) * amount, b + (y - b) * amount
+        if px[i + 3] <= alpha_floor:
+            px[i + 3] = 0.0
     img.pixels = px
     img.filepath_raw = str(path)
     img.file_format = "PNG"
@@ -333,7 +350,7 @@ def desaturate(path: Path, amount: float) -> None:
 def render(path: Path, cfg: dict) -> None:
     bpy.context.scene.render.filepath = str(path)
     bpy.ops.render.render(write_still=True)
-    desaturate(path, cfg["desaturate"])
+    desaturate(path, cfg["desaturate"], cfg.get("alphaFloor", 0))
     print(f"wrote {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
 
 
@@ -385,7 +402,7 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     render(out / f"{spec['id']}-turret.png", cfg)
 
 
-def orbit_frame(meshes, cfg: dict) -> tuple[Vector, float]:
+def orbit_frame(meshes, cfg: dict, spec: dict) -> tuple[Vector, float]:
     """The point the turntable camera orbits and the orthographic scale that keeps the model and its ground shadow
     in frame from every side: every vertex, and where its shadow falls, projected for each frame's view."""
     import numpy as np
@@ -399,7 +416,7 @@ def orbit_frame(meshes, cfg: dict) -> tuple[Vector, float]:
         co = np.c_[co.reshape(-1, 3), np.ones(len(co) // 3)] @ np.array(m.matrix_world).T
         pts.append(co[:, :3])
     pts = np.concatenate(pts)
-    sun = cfg["sun"]
+    sun = {**cfg["sun"], **spec.get("sun", {})}  # as build_stage lights it
     el, az = math.radians(sun["elevationDeg"]), math.radians(sun["azimuthDeg"])
     away = np.array((-math.sin(az), -math.cos(az), 0.0))  # shadows fall away from the sun's azimuth
     shadows = pts * (1, 1, 0) + np.outer(np.maximum(pts[:, 2], 0) / math.tan(el), away)
@@ -458,7 +475,7 @@ def render_turntable(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     size = TURNTABLE["frameSize"]
     scene.render.resolution_x = scene.render.resolution_y = size
     scene.cycles.samples = cfg.get("samples", TURNTABLE["samples"])  # 24 frames: denoised 32 is plenty at 384 px
-    centre, scale = orbit_frame(meshes, cfg)
+    centre, scale = orbit_frame(meshes, cfg, spec)
     cam = scene.camera
     cam.data.ortho_scale = scale
     cam.data.clip_end = 100

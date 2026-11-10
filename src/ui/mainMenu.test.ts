@@ -14,11 +14,11 @@ beforeEach(() => {
 });
 
 describe('Main menu', () => {
-  it('shows the title and a Play, a Settings and a Credits button', () => {
+  it('shows the game title Hold the Perimeter and a Deploy, a Settings and a Credits button', () => {
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
     expect(root.hidden).toBe(false);
-    expect(root.querySelector('h1')?.textContent).toBe('Military TD');
-    expect(button('Play')?.type).toBe('button');
+    expect(root.querySelector('h1')?.textContent).toBe('Hold the Perimeter');
+    expect(button('Deploy')?.type).toBe('button');
     expect(button('Settings')?.type).toBe('button');
     expect(button('Credits')?.type).toBe('button');
   });
@@ -38,7 +38,7 @@ describe('Main menu', () => {
 
   it('disables Settings when it is given no Settings screen to open', () => {
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
-    expect(button('Play')?.disabled).toBe(false);
+    expect(button('Deploy')?.disabled).toBe(false);
     expect(button('Settings')?.disabled).toBe(true);
   });
 
@@ -49,6 +49,51 @@ describe('Main menu', () => {
     button('Settings')!.click();
     expect(openSettings).toHaveBeenCalledOnce();
     expect(root.inert).toBe(true);
+  });
+
+  it('disables How to play when it is given no screen to open', () => {
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
+    expect(button('How to play')?.disabled).toBe(true);
+  });
+
+  it('puts How to play between Settings and Credits, and opens it with the menu inert behind it', () => {
+    const openHowToPlay = vi.fn(() => ({ close: () => {}, back: () => {} }));
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {}, openHowToPlay });
+    const labels = [...root.querySelectorAll('button')].map((b) => b.textContent);
+    expect(labels).toEqual(['Deploy', 'Settings', 'Field manual', 'How to play', 'Credits']);
+    button('How to play')!.click();
+    expect(openHowToPlay).toHaveBeenCalledOnce();
+    expect(root.inert).toBe(true);
+  });
+
+  it('comes back from How to play with the menu usable and its button focused', () => {
+    let onBack = () => {};
+    mountMainMenu(root, {
+      app,
+      onPlay: () => {},
+      onCredits: () => {},
+      openHowToPlay: (back) => {
+        onBack = back;
+        return { close: () => {}, back: () => {} };
+      },
+    });
+    button('How to play')!.click();
+    onBack();
+    expect(root.inert).toBe(false);
+    expect(document.activeElement).toBe(button('How to play'));
+  });
+
+  it('closes an open How to play screen when destroyed', () => {
+    const close = vi.fn();
+    const menu = mountMainMenu(root, {
+      app,
+      onPlay: () => {},
+      onCredits: () => {},
+      openHowToPlay: () => ({ close, back: () => {} }),
+    });
+    button('How to play')!.click();
+    menu.destroy();
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it('comes back from Settings with the menu usable and Settings focused', () => {
@@ -82,16 +127,16 @@ describe('Main menu', () => {
     expect(root.inert).toBe(false);
   });
 
-  it('calls onPlay when the player presses Play', () => {
+  it('calls onPlay when the player presses Deploy', () => {
     const onPlay = vi.fn();
     mountMainMenu(root, { app, onPlay, onCredits: () => {} });
-    button('Play')?.click();
+    button('Deploy')?.click();
     expect(onPlay).toHaveBeenCalledOnce();
   });
 
-  it('focuses Play when it opens', () => {
+  it('focuses Deploy when it opens', () => {
     mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
-    expect(document.activeElement).toBe(button('Play'));
+    expect(document.activeElement).toBe(button('Deploy'));
   });
 
   it('marks the app as on the menu, which hides the HUD, build bar and tower panel, until destroyed', () => {
@@ -101,14 +146,39 @@ describe('Main menu', () => {
     expect(app.dataset.screen).toBeUndefined();
   });
 
-  it('after destroy, is hidden and empty, and an old Play button does nothing', () => {
+  it('after destroy, is hidden and empty, and an old Deploy button does nothing', () => {
     const onPlay = vi.fn();
     const menu = mountMainMenu(root, { app, onPlay, onCredits: () => {} });
-    const play = button('Play')!;
+    const play = button('Deploy')!;
     menu.destroy();
     play.click();
     expect(onPlay).not.toHaveBeenCalled();
     expect(root.hidden).toBe(true);
     expect(root.childElementCount).toBe(0);
+  });
+
+  it('opens the Field manual with the menu inert behind it, and comes back to the button', () => {
+    let back: () => void = () => {};
+    const close = vi.fn();
+    mountMainMenu(root, { app, onPlay: () => {}, onCredits: () => {} });
+    expect(button('Field manual')?.disabled).toBe(true);
+    root.replaceChildren();
+    const menu = mountMainMenu(root, {
+      app,
+      onPlay: () => {},
+      onCredits: () => {},
+      openFieldManual: (onBack) => {
+        back = onBack;
+        return { close, back: () => {} };
+      },
+    });
+    button('Field manual')!.click();
+    expect(root.inert).toBe(true);
+    back();
+    expect(root.inert).toBe(false);
+    expect(document.activeElement).toBe(button('Field manual'));
+    button('Field manual')!.click();
+    menu.destroy();
+    expect(close).toHaveBeenCalledOnce();
   });
 });

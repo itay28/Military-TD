@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { firstScene, frameMs, parseTestFlags } from './flags';
 
 describe('parseTestFlags', () => {
+  it('reads demo=1: the live battlefield behind the menu plays in test mode too', () => {
+    expect(parseTestFlags('?test=1&demo=1').demo).toBe(true);
+    expect(parseTestFlags('?test=1&demo=yes').demo).toBe(false);
+  });
+
   it('with no flags, test mode is off and the game runs in real time with animation', () => {
     expect(parseTestFlags('')).toEqual({
       test: false,
@@ -11,6 +16,7 @@ describe('parseTestFlags', () => {
       menu: false,
       persist: false,
       unlockAll: false,
+      demo: false,
     });
   });
 
@@ -23,6 +29,7 @@ describe('parseTestFlags', () => {
       menu: false,
       persist: false,
       unlockAll: false,
+      demo: false,
     });
   });
 
@@ -35,6 +42,7 @@ describe('parseTestFlags', () => {
       menu: false,
       persist: false,
       unlockAll: false,
+      demo: false,
     });
   });
 

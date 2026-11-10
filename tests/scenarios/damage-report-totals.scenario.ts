@@ -14,9 +14,9 @@ export default defineScenario({
     { groups: [{ kind: 'infantry', count: 3, spacingMs: 800, delayMs: 0 }] },
   ],
   script: [
-    { atTick: 0, command: { type: 'startWave' } },
+    { atTick: 0, command: { type: 'callNextWave' } },
     { atTick: 2400, command: { type: 'sellTower', towerId: 1 } },
-    { atTick: 2700, command: { type: 'startWave' } },
+    { atTick: 2700, command: { type: 'callNextWave' } },
   ],
   until: 'end',
   expectations({ outcome, finalState, events }, expect) {

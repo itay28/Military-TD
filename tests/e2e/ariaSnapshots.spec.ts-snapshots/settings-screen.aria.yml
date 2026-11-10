@@ -9,10 +9,27 @@
     - radio "×3"
     - text: ×3
   - checkbox "Always show tower ranges"
-  - text: Always show tower ranges Master volume
+  - text: Always show tower ranges
+  - checkbox "Show map grid" [checked]
+  - text: Show map grid
+  - checkbox "Tactical mode"
+  - text: Tactical mode
+  - paragraph: Call each wave yourself. Wins earn at most 2 stars.
+  - text: Master volume
   - slider "Master volume": "80"
   - text: Music volume
   - slider "Music volume": "60"
   - text: Sound effects volume
   - slider "Sound effects volume": "80"
+  - checkbox "Reduce motion"
+  - text: Reduce motion
+  - group "Text size":
+    - text: Text size
+    - radio "100 %" [checked]
+    - text: 100 %
+    - radio "125 %"
+    - text: 125 %
+    - radio "150 %"
+    - text: 150 %
+  - button "Show hints again"
   - button "Back"

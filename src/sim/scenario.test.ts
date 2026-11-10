@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mapById, MVP_MAP } from '../data/maps';
 import { START_LIVES, START_MONEY } from '../data/start';
-import { AUTO_START_DELAY_MS, WAVES } from '../data/waves';
+import { WAVES } from '../data/waves';
 import { TICK_MS } from './game';
 import type { MapData } from './map';
 import { runScenario, setUpGame } from './scenario';
@@ -40,11 +40,11 @@ describe('runScenario', () => {
     const { events } = runScenario({
       map: SMALL,
       waves: ONE_INFANTRY,
-      script: [{ atTick: 10, command: { type: 'startWave' } }],
+      script: [{ atTick: 10, command: { type: 'callNextWave' } }],
       until: { ticks: 300 },
     });
     expect(events.map((e) => e.type)).toEqual(['command', 'waveStarted', 'enemyLeaked', 'waveCleared', 'victory']);
-    expect(events[0]).toEqual({ tick: 10, type: 'command', command: { type: 'startWave' }, result: { ok: true } });
+    expect(events[0]).toEqual({ tick: 10, type: 'command', command: { type: 'callNextWave' }, result: { ok: true } });
     expect(events[1]).toEqual({ tick: 10, type: 'waveStarted', waveNumber: 1, holdovers: 0 });
     // 6 tiles at 1.5 tiles/s: the leak lands 4 s (240 ticks) after the wave starts.
     const leak = events[2];
@@ -54,26 +54,28 @@ describe('runScenario', () => {
     expect(events.slice(2).every((e) => e.tick === leak?.tick)).toBe(true);
   });
 
-  it('a setAutoStart command turns auto-start on: the first wave starts AUTO_START_DELAY_MS later', () => {
-    const { events, finalState } = runScenario({
+  it('in timed mode, the first wave arrives on its timer with no command', () => {
+    const { events } = runScenario({
       map: SMALL,
-      waves: ONE_INFANTRY,
-      script: [{ atTick: 0, command: { type: 'setAutoStart', on: true } }],
+      waves: [{ ...ONE_INFANTRY[0]!, afterMs: 1000 }],
       until: { event: 'waveStarted' },
     });
-    expect(events[0]).toEqual({
-      tick: 0,
-      type: 'command',
-      command: { type: 'setAutoStart', on: true },
-      result: { ok: true },
-    });
-    expect(finalState.autoStart).toBe(true);
     expect(events.at(-1)).toEqual({
-      tick: Math.round(AUTO_START_DELAY_MS / TICK_MS),
+      tick: Math.round(1000 / TICK_MS),
       type: 'waveStarted',
       waveNumber: 1,
       holdovers: 0,
     });
+  });
+
+  it('in Tactical mode, no wave arrives by itself', () => {
+    const { events } = runScenario({
+      map: SMALL,
+      waves: ONE_INFANTRY,
+      tacticalMode: true,
+      until: { ticks: Math.round(120_000 / TICK_MS) },
+    });
+    expect(events).toEqual([]);
   });
 
   it('a refused command is logged with its reason and the run goes on', () => {
@@ -97,7 +99,7 @@ describe('runScenario', () => {
     const result = runScenario({
       map: SMALL,
       waves: ONE_INFANTRY,
-      script: [{ atTick: 0, command: { type: 'startWave' } }],
+      script: [{ atTick: 0, command: { type: 'callNextWave' } }],
       until: 'end',
     });
     expect(result.outcome).toBe('victory');
@@ -110,7 +112,7 @@ describe('runScenario', () => {
       map: SMALL,
       lives: 1,
       waves: [{ groups: [{ kind: 'infantry', count: 3, spacingMs: 100, delayMs: 0 }] }],
-      script: [{ atTick: 0, command: { type: 'startWave' } }],
+      script: [{ atTick: 0, command: { type: 'callNextWave' } }],
       until: 'end',
     });
     expect(result.outcome).toBe('defeat');
@@ -121,7 +123,7 @@ describe('runScenario', () => {
     const result = runScenario({
       map: SMALL,
       waves: ONE_INFANTRY,
-      script: [{ atTick: 0, command: { type: 'startWave' } }],
+      script: [{ atTick: 0, command: { type: 'callNextWave' } }],
       until: { ticks: 10_000 },
     });
     expect(result.outcome).toBe('victory');
@@ -132,7 +134,7 @@ describe('runScenario', () => {
     const result = runScenario({
       map: SMALL,
       waves: [{ groups: [{ kind: 'infantry', count: 3, spacingMs: 1000, delayMs: 0 }] }],
-      script: [{ atTick: 0, command: { type: 'startWave' } }],
+      script: [{ atTick: 0, command: { type: 'callNextWave' } }],
       until: { event: 'enemyLeaked' },
     });
     expect(result.outcome).toBe('stopped');
@@ -148,7 +150,10 @@ describe('runScenario', () => {
   });
 
   it('maxTicks defaults to an hour of game time', () => {
-    expect(runScenario({ map: SMALL, until: 'end' })).toMatchObject({ outcome: 'timeout', ticks: 60 * 60 * 60 });
+    expect(runScenario({ map: SMALL, tacticalMode: true, until: 'end' })).toMatchObject({
+      outcome: 'timeout',
+      ticks: 60 * 60 * 60,
+    });
   });
 
   it('pre-placed towers stand on their tiles from the start and cost no Money', () => {
@@ -177,7 +182,7 @@ describe('runScenario', () => {
 
   it('a script step at a negative or fractional tick throws RangeError', () => {
     for (const atTick of [-1, 2.5])
-      expect(() => runScenario({ script: [{ atTick, command: { type: 'startWave' } }], until: 'end' })).toThrow(
+      expect(() => runScenario({ script: [{ atTick, command: { type: 'callNextWave' } }], until: 'end' })).toThrow(
         RangeError,
       );
   });
@@ -195,7 +200,7 @@ describe('runScenario', () => {
     expect(result.outcome).toBe('victory');
     const starts = result.events.filter((e) => e.type === 'command');
     expect(starts).toHaveLength(2);
-    expect(starts[0]).toMatchObject({ tick: 0, command: { type: 'startWave' }, result: { ok: true } });
+    expect(starts[0]).toMatchObject({ tick: 0, command: { type: 'callNextWave' }, result: { ok: true } });
     const firstCleared = result.events.find((e) => e.type === 'waveCleared');
     expect(starts[1]?.tick).toBe(firstCleared?.tick);
     expect(result.finalState.lives).toBe(START_LIVES - 3);
@@ -217,7 +222,7 @@ describe('runScenario', () => {
     const commands = result.events.filter((e) => e.type === 'command');
     expect(commands.map((e) => [e.tick, e.command.type, e.result.ok])).toEqual([
       [0, 'placeTower', true],
-      [0, 'startWave', true],
+      [0, 'callNextWave', true],
     ]);
     expect(result.finalState.towers).toHaveLength(1);
   });

@@ -16,7 +16,7 @@ export default defineScenario({
       ],
     },
   ],
-  script: [{ atTick: 0, command: { type: 'startWave' } }],
+  script: [{ atTick: 0, command: { type: 'callNextWave' } }],
   until: 'end',
   expectations({ outcome, finalState, events }, expect) {
     expect(outcome).toBe('victory');

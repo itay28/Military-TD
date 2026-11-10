@@ -1,6 +1,8 @@
+import { TERMS, lockedLine } from '../data/display';
 import type { MapEntry } from '../data/maps';
 import { createMap } from '../sim/map';
 import type { Stars } from '../sim/progression';
+import { TACTICAL_CAP_TEXT } from './endScreen';
 import { drawMapPreview } from './mapPreview';
 
 /** What the Level select shows of one map: whether it can be picked, and its best Stars so far. */
@@ -22,6 +24,8 @@ export interface LevelSelectOptions {
   readonly statusOf?: (mapIndex: number) => MapStatus;
   /** Called when the player presses Back. */
   readonly onBack: () => void;
+  /** Tactical mode is on in the settings: the screen says wins earn at most 2 stars (ADR-0011). */
+  readonly tacticalMode?: boolean;
 }
 
 export interface LevelSelect {
@@ -29,8 +33,8 @@ export interface LevelSelect {
   destroy(): void;
 }
 
-/** "★★☆", or "🔒 Locked": hidden from screen readers, which hear the button's name instead. */
-function buildStatus(doc: Document, { unlocked, bestStars }: MapStatus): HTMLElement {
+/** "★★☆", or "Locked: complete <the map before>": hidden from screen readers, which hear the button's name instead. */
+function buildStatus(doc: Document, { unlocked, bestStars }: MapStatus, previous: MapEntry | undefined): HTMLElement {
   const line = doc.createElement('span');
   line.setAttribute('aria-hidden', 'true');
   if (unlocked) {
@@ -40,7 +44,7 @@ function buildStatus(doc: Document, { unlocked, bestStars }: MapStatus): HTMLEle
   } else {
     line.dataset.testid = 'locked';
     line.className = 'locked';
-    line.textContent = '🔒 Locked';
+    line.textContent = lockedLine(previous?.name);
   }
   return line;
 }
@@ -57,12 +61,12 @@ function accessibleName(name: string, { unlocked, bestStars }: MapStatus, previo
  */
 export function mountLevelSelect(
   root: HTMLElement,
-  { app, maps, onPick, onBack, statusOf = () => OPEN }: LevelSelectOptions,
+  { app, maps, onPick, onBack, statusOf = () => OPEN, tacticalMode = false }: LevelSelectOptions,
 ): LevelSelect {
   const doc = root.ownerDocument;
   let live = true;
   const title = doc.createElement('h1');
-  title.textContent = 'Select map';
+  title.textContent = TERMS.levelSelect;
   const list = doc.createElement('ul');
   const mapButtons = maps.map(({ id, name, data }, index) => {
     const status = statusOf(index);
@@ -78,7 +82,7 @@ export function mountLevelSelect(
     drawMapPreview(preview, createMap(data));
     const label = doc.createElement('span');
     label.textContent = name;
-    button.append(preview, label, buildStatus(doc, status));
+    button.append(preview, label, buildStatus(doc, status, maps[index - 1]));
     button.addEventListener('click', () => live && status.unlocked && onPick(id));
     const item = doc.createElement('li');
     item.append(button);
@@ -89,7 +93,14 @@ export function mountLevelSelect(
   back.type = 'button';
   back.textContent = 'Back';
   back.addEventListener('click', () => live && onBack());
-  root.append(title, list, back);
+  root.append(title);
+  if (tacticalMode) {
+    const cap = doc.createElement('p');
+    cap.dataset.testid = 'tactical-cap';
+    cap.textContent = TACTICAL_CAP_TEXT;
+    root.append(cap);
+  }
+  root.append(list, back);
   root.hidden = false;
   app.dataset.screen = 'level-select';
   mapButtons.findLast((button) => !button.hasAttribute('aria-disabled'))?.focus();

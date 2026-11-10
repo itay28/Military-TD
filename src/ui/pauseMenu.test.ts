@@ -75,9 +75,23 @@ describe('mountPauseMenu', () => {
     expect(menu.paused).toBe(false);
   });
 
-  it('ignores other keys', () => {
+  it('toggles with the P key too, either case', () => {
     const menu = mount();
     pressKey('p');
+    expect(menu.paused).toBe(true);
+    pressKey('P');
+    expect(menu.paused).toBe(false);
+  });
+
+  it('does not pause on P typed with Ctrl held', () => {
+    const menu = mount();
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true }));
+    expect(menu.paused).toBe(false);
+  });
+
+  it('ignores other keys', () => {
+    const menu = mount();
+    pressKey('x');
     expect(menu.paused).toBe(false);
   });
 
@@ -125,12 +139,19 @@ describe('mountPauseMenu', () => {
     expect(button('quit')!.disabled).toBe(true);
   });
 
-  it('disables Settings when it is given no Settings screen to open', () => {
+  it('disables Settings, Field manual and How to play when it is given no screen to open', () => {
     mount().open();
     expect(button('settings')!.disabled).toBe(true);
+    expect(button('field-manual')!.disabled).toBe(true);
+    expect(button('field-manual')!.textContent).toBe('Field manual');
+    expect(button('how-to-play')!.disabled).toBe(true);
   });
 
-  describe('Settings', () => {
+  describe.each([
+    ['Settings', 'settings', 'openSettings'],
+    ['Field manual', 'field-manual', 'openFieldManual'],
+    ['How to play', 'how-to-play', 'openHowToPlay'],
+  ] as const)('%s', (_name, testId, option) => {
     let onBack: () => void;
     let screen: { close: Mock<() => void>; back: Mock<() => void> };
     const openSettings = vi.fn((back: () => void) => {
@@ -144,9 +165,9 @@ describe('mountPauseMenu', () => {
     });
 
     it('opens the Settings screen in place of the Paused dialog, still paused', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       expect(openSettings).toHaveBeenCalledOnce();
       expect(dialog()!.hidden).toBe(true);
       expect(menu.paused).toBe(true);
@@ -154,19 +175,19 @@ describe('mountPauseMenu', () => {
     });
 
     it('comes back to the Paused dialog with Settings focused', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       onBack();
       expect(dialog()!.hidden).toBe(false);
       expect(menu.paused).toBe(true);
-      expect(document.activeElement).toBe(button('settings'));
+      expect(document.activeElement).toBe(button(testId));
     });
 
     it('makes Esc go back from Settings rather than resume', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       pressKey('Escape');
       expect(screen.back).toHaveBeenCalledOnce();
       expect(menu.paused).toBe(true);
@@ -176,11 +197,92 @@ describe('mountPauseMenu', () => {
     });
 
     it('closes an open Settings screen when destroyed', () => {
-      const menu = mount({ openSettings });
+      const menu = mount({ [option]: openSettings });
       menu.open();
-      button('settings')!.click();
+      button(testId)!.click();
       menu.destroy();
       expect(screen.close).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('Keys (help overlay)', () => {
+    const help = () => root.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="help-title"]');
+
+    it('has a Keys button after Settings, the Field manual and How to play', () => {
+      mount({ openSettings: vi.fn() });
+      const labels = [...dialog()!.querySelectorAll(':scope > button')].map((b) => b.textContent);
+      expect(labels.indexOf('Keys')).toBe(labels.indexOf('How to play') + 1);
+      expect(labels.indexOf('How to play')).toBe(labels.indexOf('Field manual') + 1);
+      expect(labels.indexOf('Field manual')).toBe(labels.indexOf('Settings') + 1);
+    });
+
+    it('opens the help overlay in place of the Paused dialog, still paused', () => {
+      const menu = mount();
+      menu.open();
+      button('keys')!.click();
+      expect(help()).not.toBeNull();
+      expect(dialog()!.hidden).toBe(true);
+      expect(menu.paused).toBe(true);
+    });
+
+    it('Esc from it goes back to the Paused dialog with Keys focused', () => {
+      const menu = mount();
+      menu.open();
+      button('keys')!.click();
+      pressKey('Escape');
+      expect(help()).toBeNull();
+      expect(dialog()!.hidden).toBe(false);
+      expect(menu.paused).toBe(true);
+      expect(document.activeElement).toBe(button('keys'));
+    });
+
+    it('openHelp() pauses and shows it directly; Esc then resumes the game', () => {
+      const menu = mount();
+      menu.openHelp();
+      expect(menu.paused).toBe(true);
+      expect(help()).not.toBeNull();
+      expect(dialog()!.hidden).toBe(true);
+      expect(buildBar.inert).toBe(true);
+      pressKey('Escape');
+      expect(menu.paused).toBe(false);
+      expect(help()).toBeNull();
+    });
+
+    it('its Back button resumes too after openHelp()', () => {
+      const menu = mount();
+      menu.openHelp();
+      help()!.querySelector('button')!.click();
+      expect(menu.paused).toBe(false);
+    });
+
+    it('keeps keys from the page while it is open', () => {
+      const menu = mount();
+      const seen: string[] = [];
+      const onKey = (event: KeyboardEvent) => seen.push(event.key);
+      document.addEventListener('keydown', onKey);
+      menu.openHelp();
+      pressKey('u');
+      pressKey(' ');
+      document.removeEventListener('keydown', onKey);
+      expect(seen).toEqual([]);
+      expect(menu.paused).toBe(true);
+    });
+
+    it('openHelp() does nothing once the game is over', () => {
+      game.state.phase = 'defeat';
+      const menu = mount();
+      menu.openHelp();
+      expect(menu.paused).toBe(false);
+      expect(help()).toBeNull();
+    });
+
+    it('Resume or close() takes it away', () => {
+      const menu = mount();
+      menu.openHelp();
+      menu.close();
+      expect(help()).toBeNull();
+      menu.open();
+      expect(dialog()!.hidden).toBe(false);
     });
   });
 

@@ -1,7 +1,8 @@
 import { readFileSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { FACTIONS } from '../sim/factions';
-import { TURNTABLES, TURNTABLE_BUDGET_BYTES, loadTurntable, turntableFor, turntableKey } from './turntables';
+import type { Faction } from '../sim/factions';
+import { modelFor } from './modelViews';
+import { TURNTABLES, TURNTABLE_BUDGET_BYTES, turntableFor } from './turntables';
 
 const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as {
   models: { id: string; kind: string; faction: string }[];
@@ -9,6 +10,9 @@ const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as
 const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
   packs: { id: string; name: string; attribution: string; files: string[] }[];
 };
+/** The factions rendered so far (#440 US; #442, #444, #445 add the others). */
+const DONE: readonly Faction[] = ['us'];
+const done = config.models.filter((m) => (DONE as readonly string[]).includes(m.faction));
 const sheetPath = (id: string): string => `assets/render-${id}/${id}-turntable.webp`;
 
 /** Width and height from a WebP's header (lossy VP8, lossless VP8L or extended VP8X). */
@@ -26,18 +30,21 @@ function webpSize(path: string): { width: number; height: number } {
 }
 
 describe('TURNTABLES', () => {
-  it('has a turntable for every model in render-sprite.json, with its kind and faction', () => {
-    expect(Object.keys(TURNTABLES).sort()).toEqual(config.models.map((m) => m.id).sort());
-    for (const m of config.models) {
+  it('has a turntable for every model of the factions done so far, with its kind and faction', () => {
+    expect(done.length).toBe(8);
+    for (const m of done) {
       expect(TURNTABLES[m.id]!.kind, m.id).toBe(m.kind);
       expect(TURNTABLES[m.id]!.faction, m.id).toBe(m.faction);
     }
   });
 
-  it('covers every kind for each of the four factions', () => {
-    const kinds = new Set(config.models.map((m) => m.kind));
-    for (const faction of FACTIONS)
-      for (const kind of kinds) expect(turntableFor(faction, kind), `${faction} ${kind}`).not.toBeNull();
+  it('only holds turntables of models in render-sprite.json', () => {
+    const ids = config.models.map((m) => m.id);
+    for (const id of Object.keys(TURNTABLES)) expect(ids, id).toContain(id);
+  });
+
+  it('finds a faction’s turntable by kind', () => {
+    for (const m of done) expect(turntableFor(m.faction as Faction, m.kind)?.id, m.id).toBe(m.id);
   });
 
   it('is 24 frames of 384 px, 15° apart, from 30° up', () => {
@@ -64,11 +71,8 @@ describe('TURNTABLES', () => {
       expect(statSync(sheetPath(t.id)).size, t.id).toBeLessThanOrEqual(TURNTABLE_BUDGET_BYTES);
   });
 
-  it('serves each sheet by URL under its own texture key', () => {
-    for (const t of Object.values(TURNTABLES)) {
-      expect(t.key).toBe(turntableKey(t.id));
-      expect(t.url).toMatch(new RegExp(`${t.id}-turntable\\.webp`));
-    }
+  it('serves each sheet by URL', () => {
+    for (const t of Object.values(TURNTABLES)) expect(t.url).toMatch(new RegExp(`${t.id}-turntable\\.webp`));
   });
 
   it('has no turntable for a kind without a model', () => {
@@ -76,12 +80,17 @@ describe('TURNTABLES', () => {
   });
 });
 
-describe('loadTurntable', () => {
-  it('queues the sheet as a spritesheet of its frame size', () => {
-    const calls: unknown[][] = [];
-    const t = TURNTABLES['us-tank']!;
-    loadTurntable({ spritesheet: (...args: unknown[]) => void calls.push(args) }, t);
-    expect(calls).toEqual([[t.key, t.url, { frameWidth: 384, frameHeight: 384, endFrame: 23 }]]);
+describe('modelFor', () => {
+  it('gives the Field manual each turntable’s sheet URL and layout', () => {
+    for (const m of done) {
+      const t = TURNTABLES[m.id]!;
+      expect(modelFor(m.faction as Faction, m.kind as never).turntable, m.id).toEqual({
+        url: t.url,
+        frames: 24,
+        frameSize: 384,
+        columns: t.columns,
+      });
+    }
   });
 });
 
@@ -92,8 +101,8 @@ describe('turntables are loaded on demand', () => {
 });
 
 describe('turntable credits', () => {
-  it('mentions the turntable in every render folder’s manifest entry and License.txt', () => {
-    for (const m of config.models) {
+  it('mentions the turntable in the manifest entry and License.txt of every render folder that has one', () => {
+    for (const m of config.models.filter((x) => TURNTABLES[x.id] !== undefined)) {
       const entry = manifest.packs.find((a) => a.files.includes(`assets/render-${m.id}/**`));
       expect(entry, m.id).toBeDefined();
       expect(entry!.attribution, m.id).toMatch(/turntable/);

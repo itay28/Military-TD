@@ -1,16 +1,15 @@
 import type { Faction } from '../sim/factions';
 
 /**
- * A model's turntable (`scripts/render-sprite.py --turntable`, #407): `frames` views of the whole model with its
+ * A model's turntable (`scripts/render-sprite.py --turntable`, #407, #440): `frames` views of the whole model with its
  * ground shadow, from `elevationDeg` up, the camera orbiting clockwise `stepDeg` per frame from the model's front.
- * One sheet per model, `columns` frames wide, read left to right, top to bottom. For the Field manual's rotating
- * model view, which loads it when it opens (`loadTurntable`); the Boot scene never does.
+ * One sheet per model, `columns` frames wide, read left to right, top to bottom. For the Field manual's turning
+ * model (`modelFor`, `src/data/modelViews.ts`), which loads the sheet when an entry opens; the Boot scene never does.
  */
 export interface Turntable {
   readonly id: string;
   readonly kind: string;
   readonly faction: Faction;
-  readonly key: string;
   readonly url: string;
   readonly frames: number;
   readonly frameSize: number;
@@ -44,9 +43,6 @@ const SHEETS = import.meta.glob<string>('../../assets/render-*/*-turntable.webp'
   import: 'default',
 });
 
-/** The texture key a turntable sheet loads under. */
-export const turntableKey = (id: string): string => `turntable-${id}`;
-
 /** Every model's turntable, by render id (`<faction>-<kind>`, as in `scripts/render-sprite.json`). */
 export const TURNTABLES: Readonly<Record<string, Turntable>> = Object.fromEntries(
   Object.entries(METAS).map(([path, meta]) => {
@@ -56,7 +52,6 @@ export const TURNTABLES: Readonly<Record<string, Turntable>> = Object.fromEntrie
       id: meta.id,
       kind: meta.kind,
       faction: meta.faction,
-      key: turntableKey(meta.id),
       url,
       frames: meta.frames,
       frameSize: meta.frameSize,
@@ -71,14 +66,4 @@ export const TURNTABLES: Readonly<Record<string, Turntable>> = Object.fromEntrie
 /** The faction's turntable of `kind`, or null when that kind has no model yet. */
 export function turntableFor(faction: Faction, kind: string): Turntable | null {
   return Object.values(TURNTABLES).find((t) => t.faction === faction && t.kind === kind) ?? null;
-}
-
-/** The part of Phaser's loader `loadTurntable` uses. */
-export interface SpritesheetLoader {
-  spritesheet(key: string, url: string, config: { frameWidth: number; frameHeight: number; endFrame: number }): unknown;
-}
-
-/** Queue a turntable's sheet as a spritesheet, one frame per view (call it when the Field manual opens). */
-export function loadTurntable(loader: SpritesheetLoader, t: Turntable): void {
-  loader.spritesheet(t.key, t.url, { frameWidth: t.frameSize, frameHeight: t.frameSize, endFrame: t.frames - 1 });
 }

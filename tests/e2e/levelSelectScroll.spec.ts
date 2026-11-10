@@ -16,14 +16,14 @@ for (const [name, viewport] of [
       const last = page.getByRole('button', { name: `${FOURTH_MAP.name}, no stars yet` });
       const back = page.getByRole('button', { name: 'Back', exact: true });
       // Opening focuses the first map, which scrolls it into view, so the title is checked by scrolling back up.
-      await page.getByRole('heading', { name: 'Select map' }).scrollIntoViewIfNeeded();
-      await expect(page.getByRole('heading', { name: 'Select map' })).toBeInViewport();
+      await page.getByRole('heading', { name: 'Operations' }).scrollIntoViewIfNeeded();
+      await expect(page.getByRole('heading', { name: 'Operations' })).toBeInViewport();
       await last.scrollIntoViewIfNeeded();
       await expect(last).toBeInViewport();
       await back.scrollIntoViewIfNeeded();
       await expect(back).toBeInViewport();
       await back.click();
-      await expect(page.getByRole('heading', { name: 'Select map' })).toBeHidden();
+      await expect(page.getByRole('heading', { name: 'Operations' })).toBeHidden();
     });
   });
 }
@@ -46,8 +46,8 @@ test('on a short phone screen the Main menu title and last button can be scrolle
   await page.setViewportSize({ width: 667, height: 120 });
   await openMenu(page);
   const buttons = page.locator('#menu > button');
-  await page.getByRole('heading', { name: 'Military TD' }).scrollIntoViewIfNeeded();
-  await expect(page.getByRole('heading', { name: 'Military TD' })).toBeInViewport();
+  await page.getByRole('heading', { name: 'Hold the Perimeter' }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('heading', { name: 'Hold the Perimeter' })).toBeInViewport();
   await buttons.last().scrollIntoViewIfNeeded();
   await expect(buttons.last()).toBeInViewport();
   const scrolls = await page.evaluate(() => {
