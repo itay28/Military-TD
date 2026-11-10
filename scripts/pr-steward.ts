@@ -84,6 +84,10 @@ function unresolvedConflict(
 /** Posted by the Action when it hands a PR off. */
 export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
 /** Posted next to the stuck marker when the hand-off asks for the maintainer's `/approve` (#206). */
+/** Posted when the steward merges the base in because mergeability stayed UNKNOWN (#487). */
+export const UNKNOWN_UPDATE_MARKER = '<!-- pr-steward:unknown-update -->';
+/** How long GitHub may report mergeability as UNKNOWN before the steward acts (#487). */
+const UNKNOWN_MS = 60 * 60 * 1000;
 export const APPROVAL_MARKER = '<!-- pr-steward:approval -->';
 /** A maintainer comment starting with this lets a PR that touches a critical path merge. */
 const APPROVE_COMMAND = /^\/approve\b/;
@@ -230,7 +234,8 @@ export type Reason = 'conflict' | 'ci' | 'review' | 'comment' | 'threads';
 export type Decision =
   | { readonly kind: 'skip'; readonly why: string }
   | { readonly kind: 'wait'; readonly why: string }
-  | { readonly kind: 'update' }
+  /** `unknown`: mergeability stayed UNKNOWN for over an hour (#487), so a marker comment goes with the merge. */
+  | { readonly kind: 'update'; readonly unknown?: boolean }
   /** A draft whose steward round ended green (#326): mark it ready for review. */
   | { readonly kind: 'ready' }
   /** No CI review ever ran on this PR: add `review-again` to start one (#209). */
@@ -249,6 +254,8 @@ export type Decision =
       readonly reasons: readonly Reason[];
       /** A conflict round didn't resolve the conflict. */
       readonly conflict?: boolean;
+      /** Mergeability is still UNKNOWN an hour after the steward merged the base in (#487). */
+      readonly unknown?: boolean;
     }
   | { readonly kind: 'merge' }
   /** Ready to merge, but it touches a critical path (#206): hand off for the maintainer's `/approve`. */
@@ -378,7 +385,17 @@ function decideIgnoringMain(
     if (!lastStuck || lastMaintainer <= lastStuck)
       return { kind: 'skip', why: 'handed off, waiting on the maintainer' };
   }
-  if (pr.mergeable === 'UNKNOWN') return { kind: 'wait', why: 'GitHub is computing mergeability' };
+  if (pr.mergeable === 'UNKNOWN') {
+    // Waiting forever hides a PR GitHub never recomputes (#487): after an hour, merge the base in
+    // (that makes GitHub compute it again), and after another hour hand it off.
+    const lastActivity = Math.max(
+      lastCommentAt(pr, () => true),
+      pr.lastCommitAt ? Date.parse(pr.lastCommitAt) : 0,
+    );
+    if (now.getTime() - lastActivity < UNKNOWN_MS) return { kind: 'wait', why: 'GitHub is computing mergeability' };
+    const updated = last((c) => c.body.includes(UNKNOWN_UPDATE_MARKER)) > lastMaintainer;
+    return pr.behind && !updated ? { kind: 'update', unknown: true } : { kind: 'stuck', reasons: [], unknown: true };
+  }
   if (lastRound > lastDone && now.getTime() - lastRound < ROUND_TIMEOUT_MS)
     return { kind: 'wait', why: 'a steward round is in flight' };
 
@@ -579,7 +596,9 @@ export async function act(
         stuckBody(
           decision.conflict
             ? "The steward couldn't resolve the merge conflict: it's still there on the same base."
-            : `${MAX_ROUNDS} steward rounds didn't finish it. Still open: ${describeReasons(decision.reasons)}.`,
+            : decision.unknown
+              ? 'GitHub still reports mergeability as unknown, even after merging the base in.'
+              : `${MAX_ROUNDS} steward rounds didn't finish it. Still open: ${describeReasons(decision.reasons)}.`,
         ),
         token,
         fetchFn,
@@ -619,6 +638,10 @@ ${APPROVAL_MARKER}`,
       });
       return;
     case 'update':
+      if (decision.unknown)
+        await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+          body: `PR steward: GitHub has reported mergeability as unknown for over an hour, so I'm merging the base in to make it compute again.\n\n${UNKNOWN_UPDATE_MARKER}`,
+        });
       await github(fetchFn, token, 'PUT', `pulls/${n}/update-branch`, { expected_head_sha: pr.headSha });
       return;
     case 'merge':
