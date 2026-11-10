@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
+  FLOATING_TEXT,
   ENEMY_NAMES,
   ENEMY_WEAKNESS,
   PLACEMENT_REFUSAL_TEXT,
@@ -17,12 +18,19 @@ import {
 } from './display';
 import { ENEMY_STATS, type EnemyKind } from './enemies';
 import { GRID_COLS, GRID_ROWS } from './grid';
+import { FONT_STACK } from './theme';
 import { TOWER_STATS, type TowerKind } from './towers';
 
 describe('display', () => {
   it('canvas is 768×480 from a 16×10 grid of 48 px tiles', () => {
     expect([GRID_COLS, GRID_ROWS, TILE_PX]).toEqual([16, 10, 48]);
     expect([CANVAS_WIDTH, CANVAS_HEIGHT]).toEqual([768, 480]);
+  });
+});
+
+describe('Phaser text (#399)', () => {
+  it('floats refusals in the same monospace face as the HUD', () => {
+    expect(FLOATING_TEXT.style.fontFamily).toBe(FONT_STACK.mono);
   });
 });
 
