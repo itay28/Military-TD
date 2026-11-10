@@ -26,6 +26,11 @@ export interface TacticalOverlay {
   readonly gridRef: string;
 }
 
+/** The grid square HQ stands in (the exit's), such as "D2". */
+export function gridRefOf(map: GameMap): string {
+  return gridLabel(map.waypoints[map.waypoints.length - 1]!);
+}
+
 /** The overlay of `map` at `tilePx` canvas pixels a tile. */
 export function tacticalOverlay(map: GameMap, tilePx: number = PREVIEW_TILE_PX): TacticalOverlay {
   const width = map.cols * tilePx;
@@ -36,7 +41,6 @@ export function tacticalOverlay(map: GameMap, tilePx: number = PREVIEW_TILE_PX):
   for (let y = cellPx; y < height; y += cellPx) gridLines.push({ x1: 0, y1: y, x2: width, y2: y });
   const centre = ({ col, row }: Tile): Point => ({ x: (col + 0.5) * tilePx, y: (row + 0.5) * tilePx });
   const route = map.waypoints.map(centre);
-  const exitTile = map.waypoints[map.waypoints.length - 1]!;
   return {
     width,
     height,
@@ -44,7 +48,7 @@ export function tacticalOverlay(map: GameMap, tilePx: number = PREVIEW_TILE_PX):
     route,
     entry: route[0]!,
     exit: route[route.length - 1]!,
-    gridRef: gridLabel(exitTile),
+    gridRef: gridRefOf(map),
   };
 }
 
@@ -100,13 +104,7 @@ export function drawTacticalOverlay(ctx: OverlayContext, overlay: TacticalOverla
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = exit.color;
-  ctx.beginPath();
-  ctx.moveTo(overlay.exit.x - exit.size / 2, overlay.exit.y - exit.size / 2);
-  ctx.lineTo(overlay.exit.x + exit.size / 2, overlay.exit.y - exit.size / 2);
-  ctx.lineTo(overlay.exit.x + exit.size / 2, overlay.exit.y + exit.size / 2);
-  ctx.lineTo(overlay.exit.x - exit.size / 2, overlay.exit.y + exit.size / 2);
-  ctx.closePath();
-  ctx.fill();
+  ctx.fillRect(overlay.exit.x - exit.size / 2, overlay.exit.y - exit.size / 2, exit.size, exit.size);
 
   const text = `GRID ${overlay.gridRef}`;
   ctx.font = label.font;

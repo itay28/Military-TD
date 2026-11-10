@@ -2,7 +2,7 @@ import { FACTION_INSIGNIA, FACTION_NAMES, TERMS } from '../data/display';
 import type { MapEntry } from '../data/maps';
 import type { Faction } from '../sim/factions';
 import { createMap } from '../sim/map';
-import { tacticalOverlay } from './mapCard';
+import { gridRefOf } from './mapCard';
 
 export interface BriefingHandlers {
   /** Starts the operation. */
@@ -40,7 +40,7 @@ export function buildBriefing(doc: Document, entry: MapEntry, { onDeploy, onBack
   const grid = doc.createElement('p');
   grid.className = 'grid-ref';
   grid.dataset.testid = 'briefing-grid';
-  grid.textContent = `${entry.name} · HQ grid ${tacticalOverlay(createMap(entry.data)).gridRef}`;
+  grid.textContent = `${entry.name} · HQ grid ${gridRefOf(createMap(entry.data))}`;
 
   const list = doc.createElement('dl');
   const item = (term: string, ...content: (Node | string)[]) => {

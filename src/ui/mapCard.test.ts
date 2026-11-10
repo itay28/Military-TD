@@ -70,7 +70,7 @@ function recorder() {
     },
     arc: (x: number, y: number) => calls.push(`arc ${x},${y}`),
     closePath: () => calls.push('close'),
-    fillRect: (x: number, y: number) => calls.push(`rect ${x},${y}`),
+    fillRect: (x: number, y: number) => calls.push(`fill ${ctx.fillStyle}`, `rect ${x},${y}`),
     fillText: (text: string) => calls.push(`text ${text}`),
     strokeText: (text: string) => calls.push(`stroketext ${text}`),
   };
