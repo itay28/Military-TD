@@ -4,7 +4,15 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { format } from 'prettier';
-import { autoResolve, formatManifest, mergeGlossary, mergeKeyed, mergeManifest, ruleFor } from '../scripts/auto-resolve.ts';
+import {
+  autoResolve,
+  cleanEnv,
+  formatManifest,
+  mergeGlossary,
+  mergeKeyed,
+  mergeManifest,
+  ruleFor,
+} from '../scripts/auto-resolve.ts';
 import { renderCredits, type Manifest, type ManifestEntry } from '../scripts/credits.ts';
 
 const pack = (id: string, over: Partial<ManifestEntry> = {}): ManifestEntry => ({
@@ -69,7 +77,11 @@ describe('mergeKeyed', () => {
 
 describe('mergeManifest', () => {
   it("keeps both sides' new packs", () => {
-    const merged = mergeManifest(manifest(pack('a')), manifest(pack('a'), pack('ours')), manifest(pack('a'), pack('theirs')));
+    const merged = mergeManifest(
+      manifest(pack('a')),
+      manifest(pack('a'), pack('ours')),
+      manifest(pack('a'), pack('theirs')),
+    );
     expect(merged.ok && ids(merged.text)).toEqual(['a', 'ours', 'theirs']);
   });
 
@@ -89,7 +101,9 @@ describe('mergeManifest', () => {
 
   it("writes prettier's layout, so the merged file passes format:check", async () => {
     const real = readFileSync('assets/manifest.json', 'utf8');
-    const long = pack('long', { files: Array.from({ length: 8 }, (_, i) => `assets/some-long-pack-name/folder-${i}/**`) });
+    const long = pack('long', {
+      files: Array.from({ length: 8 }, (_, i) => `assets/some-long-pack-name/folder-${i}/**`),
+    });
     for (const m of [JSON.parse(real) as Manifest, { packs: [pack('a'), long] }, { packs: [] }]) {
       const text = formatManifest(m);
       expect(text).toBe(await format(text, { parser: 'json', singleQuote: true, printWidth: 120 }));
@@ -135,6 +149,8 @@ describe('autoResolve', () => {
     execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], {
       cwd,
       encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: cleanEnv(),
     }).trim();
   const write = (cwd: string, files: Record<string, string | Buffer>) => {
     for (const [path, content] of Object.entries(files)) {

@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { classifyFireError, fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
 import { currentMilestone, graphql, milestoneOrder } from './board-sync.ts';
 import { ApiMeter, softFail } from './rate-limit.ts';
+import { autoResolve, type AutoResolveResult } from './auto-resolve.ts';
 import { markerFor } from './failure-report.ts';
 import { isMilestoneDone, releaseVersion } from './milestone-report.ts';
 
@@ -544,6 +545,40 @@ function decideReport(pr: StewardPr, current: CurrentMilestone | null, version: 
 export interface StewardSettings {
   readonly steward?: Routine;
   readonly merge: boolean;
+  /** Tries to merge the base in without an agent before a conflict round (#474, scripts/auto-resolve.ts). */
+  readonly autoResolve?: (pr: StewardPr) => Promise<AutoResolveResult>;
+}
+
+/** On the comment for a conflict resolved without an agent: not a round, so it counts as none. */
+export const AUTO_RESOLVED_MARKER = '<!-- pr-steward:auto-resolved -->';
+const UPDATE_SNAPSHOTS_LABEL = 'update-snapshots';
+
+/**
+ * Before a conflict round or a conflict hand-off: merge the base in with scripts/auto-resolve.ts.
+ * True when it pushed the merge, so no agent is needed; the next run decides on the new head.
+ * A conflict it has no rule for, or any failure, leaves the PR to the round as before.
+ */
+async function resolvedMechanically(pr: StewardPr, settings: StewardSettings, token: string, fetchFn: Fetch) {
+  let result: AutoResolveResult;
+  try {
+    result = await settings.autoResolve!(pr);
+  } catch (error) {
+    result = { kind: 'aborted', why: String(error) };
+  }
+  if (result.kind === 'aborted') {
+    console.log(`#${pr.number}: no mechanical resolution (${result.why}), so an agent takes the conflict`);
+    return false;
+  }
+  const files = result.files.map((f) => `\`${f}\``).join(', ');
+  const snapshots = result.baselines
+    ? ` The screenshot baselines took \`${pr.base}\`'s version, so I added \`${UPDATE_SNAPSHOTS_LABEL}\` to remake them.`
+    : '';
+  await github(fetchFn, token, 'POST', `issues/${pr.number}/comments`, {
+    body: `PR steward: merged \`${pr.base}\` in and resolved the conflicts without an agent (#474), so no round was needed: ${files}.${snapshots}\n\n${AUTO_RESOLVED_MARKER}`,
+  });
+  if (result.baselines)
+    await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [UPDATE_SNAPSHOTS_LABEL] });
+  return true;
 }
 
 const REASON_TEXT: Readonly<Record<Reason, string>> = {
@@ -591,6 +626,13 @@ export async function act(
 ): Promise<void> {
   const n = pr.number;
   if (!switchedOn(decision.kind, settings)) return;
+  if (
+    (decision.kind === 'steward' || decision.kind === 'stuck') &&
+    decision.reasons.includes('conflict') &&
+    settings.autoResolve &&
+    (await resolvedMechanically(pr, settings, token, fetchFn))
+  )
+    return;
   switch (decision.kind) {
     case 'steward': {
       let session: string | undefined;
@@ -1145,7 +1187,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   globalThis.fetch = meter.wrap(globalThis.fetch) as typeof fetch;
   try {
     if (!token) throw new Error('PROJECT_TOKEN is not set, so no PR was checked.');
-    await reconcileOpenPrs(token, settingsFromEnv(process.env), process.argv.includes('--dry-run'));
+    const settings = settingsFromEnv(process.env);
+    // The Action's checkout keeps no credentials, so the merge is pushed with PROJECT_TOKEN and starts CI.
+    const remote = `https://x-access-token:${token}@github.com/itay28/Military-TD.git`;
+    await reconcileOpenPrs(
+      token,
+      { ...settings, autoResolve: (pr) => autoResolve({ dir: process.cwd(), remote, head: pr.head, base: pr.base }) },
+      process.argv.includes('--dry-run'),
+    );
   } catch (error) {
     if (!softFail(meter)) {
       console.log(`::error::${error instanceof Error ? error.message : String(error)}`);

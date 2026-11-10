@@ -1369,7 +1369,9 @@ describe('ensureStatusLabels', () => {
 describe('act: mechanical conflict resolution', () => {
   const conflict: Decision = { kind: 'steward', reasons: ['conflict'], round: 1, retry: false, clearHandOff: [] };
   const bodies = (fetchFn: Mock<Fetch>) =>
-    fetchFn.mock.calls.map(([, init]) => (init.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : {}));
+    fetchFn.mock.calls.map(([, init]) =>
+      init.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : {},
+    );
 
   it('fires no round when every conflict was resolved, and says so without a round marker', async () => {
     fireOk.mockClear();
@@ -1414,7 +1416,13 @@ describe('act: mechanical conflict resolution', () => {
   it('tries it before handing off a conflict a round left behind', async () => {
     fireOk.mockClear();
     const autoResolve = vi.fn(async () => ({ kind: 'resolved' as const, files: ['GLOSSARY.md'], baselines: false }));
-    await act(pr(), { kind: 'stuck', reasons: ['conflict'], conflict: true }, 'gh-token', { ...settings, autoResolve }, fireOk);
+    await act(
+      pr(),
+      { kind: 'stuck', reasons: ['conflict'], conflict: true },
+      'gh-token',
+      { ...settings, autoResolve },
+      fireOk,
+    );
     expect(calls(fireOk)).toEqual([`POST ${api}/issues/7/comments`]);
     expect(bodies(fireOk)[0]!['labels']).toBeUndefined();
   });
