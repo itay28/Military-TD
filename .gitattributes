@@ -1,5 +1,6 @@
 * text=auto eol=lf
 *.png binary
+*.ttf binary
 *.jpg binary
 *.ogg binary
 *.mp3 binary
@@ -7,3 +8,4 @@
 
 # Third-party license files stay byte-for-byte as the pack shipped them (docs/assets.md).
 assets/**/License.txt -text
+assets/**/OFL.txt -text
