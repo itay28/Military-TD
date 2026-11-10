@@ -1189,7 +1189,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (!token) throw new Error('PROJECT_TOKEN is not set, so no PR was checked.');
     const settings = settingsFromEnv(process.env);
     // The Action's checkout keeps no credentials, so the merge is pushed with PROJECT_TOKEN and starts CI.
-    const remote = `https://x-access-token:${token}@github.com/itay28/Military-TD.git`;
+    const remote = `https://x-access-token:${token}@github.com/${process.env['GITHUB_REPOSITORY'] ?? 'itay28/Military-TD'}.git`;
     await reconcileOpenPrs(
       token,
       { ...settings, autoResolve: (pr) => autoResolve({ dir: process.cwd(), remote, head: pr.head, base: pr.base }) },

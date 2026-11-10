@@ -32,9 +32,9 @@ export type TextMerge = { ok: true; text: string } | { ok: false; clash: string 
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
- * A 3-way merge of keyed entries, in `ours`' order. Each side's additions are kept (one of
- * `theirs` goes after the entry before it on their side and after our own additions there), a change or delete made on one
- * side wins, and an entry both sides added identically appears once. A key both sides changed (or
+ * A 3-way merge of keyed entries, in `ours`' order. Each side's additions are kept (each new entry
+ * of `theirs` goes after the entry before it on their side, and after our own additions there), a change or delete
+ * made on one side wins, and an entry both sides added identically appears once. A key both sides changed (or
  * one changed and the other deleted) differently is a clash.
  */
 export function mergeKeyed<T>(
