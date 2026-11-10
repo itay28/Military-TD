@@ -15,8 +15,9 @@ const scrollState = (page: Page) =>
     return {
       scrollTop: dialog.scrollTop,
       overflows: dialog.scrollHeight > dialog.clientHeight,
-      // The cue is the glow layers (`scroll`) under cover layers (`local`) that hide it where nothing is clipped.
-      cue: getComputedStyle(dialog).backgroundAttachment === 'local, local, scroll, scroll, scroll',
+      // The cue is the glow layers (`scroll`) under cover layers (`local`) that hide it where nothing is clipped,
+      // after the frame's corner brackets (#399).
+      cue: getComputedStyle(dialog).backgroundAttachment.endsWith('local, local, scroll, scroll, scroll'),
     };
   });
 
