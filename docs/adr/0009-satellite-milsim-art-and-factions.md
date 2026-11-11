@@ -1,6 +1,6 @@
 # 9. Satellite-style milsim art and factions per map
 
-Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Heavy tank (boss) row for its renders (#362) · Updated 2026-11-11: an APC row in "What each kind depicts" (#478, v0.8.0); Fighter jet row and size (#482)
+Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Heavy tank (boss) row for its renders (#362) · Updated 2026-11-11: an APC row in "What each kind depicts" (#478, v0.8.0); Fighter jet row and size (#482), its China and Insurgents cells (#484)
 
 ## Context
 
@@ -38,7 +38,7 @@ The maintainer also wants each map to pit two sides against each other, picked f
 | **Helicopter** (light armor) | UH-60 Black Hawk | Mi-8AMTSh | Z-20 | Mi-8 (captured) |
 | **Heavy tank** (boss) | M1A2 SEPv3 with TUSK (urban kit) | T-14 Armata | Type 99A with add-on armor | T-72 (captured, ideally with improvised slat armor) |
 | **APC** (armored troop carrier) | M113 (or Stryker ICV, unarmed variant) | BTR-82A | ZBL-08 / ZSL-92 | BTR-60 (captured) |
-| **Fighter jet** (`jet`) | F-16 Fighting Falcon | Su-25 Grach | pending (next part) | pending (next part) |
+| **Fighter jet** (`jet`) | F-16 Fighting Falcon | Su-25 Grach | J-10 (a two-seat J-10S model, markings painted out) | MiG-21 (captured; a MiG-21PF in sand and green camouflage, markings removed) |
 
 The Heavy tank is rendered about 1.4 tiles long, bigger than the Tank's 1.3, so the boss reads at a glance. Its renders were made ahead of its gameplay (#78), so it's listed as an upcoming kind until it joins the waves.
 

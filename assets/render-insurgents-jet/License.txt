@@ -1,0 +1,12 @@
+Rendered sprites of "Mikoyan-Gurevich MiG-21PF Fishbed" by mgg8
+https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7
+License: Creative Commons Zero 1.0 (CC0 1.0, public domain dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The PNG in this folder is a top-down render of that model made by
+scripts/render-sprite.py (changed: national markings and numbers, modelled as decals, removed,
+rendered from above in flight, raised off the ground so its shadow falls offset, lit, desaturated).
+insurgents-jet-turntable.webp is a turntable of the same model (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
+The model itself isn't committed. CC0 needs no credit; it's given anyway.
+License checked on the model's Sketchfab page, 2026-11-11.
