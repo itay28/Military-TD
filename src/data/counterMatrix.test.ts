@@ -32,6 +32,10 @@ describe('counter matrix', () => {
     expect(efficiency('cannon', 'jeep')).toBeCloseTo((0.5 * 20) / 100);
   });
 
+  it('the Heavy tank boss keeps the Cannon and the Sniper as efficient counters', () => {
+    expect(efficientCounters('heavyTank')).toEqual(expect.arrayContaining(['cannon', 'sniper']));
+  });
+
   // The matrix scores a lone enemy, so it doesn't count the blast that makes the launcher good against groups.
   it('does not count the grenade launcher an efficient counter to the Tank: armor eats each grenade (#75)', () => {
     expect(efficientCounters('tank')).not.toContain('grenadeLauncher');
