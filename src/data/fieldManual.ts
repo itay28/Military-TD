@@ -1,6 +1,6 @@
 import { counteredBy, poorAgainst, resists, strongAgainst } from './counters';
 import { ENEMY_NAMES, ENEMY_WEAKNESS, LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES } from './display';
-import { ENEMY_STATS, NOT_IN_PLAY, type EnemyKind } from './enemies';
+import { ENEMY_STATS, PLAYABLE_ENEMY_KINDS, type EnemyKind } from './enemies';
 import { BUILD_KINDS, TOWER_LEVELS, TOWER_STATS, type TowerKind } from './towers';
 
 /**
@@ -105,8 +105,5 @@ function enemyEntry(kind: EnemyKind): FieldManualEntry {
 
 /** Every Field manual entry: the towers, then the enemy kinds, in data order. */
 export function fieldManualEntries(): FieldManualEntry[] {
-  return [
-    ...BUILD_KINDS.map(towerEntry),
-    ...(Object.keys(ENEMY_STATS) as EnemyKind[]).filter((k) => !NOT_IN_PLAY.has(k)).map(enemyEntry),
-  ];
+  return [...BUILD_KINDS.map(towerEntry), ...PLAYABLE_ENEMY_KINDS.map(enemyEntry)];
 }

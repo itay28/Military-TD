@@ -170,7 +170,7 @@ export const ENEMY_WEAKNESS = {
   jeep: 'Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it.',
   helicopter: 'Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best.',
   tank: 'Armor: Rifle Nests barely scratch it. Cannons and Mortars work.',
-  heavyTank: 'Boss. Heavy armor, huge HP. Leaking it costs 10 Lives. Cannons and Snipers pierce it best.',
+  heavyTank: 'Boss. Heavy armor, huge HP. Leaking it costs 10 Lives.',
 } as const satisfies Record<EnemyKind, string>;
 
 /** The smallest tap area of an enemy, as a diameter in screen pixels, so a small one is easy to hit on a phone. */

@@ -13,3 +13,8 @@ export type EnemyKind = keyof typeof ENEMY_STATS;
 
 /** Kinds that aren't in any map's waves yet (ADR-0009). Tests and headless scenarios can still spawn them. */
 export const NOT_IN_PLAY: ReadonlySet<EnemyKind> = new Set<EnemyKind>(['heavyTank']);
+
+/** The kinds that appear in play lists (waves, How to play, Field manual), in `ENEMY_STATS` order: every kind not in `NOT_IN_PLAY`. */
+export const PLAYABLE_ENEMY_KINDS: readonly EnemyKind[] = (Object.keys(ENEMY_STATS) as EnemyKind[]).filter(
+  (k) => !NOT_IN_PLAY.has(k),
+);
