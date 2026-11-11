@@ -34,6 +34,12 @@ describe('PR steward workflow', () => {
     expect(yaml).toMatch(/^ {4}concurrency:\n {6}group: pr-steward\n {6}cancel-in-progress: false\n/m);
   });
 
+  // Its conflict merges (#474) push with PROJECT_TOKEN, so CI runs; a persisted GITHUB_TOKEN header would win.
+  it('checks out without persisted credentials in the steward job', () => {
+    const job = yaml.slice(yaml.indexOf('  pr-steward:'));
+    expect(job).toMatch(/uses: actions\/checkout@v4\n {8}with:\n {10}persist-credentials: false\n/);
+  });
+
   it('runs the steward with the project token, its switches and its secrets', () => {
     expect(runsOf(yaml)).toContain('node scripts/pr-steward.ts');
     for (const line of [
