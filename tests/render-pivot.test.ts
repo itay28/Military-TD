@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { SPRITES } from '../src/data/sprites';
+import { NOT_IN_PLAY, type TowerKind } from '../src/data/towers';
 import { FACTIONS, type Faction } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
@@ -104,13 +105,12 @@ describe('the committed render data', () => {
 const NEW_KINDS: Readonly<Record<string, readonly Faction[]>> = { apc: ['us'] };
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
+  // A kind not in play yet (the Sniper, renders in #358) has none until its rollout.
+  const inPlay = Object.keys(SPRITES).filter((kind) => !NOT_IN_PLAY.has(kind as TowerKind));
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
-      const kinds = [
-        ...Object.keys(SPRITES),
-        ...Object.keys(NEW_KINDS).filter((k) => NEW_KINDS[k]!.includes(faction)),
-      ].sort();
+      const kinds = [...inPlay, ...Object.keys(NEW_KINDS).filter((k) => NEW_KINDS[k]!.includes(faction))].sort();
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
       expect(models.map((m) => m.kind).sort()).toEqual(kinds);
     });
