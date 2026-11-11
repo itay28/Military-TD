@@ -9,6 +9,8 @@ import {
   REVIEW_HEADING,
   REVIEW_REQUEST_MARKER,
   reviewRequestMarker,
+  restMergeability,
+  settleMergeability,
   ROUND_MARKER,
   roundMeta,
   STUCK_MARKER,
@@ -1852,5 +1854,86 @@ describe('update-snapshots request (#472)', () => {
     );
     await startSnapshots(pr(), 'gh-token', fetchFn);
     expect(calls(fetchFn).at(-1)).toBe(`POST ${api}/issues/7/labels`);
+  });
+});
+
+// GitHub computes mergeability lazily: a REST fetch of the PR starts it (#547).
+describe('restMergeability', () => {
+  it('reads each REST state', () => {
+    expect(restMergeability({ mergeable: false, mergeable_state: 'dirty' })).toEqual({
+      mergeable: 'CONFLICTING',
+      behind: false,
+    });
+    expect(restMergeability({ mergeable: true, mergeable_state: 'behind' })).toEqual({
+      mergeable: 'MERGEABLE',
+      behind: true,
+    });
+    expect(restMergeability({ mergeable: true, mergeable_state: 'clean' })).toEqual({
+      mergeable: 'MERGEABLE',
+      behind: false,
+    });
+  });
+
+  it('is null while GitHub is still computing', () => {
+    expect(restMergeability({ mergeable: null, mergeable_state: 'unknown' })).toBeNull();
+  });
+});
+
+describe('settleMergeability (#547)', () => {
+  const unknownPr = pr({ mergeable: 'UNKNOWN', behind: false, lastCommitAt: at(90), comments: [] });
+  const answers = (...bodies: object[]) => {
+    const queue = [...bodies];
+    return vi.fn<Fetch>(async () => new Response(JSON.stringify(queue.length > 1 ? queue.shift() : queue[0])));
+  };
+  const sleep = vi.fn(async () => {});
+
+  it('turns an UNKNOWN list answer of dirty into a conflict round, not a hand-off', async () => {
+    const fetchFn = answers({ mergeable: false, mergeable_state: 'dirty' });
+    const settled = await settleMergeability(unknownPr, 't', fetchFn, sleep);
+    expect(settled.mergeable).toBe('CONFLICTING');
+    expect(fetchFn.mock.calls.map((c) => c[0])).toEqual([`${api}/pulls/7`]);
+    expect(decide(settled, now).kind).toBe('steward');
+  });
+
+  it('turns behind into an update', async () => {
+    const settled = await settleMergeability(
+      unknownPr,
+      't',
+      answers({ mergeable: true, mergeable_state: 'behind' }),
+      sleep,
+    );
+    expect(decide(settled, now)).toEqual({ kind: 'update' });
+  });
+
+  it('re-reads after a wait while GitHub computes', async () => {
+    const fetchFn = answers(
+      { mergeable: null, mergeable_state: 'unknown' },
+      { mergeable: false, mergeable_state: 'dirty' },
+    );
+    const settled = await settleMergeability(unknownPr, 't', fetchFn, sleep);
+    expect(settled.mergeable).toBe('CONFLICTING');
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalled();
+  });
+
+  it('leaves a PR unknown after the retries, so decide waits and only hands off after its limit', async () => {
+    const fetchFn = answers({ mergeable: null, mergeable_state: 'unknown' });
+    const settled = await settleMergeability(unknownPr, 't', fetchFn, sleep);
+    expect(settled).toEqual(unknownPr);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    const recent = { ...settled, lastCommitAt: at(10) };
+    expect(decide(recent, now).kind).toBe('wait');
+  });
+
+  it('leaves the PR as it is when the fetch fails', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => new Response('{}', { status: 500 }));
+    expect(await settleMergeability(unknownPr, 't', fetchFn, sleep)).toEqual(unknownPr);
+  });
+
+  it('makes no request for a PR the list already answered', async () => {
+    const fetchFn = answers({});
+    const known = pr({ mergeable: 'MERGEABLE' });
+    expect(await settleMergeability(known, 't', fetchFn, sleep)).toBe(known);
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 });
