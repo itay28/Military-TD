@@ -18,6 +18,7 @@ export const CLASS_LINES = {
   helicopter: 'Medium transport helicopter: twin turbines, a light armored cabin',
   tank: 'Main battle tank: large-calibre gun, heavy composite armor',
   heavyTank: 'Heavy tank: a thickly armored, slow main battle tank',
+  gunship: 'Attack helicopter gunship: heavy armor plating, rotor and chin gun',
 } as const satisfies Record<TowerKind | EnemyKind, string>;
 
 /** One Field manual entry: a tower or an enemy kind, with everything its info side shows. */
