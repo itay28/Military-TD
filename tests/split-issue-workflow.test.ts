@@ -14,6 +14,10 @@ describe('split issue workflow', () => {
     expect(yaml).toMatch(/^ {2}workflow_dispatch:/m);
   });
 
+  it('names each run after its issue, so Board sync can tell the runs apart (#486)', () => {
+    expect(yaml).toContain('run-name: Split issue #${{ github.event.issue.number || inputs.issue }}');
+  });
+
   it('runs Claude on Opus with the OAuth token and the split prompt', () => {
     expect(yaml).toContain('uses: anthropics/claude-code-action@v1');
     expect(yaml).toContain('claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}');
