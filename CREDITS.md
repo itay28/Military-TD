@@ -83,66 +83,66 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/naip-field-road-treeline/**`, `assets/naip-maps/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR)
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`
 
-## Phalanx CIWS (top-down render)
+## Phalanx CIWS (top-down render and turntable)
 
 - Author: Lemper_Studio
 - Source: <https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d>
 - License: CC-BY-4.0
-- Attribution: "Phalanx CIWS" by Lemper_Studio (sketchfab.com), CC-BY 4.0, rendered top-down, repainted grey-olive, set on a sandbagged pad of our own
+- Attribution: "Phalanx CIWS" by Lemper_Studio (sketchfab.com), CC-BY 4.0, rendered top-down, repainted grey-olive, set on a sandbagged pad of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-aa-gun/**`
 
-## Anti-Tank Guided Missile (top-down render)
+## Anti-Tank Guided Missile (top-down render and turntable)
 
 - Author: Alhimix
 - Source: <https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6>
 - License: CC-BY-4.0
-- Attribution: "Anti-Tank Guided Missile" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, set on a sandbagged pad of our own
+- Attribution: "Anti-Tank Guided Missile" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, set on a sandbagged pad of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-cannon/**`
 
-## Mortar - M224 (top-down render)
+## Mortar - M224 (top-down render and turntable)
 
 - Author: jcherry3d
 - Source: <https://sketchfab.com/3d-models/c86a73e40d994431bcdb57dc741cf8be>
 - License: CC-BY-4.0
-- Attribution: "Mortar - M224" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own
+- Attribution: "Mortar - M224" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-mortar/**`
 
-## Low Poly Humvee FREE (top-down render)
+## Low Poly Humvee FREE (top-down render and turntable)
 
 - Author: madtrollstudio
 - Source: <https://sketchfab.com/3d-models/c0e2ddcc4ccf4d49a9303303a6307bcf>
 - License: CC-BY-4.0
-- Attribution: "Low Poly Humvee FREE" by madtrollstudio (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "Low Poly Humvee FREE" by madtrollstudio (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-jeep/**`
 
-## M1A2 Abrams Crows (top-down render)
+## M1A2 Abrams Crows (top-down render and turntable)
 
 - Author: MirzaArrafiERV_45
 - Source: <https://sketchfab.com/3d-models/c9e2b389e5004b03bcc695e4350b989d>
 - License: CC-BY-4.0
-- Attribution: "M1A2 Abrams Crows" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull
+- Attribution: "M1A2 Abrams Crows" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-tank/**`
 
-## Sikorsky UH-60 Black Hawk (top-down render)
+## Sikorsky UH-60 Black Hawk (top-down render and turntable)
 
 - Author: helijah
 - Source: <https://sketchfab.com/3d-models/ee81eb66006b4d8980d0cf9ff6304b69>
 - License: CC-BY-4.0
-- Attribution: "Sikorsky UH-60 Black Hawk" by helijah (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "Sikorsky UH-60 Black Hawk" by helijah (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-helicopter/**`
 
