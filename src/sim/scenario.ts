@@ -1,6 +1,6 @@
+import { DIFFICULTY, type Difficulty } from '../data/difficulty';
 import type { EnemyKind } from '../data/enemies';
 import { MVP_MAP, wavesForMap } from '../data/maps';
-import { START_LIVES, START_MONEY } from '../data/start';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { createGame, TICK_MS, type CommandResult, type Game, type GameEvents, type GameState } from './game';
 import { tileKey, type MapData, type Tile } from './map';
@@ -46,6 +46,8 @@ export interface GameSetup {
   readonly waves?: readonly WaveData[];
   /** Tactical mode (ADR-0011): no wave timers. Off by default, as in a new game. */
   readonly tacticalMode?: boolean;
+  /** Normal by default. Lives and Money not given above start at the Difficulty's (`DIFFICULTY`). */
+  readonly difficulty?: Difficulty;
 }
 
 /** A game situation to run headlessly (ADR-0003): a setup, a script, and when to stop. */
@@ -125,13 +127,16 @@ export function setUpGame(setup: GameSetup = {}): Game {
   const map = setup.map ?? MVP_MAP;
   const towers = setup.towers ?? [];
   const towersCost = towers.reduce((sum, { kind }) => sum + TOWER_STATS[kind].cost, 0);
+  const difficulty = setup.difficulty ?? 'normal';
+  const { startLives, startMoney } = DIFFICULTY[difficulty];
   const game = createGame({
     map,
-    lives: setup.lives ?? START_LIVES,
+    lives: setup.lives ?? startLives,
     // Pre-placed towers are placed like any other, with their cost added first, so they come free.
-    money: (setup.money ?? START_MONEY) + towersCost,
+    money: (setup.money ?? startMoney) + towersCost,
     waves: setup.waves ?? wavesForMap(map.id),
     tacticalMode: setup.tacticalMode ?? false,
+    difficulty,
   });
   for (const { kind, tile } of towers) {
     const placed = game.placeTower(kind, tile);
