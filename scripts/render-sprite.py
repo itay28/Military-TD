@@ -35,7 +35,9 @@ clockwise), e.g. a rifle team. `base` (towers, issue #314) builds our own dug-in
 of `radiusTiles` ringed by sandbags, open at the front when `gapDeg` is set, so a dark tower reads on grass at
 48 px. The base is part of the hull layer and casts its own shadow.
 
-Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1
+Setup:  python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1
+        bpy 5.0.1 only ships a Python 3.11 wheel (cp311). Under any other Python pip hides it and offers only 5.1+.
+        Stay on 5.0.1 so new renders match the existing sprites (lighting and shadow can shift between versions).
 Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets]
 """
 
