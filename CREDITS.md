@@ -56,23 +56,41 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-10-27
 - Files: `assets/morgan3d-chopper/**`
 
-## Oerlikon Gdf-006 35mm (top-down render)
+## Oerlikon Gdf-006 35mm (top-down render and turntable)
 
 - Author: lm9241221
 - Source: <https://sketchfab.com/3d-models/26f4e5fde15747db9f88d2d60b86f9cf>
 - License: CC-BY-4.0
-- Attribution: "Oerlikon Gdf-006 35mm" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own
+- Attribution: "Oerlikon Gdf-006 35mm" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-aa-gun/**`
 
-## T-72B3 Main Battle Tank (top-down render)
+## T-72B3 Main Battle Tank (top-down render and turntable)
 
 - Author: MirzaArrafiERV_45
 - Source: <https://sketchfab.com/3d-models/dfe130dfce724c30958cec51f2bd86b7>
 - License: CC-BY-4.0
-- Attribution: "T-72B3 Main Battle Tank" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, slat armour removed, repainted olive
+- Attribution: "T-72B3 Main Battle Tank" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, slat armour removed, repainted olive, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-tank/**`
+
+## T-14 Armara Uralvagon Factory (top-down render)
+
+- Author: 3DYAROSLAV2
+- Source: <https://sketchfab.com/3d-models/9864af9626f14256a255d4faea52ec7f>
+- License: CC-BY-4.0
+- Attribution: "T-14 Armara Uralvagon Factory" by 3DYAROSLAV2 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-heavy-tank/**`
+
+## WIP - Abrams M1A2 TUSK 2 (top-down render)
+
+- Author: davidfalke
+- Source: <https://sketchfab.com/3d-models/efb7311b641f4a76afff19e5f3068298>
+- License: CC-BY-4.0
+- Attribution: "WIP - Abrams M1A2 TUSK 2" by davidfalke (sketchfab.com), CC-BY 4.0, rendered top-down, tinted tan
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-heavy-tank/**`
 
 ## NAIP aerial imagery (Iowa 2023)
 
@@ -128,6 +146,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-jeep/**`
 
+## M113 (top-down render and turntable)
+
+- Author: arc4de
+- Source: <https://sketchfab.com/3d-models/7fe132c071584049b51d3569726021a0>
+- License: CC-BY-4.0
+- Attribution: "M113" by arc4de (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-apc/**`
+
 ## M1A2 Abrams Crows (top-down render and turntable)
 
 - Author: MirzaArrafiERV_45
@@ -146,84 +173,102 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-helicopter/**`
 
-## ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)
+## F 16 Fighting Falcon (top-down render and turntable)
+
+- Author: davidmilitei09
+- Source: <https://sketchfab.com/3d-models/c2ed832c0aa743789aa5b4452a60e97c>
+- License: CC-BY-4.0
+- Attribution: "F 16 Fighting Falcon" by davidmilitei09 (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-jet/**`
+
+## ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render and turntable)
 
 - Author: LuckySkink9661
 - Source: <https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3>
 - License: CC-BY-4.0
-- Attribution: "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own, turret split from the carriage
+- Attribution: "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own, turret split from the carriage, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-aa-gun/**`
 
-## ZiS-2 57mm anti-tank gun (top-down render)
+## ZiS-2 57mm anti-tank gun (top-down render and turntable)
 
 - Author: sergey.s.filin
 - Source: <https://sketchfab.com/3d-models/61e3cb4b62ad48b186596b0cd88fc156>
 - License: CC-BY-4.0
-- Attribution: "ZiS-2 57mm anti-tank gun" by sergey.s.filin (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own
+- Attribution: "ZiS-2 57mm anti-tank gun" by sergey.s.filin (sketchfab.com), CC-BY 4.0, rendered top-down, set on a sandbagged pad of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-cannon/**`
 
-## Pindad Mortars (top-down render)
+## Pindad Mortars (top-down render and turntable)
 
 - Author: sakigakefuruzawa
 - Source: <https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb>
 - License: CC-BY-4.0
-- Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate
+- Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-mortar/**`
 
-## UAZ-469 Low Poly (top-down render)
+## UAZ-469 Low Poly (top-down render and turntable)
 
 - Author: lebedeventerprise
 - Source: <https://sketchfab.com/3d-models/77bdfa6804334b2794e65654e9dd8f3a>
 - License: CC-BY-4.0
-- Attribution: "UAZ-469 Low Poly" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down, its recoilless rifle and machine gun removed, repainted olive
+- Attribution: "UAZ-469 Low Poly" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down, its recoilless rifle and machine gun removed, repainted olive, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-03
 - Files: `assets/render-russia-jeep/**`
 
-## Mi-8 (top-down render)
+## Mi-8 (top-down render and turntable)
 
 - Author: tiunov.se
 - Source: <https://sketchfab.com/3d-models/5e5e57ef66994c6196a5f5d6b9f50403>
 - License: CC-BY-4.0
-- Attribution: "Mi-8" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "Mi-8" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-helicopter/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
+## Su-25 (top-down render and turntable)
+
+- Author: tnikita
+- Source: <https://sketchfab.com/3d-models/88b71eb848cf4418a95dff497c07cefc>
+- License: CC-BY-4.0
+- Attribution: "Su-25" by tnikita (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-jet/**`
+
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-rifle-nest/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit tinted green (toward Type 07), a shooter and an observer set in a dug-in pit of our own
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit tinted green (toward Type 07), a shooter and an observer set in a dug-in pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-11
 - Files: `assets/render-china-sniper/**`
 
-## Anti-Tank Guided Missile (top-down render)
+## Anti-Tank Guided Missile (top-down render and turntable)
 
 - Author: Alhimix
 - Source: <https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6>
 - License: CC-BY-4.0
-- Attribution: "Anti-Tank Guided Missile" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, tinted green, set on a sandbagged pad of our own
+- Attribution: "Anti-Tank Guided Missile" by Alhimix (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, tinted green, set on a sandbagged pad of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-cannon/**`
 
-## Pindad Mortars (top-down render)
+## Pindad Mortars (top-down render and turntable)
 
 - Author: sakigakefuruzawa
 - Source: <https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb>
 - License: CC-BY-4.0
-- Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate
+- Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-mortar/**`
 
