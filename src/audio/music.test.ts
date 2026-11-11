@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { createRecordingAudio } from './audioOut';
 import {
   createMusicController,
+  CROSSFADE_MS,
   DUCK_FADE_MS,
   DUCK_VOLUME,
   END_SCREEN,
@@ -408,5 +410,92 @@ describe('gameMusic', () => {
     expect(gameMusic('wave')).toEqual({ scene: 'Game', combat: true });
     expect(gameMusic('victory')).toEqual({ scene: END_SCREEN, combat: false });
     expect(gameMusic('defeat')).toEqual({ scene: END_SCREEN, combat: false });
+  });
+});
+
+describe('the radio cold open (#479)', () => {
+  const CUE_MS = 2680;
+
+  /** A controller with a cold open on a recording sink and a fake timer: `elapse()` runs what's due. */
+  function withColdOpen(muted = false) {
+    const { backend, voices } = fakeBackend();
+    const audio = createRecordingAudio();
+    const timers: { ms: number; run: () => void }[] = [];
+    const music = createMusicController(backend, {
+      muted,
+      coldOpen: { audio, ms: CUE_MS, schedule: (ms, run) => void timers.push({ ms, run }) },
+    });
+    const elapse = (): void => {
+      for (const timer of timers.splice(0)) timer.run();
+    };
+    return { music, voices, audio, timers, elapse };
+  }
+
+  it('plays the cold open on the first input at the Menu, then fades the menu track in once it ends', () => {
+    const { music, voices, audio, timers, elapse } = withColdOpen();
+    music.enterScene('Menu');
+    expect(audio.played).toEqual([]);
+
+    music.unlock();
+    expect(audio.played).toEqual(['coldOpen']);
+    expect(voices).toEqual([]);
+    expect(timers.map((t) => t.ms)).toEqual([CUE_MS]);
+
+    elapse();
+    expect(voices.map((v) => v.track)).toEqual(['menu']);
+    expect(voices[0]?.fades).toEqual([{ volume: TRACK_VOLUME.menu, ms: CROSSFADE_MS }]);
+    expect(audio.played).toEqual(['coldOpen']);
+  });
+
+  it('plays it once a session: later visits to the menu go straight to music', () => {
+    const { music, voices, audio, elapse } = withColdOpen();
+    music.enterScene('Menu');
+    music.unlock();
+    elapse();
+    music.enterScene('Game');
+    music.enterScene('Menu');
+    expect(audio.played).toEqual(['coldOpen']);
+    expect(voices.map((v) => v.track)).toEqual(['menu', 'ambient', 'combat', 'menu']);
+  });
+
+  it('waits for the menu when the first input comes on a scene with no track (Boot)', () => {
+    const { music, voices, audio, elapse } = withColdOpen();
+    music.enterScene('Boot');
+    music.unlock();
+    expect(audio.played).toEqual([]);
+
+    music.enterScene('Menu');
+    expect(audio.played).toEqual(['coldOpen']);
+    expect(voices).toEqual([]);
+    elapse();
+    expect(voices.map((v) => v.track)).toEqual(['menu']);
+  });
+
+  it('skips it when the first track is not the menu one, and later on the menu too', () => {
+    const { music, voices, audio } = withColdOpen();
+    music.enterScene('Game');
+    music.unlock();
+    music.enterScene('Menu');
+    expect(audio.played).toEqual([]);
+    expect(voices.map((v) => v.track)).toEqual(['ambient', 'combat', 'menu']);
+  });
+
+  it('plays the track the current scene wants once the cue ends, after a scene change during it', () => {
+    const { music, voices, elapse } = withColdOpen();
+    music.enterScene('Menu');
+    music.unlock();
+    music.enterScene('Game');
+    expect(voices).toEqual([]);
+    elapse();
+    expect(voices.map((v) => v.track)).toEqual(['ambient', 'combat']);
+  });
+
+  it('plays neither the cue nor the music when muted (test mode)', () => {
+    const { music, voices, audio, timers } = withColdOpen(true);
+    music.enterScene('Menu');
+    music.unlock();
+    expect(audio.played).toEqual([]);
+    expect(timers).toEqual([]);
+    expect(voices).toEqual([]);
   });
 });
