@@ -37,13 +37,16 @@ only the soldier sets were re-rendered for #342, so re-rendering a vehicle or to
 
 `turnDeg` turns a model clockwise after `frontAxis`, for one set down at an angle (not along an axis).
 
+`liftTiles` raises the placed model that far above the ground, so its shadow falls off to the south-east, away from
+the sun: an aircraft in flight (the Fighter jet, #482). Without it the model stands on the ground.
+
 `pose` freezes a rigged model at one frame of one of its animations (`action`, `frame`), e.g. a soldier crouched
 and aiming instead of in a T-pose. `copies` places the placed model several times (`x`, `y` in tiles, `turnDeg`
 clockwise), e.g. a rifle team. `base` (towers, issue #314) builds our own dug-in pad under the model: a dirt disc
 of `radiusTiles` ringed by sandbags, open at the front when `gapDeg` is set, so a dark tower reads on grass at
 48 px. The base is part of the hull layer and casts its own shadow.
 
-Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow
+Setup:  python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow
 Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets] [--turntable]
 """
 
@@ -157,7 +160,7 @@ def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) 
 
 def place_model(spec: dict) -> None:
     """Turn the model's front north (`frontAxis`, then `turnDeg` clockwise), stand it on z = 0 and scale it so its
-    north-south length is `lengthTiles`.
+    north-south length is `lengthTiles`, then raise it `liftTiles` (default 0) off the ground.
 
     One Blender unit is one tile from here on.
     """
@@ -170,7 +173,8 @@ def place_model(spec: dict) -> None:
     lo, hi = world_bounds(meshes)
     scale = spec["lengthTiles"] / (hi.y - lo.y)
     centre = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
-    fit = Matrix.Scale(scale, 4) @ Matrix.Translation(-centre)
+    lift = Matrix.Translation((0, 0, spec.get("liftTiles", 0)))
+    fit = lift @ Matrix.Scale(scale, 4) @ Matrix.Translation(-centre)
     for o in roots:
         o.matrix_world = fit @ o.matrix_world
     bpy.context.view_layer.update()

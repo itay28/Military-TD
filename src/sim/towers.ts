@@ -31,7 +31,15 @@ export interface TowerStats {
   readonly armorPierce?: number;
   /** Set for a tower that lobs shells: a shot becomes a Shell that lands later, instead of hitting at once. */
   readonly shell?: ShellStats;
+  /** Which enemy in range it picks (see `selectTarget`); `first` when left out. */
+  readonly targeting?: Targeting;
 }
+
+/**
+ * A tower kind's targeting rule. `first`: the enemy furthest along the Path. `strongest`: the one with the most HP
+ * left, ties to the one furthest along.
+ */
+export type Targeting = 'first' | 'strongest';
 
 /**
  * A placed tower. Its stats are copied from its kind's level when it is placed or upgraded;
@@ -104,21 +112,27 @@ export function towerAt(towers: readonly Tower[], { col, row }: Tile): Tower | u
 const COOLDOWN_EPSILON = 1e-9;
 
 /**
- * The enemy on a layer the tower hits and in range (inclusive, from the tile center) furthest along the Path ("first").
- * An enemy at or inside the tower's `minRange` isn't a target.
- * Ties go to the one earlier in `enemies`, i.e. spawned first.
+ * The enemy the tower shoots: of those on a layer it hits and in range (inclusive, from the tile center), the one its
+ * `targeting` rule picks. `first` (the default): furthest along the Path. `strongest`: most HP left, ties to the one
+ * furthest along. An enemy at or inside the tower's `minRange` isn't a target.
+ * Remaining ties go to the one earlier in `enemies`, i.e. spawned first.
  */
 export function selectTarget(tower: Tower, enemies: readonly Enemy[]): Enemy | undefined {
   const center = tileCenter(tower.tile);
+  const better = tower.targeting === 'strongest' ? isStronger : isFurther;
   let target: Enemy | undefined;
   for (const enemy of enemies) {
     if (!tower.targets.includes(enemy.layer)) continue;
     const gap = Math.hypot(enemy.position.x - center.x, enemy.position.y - center.y);
     const inRange = gap <= tower.range && (tower.minRange === undefined || gap > tower.minRange);
-    if (inRange && (!target || enemy.distance > target.distance)) target = enemy;
+    if (inRange && (!target || better(enemy, target))) target = enemy;
   }
   return target;
 }
+
+const isFurther = (enemy: Enemy, than: Enemy): boolean => enemy.distance > than.distance;
+const isStronger = (enemy: Enemy, than: Enemy): boolean =>
+  enemy.hp > than.hp || (enemy.hp === than.hp && isFurther(enemy, than));
 
 /** Where an idle tower turns: toward `point`, laid for enemy `enemyId` when it has one. */
 export interface PreAim {
