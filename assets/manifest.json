@@ -146,6 +146,16 @@
       "files": ["assets/render-us-jeep/**"]
     },
     {
+      "id": "render-us-apc",
+      "name": "M113 (top-down render and turntable)",
+      "author": "arc4de",
+      "source": "https://sketchfab.com/3d-models/7fe132c071584049b51d3569726021a0",
+      "license": "CC-BY-4.0",
+      "attribution": "\"M113\" by arc4de (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-us-apc/**"]
+    },
+    {
       "id": "render-us-tank",
       "name": "M1A2 Abrams Crows (top-down render and turntable)",
       "author": "MirzaArrafiERV_45",
