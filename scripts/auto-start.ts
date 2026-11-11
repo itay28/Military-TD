@@ -70,6 +70,8 @@ export interface StartIssue {
   readonly needsYou: boolean;
   /** Labelled `needs-info`: the agent stopped on a question (#423). */
   readonly needsInfo: boolean;
+  /** Labelled `needs-split`: waiting for the split agent, no implement session (#486). */
+  readonly needsSplit: boolean;
   readonly autoAgent: boolean;
   /** Labelled `area:infra` (or Area `infra`): startable without a milestone (#225). */
   readonly infra: boolean;
@@ -150,7 +152,7 @@ export function stackBase(blockedBy: readonly number[], prs: readonly OpenPr[], 
  * Infra issues without a milestone are startable in every run, next to that milestone's (#225);
  * other issues without one never start. Ordered by Priority (P0 first, none last), then issue
  * number; capped so at most `cap` `auto-agent` issues are In progress. Parked ones (`needs-info`,
- * `needs-you`, `hold`) have no live session, so they keep their claim but use no slot (#423).
+ * `needs-you`, `needs-split` (#486), `hold`) have no live session, so they keep their claim but use no slot (#423).
  * Look-ahead may fill at most `cap − 1` slots (at least 1, so `cap` 1 isn't starved), counting
  * look-ahead issues already running; the current milestone and infra can use every slot. With
  * `freeze` on (the feature freeze, #84), feature work doesn't start.
@@ -208,10 +210,14 @@ export function planStarts(
   };
 }
 
-/** An `auto-agent` issue with a live session: In progress and not parked on a question or the maintainer (#423). */
+/**
+ * An `auto-agent` issue with a live session: In progress and not parked on a question, the maintainer
+ * (#423) or the split agent (#486).
+ */
 export const isRunning = (
-  i: Pick<StartIssue, 'autoAgent' | 'status'> & Partial<Pick<StartIssue, 'needsInfo' | 'needsYou' | 'hold'>>,
-) => i.autoAgent && i.status === 'In progress' && !i.needsInfo && !i.needsYou && !i.hold;
+  i: Pick<StartIssue, 'autoAgent' | 'status'> &
+    Partial<Pick<StartIssue, 'needsInfo' | 'needsYou' | 'needsSplit' | 'hold'>>,
+) => i.autoAgent && i.status === 'In progress' && !i.needsInfo && !i.needsYou && !i.needsSplit && !i.hold;
 
 const rank = (priority: string | undefined) => {
   const i = PRIORITIES.indexOf(priority ?? '');
