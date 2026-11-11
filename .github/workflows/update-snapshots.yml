@@ -18,6 +18,10 @@ on:
         required: true
         type: number
 
+# The PR number is in the run's title: the PR steward waits on an active run (#471), and a hand
+# run (workflow_dispatch) isn't linked to the PR any other way.
+run-name: Update snapshots #${{ github.event.pull_request.number || inputs.pr }}
+
 # Keyed on the label too: adding any other label starts a run that is skipped, and it must not
 # cancel a live one. A hand run shares the group with the label's.
 concurrency:
