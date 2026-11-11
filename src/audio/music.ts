@@ -5,6 +5,7 @@
  */
 
 import type { Phase } from '../sim/game';
+import type { AudioOut } from './audioOut';
 import type { Channel } from './volume';
 
 /**
@@ -106,12 +107,27 @@ export interface MusicController {
   setCombat(on: boolean): void;
 }
 
+/**
+ * The radio cold open (#479): the first thing a player hears, before the menu music. The controller plays the
+ * `coldOpen` cue on `audio` once a session, the first time the menu track would start, and holds the music for `ms`.
+ */
+export interface ColdOpenOptions {
+  /** Where the cue plays: the SFX sink, so it follows the sound effects volume (#67). */
+  readonly audio: AudioOut;
+  /** The cue's length (`RADIO_CUE_MS.coldOpen`): the music starts once it's over. */
+  readonly ms: number;
+  /** Runs `run` after `ms` (a real-time timer in the game, a fake in tests). */
+  readonly schedule: (ms: number, run: () => void) => void;
+}
+
 export interface MusicOptions {
   /** Test mode: the controller never touches the backend, so e2e runs and scenarios stay silent. */
   readonly muted: boolean;
   readonly crossfadeMs?: number;
   /** A channel's volume, 0–1, read at each fade-in and `refreshVolume` (#67). Full volume when not given. */
   readonly volume?: (channel: Channel) => number;
+  /** Plays the radio cold open before the first menu track (#479). None by default. */
+  readonly coldOpen?: ColdOpenOptions;
 }
 
 export function createMusicController(backend: MusicBackend, options: MusicOptions): MusicController {
@@ -125,6 +141,10 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
   /** A layer's volume: its track's level during a wave, silent otherwise. */
   const layerLevel = (layer: TrackId): number => (combat ? level(layer) : 0);
   let unlocked = false;
+  /** The cold open hasn't had its turn yet: it gets one, the first time any track would start. */
+  let coldOpenDue = options.coldOpen !== undefined;
+  /** The cold open is playing: the music waits for it. */
+  let holding = false;
   /** The track the current scene wants, whether or not it's playing yet. */
   let wanted: TrackId | null = null;
   /** The track playing (or failed to load, with no voice) since the last change, and its layer's voice. */
@@ -146,7 +166,20 @@ export function createMusicController(backend: MusicBackend, options: MusicOptio
   };
 
   const sync = (): void => {
-    if (options.muted || !unlocked || playing?.track === wanted) return;
+    if (options.muted || !unlocked || holding || playing?.track === wanted) return;
+    if (coldOpenDue && wanted !== null) {
+      coldOpenDue = false;
+      const coldOpen = options.coldOpen;
+      if (coldOpen && wanted === 'menu') {
+        holding = true;
+        coldOpen.audio.play('coldOpen');
+        coldOpen.schedule(coldOpen.ms, () => {
+          holding = false;
+          sync();
+        });
+        return;
+      }
+    }
     if (playing) {
       fadeOut(playing.voice);
       fadeOut(playing.layer?.voice);

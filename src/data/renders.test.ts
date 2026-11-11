@@ -45,6 +45,11 @@ describe('RENDERS', () => {
     expect(SPRITES.tank).not.toBeNull();
   });
 
+  it('draws the APC with the shape fallback until its renders are wired in (#360): its US render (#478) is only in the Field manual for now', () => {
+    expect('apc' in RENDERS).toBe(false);
+    expect(SPRITES.apc).toBeNull();
+  });
+
   it('renders face north', () => {
     expect(RENDER_FACING).toBeCloseTo(-Math.PI / 2);
   });

@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS, NOT_IN_PLAY, type EnemyKind } from './enemies';
 import { CLASS_LINES, fieldManualEntries } from './fieldManual';
-import { TOWER_STATS } from './towers';
+import { BUILD_KINDS } from './towers';
 
 describe('fieldManualEntries', () => {
   const entries = fieldManualEntries();
 
   it('has every tower, then every enemy kind, each with a class line', () => {
     expect(entries.map((e) => e.kind)).toEqual([
-      ...Object.keys(TOWER_STATS),
+      ...BUILD_KINDS,
       ...Object.keys(ENEMY_STATS).filter((k) => !NOT_IN_PLAY.includes(k as EnemyKind)),
     ]);
-    expect(entries.filter((e) => e.group === 'tower')).toHaveLength(Object.keys(TOWER_STATS).length);
+    expect(entries.filter((e) => e.group === 'tower')).toHaveLength(BUILD_KINDS.length);
     for (const entry of entries) {
       expect(entry.classLine).toBe(CLASS_LINES[entry.kind]);
       expect(entry.classLine.length).toBeGreaterThan(10);
@@ -49,5 +49,12 @@ describe('fieldManualEntries', () => {
     expect(heli.effective).toContain('AA Gun');
     expect(heli.weakLabel).toBe('Shrugs off');
     expect(heli.weak).toEqual(expect.arrayContaining(['Cannon', 'Mortar']));
+  });
+
+  it('names no tower that is not in play in an enemy entry (ADR-0009)', () => {
+    for (const e of entries.filter((x) => x.group === 'enemy')) {
+      expect(e.effective).not.toContain('Sniper');
+      expect(e.weak).not.toContain('Sniper');
+    }
   });
 });

@@ -43,7 +43,7 @@ clockwise), e.g. a rifle team. `base` (towers, issue #314) builds our own dug-in
 of `radiusTiles` ringed by sandbags, open at the front when `gapDeg` is set, so a dark tower reads on grass at
 48 px. The base is part of the hull layer and casts its own shadow.
 
-Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow
+Setup:  python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow
 Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets] [--turntable]
 """
 

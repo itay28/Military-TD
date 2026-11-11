@@ -1,0 +1,10 @@
+{
+  "id": "russia-heavy-tank",
+  "kind": "heavyTank",
+  "pxPerTile": 128,
+  "canvasPx": 224,
+  "pivot": {
+    "x": 112,
+    "y": 139
+  }
+}

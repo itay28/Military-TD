@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
-import { NOT_IN_PLAY } from '../src/data/enemies';
+import { NOT_IN_PLAY as ENEMIES_NOT_IN_PLAY } from '../src/data/enemies';
+import { isUpcoming, UPCOMING_KINDS } from '../src/data/modelViews';
 import { SPRITES } from '../src/data/sprites';
+import { NOT_IN_PLAY } from '../src/data/towers';
 import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
@@ -99,17 +101,63 @@ describe('the committed render data', () => {
 });
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  // A kind not in play yet (NOT_IN_PLAY) may or may not have its renders: they land before its rollout.
-  const notInPlay: readonly string[] = NOT_IN_PLAY;
+  // A kind not in play yet has no renders required until its rollout: the Sniper (renders in #358), the APC (its
+  // renders land in #360; the US one exists), and the Heavy tank (in UPCOMING_KINDS) until all four Factions have it (#509).
+  const notInPlay: readonly string[] = [...NOT_IN_PLAY, ...ENEMIES_NOT_IN_PLAY];
   const kinds = Object.keys(SPRITES)
     .filter((kind) => !notInPlay.includes(kind))
     .sort();
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
     it(`has one render per kind in play for ${faction}`, () => {
-      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction).map((m) => m.kind);
-      expect(models.filter((kind) => !notInPlay.includes(kind)).sort()).toEqual(kinds);
-      expect(new Set(models).size).toBe(models.length);
+      const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
+      expect(
+        models
+          .filter((m) => !isUpcoming(m.kind) && !notInPlay.includes(m.kind))
+          .map((m) => m.kind)
+          .sort(),
+      ).toEqual(kinds);
+      expect(new Set(models.map((m) => m.kind)).size).toBe(models.length);
     });
   }
+
+  it('lists a kind as upcoming only until it is in play (then drop it from UPCOMING_KINDS)', () => {
+    for (const kind of UPCOMING_KINDS) expect(Object.keys(SPRITES), kind).not.toContain(kind);
+  });
+});
+
+describe('the US APC render (#478)', () => {
+  const model = RENDER_CONFIG.models.find((m) => m.id === 'us-apc')!;
+  const png = PNG.sync.read(readFileSync('assets/render-us-apc/us-apc.png'));
+
+  it('is the APC kind for the US, a single image with no turret', () => {
+    expect(model).toMatchObject({ kind: 'apc', faction: 'us' });
+    expect(model.turret).toBeUndefined();
+    expect(buildRenderMeta().find((m) => m.json.id === 'us-apc')!.json.pivot).toBeUndefined();
+  });
+
+  it('fills its canvas: canvasTiles × pxPerTile, with the shadow inside the edges', () => {
+    expect(png.width).toBe(Math.round(model.canvasTiles * RENDER_CONFIG.pxPerTile));
+    expect(png.height).toBe(png.width);
+    const alpha = (x: number, y: number): number => png.data[(y * png.width + x) * 4 + 3]!;
+    for (let i = 0; i < png.width; i++) {
+      expect(alpha(i, 0)).toBe(0);
+      expect(alpha(i, png.height - 1)).toBe(0);
+      expect(alpha(0, i)).toBe(0);
+      expect(alpha(png.width - 1, i)).toBe(0);
+    }
+  });
+
+  it('is about 0.9 tile long (ADR-0009, point 2), facing north: longer than wide', () => {
+    let [minX, minY, maxX, maxY] = [Infinity, Infinity, -1, -1];
+    for (let y = 0; y < png.height; y++)
+      for (let x = 0; x < png.width; x++) {
+        if (png.data[(y * png.width + x) * 4 + 3]! < 250) continue; // the vehicle, not its softer shadow
+        [minX, minY, maxX, maxY] = [Math.min(minX, x), Math.min(minY, y), Math.max(maxX, x), Math.max(maxY, y)];
+      }
+    const length = (maxY - minY + 1) / RENDER_CONFIG.pxPerTile;
+    expect(length).toBeGreaterThan(0.82);
+    expect(length).toBeLessThan(0.98);
+    expect(maxX - minX + 1).toBeLessThan(maxY - minY + 1);
+  });
 });

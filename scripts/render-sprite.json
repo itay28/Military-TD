@@ -55,6 +55,21 @@
       }
     },
     {
+      "id": "russia-heavy-tank",
+      "kind": "heavyTank",
+      "faction": "russia",
+      "depicts": "T-14 Armata main battle tank",
+      "sketchfab": "9864af9626f14256a255d4faea52ec7f",
+      "author": "3DYAROSLAV2",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.45,
+      "canvasTiles": 1.75,
+      "turret": {
+        "names": ["Object_8", "Object_9", "Object_10", "Object_11", "Object_14", "Object_15"]
+      }
+    },
+    {
       "id": "us-rifle-nest",
       "kind": "rifleNest",
       "faction": "us",
@@ -63,18 +78,18 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.45,
+      "lengthTiles": 0.6,
       "pose": {
         "action": "crouch_firing",
         "frame": 10
       },
       "copies": [
         {
-          "x": -0.15,
+          "x": -0.19,
           "y": 0.0
         },
         {
-          "x": 0.15,
+          "x": 0.19,
           "y": -0.03
         }
       ],
@@ -230,6 +245,18 @@
       "canvasTiles": 1.0
     },
     {
+      "id": "us-apc",
+      "kind": "apc",
+      "faction": "us",
+      "depicts": "M113 armored personnel carrier, woodland camo",
+      "sketchfab": "7fe132c071584049b51d3569726021a0",
+      "author": "arc4de",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25
+    },
+    {
       "id": "us-tank",
       "kind": "tank",
       "faction": "us",
@@ -256,6 +283,25 @@
       }
     },
     {
+      "id": "us-heavy-tank",
+      "kind": "heavyTank",
+      "faction": "us",
+      "depicts": "M1A2 Abrams with TUSK II (stand-in for the M1A2 SEPv3 with TUSK); untextured, so tinted",
+      "sketchfab": "efb7311b641f4a76afff19e5f3068298",
+      "author": "davidfalke",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.45,
+      "untexturedColor": [0.16, 0.13, 0.07],
+      "canvasTiles": 1.75,
+      "turret": {
+        "box": [
+          { "x": [-0.27, 0.27], "y": [-0.5, 0.12], "minZ": 0.226 },
+          { "x": [-0.05, 0.05], "y": [0.1, 0.74], "minZ": 0.21 }
+        ]
+      }
+    },
+    {
       "id": "us-helicopter",
       "kind": "helicopter",
       "faction": "us",
@@ -276,18 +322,18 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.45,
+      "lengthTiles": 0.6,
       "pose": {
         "action": "crouch_firing",
         "frame": 10
       },
       "copies": [
         {
-          "x": -0.15,
+          "x": -0.19,
           "y": 0.0
         },
         {
-          "x": 0.15,
+          "x": 0.19,
           "y": -0.03
         }
       ],
@@ -478,18 +524,18 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.45,
+      "lengthTiles": 0.6,
       "pose": {
         "action": "crouch_firing",
         "frame": 10
       },
       "copies": [
         {
-          "x": -0.15,
+          "x": -0.19,
           "y": 0.0
         },
         {
-          "x": 0.15,
+          "x": 0.19,
           "y": -0.03
         }
       ],
@@ -676,18 +722,18 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.45,
+      "lengthTiles": 0.6,
       "pose": {
         "action": "crouch_firing",
         "frame": 10
       },
       "copies": [
         {
-          "x": -0.15,
+          "x": -0.19,
           "y": 0.0
         },
         {
-          "x": 0.15,
+          "x": 0.19,
           "y": -0.03
         }
       ],
