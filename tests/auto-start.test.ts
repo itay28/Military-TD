@@ -326,6 +326,14 @@ describe('planStarts: stacking', () => {
   it('leaves it alone when AUTO_STACK is off', () => {
     expect(numbers([blocked], prs)).toEqual([]);
   });
+
+  it('starts nothing whose blocker has an open PR when stacking is off, explicit or by default (#537)', () => {
+    const chain = [pr('feat/5-a', 'main', [5]), pr('feat/6-b', 'feat/5-a', [6])];
+    const onChain = issue(10, { blockedBy: [5, 6], status: 'Backlog' });
+    for (const options of [{}, { stack: false }]) {
+      expect(planStarts([blocked, onChain], [...prs, ...chain.slice(1)], order, options).starts).toEqual([]);
+    }
+  });
 });
 
 describe('milestoneOrder', () => {

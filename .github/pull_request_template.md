@@ -16,4 +16,5 @@ Closes #
 - [ ] A sound was added or changed: an **Audio** section linking a playable before/after copy of each (**4b** → **Sounds**)
 - [ ] Later commits changed the look or sound again: the sections above show the latest version, and the comment reporting it shows it too
 - [ ] Game rules stay in `src/sim` (no Phaser there)
+- [ ] New content (towers, enemies, screens, options) stays out of play (`NOT_IN_PLAY` or a similar switch) until its rollout issue
 - [ ] Docs updated if needed (PLAN, GLOSSARY, ADR)
