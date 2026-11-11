@@ -18,8 +18,9 @@ ROOT = Path(__file__).resolve().parent.parent
 RENDER_TILE = 128  # render-sprite.json pxPerTile
 GAME_TILE = 48
 NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in its own pixels (sprite-compare.py)
-CELL = 1.6  # tiles per cell, enough for the largest canvas (1.5)
-KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "helicopter"]
+CELL = 2.5  # tiles per cell, enough for the largest canvas (the jet's, for its offset shadow)
+KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "helicopter", "jet"]
+PENDING = {"jet"}  # kinds a faction may not have yet (#482: China and Insurgents jets come in the next part)
 
 
 def grass(px: int) -> Image.Image:
@@ -41,7 +42,7 @@ def main() -> None:
     args = ap.parse_args()
     cfg = json.loads((ROOT / "scripts/render-sprite.json").read_text())
     models = {m["kind"]: m for m in cfg["models"] if m["faction"] == args.faction}
-    missing = [k for k in KINDS if k not in models]
+    missing = [k for k in KINDS if k not in models and k not in PENDING]
     if missing:
         raise SystemExit(f"{args.faction}: no model for {', '.join(missing)}")
     small, big = round(CELL * GAME_TILE), round(CELL * RENDER_TILE)
@@ -49,10 +50,13 @@ def main() -> None:
     sheet = Image.new("RGBA", (width, small + 2 * big), (40, 40, 40, 255))
     draw = ImageDraw.Draw(sheet)
     for i, kind in enumerate(KINDS):
+        x = i * big
+        if kind not in models:
+            draw.text((x + 4, small + 2 * big - 14), f"{kind}: pending", fill=(255, 255, 255, 255))
+            continue
         m = models[kind]
         folder = args.assets / f"render-{m['id']}"
         whole = Image.open(folder / f"{m['id']}.png").convert("RGBA")
-        x = i * big
         sheet.alpha_composite(grass(small), (x + (big - small) // 2, 0))
         place(sheet, whole, GAME_TILE / RENDER_TILE, x + big // 2, small // 2)
         sheet.alpha_composite(grass(big), (x, small))

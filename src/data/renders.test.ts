@@ -45,6 +45,10 @@ describe('RENDERS', () => {
     expect(SPRITES.tank).not.toBeNull();
   });
 
+  it('has no hull/turret render for the Fighter jet: it is one top-down sprite (#482, src/data/jet-sprites.test.ts)', () => {
+    expect('jet' in RENDERS).toBe(false);
+  });
+
   it('renders face north', () => {
     expect(RENDER_FACING).toBeCloseTo(-Math.PI / 2);
   });
