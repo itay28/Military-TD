@@ -1,3 +1,4 @@
+import { DIFFICULTY } from '../../src/data/difficulty';
 import { START_LIVES } from '../../src/data/start';
 import { isDeepStrictEqual } from 'node:util';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -10,7 +11,7 @@ import { FACTIONS, isFaction } from '../../src/sim/factions';
 import { createMap, tileKey } from '../../src/sim/map';
 import { importTiledMap } from '../../src/sim/tiled';
 import { BALANCED_ORDER } from '../scenarios/bot-balanced.scenario';
-import { buildOrder, fitOrder } from '../scenarios/bots';
+import { buildOrder, fitOrder, type BuildStep } from '../scenarios/bots';
 
 // Every map in `maps/` must import cleanly and be winnable by the reference bot (ADR-0006).
 
@@ -274,6 +275,44 @@ describe('Tiled map files', () => {
 
   it.each(MAPS)('$id: a bot that builds nothing loses to its own waves', ({ data, waves }) => {
     const result = runScenario({ map: data, waves, autoStartWaves: true, until: 'end' });
+    expect(result.outcome).toBe('defeat');
+  });
+});
+
+/** Rifle Nests only, as many as Money allows, never upgraded; `fitOrder` moves each to the best free tile. */
+const RIFLES_ONLY: readonly BuildStep[] = Array.from({ length: 30 }, (_, i) => ({
+  place: 'rifleNest',
+  tile: { col: i % 16, row: Math.floor(i / 16) },
+}));
+
+// Hard (#461) is tuned with these bots (ADR-0007): a good mix still wins it, one tower kind alone doesn't.
+describe('Hard difficulty', () => {
+  const { startLives } = DIFFICULTY.hard;
+
+  it.each(MAPS)('$id: the reference bot wins Hard with at least a third of its Lives', ({ data, waves }) => {
+    for (const mode of [{ autoStartWaves: true }, {}, { tacticalMode: true, autoStartWaves: true }]) {
+      const result = runScenario({
+        map: data,
+        waves,
+        difficulty: 'hard',
+        bot: buildOrder(fitOrder(data, BALANCED_ORDER)),
+        until: 'end',
+        ...mode,
+      });
+      expect({ mode, outcome: result.outcome }).toEqual({ mode, outcome: 'victory' });
+      expect(result.finalState.lives).toBeGreaterThanOrEqual(startLives / 3);
+    }
+  });
+
+  it.each(MAPS)('$id: Rifle Nests alone lose Hard', ({ data, waves }) => {
+    const result = runScenario({
+      map: data,
+      waves,
+      difficulty: 'hard',
+      autoStartWaves: true,
+      bot: buildOrder(fitOrder(data, RIFLES_ONLY)),
+      until: 'end',
+    });
     expect(result.outcome).toBe('defeat');
   });
 });
