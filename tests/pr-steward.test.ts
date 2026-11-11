@@ -1,3 +1,7 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import {
   CLEAN_REVIEW_MARKER,
@@ -9,6 +13,11 @@ import {
   roundMeta,
   STUCK_MARKER,
   APPROVAL_MARKER,
+  AUTO_RESOLVED_MARKER,
+  SNAPSHOTS_MARKER,
+  SNAPSHOTS_STARTED_MARKER,
+  snapshotsRequested,
+  startSnapshots,
   act,
   changedFiles,
   codeCommittedAt,
@@ -17,6 +26,7 @@ import {
   renameSources,
   currentChecks,
   decide,
+  activeSnapshotRuns,
   mainCiRed,
   mainRedFrom,
   milestoneDone,
@@ -24,6 +34,7 @@ import {
   settingsFromEnv,
   switchedOn,
   toStewardPr,
+  UNKNOWN_UPDATE_MARKER,
   applyStatusLabel,
   ensureStatusLabels,
   labelChanges,
@@ -35,6 +46,12 @@ import {
   type StatusLabel,
   type StewardSettings,
   type WaitCause,
+  conflictMap,
+  gitConflicts,
+  inQueue,
+  mergeQueue,
+  queueOrder,
+  type ConflictMap,
 } from '../scripts/pr-steward';
 
 // The PR steward reconciles every open PR (#168): fire a steward round, merge the base, hand off, or merge.
@@ -91,6 +108,7 @@ const pr = (over: Partial<StewardPr> = {}): StewardPr => ({
   codeCommittedAt: at(40),
   lastCommitAt: at(40),
   comments: [review(60), agent(DONE_MARKER, 30)],
+  snapshotRunSince: null,
   ...over,
 });
 const kind = (p: StewardPr) => decide(p, now).kind;
@@ -326,8 +344,41 @@ describe('decide: wait', () => {
     ).toBe('wait');
   });
 
-  it('waits while GitHub is still computing mergeability', () => {
-    expect(kind(pr({ mergeable: 'UNKNOWN' }))).toBe('wait');
+  describe('mergeability UNKNOWN (#487)', () => {
+    const unknown = (over: Partial<StewardPr> = {}) =>
+      pr({
+        mergeable: 'UNKNOWN',
+        behind: true,
+        lastCommitAt: at(90),
+        codeCommittedAt: at(90),
+        comments: [review(100)],
+        ...over,
+      });
+
+    it('waits while GitHub is still computing mergeability', () => {
+      expect(kind(pr({ mergeable: 'UNKNOWN' }))).toBe('wait');
+      expect(kind(unknown({ lastCommitAt: at(30), comments: [review(30)] }))).toBe('wait');
+    });
+
+    it('merges the base in once it has been unknown for over an hour and the PR is behind', () => {
+      expect(decide(unknown(), now)).toEqual({ kind: 'update', unknown: true });
+    });
+
+    it('hands off when it is still unknown an hour after the base merge', () => {
+      const merged = unknown({ comments: [review(100), action(UNKNOWN_UPDATE_MARKER, 70)], lastCommitAt: at(70) });
+      expect(decide(merged, now)).toEqual({ kind: 'stuck', reasons: [], unknown: true });
+      expect(decide(unknown({ behind: false }), now)).toEqual({ kind: 'stuck', reasons: [], unknown: true });
+    });
+
+    it('waits an hour after the base merge before handing off', () => {
+      const merged = unknown({ comments: [review(100), action(UNKNOWN_UPDATE_MARKER, 10)], lastCommitAt: at(10) });
+      expect(kind(merged)).toBe('wait');
+    });
+
+    it('merges the base in again after a maintainer comment', () => {
+      const answered = unknown({ comments: [action(UNKNOWN_UPDATE_MARKER, 200), maintainer(100)] });
+      expect(decide(answered, now)).toEqual({ kind: 'update', unknown: true });
+    });
   });
 
   it('waits while a round is in flight, and stops waiting once it is an hour old', () => {
@@ -366,6 +417,78 @@ describe('decide: request a missing CI review', () => {
   it('marks each request with the head commit it was made for', () => {
     expect(reviewRequestMarker('abc123')).toContain(REVIEW_REQUEST_MARKER);
     expect(reviewRequestMarker('abc123')).toContain('abc123');
+  });
+});
+
+describe('decide: an Update snapshots run is going (#471)', () => {
+  const red = { checks: [{ name: 'e2e', state: 'failure' as const }] };
+  const active = (minutesAgo: number) => ({ snapshotRunSince: at(minutesAgo) });
+
+  it('waits instead of starting a round or handing off', () => {
+    const d = decide(pr({ ...red, ...active(2) }), now);
+    expect(d).toMatchObject({ kind: 'wait', cause: 'snapshots' });
+    const spent = pr({
+      ...red,
+      ...active(2),
+      comments: [agent(ROUND_MARKER, 50), agent(DONE_MARKER, 49), agent(ROUND_MARKER, 20), agent(DONE_MARKER, 19)],
+    });
+    expect(kind(spent)).toBe('wait');
+  });
+
+  it('gives up waiting after 30 minutes: the normal decision', () => {
+    expect(kind(pr({ ...red, ...active(31) }))).toBe('steward');
+    const spent = pr({
+      ...red,
+      ...active(31),
+      comments: [agent(ROUND_MARKER, 50), agent(DONE_MARKER, 49), agent(ROUND_MARKER, 40), agent(DONE_MARKER, 39)],
+    });
+    expect(kind(spent)).toBe('stuck');
+  });
+
+  it('does not hold a PR with no run of its own', () => {
+    expect(kind(pr({ ...red, snapshotRunSince: null }))).toBe('steward');
+  });
+
+  it('does not hold a conflict', () => {
+    expect(reasons(pr({ ...red, ...active(2), mergeable: 'CONFLICTING' }))).toContain('conflict');
+  });
+
+  it('is an agent wait for the status label', () => {
+    const p = pr({ ...red, ...active(2) });
+    expect(statusLabel(decide(p, now), p)).toBe('waiting: agent');
+  });
+});
+
+describe('activeSnapshotRuns (#471)', () => {
+  const run = (title: string, status: string, started = '2026-10-26T11:58:00Z') => ({
+    display_title: title,
+    status,
+    run_started_at: started,
+  });
+
+  it('maps PR numbers to the start of their active runs', () => {
+    const runs = [
+      run('Update snapshots #431', 'in_progress'),
+      run('Update snapshots #12', 'queued', '2026-10-26T11:50:00Z'),
+      run('Update snapshots #13', 'waiting'),
+      run('Update snapshots #14', 'completed'),
+      run('something else', 'in_progress'),
+    ];
+    expect(activeSnapshotRuns(runs)).toEqual(
+      new Map([
+        [431, '2026-10-26T11:58:00Z'],
+        [12, '2026-10-26T11:50:00Z'],
+        [13, '2026-10-26T11:58:00Z'],
+      ]),
+    );
+  });
+
+  it('keeps the earliest start when a PR has several', () => {
+    const runs = [
+      run('Update snapshots #5', 'in_progress', '2026-10-26T11:58:00Z'),
+      run('Update snapshots #5', 'queued', '2026-10-26T11:40:00Z'),
+    ];
+    expect(activeSnapshotRuns(runs).get(5)).toBe('2026-10-26T11:40:00Z');
   });
 });
 
@@ -1005,6 +1128,14 @@ describe('act', () => {
     expect(body).toContain(roundMeta(['ci', 'review'], 'base-1'));
   });
 
+  it('marks a free front-of-queue round in its comment and meta line (#473)', async () => {
+    fireOk.mockClear();
+    await act(pr(), { ...steward, reasons: ['ci'], free: true }, 'gh-token', settings, fireOk);
+    const { body } = JSON.parse(fireOk.mock.calls[1]![1].body as string) as { body: string };
+    expect(body).toContain("doesn't count toward the limit");
+    expect(body).toContain(roundMeta(['ci'], 'base-1', true));
+  });
+
   it('removes the hand-off labels when a maintainer comment restarted the PR', async () => {
     fireOk.mockClear();
     await act(pr(), { ...steward, clearHandOff: ['needs-you', 'needs-approval'] }, 'gh-token', settings, fireOk);
@@ -1105,6 +1236,20 @@ describe('act', () => {
     expect(fetchFn).toHaveBeenCalled();
   });
 
+  it('notes an update for unknown mergeability, then merges the base in', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'update', unknown: true }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `PUT ${api}/pulls/7/update-branch`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string).body).toContain(UNKNOWN_UPDATE_MARKER);
+  });
+
+  it('hands off a PR whose mergeability stays unknown', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'stuck', reasons: [], unknown: true }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string).body).toContain('unknown');
+  });
+
   it('updates the branch against the head it saw', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await act(pr(), { kind: 'update' }, 'gh-token', settings, fetchFn);
@@ -1197,6 +1342,7 @@ describe('statusLabel', () => {
     [{ kind: 'review' }, 'waiting: agent'],
     [{ kind: 'ready' }, 'waiting: agent'],
     [{ kind: 'merge' }, 'ready to merge'],
+    [{ kind: 'wait', cause: 'queued', why: 'x' }, 'waiting: queue'],
   ])('maps a %o decision to %s', (decision, label) => {
     expect(statusLabel(decision, pr())).toBe(label);
   });
@@ -1232,6 +1378,7 @@ describe('statusLabel', () => {
         'waiting: main CI',
         'waiting: milestone',
         'waiting: parent PR',
+        'waiting: queue',
         'waiting: you',
       ].sort(),
     );
@@ -1361,5 +1508,351 @@ describe('ensureStatusLabels', () => {
 
   it('reads the repo labels in the PR query, so checking costs no request', () => {
     expect(PR_QUERY).toMatch(/labels\(first: 100\) \{ nodes \{ name \} \}/);
+  });
+});
+
+// The merge queue (#473): rounds and base merges go to the PR that merges next, so a merge to main
+// doesn't throw away work done on the PRs behind it.
+describe('merge queue', () => {
+  const round = (minutesAgo: number, reasons: string[], base: string, free = false) =>
+    action(`${ROUND_MARKER}\n${roundMeta(reasons as never, base, free)}`, minutesAgo);
+  const after = (r: ReturnType<typeof round>, m: number) => [r, agent(DONE_MARKER, m)];
+  const failing = { checks: [{ name: 'ci', state: 'failure' as const }] };
+  // A PR whose head is a merge of main: its latest commit is newer than its latest code commit.
+  const merged = { codeCommittedAt: at(200), lastCommitAt: at(100) };
+  const noMap: ConflictMap = { main: [], pairs: [] };
+  const decideFor = (p: StewardPr, front: boolean) => decide(p, now, 'main', null, null, front);
+  const queue = (prs: StewardPr[], map: ConflictMap = noMap) => mergeQueue(prs, { map, decideFor });
+
+  describe('queueOrder', () => {
+    it('puts green PRs (review answered, threads resolved) first, then priority, then the oldest', () => {
+      const red = pr({ number: 1, ...failing });
+      const threads = pr({ number: 2, unresolvedThreads: 1 });
+      const unanswered = pr({ number: 3, comments: [agent(DONE_MARKER, 90), review(60)] });
+      const greenP3 = pr({ number: 4, labels: ['priority:P3'] });
+      const greenP1 = pr({ number: 9, closes: [{ number: 3, blocked: false, needsInfo: false, priority: 'P1' }] });
+      const green = pr({ number: 5 });
+      const prs = [red, threads, unanswered, greenP3, greenP1, green];
+      expect(queueOrder(prs)).toEqual([9, 4, 5, 1, 2, 3]);
+      expect(queueOrder([...prs].reverse())).toEqual([9, 4, 5, 1, 2, 3]);
+    });
+
+    it('ignores mergeability when ranking green: a conflict is what the queue is for', () => {
+      expect(queueOrder([pr({ number: 1, ...failing }), pr({ number: 2, mergeable: 'CONFLICTING' })])).toEqual([2, 1]);
+    });
+  });
+
+  describe('inQueue', () => {
+    it('takes ready PRs that target main', () => {
+      expect(inQueue(pr(), 'main')).toBe(true);
+    });
+
+    it.each<[string, Partial<StewardPr>]>([
+      ['a draft', { isDraft: true }],
+      ['a fork', { fork: true }],
+      ['a hold', { labels: ['hold'] }],
+      ['a hand-off', { labels: ['needs-you'] }],
+      ['a stacked PR', { base: 'feat/5-parent' }],
+      ['a release PR', { head: 'release-please--branches--main' }],
+      ['a report PR', { head: 'chore/release-0.2.0' }],
+      ['a PR closing a blocked issue', { closes: [{ number: 3, blocked: true, needsInfo: false }] }],
+      ['a PR closing a needs-info issue', { closes: [{ number: 3, blocked: false, needsInfo: true }] }],
+    ])('leaves out %s', (_, over) => {
+      expect(inQueue(pr(over), 'main')).toBe(false);
+    });
+
+    it('leaves out look-ahead work for a later milestone', () => {
+      const later = pr({
+        closes: [{ number: 3, blocked: false, needsInfo: false, milestone: { number: 4, title: 'v0.3.0' } }],
+      });
+      expect(inQueue(later, 'main', { number: 2, title: 'v0.2.0', after: [4], done: false })).toBe(false);
+    });
+  });
+
+  describe('conflictMap', () => {
+    const a = pr({ number: 1, headSha: 'sha-1' });
+    const b = pr({ number: 2, headSha: 'sha-2' });
+    const c = pr({ number: 3, headSha: 'sha-3', mergeable: 'CONFLICTING' });
+
+    it('asks the conflicts seam about each PR against main and each pair of PRs', () => {
+      const conflicts = vi.fn((x: string, y: string) => [x, y].sort().join() === 'sha-1,sha-2');
+      const map = conflictMap([a, b, c], conflicts, 'main-sha');
+      expect(map).toEqual({ main: [3], pairs: [[1, 2]] });
+      expect(conflicts.mock.calls).toEqual(
+        expect.arrayContaining([
+          ['main-sha', 'sha-1'],
+          ['main-sha', 'sha-2'],
+          ['sha-1', 'sha-2'],
+          ['sha-1', 'sha-3'],
+          ['sha-2', 'sha-3'],
+        ]),
+      );
+    });
+
+    it('counts a PR the seam finds conflicting with main', () => {
+      expect(conflictMap([a], (x) => x === 'main-sha', 'main-sha').main).toEqual([1]);
+    });
+  });
+
+  describe('gitConflicts', () => {
+    const repo = () => {
+      const dir = mkdtempSync(join(tmpdir(), 'merge-tree-'));
+      const git = (...args: string[]) =>
+        execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
+          cwd: dir,
+          encoding: 'utf8',
+        }).trim();
+      const commit = (file: string, text: string) => {
+        writeFileSync(join(dir, file), text);
+        git('add', file);
+        git('commit', '-qm', text);
+        return git('rev-parse', 'HEAD');
+      };
+      git('init', '-q', '-b', 'main');
+      const base = commit('a.txt', 'one\n');
+      return { dir, git, commit, base };
+    };
+
+    it('finds a textual conflict between two heads, and none between unrelated edits', () => {
+      const { dir, git, commit, base } = repo();
+      const left = commit('a.txt', 'left\n');
+      git('checkout', '-q', base);
+      const right = commit('a.txt', 'right\n');
+      git('checkout', '-q', base);
+      const other = commit('b.txt', 'other\n');
+      expect(gitConflicts(left, right, dir)).toBe(true);
+      expect(gitConflicts(left, other, dir)).toBe(false);
+    });
+
+    it('throws when git cannot merge (an unknown commit)', () => {
+      const { dir, base } = repo();
+      expect(() => gitConflicts(base, 'f'.repeat(40), dir)).toThrow();
+    });
+  });
+
+  describe('mergeQueue', () => {
+    it('holds a PR that conflicts with a PR ahead of it as queued, and fires no round', () => {
+      const ahead = pr({ number: 1 });
+      const behind = pr({ number: 2, ...failing });
+      const { order, decisions } = queue([behind, ahead], { main: [], pairs: [[1, 2]] });
+      expect(order).toEqual([1, 2]);
+      expect(decisions.get(2)).toMatchObject({ kind: 'wait', cause: 'queued', why: expect.stringContaining('#1') });
+      expect(decisions.get(1)).toMatchObject({ kind: 'merge' });
+    });
+
+    it('holds a PR behind the front that conflicts with main, instead of a conflict round', () => {
+      const front = pr({ number: 1 });
+      const conflicted = pr({ number: 2, mergeable: 'CONFLICTING' });
+      expect(queue([front, conflicted], { main: [2], pairs: [] }).decisions.get(2)).toMatchObject({
+        kind: 'wait',
+        cause: 'queued',
+      });
+    });
+
+    it('gives the front PR its conflict round', () => {
+      const front = pr({ number: 1, mergeable: 'CONFLICTING' });
+      expect(queue([front], { main: [1], pairs: [] }).decisions.get(1)).toMatchObject({
+        kind: 'steward',
+        reasons: ['conflict'],
+      });
+    });
+
+    it('leaves a PR with no overlap ahead of it alone: rounds and merges go in parallel', () => {
+      const front = pr({ number: 1 });
+      const red = pr({ number: 2, ...failing });
+      const green = pr({ number: 3 });
+      const { decisions } = queue([front, red, green], { main: [], pairs: [[2, 9]] });
+      expect(decisions.get(2)).toMatchObject({ kind: 'steward', reasons: ['ci'] });
+      expect(decisions.get(3)).toMatchObject({ kind: 'merge' });
+    });
+
+    it('updates an only-behind green PR only at the front', () => {
+      const front = pr({ number: 1, behind: true });
+      const next = pr({ number: 2, behind: true });
+      const { decisions } = queue([next, front]);
+      expect(decisions.get(1)).toEqual({ kind: 'update' });
+      expect(decisions.get(2)).toMatchObject({ kind: 'wait', cause: 'queued' });
+    });
+
+    it('decides PRs outside the queue as before', () => {
+      const draft = pr({ number: 1, isDraft: true });
+      const stacked = pr({ number: 2, base: 'feat/5-parent', behind: true });
+      const { order, decisions } = queue([draft, stacked]);
+      expect(order).toEqual([]);
+      expect(decisions.get(1)).toEqual(decide(draft, now));
+      expect(decisions.get(2)).toEqual({ kind: 'update' });
+    });
+  });
+
+  describe('round budget for the front PR', () => {
+    // Two counted rounds already: anywhere else, the PR is handed off.
+    const spent = [...after(round(400, ['ci'], 'base-a'), 395), ...after(round(300, ['ci'], 'base-a'), 295)];
+
+    it('fires a free conflict round past MAX_ROUNDS at the front', () => {
+      const p = pr({ mergeable: 'CONFLICTING', baseSha: 'base-b', comments: spent });
+      expect(decide(p, now, 'main', null, null, false)).toMatchObject({ kind: 'stuck' });
+      expect(decide(p, now, 'main', null, null, true)).toMatchObject({ kind: 'steward', free: true });
+    });
+
+    it('fires a free ci round when the head is a merge of main (main moved in)', () => {
+      const p = pr({ ...failing, ...merged, baseSha: 'base-b', comments: spent });
+      expect(decide(p, now, 'main', null, null, true)).toMatchObject({ kind: 'steward', reasons: ['ci'], free: true });
+    });
+
+    it("counts a ci failure in the PR's own code (its head isn't a base merge)", () => {
+      const p = pr({ ...failing, baseSha: 'base-b', comments: spent });
+      expect(decide(p, now, 'main', null, null, true)).toMatchObject({ kind: 'stuck' });
+    });
+
+    it('counts a round with any other reason', () => {
+      const p = pr({ ...failing, ...merged, unresolvedThreads: 1, baseSha: 'base-b', comments: spent });
+      expect(decide(p, now, 'main', null, null, true)).toMatchObject({ kind: 'stuck' });
+    });
+
+    it('gives one free ci round per base: the same base again counts', () => {
+      const comments = [...spent, ...after(round(200, ['ci'], 'base-b', true), 195)];
+      const p = pr({ ...failing, ...merged, baseSha: 'base-b', comments });
+      expect(decide(p, now, 'main', null, null, true)).toMatchObject({ kind: 'stuck' });
+      expect(decide({ ...p, baseSha: 'base-c' }, now, 'main', null, null, true)).toMatchObject({
+        kind: 'steward',
+        free: true,
+      });
+    });
+
+    it("doesn't count a finished free round toward MAX_ROUNDS", () => {
+      const comments = [...after(round(300, ['ci'], 'base-a'), 295), ...after(round(200, ['ci'], 'base-b', true), 195)];
+      expect(decide(pr({ ...failing, comments }), now)).toMatchObject({ kind: 'steward', round: 2 });
+    });
+
+    it('marks a free round in its meta line', () => {
+      expect(roundMeta(['ci'], 'base-b', true)).toBe('<!-- pr-steward:round-meta reasons=ci base=base-b free=1 -->');
+      expect(roundMeta(['ci'], 'base-b')).toBe('<!-- pr-steward:round-meta reasons=ci base=base-b -->');
+    });
+  });
+});
+
+// Conflicts only in generated files are merged by a script, not an agent round (#474).
+describe('act: mechanical conflict resolution', () => {
+  const conflict: Decision = { kind: 'steward', reasons: ['conflict'], round: 1, retry: false, clearHandOff: [] };
+  const bodies = (fetchFn: Mock<Fetch>) =>
+    fetchFn.mock.calls.map(([, init]) =>
+      init.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : {},
+    );
+
+  it('fires no round when every conflict was resolved, and says so without a round marker', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => ({
+      kind: 'resolved' as const,
+      files: ['CREDITS.md', 'assets/manifest.json'],
+      baselines: false,
+    }));
+    await act(pr(), conflict, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(autoResolve).toHaveBeenCalledWith(expect.objectContaining({ number: 7 }));
+    expect(calls(fireOk)).toEqual([`POST ${api}/issues/7/comments`]);
+    const { body } = bodies(fireOk)[0] as { body: string };
+    expect(body).toContain(AUTO_RESOLVED_MARKER);
+    expect(body).toContain('`CREDITS.md`');
+    expect(body).not.toContain(ROUND_MARKER);
+  });
+
+  it('starts Update snapshots when a screenshot baseline took the base version', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => ({ kind: 'resolved' as const, files: ['x.png'], baselines: true }));
+    await act(pr(), conflict, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(calls(fireOk)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
+    expect(bodies(fireOk)[1]).toEqual({ labels: ['update-snapshots'] });
+  });
+
+  it('fires the round as before when a conflict has no rule', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => ({ kind: 'aborted' as const, why: 'src/a.ts has no mechanical rule' }));
+    await act(pr(), conflict, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(calls(fireOk)).toEqual(['POST https://fire.example/steward', `POST ${api}/issues/7/comments`]);
+  });
+
+  it('fires the round as before when the resolver itself fails', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => {
+      throw new Error('git broke');
+    });
+    await act(pr(), conflict, 'gh-token', { ...settings, autoResolve }, fireOk);
+    expect(calls(fireOk)[0]).toBe('POST https://fire.example/steward');
+  });
+
+  it('tries it before handing off a conflict a round left behind', async () => {
+    fireOk.mockClear();
+    const autoResolve = vi.fn(async () => ({ kind: 'resolved' as const, files: ['GLOSSARY.md'], baselines: false }));
+    await act(
+      pr(),
+      { kind: 'stuck', reasons: ['conflict'], conflict: true },
+      'gh-token',
+      { ...settings, autoResolve },
+      fireOk,
+    );
+    expect(calls(fireOk)).toEqual([`POST ${api}/issues/7/comments`]);
+    expect(bodies(fireOk)[0]!['labels']).toBeUndefined();
+  });
+
+  it('is not tried without a conflict, or with AUTO_STEWARD off', async () => {
+    const autoResolve = vi.fn(async () => ({ kind: 'aborted' as const, why: '' }));
+    await act(pr(), { ...conflict, reasons: ['ci'] }, 'gh-token', { ...settings, autoResolve }, fireOk);
+    await act(pr(), conflict, 'gh-token', { merge: true, autoResolve }, fireOk);
+    expect(autoResolve).not.toHaveBeenCalled();
+  });
+});
+
+// A round that finds only stale screenshot baselines says so with a marker; the script starts
+// *Update snapshots*, so no session call can be denied (#472).
+describe('update-snapshots request (#472)', () => {
+  const asks = (minutesAgo: number) => agent(`${SNAPSHOTS_MARKER}\n${DONE_MARKER}`, minutesAgo);
+  const started = (minutesAgo: number) => action(SNAPSHOTS_STARTED_MARKER, minutesAgo);
+
+  it('is not requested without the marker', () => {
+    expect(snapshotsRequested(pr({ comments: [agent(DONE_MARKER, 5)] }))).toBe(false);
+  });
+
+  it('is requested by a done comment carrying the marker', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(5)] }))).toBe(true);
+  });
+
+  it('is requested once: a start after the request answers it', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(10), started(5)] }))).toBe(false);
+  });
+
+  it('is requested again by a newer marker after a start', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(20), started(10), asks(5)] }))).toBe(true);
+  });
+
+  it('is not requested by a comment from outside the maintainer identity', () => {
+    const stranger = { ...asks(5), author: 'rando', association: 'NONE' };
+    const bot = { ...asks(5), bot: true };
+    expect(snapshotsRequested(pr({ comments: [stranger] }))).toBe(false);
+    expect(snapshotsRequested(pr({ comments: [bot] }))).toBe(false);
+  });
+
+  it('is not requested on a fork or a held PR', () => {
+    expect(snapshotsRequested(pr({ fork: true, comments: [asks(5)] }))).toBe(false);
+    expect(snapshotsRequested(pr({ labels: ['hold'], comments: [asks(5)] }))).toBe(false);
+  });
+
+  it('starts the run: comment first, then a fresh label', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await startSnapshots(pr(), 'gh-token', fetchFn);
+    expect(calls(fetchFn)).toEqual([
+      `POST ${api}/issues/7/comments`,
+      `DELETE ${api}/issues/7/labels/update-snapshots`,
+      `POST ${api}/issues/7/labels`,
+    ]);
+    const body = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
+    expect(body.body).toContain(SNAPSHOTS_STARTED_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[2]![1].body as string)).toEqual({ labels: ['update-snapshots'] });
+  });
+
+  it('adds the label even when there was none to remove', async () => {
+    const fetchFn = vi.fn<Fetch>(async (_url, init) =>
+      init.method === 'DELETE' ? new Response('{}', { status: 404 }) : ok(),
+    );
+    await startSnapshots(pr(), 'gh-token', fetchFn);
+    expect(calls(fetchFn).at(-1)).toBe(`POST ${api}/issues/7/labels`);
   });
 });

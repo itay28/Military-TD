@@ -1,5 +1,5 @@
 /**
- * Builds the radio comms cues (#396): `assets/radio-cues/{waveStart,waveReinforcements,leak,victory,defeat}.ogg`, from the
+ * Builds the radio comms cues (#396): `assets/radio-cues/{coldOpen,waveStart,waveReinforcements,leak,victory,defeat}.ogg`, from the
  * committed voice takes (`assets/radio-voice/takes/`, made by `scripts/radio-voice.py`), real scanner noise
  * (`assets/kresiek-radio-noise/`) and, for defeat, gunfire and a blast (`assets/free-firearm-sfx/`,
  * `assets/ezduzziteh-explosions/`). Every input is in the repo, so a cue can be rebuilt or retuned (ADR-0003 spirit).
@@ -34,7 +34,7 @@ const BAND = bandFor(300, 3400);
 /** Evens out a line and drives it into the clip, as a radio's mic gain does. */
 const COMPRESS = 'acompressor=threshold=-24dB:ratio=6:attack=5:release=80:makeup=4';
 
-type CueId = 'waveStart' | 'waveReinforcements' | 'leak' | 'victory' | 'defeat';
+type CueId = 'coldOpen' | 'waveStart' | 'waveReinforcements' | 'leak' | 'victory' | 'defeat';
 
 type Part =
   /**
@@ -67,9 +67,16 @@ const squelch = (at: number, dur = 0.12): Part => ({ kind: 'static', at, dur, db
 /** The faint hiss under a transmission. */
 const bed = (at: number, dur: number, db = -20): Part => ({ kind: 'static', at, dur, db, fadeIn: 0.03, fadeOut: 0.05 });
 
-// Take timings (speech ends): waveStart 2.39 s, waveReinforcements 3.27 s, victory 1.77 s, defeat 1.62 s with a
+// Take timings (speech ends): coldOpen 2.23 s, waveStart 2.39 s, waveReinforcements 3.27 s, victory 1.77 s, defeat 1.62 s with a
 // pause at 1.02–1.15 s between "They're breaking through!" and "Fall back!".
 const CUES: readonly Cue[] = [
+  {
+    // "All units, hold the perimeter. Over." (#477): the cold open, before the menu music (#406). A normal link.
+    id: 'coldOpen',
+    length: 2.7,
+    gainDb: 0,
+    parts: [squelch(0), bed(0.1, 2.35), { kind: 'voice', at: 0.12 }, squelch(2.48, 0.2)],
+  },
   {
     // "Contact front! Enemy inbound. Over."
     id: 'waveStart',

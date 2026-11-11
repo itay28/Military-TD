@@ -43,8 +43,21 @@ describe('sound tuning', () => {
 });
 
 describe('RADIO_CUE_MS (#396)', () => {
-  it('makes wave start, reinforcements, a leak, victory and defeat radio cues', () => {
-    expect(Object.keys(RADIO_CUE_MS).sort()).toEqual(['defeat', 'leak', 'victory', 'waveReinforcements', 'waveStart']);
+  it('makes the cold open, wave start, reinforcements, a leak, victory and defeat radio cues', () => {
+    expect(Object.keys(RADIO_CUE_MS).sort()).toEqual([
+      'coldOpen',
+      'defeat',
+      'leak',
+      'victory',
+      'waveReinforcements',
+      'waveStart',
+    ]);
+  });
+
+  it('opens the game with a radio call: squelch, a voice line, squelch, 1.5–3.5 s (#477)', () => {
+    expect(SOUND_URLS.coldOpen).toMatch(/radio-cues\/coldOpen\.ogg$/);
+    expect(RADIO_CUE_MS.coldOpen).toBeGreaterThanOrEqual(1500);
+    expect(RADIO_CUE_MS.coldOpen).toBeLessThanOrEqual(3500);
   });
 
   it('calls a leak over the radio instead of a bell, once for a burst (#405)', () => {
