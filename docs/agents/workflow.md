@@ -131,7 +131,7 @@ Agents also run in cloud sessions: claude.ai/code, and the auto-start and PR ste
 - **GitHub: REST only.** Use the built-in GitHub tools, or `gh api repos/itay28/Military-TD/...`. GraphQL is blocked, so `gh pr`, `gh issue` and `gh project` don't work. For review threads, auto-merge and draft/ready, the proxy's REST routes are `/repos/{owner}/{repo}/pulls/{n}/ccr/review_threads`, `.../ccr/comments/{id}/resolve`, `.../ccr/auto_merge` and `.../ccr/ready_for_review`.
 - **Board:** never move cards. *Board sync* does it from PR and issue events.
 - **Skills:** no plugins. `tdd`, `pr` and `diagnosing-bugs` come from `.claude/skills/` (vendored, `.claude/skills/README.md`). `code-review` stays in CI.
-- **Questions:** ask on the issue, add `needs-info` (that pushes to the maintainer's phone), and move on. Never guess.
+- **Questions:** ask on the issue, add `needs-info` (that pushes to the maintainer's phone), and move on. Never guess. Only real decisions (design, feel, mechanics, scope) are questions: unfinished work you depend on is a blocked-by link plus a one-line comment, unassign and stop, no `needs-info` (`agent-brief.md` → **Cloud limits**; fallback marker `<!-- blocked-by: #n -->`, #538).
 - **Merging:** never merge, not even as the steward. The *PR steward* Action (`scripts/pr-steward.ts`) merges a PR itself once it's green, the review is answered and the threads are resolved.
 
 ## Token budget

@@ -14,13 +14,33 @@ export const TOWER_STATS = {
     targets: ['ground'],
     shell: { flightMs: 1000, innerRadius: 0.6, outerRadius: 1.25 },
   },
+  sniper: {
+    cost: 110,
+    range: 6,
+    fireRate: 0.4,
+    damage: 70,
+    armorPierce: 4,
+    targets: ['ground'],
+    targeting: 'strongest',
+  },
 } as const satisfies Record<string, TowerStats>;
 
 export type TowerKind = keyof typeof TOWER_STATS;
 
 /**
+ * Kinds in the sim (tests and headless scenarios use them) but not in play yet: no build bar button. A kind joins
+ * play in its rollout issue, once its renders land (ADR-0009: no map mixes art styles). The Sniper's is #364.
+ */
+export const NOT_IN_PLAY: ReadonlySet<TowerKind> = new Set<TowerKind>(['sniper']);
+
+/** The kinds the player can build, in `TOWER_STATS` order: every kind not in `NOT_IN_PLAY`. */
+export const BUILD_KINDS: readonly TowerKind[] = (Object.keys(TOWER_STATS) as TowerKind[]).filter(
+  (kind) => !NOT_IN_PLAY.has(kind),
+);
+
+/**
  * How fast each kind's turret turns toward its target, in radians per second; it fires only once it faces it
- * (within `AIM_TOLERANCE`). A soldier and a light AA mount swing fast, a heavy gun slowly.
+ * (within `AIM_TOLERANCE`). A soldier and a light AA mount swing fast, a heavy gun slowly; a sniper's long rifle in between.
  * `null`: the Mortar lobs shells (indirect fire), so it fires without turning.
  */
 export const TURN_RATES: Record<TowerKind, number | null> = {
@@ -28,6 +48,7 @@ export const TURN_RATES: Record<TowerKind, number | null> = {
   aaGun: 3 * Math.PI,
   cannon: Math.PI / 2,
   mortar: null,
+  sniper: Math.PI,
 };
 
 /** Seconds of look-ahead every turning kind gets, on top of the time a half turn takes it (see `trackHorizon`). */
@@ -78,5 +99,9 @@ export const TOWER_LEVELS = {
   mortar: [
     { ...TOWER_STATS.mortar, cost: 100, range: 5.5 },
     { ...TOWER_STATS.mortar, cost: 175, range: 5.5, fireRate: 0.625 / 1.5, damage: 64 },
+  ],
+  sniper: [
+    { ...TOWER_STATS.sniper, cost: 88, range: 6.5 },
+    { ...TOWER_STATS.sniper, cost: 154, range: 6.5, fireRate: 0.5, damage: 112 },
   ],
 } as const satisfies Record<TowerKind, readonly TowerStats[]>;

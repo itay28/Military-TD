@@ -5,6 +5,7 @@ What an unattended agent (the implement and PR steward routines) needs to work o
 ## Rules that shape the code
 - **Rules live in `src/sim`**: no Phaser, no `Math.random`/`Date.now` there (ADR-0002). Tuning numbers go in `src/data`. Mechanics are realistic and readable, with no hard counters (ADR-0007).
 - **Tests first** with the `tdd` skill (`.claude/skills/tdd`): failing test at the agreed seam, then the code, then refactor. Use the cheapest layer that proves the behaviour (ADR-0003): unit (Vitest), scenario (`tests/scenarios/*.scenario.ts`, `npm run scenario -- <name>`), or e2e (Playwright, `tests/e2e/`, open the game with `openGame(page)`). Details: `workflow.md` → **2. Tests first**.
+- **New content stays out of play until its rollout issue** (#536): PRs merge as soon as they're green, whatever their milestone, so a tower, enemy, screen or option the player would see before its milestone ships stays behind `NOT_IN_PLAY` (or a similar switch, e.g. for a difficulty on the Level select). Its rollout issue puts it in play.
 - **Assets**: no third-party file without an `assets/manifest.json` entry and an allowed license (`docs/assets.md`).
 - **Terms and decisions**: new domain terms go in `GLOSSARY.md`; anything hard to reverse is an ADR in `docs/adr/`. Read only the ADRs the issue touches.
 
@@ -20,6 +21,7 @@ What an unattended agent (the implement and PR steward routines) needs to work o
 - GitHub is REST only (GraphQL is blocked, so no `gh pr` / `gh issue`): use the built-in GitHub tools or `gh api repos/itay28/Military-TD/...`. Review-thread and ready routes: `workflow.md` → **Cloud sessions**.
 - Never move board cards; *Board sync* does it.
 - Questions the issue, `docs/PLAN.md`, the ADRs and `GLOSSARY.md` don't answer: ask on the issue, add `needs-info`, stop. Never guess.
+- **A missing dependency is not a question (#538).** If you can't start because other work isn't finished (e.g. #364 waits for its render issues #459/#460), don't add `needs-info`: add a native blocked-by link (`gh api -X POST repos/itay28/Military-TD/issues/<n>/dependencies/blocked_by -F issue_id=<blocker's id>`; the id is `gh api repos/itay28/Military-TD/issues/<blocker> --jq .id`), comment one line saying what it waits for, unassign, end with `<!-- auto-start:done -->` and stop. If the call is denied, put `<!-- blocked-by: #459 #460 -->` in that comment: the *Blocked links* workflow (`scripts/blocked-links.ts`) adds the links. Auto-start skips blocked issues and starts them when the blockers close. `needs-info` stays for real decisions (design, feel, mechanics, scope).
 
 ## Keep it cheap
 - `Grep` for the line, then read that range; don't print whole files or long logs (`tail`, `grep`, `--jq`).
