@@ -7,7 +7,7 @@ Row 3: the turret layer alone at 128 px on a neutral grey, with its pivot marked
 Run after render-sprite.py and `npm run render:pivot` (needs Pillow in the art venv):
     .venv-art/bin/python scripts/faction-sheet.py us [--out docs/art/faction-us.png]
 With `--kind`, the columns are one kind across every Faction instead (#509):
-    .venv-art/bin/python scripts/faction-sheet.py --kind heavyTank [--out docs/art/heavy-tanks.png]
+    .venv-art/bin/python scripts/faction-sheet.py --kind heavyTank [--out docs/art/heavyTank.png]
 """
 
 import argparse
