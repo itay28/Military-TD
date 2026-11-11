@@ -21,16 +21,7 @@ export interface Turntable {
 /** The size budget of one turntable sheet (`render-sprite.py` steps the WebP quality down to fit it). */
 export const TURNTABLE_BUDGET_BYTES = 300_000;
 
-interface TurntableMeta {
-  readonly id: string;
-  readonly kind: string;
-  readonly faction: Faction;
-  readonly frames: number;
-  readonly frameSize: number;
-  readonly columns: number;
-  readonly stepDeg: number;
-  readonly elevationDeg: number;
-}
+type TurntableMeta = Omit<Turntable, 'url'>;
 
 const METAS = import.meta.glob<TurntableMeta>('../../assets/render-*/*-turntable.json', {
   eager: true,

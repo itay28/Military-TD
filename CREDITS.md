@@ -74,6 +74,24 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-tank/**`
 
+## T-14 Armara Uralvagon Factory (top-down render)
+
+- Author: 3DYAROSLAV2
+- Source: <https://sketchfab.com/3d-models/9864af9626f14256a255d4faea52ec7f>
+- License: CC-BY-4.0
+- Attribution: "T-14 Armara Uralvagon Factory" by 3DYAROSLAV2 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-heavy-tank/**`
+
+## WIP - Abrams M1A2 TUSK 2 (top-down render)
+
+- Author: davidfalke
+- Source: <https://sketchfab.com/3d-models/efb7311b641f4a76afff19e5f3068298>
+- License: CC-BY-4.0
+- Attribution: "WIP - Abrams M1A2 TUSK 2" by davidfalke (sketchfab.com), CC-BY 4.0, rendered top-down, tinted tan
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-heavy-tank/**`
+
 ## NAIP aerial imagery (Iowa 2023)
 
 - Author: USDA Farm Service Agency
@@ -128,6 +146,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-jeep/**`
 
+## M113 (top-down render and turntable)
+
+- Author: arc4de
+- Source: <https://sketchfab.com/3d-models/7fe132c071584049b51d3569726021a0>
+- License: CC-BY-4.0
+- Attribution: "M113" by arc4de (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-apc/**`
+
 ## M1A2 Abrams Crows (top-down render and turntable)
 
 - Author: MirzaArrafiERV_45
@@ -145,6 +172,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Sikorsky UH-60 Black Hawk" by helijah (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-helicopter/**`
+
+## F 16 Fighting Falcon (top-down render and turntable)
+
+- Author: davidmilitei09
+- Source: <https://sketchfab.com/3d-models/c2ed832c0aa743789aa5b4452a60e97c>
+- License: CC-BY-4.0
+- Attribution: "F 16 Fighting Falcon" by davidmilitei09 (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-jet/**`
 
 ## ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render and turntable)
 
@@ -190,6 +226,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Mi-8" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-helicopter/**`
+
+## Su-25 (top-down render and turntable)
+
+- Author: tnikita
+- Source: <https://sketchfab.com/3d-models/88b71eb848cf4418a95dff497c07cefc>
+- License: CC-BY-4.0
+- Attribution: "Su-25" by tnikita (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-jet/**`
 
 ## Tactical Soldier (game ready) low poly (top-down render and turntable)
 

@@ -81,6 +81,26 @@
       "files": ["assets/render-russia-tank/**"]
     },
     {
+      "id": "render-russia-heavy-tank",
+      "name": "T-14 Armara Uralvagon Factory (top-down render)",
+      "author": "3DYAROSLAV2",
+      "source": "https://sketchfab.com/3d-models/9864af9626f14256a255d4faea52ec7f",
+      "license": "CC-BY-4.0",
+      "attribution": "\"T-14 Armara Uralvagon Factory\" by 3DYAROSLAV2 (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-russia-heavy-tank/**"]
+    },
+    {
+      "id": "render-us-heavy-tank",
+      "name": "WIP - Abrams M1A2 TUSK 2 (top-down render)",
+      "author": "davidfalke",
+      "source": "https://sketchfab.com/3d-models/efb7311b641f4a76afff19e5f3068298",
+      "license": "CC-BY-4.0",
+      "attribution": "\"WIP - Abrams M1A2 TUSK 2\" by davidfalke (sketchfab.com), CC-BY 4.0, rendered top-down, tinted tan",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-us-heavy-tank/**"]
+    },
+    {
       "id": "naip-field-road-treeline",
       "name": "NAIP aerial imagery (Iowa 2023)",
       "author": "USDA Farm Service Agency",
@@ -146,6 +166,16 @@
       "files": ["assets/render-us-jeep/**"]
     },
     {
+      "id": "render-us-apc",
+      "name": "M113 (top-down render and turntable)",
+      "author": "arc4de",
+      "source": "https://sketchfab.com/3d-models/7fe132c071584049b51d3569726021a0",
+      "license": "CC-BY-4.0",
+      "attribution": "\"M113\" by arc4de (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-us-apc/**"]
+    },
+    {
       "id": "render-us-tank",
       "name": "M1A2 Abrams Crows (top-down render and turntable)",
       "author": "MirzaArrafiERV_45",
@@ -164,6 +194,16 @@
       "attribution": "\"Sikorsky UH-60 Black Hawk\" by helijah (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
       "downloaded": "2026-11-02",
       "files": ["assets/render-us-helicopter/**"]
+    },
+    {
+      "id": "render-us-jet",
+      "name": "F 16 Fighting Falcon (top-down render and turntable)",
+      "author": "davidmilitei09",
+      "source": "https://sketchfab.com/3d-models/c2ed832c0aa743789aa5b4452a60e97c",
+      "license": "CC-BY-4.0",
+      "attribution": "\"F 16 Fighting Falcon\" by davidmilitei09 (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-us-jet/**"]
     },
     {
       "id": "render-russia-aa-gun",
@@ -214,6 +254,16 @@
       "attribution": "\"Mi-8\" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
       "downloaded": "2026-11-02",
       "files": ["assets/render-russia-helicopter/**"]
+    },
+    {
+      "id": "render-russia-jet",
+      "name": "Su-25 (top-down render and turntable)",
+      "author": "tnikita",
+      "source": "https://sketchfab.com/3d-models/88b71eb848cf4418a95dff497c07cefc",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Su-25\" by tnikita (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-russia-jet/**"]
     },
     {
       "id": "render-china-rifle-nest",
