@@ -281,6 +281,7 @@
         top: calc(100% + 14px);
         left: 50%;
         transform: translateX(-50%);
+        z-index: 1;
         box-sizing: border-box;
         width: 320px;
         max-width: calc(100vw - 32px);
@@ -292,6 +293,14 @@
       }
       #hud .hud-boss[hidden] {
         display: none;
+      }
+      /* On a phone, centred would run under the build bar's toggle: start it at the map's left edge instead. */
+      @media (max-width: 600px) {
+        #hud .hud-boss {
+          left: 8px;
+          transform: none;
+          max-width: calc(100vw - 80px);
+        }
       }
       #hud .hud-boss .boss {
         display: flex;
