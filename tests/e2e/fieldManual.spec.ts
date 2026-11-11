@@ -19,7 +19,8 @@ test('from the Main menu: pick the Tank, turn it, switch faction, and go back', 
   await expect(manual(page).getByRole('heading', { name: 'Tank', exact: true })).toBeVisible();
   await expect(manual(page).locator('dl')).toContainText('Leak cost');
   await expect(model(page)).toHaveAttribute('aria-label', 'Tank, US model');
-  // The model loads (the top-down render until the turntables land), and the placeholder goes.
+  // The model loads (the US turntable sheet, #440), and the placeholder goes.
+  await expect(model(page).locator('img')).toHaveAttribute('src', /us-tank-turntable.*\.webp/);
   await expect(manual(page).locator('.fm-loading')).toBeHidden();
 
   // Turn it: drag, then the arrow keys. A turn stops the spin, so the angle holds.
