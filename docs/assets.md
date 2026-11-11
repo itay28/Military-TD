@@ -197,6 +197,14 @@ The ambience counts as a sound effect: it follows the **Sound effects** volume, 
 
 Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab models and one NAIP ground patch (`docs/art/render-spike-compare.png`). The game draws the AA Gun and Tank renders in place of their Kenney sprites (#310): the hull with its shadow, then the turret turning around its pivot. After `render-sprite.py`, run `npm run render:pivot`: it measures each turret's pivot (the centre of its body, without the barrel) from `<id>-turret.png` into `<id>.json`, which `src/data/renders.ts` reads. A test fails while that JSON is stale. A kind whose render doesn't load keeps its Kenney frame. Source models are never committed: `scripts/render-sprite.py` downloads them into the ignored `.cache/models/` with `SKETCHFAB_API_TOKEN`.
 
+**Art venv** (#530): every art script runs in one ignored venv, built on **Python 3.11** because `bpy` 5.0.1, the Blender the renders were made with, only ships wheels for 3.11 (a newer `bpy` can change the lighting and shadows, so the sprites stop matching):
+
+```sh
+python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow rasterio numpy
+```
+
+Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 5.1+), and don't upgrade `bpy` without re-rendering every set. Cloud sessions get the venv from the environment's setup script.
+
 **Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US models have them so far; `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
 
 | Folder | Source | Made by |
