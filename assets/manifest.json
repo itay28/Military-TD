@@ -146,6 +146,16 @@
       "files": ["assets/render-us-jeep/**"]
     },
     {
+      "id": "render-russia-apc",
+      "name": "BTR-82A (top-down render and turntable)",
+      "author": "lebedeventerprise",
+      "source": "https://sketchfab.com/3d-models/cd1ba0c1f16f42aaac45234ced318605",
+      "license": "CC-BY-4.0",
+      "attribution": "\"BTR-82A\" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-russia-apc/**"]
+    },
+    {
       "id": "render-us-apc",
       "name": "M113 (top-down render and turntable)",
       "author": "arc4de",

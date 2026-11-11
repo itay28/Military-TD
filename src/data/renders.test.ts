@@ -45,7 +45,7 @@ describe('RENDERS', () => {
     expect(SPRITES.tank).not.toBeNull();
   });
 
-  it('leaves the APC out until it is in play (#76): its US render (#478) is only in the Field manual for now', () => {
+  it('leaves the APC out until it is in play (#76): its US (#478) and Russia (#480) renders are only in the Field manual for now', () => {
     expect('apc' in RENDERS).toBe(false);
     expect(Object.keys(SPRITES)).not.toContain('apc');
   });
