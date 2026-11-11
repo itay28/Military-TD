@@ -12,6 +12,7 @@ import {
   firedComment,
   giveUpIssue,
   isFeatureWork,
+  isRunning,
   NO_SIZE_MARKER,
   MAX_AGENTS,
   MAX_SIZE_REQUESTS,
@@ -43,6 +44,7 @@ const issue = (number: number, over: Partial<StartIssue> = {}): StartIssue => ({
   hold: false,
   needsYou: false,
   needsInfo: false,
+  needsSplit: false,
   autoAgent: false,
   infra: false,
   feature: false,
@@ -160,6 +162,11 @@ describe('planStarts: parked issues and look-ahead slots (#423)', () => {
   it('does not count parked auto-agent issues (needs-info, needs-you, hold) as running', () => {
     const parked = [agent(1, { needsInfo: true }), agent(2, { needsYou: true }), agent(3, { hold: true })];
     expect(numbers([...parked, issue(10), issue(11), issue(12), issue(13)], [], { cap: 3 })).toEqual([10, 11, 12]);
+  });
+
+  it('does not count an issue waiting for the split agent (needs-split) as running (#486)', () => {
+    expect(numbers([agent(1, { needsSplit: true }), issue(10), issue(11)], [], { cap: 1 })).toEqual([10]);
+    expect(isRunning(agent(1, { needsSplit: true }))).toBe(false);
   });
 
   it('still counts a live agent', () => {
