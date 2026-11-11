@@ -31,7 +31,7 @@ function webpSize(path: string): { width: number; height: number } {
 
 describe('TURNTABLES', () => {
   it('has a turntable for every model of the factions done so far, with its kind and faction', () => {
-    expect(done.length).toBe(18);
+    expect(done.length).toBe(19); // eight kinds in play per Faction, plus the Fighter jets for US and Russia (#482) and the US APC (#478)
     for (const m of done) {
       expect(TURNTABLES[m.id]!.kind, m.id).toBe(m.kind);
       expect(TURNTABLES[m.id]!.faction, m.id).toBe(m.faction);

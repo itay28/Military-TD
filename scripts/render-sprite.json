@@ -230,6 +230,18 @@
       "canvasTiles": 1.0
     },
     {
+      "id": "us-apc",
+      "kind": "apc",
+      "faction": "us",
+      "depicts": "M113 armored personnel carrier, woodland camo",
+      "sketchfab": "7fe132c071584049b51d3569726021a0",
+      "author": "arc4de",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25
+    },
+    {
       "id": "us-tank",
       "kind": "tank",
       "faction": "us",
