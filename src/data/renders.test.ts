@@ -45,6 +45,10 @@ describe('RENDERS', () => {
     expect(SPRITES.tank).not.toBeNull();
   });
 
+  it('has no hull/turret render for the Fighter jet: it is one top-down sprite (#482, src/data/jet-sprites.test.ts)', () => {
+    expect('jet' in RENDERS).toBe(false);
+  });
+
   it('leaves the APC out until it is in play (#76): its US render (#478) is only in the Field manual for now', () => {
     expect('apc' in RENDERS).toBe(false);
     expect(Object.keys(SPRITES)).not.toContain('apc');

@@ -110,9 +110,15 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   // the Heavy tank (in UPCOMING_KINDS) joins once all four Factions have it (#509).
   const inPlay = Object.keys(SPRITES).filter((kind) => !NOT_IN_PLAY.has(kind as TowerKind));
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
+  // The Fighter jet (`jet`, #482) is rendered for US and Russia first; China and Insurgents are exempt until the next part.
+  const JET_DONE: readonly string[] = ['us', 'russia'];
   for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
-      const kinds = [...inPlay, ...Object.keys(NEW_KINDS).filter((k) => NEW_KINDS[k]!.includes(faction))].sort();
+      const kinds = [
+        ...inPlay,
+        ...(JET_DONE.includes(faction) ? ['jet'] : []),
+        ...Object.keys(NEW_KINDS).filter((k) => NEW_KINDS[k]!.includes(faction)),
+      ].sort();
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
       expect(
         models
