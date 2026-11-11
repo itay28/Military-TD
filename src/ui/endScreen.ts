@@ -1,3 +1,4 @@
+import { DIFFICULTY } from '../data/difficulty';
 import { TERMS, TOWER_NAMES } from '../data/display';
 import { isGameOver, type Game } from '../sim/game';
 import type { Stars } from '../sim/progression';
@@ -154,6 +155,8 @@ export function mountEndScreen(
   heading.id = TITLE_ID;
   const wavesSurvived = doc.createElement('p');
   wavesSurvived.dataset.testid = 'waves-survived';
+  const difficulty = doc.createElement('p');
+  difficulty.dataset.testid = 'difficulty';
   const restart = doc.createElement('button');
   restart.type = 'button';
   restart.dataset.testid = 'restart';
@@ -170,7 +173,7 @@ export function mountEndScreen(
   report.className = 'report';
   const reportHeading = doc.createElement('h3');
   reportHeading.textContent = TERMS.report;
-  dialog.append(heading, reportHeading, wavesSurvived, report, restart, levelSelect);
+  dialog.append(heading, difficulty, reportHeading, wavesSurvived, report, restart, levelSelect);
   root.append(dialog);
   root.hidden = true;
   let destroyed = false;
@@ -180,6 +183,7 @@ export function mountEndScreen(
     const { phase, wavesCleared, totalWaves } = game.state;
     if (destroyed || !root.hidden || !isGameOver(phase)) return;
     heading.textContent = phase === 'victory' ? TERMS.victory : TERMS.defeat;
+    difficulty.textContent = `Difficulty: ${DIFFICULTY[game.state.difficulty].label}`;
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
     const won = phase === 'victory' ? result?.() : undefined;
     if (won) heading.after(...buildResult(doc, won));
