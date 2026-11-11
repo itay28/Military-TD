@@ -4,6 +4,30 @@ import { ENEMY_STYLE } from './display';
 import { ENEMY_STATS } from './enemies';
 import { TOWER_STATS } from './towers';
 
+describe('heavyTank (boss)', () => {
+  it('has the boss numbers: ground, armor 12, huge HP, slow, leak cost 10', () => {
+    expect(ENEMY_STATS.heavyTank).toEqual({
+      maxHp: 1500,
+      speed: 0.4,
+      reward: 120,
+      leakCost: 10,
+      armor: 12,
+      layer: 'ground',
+      boss: true,
+    });
+  });
+
+  it('is the only boss, and armor 12 sits above the Cannon pierce but still takes damage from it', () => {
+    const bosses = Object.entries(ENEMY_STATS).filter(([, s]) => 'boss' in s && s.boss);
+    expect(bosses.map(([k]) => k)).toEqual(['heavyTank']);
+    const { damage, armorPierce } = TOWER_STATS.cannon;
+    expect(ENEMY_STATS.heavyTank.armor).toBeGreaterThan(armorPierce);
+    expect(damageTaken(damage, ENEMY_STATS.heavyTank.armor, armorPierce, ENEMY_STATS.heavyTank.maxHp)).toBeGreaterThan(
+      1,
+    );
+  });
+});
+
 describe('tank', () => {
   it('has the starting numbers: heavy, slow, armored, ground', () => {
     expect(ENEMY_STATS.tank).toEqual({ maxHp: 250, speed: 0.6, reward: 25, leakCost: 5, armor: 8, layer: 'ground' });
