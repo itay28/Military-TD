@@ -78,8 +78,9 @@ describe('Heavy tank boss renders (#362, #508)', () => {
         expect(turret).toBeLessThan(longSide(file(heavy!.id, '-hull')) * 1.2); // the barrel may overhang the nose
       });
 
-      it('shows in the Field manual as its hull and turret layers', () => {
-        expect(modelFor(faction, 'heavyTank').layers).toHaveLength(2);
+      it('shows in the Field manual as its whole render, like the Tank', () => {
+        expect(modelFor(faction, 'heavyTank').layers).toHaveLength(1);
+        expect(modelFor(faction, 'heavyTank').layers[0]).toContain(`${heavy!.id}.png`);
       });
     });
   }

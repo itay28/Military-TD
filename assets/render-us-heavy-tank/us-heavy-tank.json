@@ -2,5 +2,9 @@
   "id": "us-heavy-tank",
   "kind": "heavyTank",
   "pxPerTile": 128,
-  "canvasPx": 224
+  "canvasPx": 224,
+  "pivot": {
+    "x": 111.5,
+    "y": 135
+  }
 }
