@@ -535,6 +535,7 @@ export function planRestarts(issues: readonly RetryIssue[]): Restart[] {
   for (const i of issues) {
     if (!i.autoAgent || !i.needsYou || i.hold) continue;
     const handedAt = i.comments.findLastIndex((c) => c.body.includes(HANDOFF_MARKER));
+    if (handedAt < 0) continue; // needs-you set by hand: an old "try again" in the thread isn't a restart
     const reply = i.comments
       .slice(handedAt + 1)
       .filter(

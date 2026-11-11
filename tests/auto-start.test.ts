@@ -921,6 +921,11 @@ describe('planRestarts (#539)', () => {
   const handed = (over: Partial<RetryIssue> = {}) =>
     claimed({ needsYou: true, comments: [fired(300), fired(200), stuck(100), reply(10)], ...over });
 
+  it('ignores replies when there is no hand-off comment (needs-you set by hand)', () => {
+    const comments = [reply(500, 'try again'), fired(300)];
+    expect(planRestarts([handed({ comments })])).toEqual([]);
+  });
+
   it('restarts a needs-you issue after the maintainer replies /retry', () => {
     expect(planRestarts([handed()])).toEqual([{ issue: 7, split: false }]);
   });
