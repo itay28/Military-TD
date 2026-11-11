@@ -5,5 +5,7 @@ https://creativecommons.org/licenses/by/4.0/
 
 The PNGs in this folder are top-down renders of that model made by
 scripts/render-sprite.py (changed: rendered from above, lit, desaturated, two of its three mortars removed, set in a generated sandbag pit, split into hull and turret layers).
+russia-mortar-turntable.webp is a turntable of the same model (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
 The model itself isn't committed.
 License checked on the model's Sketchfab page, 2026-11-02.
