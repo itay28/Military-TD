@@ -203,7 +203,9 @@ def apply_pose(pose: dict, objs=None, actions=None) -> None:
     `objs` and `actions` limit it to one import (a part), whose action names Blender may have suffixed."""
     objs = list(bpy.data.objects) if objs is None else objs
     pool = bpy.data.actions if actions is None else actions
-    action = next(a for a in pool if a.name.split(".")[0] == pose["action"])
+    action = next((a for a in pool if a.name.split(".")[0] == pose["action"]), None)
+    if action is None:
+        sys.exit(f"pose action {pose['action']!r} not found (have: {sorted({a.name.split('.')[0] for a in pool})})")
     for arm in [o for o in objs if o.type == "ARMATURE"]:
         arm.animation_data_create().action = action
         if hasattr(arm.animation_data, "action_slot") and action.slots:
