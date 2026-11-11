@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { MAPS } from '../data/maps';
 import type { ProgressStore } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
-import { isUnlocked } from '../sim/progression';
+import { isHardUnlocked, isUnlocked } from '../sim/progression';
 import { mountLevelSelect } from '../ui/levelSelect';
 import { showDemo } from './demoMode';
 
@@ -13,7 +13,7 @@ export interface LevelSelectSceneOptions {
   readonly root: HTMLElement;
   /** Saved progress, which decides the maps unlocked. */
   readonly progress: ProgressStore;
-  /** Test mode's `?unlock=all`: every map can be picked. */
+  /** Test mode's `?unlock=all`: every map, and Hard on each, can be picked. */
   readonly unlockAll: boolean;
   /** The player's settings: Tactical mode decides the "max 2 stars" note. */
   readonly settings: Pick<SettingsStore, 'get'>;
@@ -46,11 +46,16 @@ export class LevelSelectScene extends Phaser.Scene {
     const screen = mountLevelSelect(this.root, {
       app: this.app,
       maps: MAPS,
-      statusOf: (index) => ({
-        unlocked: this.unlockAll || isUnlocked(index, mapIds, progress),
-        bestStars: progress.maps[mapIds[index]!]?.bestStars ?? 0,
-      }),
-      onPick: (mapId) => this.scene.start('Game', { mapId }),
+      statusOf: (index) => {
+        const mapId = mapIds[index]!;
+        return {
+          unlocked: this.unlockAll || isUnlocked(index, mapIds, progress),
+          bestStars: progress.maps[mapId]?.bestStars ?? 0,
+          hardUnlocked: this.unlockAll || isHardUnlocked(mapId, progress),
+          hardStars: progress.maps[mapId]?.hardStars ?? 0,
+        };
+      },
+      onPick: (mapId, difficulty) => this.scene.start('Game', { mapId, difficulty }),
       onBack: () => this.scene.start('Menu'),
       tacticalMode: this.settings.get().tacticalMode,
     });
