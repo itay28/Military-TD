@@ -35,6 +35,8 @@ material its own `color` and `specular`), for a model painted in the wrong colou
 (sky occlusion), so a sprite has no baked haze and its frame can be cropped to the figure. It applies to every model:
 only the soldier sets were re-rendered for #342, so re-rendering a vehicle or tower changes its alpha the same way.
 
+`opaque` (true) sets every material of a model to alpha 1, for one exported fully transparent (alpha 0).
+
 `turnDeg` turns a model clockwise after `frontAxis`, for one set down at an angle (not along an axis).
 
 `pose` freezes a rigged model at one frame of one of its animations (`action`, `frame`), e.g. a soldier crouched
@@ -46,7 +48,7 @@ of `radiusTiles` ringed by sandbags, open at the front when `gapDeg` is set, so 
 `parts` (issue #464) builds one sprite from several models, e.g. a launcher with no mount, a tripod and a crew: each
 entry is another Sketchfab model (`sketchfab`, `author`, `license`, credited like the main one) imported into the same
 scene and placed on its own, with the same `frontAxis`, `turnDeg`, `lengthTiles`, `liftTiles`, `exclude`, `tint`,
-`untexturedColor`, `pose` and `copies` keys (copies also take `z`). A part with `"turret": true` goes on the turret
+`untexturedColor`, `opaque`, `pose` and `copies` keys (copies also take `z`). A part with `"turret": true` goes on the turret
 layer (the gunner), the others on the hull. `liftTiles` stands a model (main or part) that many tiles up, e.g. a
 launcher on its tripod's head.
 
@@ -126,6 +128,15 @@ def tint_untextured(color: list[float], mats=None) -> None:
         bsdf = mat.node_tree.nodes.get("Principled BSDF") if mat.node_tree else None
         if bsdf and not bsdf.inputs["Base Color"].links:
             bsdf.inputs["Base Color"].default_value = (*color, 1.0)
+
+
+def make_opaque(mats=None) -> None:
+    """Set every material's alpha to 1, for a model exported with alpha 0 (it renders see-through, as on its
+    Sketchfab page)."""
+    for mat in bpy.data.materials if mats is None else mats:
+        bsdf = mat.node_tree.nodes.get("Principled BSDF") if mat.node_tree else None
+        if bsdf and not bsdf.inputs["Alpha"].links:
+            bsdf.inputs["Alpha"].default_value = 1.0
 
 
 def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict], mats=None) -> None:
@@ -271,6 +282,8 @@ def add_part(part: dict, cache: Path) -> list:
         tint_paint(t["color"], t.get("skip", []), t.get("overrides", {}), mats)
     if "untexturedColor" in part:
         tint_untextured(part["untexturedColor"], mats)
+    if part.get("opaque"):
+        make_opaque(mats)
     if "pose" in part:
         apply_pose(part["pose"], objs, actions)
     place_model(part, objs)
@@ -410,6 +423,8 @@ def prepare_model(spec: dict, cache: Path) -> tuple[list, list, list]:
         tint_paint(spec["tint"]["color"], spec["tint"].get("skip", []), spec["tint"].get("overrides", {}))
     if "untexturedColor" in spec:
         tint_untextured(spec["untexturedColor"])
+    if spec.get("opaque"):
+        make_opaque()
     if "pose" in spec:
         apply_pose(spec["pose"])
     place_model(spec)

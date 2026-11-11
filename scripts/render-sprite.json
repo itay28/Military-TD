@@ -801,6 +801,135 @@
       }
     },
     {
+      "id": "china-grenade-launcher",
+      "kind": "grenadeLauncher",
+      "faction": "china",
+      "depicts": "QLZ-87 35 mm automatic grenade launcher with its drum magazine, on a tripod (stand-in tripod for its own heavy mount), gunner and assistant gunner in green (Type 07), in a sandbagged pit",
+      "sketchfab": "56a2e9531c5a432f8e833bfd62c6a7ea",
+      "author": "goncalveskauan055l",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.42,
+      "liftTiles": 0.2,
+      "opaque": true,
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "overrides": {
+          "Tex_": {
+            "color": [0.035, 0.038, 0.033],
+            "flat": true,
+            "specular": 0.1
+          }
+        }
+      },
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "parts": [
+        {
+          "sketchfab": "2a5ecc14900440af8fe2b5b30dabbef0",
+          "author": "GoldbergR",
+          "license": "CC-BY-4.0",
+          "frontAxis": "-y",
+          "lengthTiles": 0.45,
+          "copies": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            }
+          ],
+          "liftTiles": -0.22
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.0,
+              "y": -0.25
+            }
+          ],
+          "turret": true,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "material_6": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "material": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "Glove": {
+                "color": [0.5, 0.55, 0.45]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.26,
+              "y": -0.06,
+              "turnDeg": 15
+            }
+          ],
+          "turret": false,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "material_6": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "material": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "Glove": {
+                "color": [0.5, 0.55, 0.45]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        }
+      ],
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "china-infantry",
       "kind": "infantry",
       "faction": "china",

@@ -3,6 +3,7 @@ import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { RENDERS, RENDER_FACING, renderFor } from './renders';
 import { SPRITES, type SpriteKind } from './sprites';
+import { TURNTABLE_BUDGET_BYTES } from './turntables';
 
 describe('RENDERS', () => {
   it('has the spike’s two renders: the China AA Gun and the Russia Tank', () => {
@@ -53,8 +54,8 @@ describe('RENDERS', () => {
 });
 
 describe('the committed Grenade launcher renders (art-ahead: not in RENDERS until #359 puts it in play)', () => {
-  // The Factions whose Grenade launcher is rendered so far: US (#464), Russia (#467). Later parts of #359 add theirs.
-  for (const faction of ['us', 'russia']) {
+  // The Factions whose Grenade launcher is rendered so far: US (#464), Russia (#467), China (#468). The last part of #359 adds its own.
+  for (const faction of ['us', 'russia', 'china']) {
     const id = `${faction}-grenade-launcher`;
     const dir = `assets/render-${id}`;
 
@@ -77,6 +78,13 @@ describe('the committed Grenade launcher renders (art-ahead: not in RENDERS unti
         expect([png.width, png.height]).toEqual([160, 160]);
       });
     }
+
+    it(`${id} has a turntable for the Field manual, within the 300 KB budget`, () => {
+      const path = `${dir}/${id}-turntable.webp`;
+      expect(existsSync(path), path).toBe(true);
+      expect(readFileSync(path).length).toBeLessThanOrEqual(TURNTABLE_BUDGET_BYTES);
+      expect(JSON.parse(readFileSync(`${dir}/${id}-turntable.json`, 'utf8'))).toMatchObject({ id, frames: 24 });
+    });
 
     it(`keeps ${id} out of RENDERS until it is in play`, () => {
       expect(Object.values(RENDERS).map((r) => r.id)).not.toContain(id);
