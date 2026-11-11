@@ -17,6 +17,7 @@ import {
   retryIssue,
   MAX_AGENTS,
   giveUpIssue,
+  SPLIT_LABEL,
   SPLIT_PART_LABEL,
   startIssue,
   type RetryIssue,
@@ -27,6 +28,7 @@ import {
 } from './auto-start.ts';
 import { flagStale, isStaleExempt, planStaleClaims, readStale, staleQuery, type StaleIssue } from './stale-claims.ts';
 import { ApiMeter, softFail } from './rate-limit.ts';
+import { giveUpSplit, planSplitRetries, readSplitIssues, retrySplit } from './split-retry.ts';
 import { applyIdle, findIdleIssue, idleReasons, isStarved, planIdle, type IdleIssue } from './pipeline-idle.ts';
 
 // Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule
@@ -494,6 +496,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         hold: labels.includes(HOLD_LABEL),
         needsYou: labels.includes(NEEDS_YOU_LABEL),
         needsInfo: labels.includes(NEEDS_INFO_LABEL),
+        needsSplit: labels.includes(SPLIT_LABEL),
         autoAgent: labels.includes(AUTO_AGENT_LABEL),
         feature: isFeatureWork(labels, row.infra),
         size: node.size?.name,
@@ -610,16 +613,29 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     }
   }
 
+  // Retry failed splits (#486): a `needs-split` issue the split agent never split is dispatched again,
+  // a few per run, and handed to the maintainer after MAX_SPLIT_ATTEMPTS failed runs.
+  // A failure here fails the run, but only after auto-start had its turn.
+  let splitFailure: string | undefined;
+  try {
+    await retrySplits(startIssues, token, defaultBranch, dryRun);
+  } catch (error) {
+    splitFailure = `Retrying failed splits failed: ${error instanceof Error ? error.message : String(error)}`;
+  }
+
   await flagStaleClaims(token, dryRun, assignedIssues, prs, order.slice(0, 2));
 
-  if (!autoStart) return;
+  if (!autoStart) {
+    if (splitFailure) throw new Error(splitFailure);
+    return;
+  }
   // An unread open PR could close an issue that would then be started a second time.
   if (repository.open.totalCount > repository.open.nodes.length)
     throw new Error('Auto-start skipped: not every open PR was read (see the warning above). Paginate PR_QUERY.');
   const moved = new Map(moves.map((m) => [m.issue, m.to]));
   const openPrs = prs.filter((pr) => pr.state === 'OPEN');
   // Try every fire and comment before failing the run, so one bad fire doesn't block the rest.
-  const failures: string[] = [];
+  const failures: string[] = splitFailure ? [splitFailure] : [];
   // Each routine has its own fire limit; one that refused for now isn't fired again this run (#200).
   const limited = new Set<string>();
 
@@ -744,6 +760,28 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     else if (await commentNoSize(issue, token)) console.log(`#${issue}: no Size, asked for one`);
   }
   if (failures.length) throw new Error(failures.join('\n'));
+}
+
+/** Dispatch the splits that are due again and hand over the ones that failed too often (#486). */
+async function retrySplits(issues: readonly StartIssue[], token: string, ref: string, dryRun: boolean): Promise<void> {
+  const waiting = issues
+    .filter((i) => i.needsSplit)
+    .map((i) => ({ number: i.number, hold: i.hold, needsYou: i.needsYou }));
+  if (!waiting.length) return;
+  const plan = planSplitRetries(await readSplitIssues(waiting, token), Date.now());
+  for (const giveUp of plan.giveUp) {
+    const what = `#${giveUp.issue}: the split agent failed ${giveUp.failed.length} times, handing it to the maintainer`;
+    if (!dryRun) await giveUpSplit(giveUp, token);
+    console.log(`${what}${dryRun ? ' (dry run)' : ''}`);
+  }
+  for (const issue of plan.retry) {
+    const what = `#${issue}: the split failed, asking the split agent again`;
+    if (dryRun) console.log(`${what} (dry run)`);
+    else if ((await retrySplit(issue, token, ref)) === 'later') {
+      console.log(`#${issue}: dispatching the split agent was refused for now; retrying next run`);
+      break;
+    } else console.log(what);
+  }
 }
 
 /**
