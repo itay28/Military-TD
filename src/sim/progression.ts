@@ -36,3 +36,8 @@ export function isUnlocked(mapIndex: number, mapIds: readonly string[], progress
 export function unlocksNext(mapIndex: number, mapIds: readonly string[], progress: CompletedMaps): boolean {
   return mapIndex >= 0 && mapIndex + 1 < mapIds.length && !isUnlocked(mapIndex + 1, mapIds, progress);
 }
+
+/** Whether Hard is unlocked on `mapId`: once that map is won on Normal (#463). Unknown maps are not. */
+export function isHardUnlocked(mapId: string, progress: CompletedMaps): boolean {
+  return progress.maps[mapId]?.completed === true;
+}
