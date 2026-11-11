@@ -74,6 +74,24 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-tank/**`
 
+## T-14 Armara Uralvagon Factory (top-down render)
+
+- Author: 3DYAROSLAV2
+- Source: <https://sketchfab.com/3d-models/9864af9626f14256a255d4faea52ec7f>
+- License: CC-BY-4.0
+- Attribution: "T-14 Armara Uralvagon Factory" by 3DYAROSLAV2 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-heavy-tank/**`
+
+## WIP - Abrams M1A2 TUSK 2 (top-down render)
+
+- Author: davidfalke
+- Source: <https://sketchfab.com/3d-models/efb7311b641f4a76afff19e5f3068298>
+- License: CC-BY-4.0
+- Attribution: "WIP - Abrams M1A2 TUSK 2" by davidfalke (sketchfab.com), CC-BY 4.0, rendered top-down, tinted tan
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-heavy-tank/**`
+
 ## NAIP aerial imagery (Iowa 2023)
 
 - Author: USDA Farm Service Agency

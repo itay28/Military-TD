@@ -99,13 +99,18 @@ describe('the committed render data', () => {
 });
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  // Every kind in play, plus the kinds whose art lands before their gameplay (the Heavy tank, #362).
-  const kinds = [...Object.keys(SPRITES), ...UPCOMING_KINDS].sort();
+  // Every kind in play. The Heavy tank (in UPCOMING_KINDS) joins once all four Factions have it (#509).
+  const kinds = Object.keys(SPRITES).sort();
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
-      expect(models.map((m) => m.kind).sort()).toEqual(kinds);
+      expect(
+        models
+          .filter((m) => !(UPCOMING_KINDS as readonly string[]).includes(m.kind))
+          .map((m) => m.kind)
+          .sort(),
+      ).toEqual(kinds);
     });
   }
 

@@ -1,0 +1,6 @@
+{
+  "id": "us-heavy-tank",
+  "kind": "heavyTank",
+  "pxPerTile": 128,
+  "canvasPx": 224
+}
