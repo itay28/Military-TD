@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { towerLevels } from '../sim/towers';
 import { LEVEL_NAME } from './display';
-import { BUILD_KINDS, NOT_IN_PLAY, TOWER_STATS, type TowerKind } from './towers';
+import { BUILD_KINDS, NOT_IN_PLAY, TOWER_STATS, TURN_RATES, type TowerKind } from './towers';
 
 const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
 
@@ -55,9 +55,51 @@ describe('tower levels', () => {
   });
 });
 
+describe('automatic grenade launcher (#75)', () => {
+  const gl = TOWER_STATS.grenadeLauncher;
+  const mortar = TOWER_STATS.mortar;
+
+  it('fires fast, small-blast grenades on the ground, with no minimum range', () => {
+    expect(gl).toEqual({
+      cost: 90,
+      range: 3,
+      fireRate: 1.5,
+      damage: 14,
+      targets: ['ground'],
+      shell: { flightMs: 400, innerRadius: 0.35, outerRadius: 0.7 },
+    });
+  });
+
+  it('upgrades range at level 2, then damage and fire rate at level 3', () => {
+    const [, two, three] = towerLevels('grenadeLauncher');
+    expect(two).toEqual({ ...gl, cost: 72, range: 3.5 });
+    expect(three).toEqual({ ...gl, cost: 126, range: 3.5, fireRate: 1.875, damage: 22.4 });
+  });
+
+  it('differs from the Mortar: shorter range, no dead zone, faster fire, smaller blast, shorter flight', () => {
+    expect(gl.range).toBeLessThan(mortar.range);
+    expect('minRange' in gl).toBe(false);
+    expect(gl.fireRate).toBeGreaterThan(mortar.fireRate);
+    expect(gl.damage).toBeLessThan(mortar.damage);
+    expect(gl.shell.innerRadius).toBeLessThan(mortar.shell.innerRadius);
+    expect(gl.shell.outerRadius).toBeLessThan(mortar.shell.outerRadius);
+    expect(gl.shell.flightMs).toBeLessThan(mortar.shell.flightMs);
+    expect(gl.cost).toBeLessThan(mortar.cost);
+  });
+
+  it('turns to aim: a direct-fire weapon on a tripod, unlike the Mortar', () => {
+    expect(TURN_RATES.grenadeLauncher).toBeGreaterThan(0);
+  });
+
+  it('is not in play yet (ADR-0009: it waits for its renders, #365)', () => {
+    expect(NOT_IN_PLAY.has('grenadeLauncher')).toBe(true);
+    expect(BUILD_KINDS).not.toContain('grenadeLauncher');
+  });
+});
+
 describe('kinds in play', () => {
-  // ADR-0009: a kind reaches the build bar in its rollout issue, once its renders land (the Sniper's: #364).
-  it('the build kinds are every kind not held back, in TOWER_STATS order; the Sniper is held back', () => {
+  // ADR-0009: a kind reaches the build bar in its rollout issue, once its renders land (the Sniper's: #364, the grenade launcher's: #365).
+  it('the build kinds are every kind not held back, in TOWER_STATS order; the Sniper and the grenade launcher are held back', () => {
     expect(NOT_IN_PLAY.has('sniper')).toBe(true);
     expect(BUILD_KINDS).toEqual(KINDS.filter((kind) => !NOT_IN_PLAY.has(kind)));
     expect(BUILD_KINDS).toEqual(['rifleNest', 'aaGun', 'cannon', 'mortar']);

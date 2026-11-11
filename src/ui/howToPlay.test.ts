@@ -48,7 +48,7 @@ describe('How to play screen', () => {
     expect(money).toContain(`${Math.round(SELL_REFUND * 100)}%`);
   });
 
-  it('lists every tower with its cost and role line', () => {
+  it('lists every tower in play with its cost and role line', () => {
     mountHowToPlay(root, { onBack: () => {} });
     const items = [...section('Towers').querySelectorAll('li')].map((li) => li.textContent);
     expect(items).toEqual(BUILD_KINDS.map((k) => `${TOWER_NAMES[k]} (${TOWER_STATS[k].cost}): ${TOWER_ROLES[k]}`));
