@@ -260,7 +260,8 @@ export type Reason = 'conflict' | 'ci' | 'review' | 'comment' | 'threads';
  * What a `wait` waits on, so its status label (#419) doesn't depend on the wording of `why`:
  * an agent or automation (`mergeability`, `round`, `checks`, `snapshots`, `review`), the maintainer
  * (`needs-info`, `release`: a release PR to merge by hand, or a broken report PR), CI on main
- * (`main-ci`), or something queued ahead of it (`milestone`, `stacked`, `blocked`).
+ * (`main-ci`), or something queued ahead of it (`stacked`, `blocked`). A milestone never holds a
+ * merge (#536): milestones decide what a release contains, not when code lands on main.
  */
 export type WaitCause =
   | 'mergeability'
@@ -271,7 +272,6 @@ export type WaitCause =
   | 'stacked'
   | 'blocked'
   | 'needs-info'
-  | 'milestone'
   | 'main-ci'
   | 'release'
   /** Behind or conflicting while another PR is at the front of the merge queue (#473). */
@@ -348,8 +348,8 @@ const isApproval = (c: PrComment) => isMaintainer(c) && APPROVE_COMMAND.test(c.b
  * unresolved threads (hand off as stuck after MAX_ROUNDS, or at once when a round left a conflict
  * on the same base); update a PR that is only behind; wait
  * for running checks and the CI review, requesting a review that never ran (#209); then merge, if
- * it targets the default branch, no issue it closes is blocked or waiting on an answer, and none
- * is in a later milestone than `current` (#180), and, when it touches a critical path, a
+ * it targets the default branch, no issue it closes is blocked or waiting on an answer (look-ahead
+ * work for a later milestone merges too, #536), and, when it touches a critical path, a
  * maintainer `/approve` came after the latest round (#206). While `mainRed`, no merge happens except
  * the fix's (#220). At the `front` of the merge queue (#473), a round for what main moving broke is
  * free (see `freeRound`).
@@ -532,14 +532,6 @@ function decideIgnoringMain(
         ? `#${held.number} is still blocked by open issues`
         : `#${held.number} has an open question (needs-info)`,
     };
-  // Look-ahead work (auto-start's next milestone) merges only once the current milestone has shipped.
-  const ahead = current && pr.closes.find((i) => i.milestone && current.after.includes(i.milestone.number));
-  if (ahead && current)
-    return {
-      kind: 'wait',
-      cause: 'milestone',
-      why: `#${ahead.number} is in ${ahead.milestone!.title}: merges after ${current.title} ships`,
-    };
   const paths = [
     ...(pr.files ? criticalFiles(pr.files) : ['(more files than were read)']),
     ...renamedCritical(pr.renamed),
@@ -604,11 +596,11 @@ function decideRelease(pr: StewardPr, current: CurrentMilestone | null): Decisio
  */
 function decideReport(pr: StewardPr, current: CurrentMilestone | null, version: string): Decision {
   const name = `report PR ${version}`;
-  const wrong = wrongVersion('report PR', version, current, 'milestone');
+  const wrong = wrongVersion('report PR', version, current, 'release');
   if (wrong) return wrong;
-  if (!current) return { kind: 'wait', cause: 'milestone', why: `${name}: no open milestone` };
-  if (!current.done)
-    return { kind: 'wait', cause: 'milestone', why: `${name}: ${current.title} still has open issues` };
+  if (!current) return { kind: 'wait', cause: 'release', why: `${name}: no open milestone` };
+  // Its milestone's open issues block it, like an issue's blockers (#536).
+  if (!current.done) return { kind: 'wait', cause: 'blocked', why: `${name}: ${current.title} still has open issues` };
   if (lastParagraph(pr.body) !== `Release-As: ${version}`)
     return {
       kind: 'wait',
@@ -666,16 +658,15 @@ export function conflictMap(prs: readonly StewardPr[], conflicts: Conflicts, bas
 
 /**
  * A PR that can merge into the default branch once it's green: no draft, fork, `hold`, hand-off,
- * stacked, release or report PR, and nothing it closes is blocked, waiting on an answer, or in a
- * later milestone. Only these take a place in the queue, so the front is always a PR that can merge.
+ * stacked, release or report PR, and nothing it closes is blocked or waiting on an answer (a later
+ * milestone doesn't count, #536). Only these take a place in the queue, so the front is always a PR
+ * that can merge.
  */
-export function inQueue(pr: StewardPr, defaultBranch: string, current: CurrentMilestone | null = null): boolean {
+export function inQueue(pr: StewardPr, defaultBranch: string): boolean {
   if (pr.isDraft || pr.fork || pr.base !== defaultBranch) return false;
   if ([HOLD_LABEL, ...HAND_OFF_LABELS].some((l) => pr.labels.includes(l))) return false;
   if (pr.head.startsWith(RELEASE_BRANCH) || REPORT_BRANCH.test(pr.head)) return false;
-  return !pr.closes.some(
-    (i) => i.blocked || i.needsInfo || (!!current && !!i.milestone && current.after.includes(i.milestone.number)),
-  );
+  return !pr.closes.some((i) => i.blocked || i.needsInfo);
 }
 
 /** Green for the queue: every check passed, the CI review answered, threads resolved. Mergeability doesn't count. */
@@ -730,11 +721,10 @@ export function mergeQueue(
     readonly map: ConflictMap;
     readonly decideFor: (pr: StewardPr, front: boolean) => Decision;
     readonly defaultBranch?: string;
-    readonly current?: CurrentMilestone | null;
   },
 ): { order: number[]; decisions: Map<number, Decision> } {
-  const { map, decideFor, defaultBranch = 'main', current = null } = options;
-  const order = queueOrder(prs.filter((p) => inQueue(p, defaultBranch, current)));
+  const { map, decideFor, defaultBranch = 'main' } = options;
+  const order = queueOrder(prs.filter((p) => inQueue(p, defaultBranch)));
   const decisions = new Map<number, Decision>();
   for (const p of prs) if (!order.includes(p.number)) decisions.set(p.number, decideFor(p, false));
   const [front] = order;
@@ -1009,9 +999,11 @@ export const STATUS_LABELS = {
   },
   'waiting: main CI': { color: 'd93f0b', description: "PR steward: ready, but main's CI is failing" },
   'waiting: agent': { color: 'fbca04', description: 'PR steward: an agent, a check or the CI review is at work' },
-  'waiting: milestone': { color: 'cfd3d7', description: 'PR steward: its issue is in a later milestone' },
   'waiting: parent PR': { color: 'cfd3d7', description: 'PR steward: stacked, merges after its parent PR' },
-  'waiting: blocker': { color: 'cfd3d7', description: 'PR steward: its issue is still blocked by open issues' },
+  'waiting: blocker': {
+    color: 'cfd3d7',
+    description: "PR steward: its issue is still blocked by open issues (a report PR: its milestone isn't done)",
+  },
   'waiting: queue': {
     color: 'cfd3d7',
     description: 'PR steward: behind or conflicting, waits for its turn at the front of the merge queue',
@@ -1020,6 +1012,8 @@ export const STATUS_LABELS = {
 } as const satisfies Record<string, { color: string; description: string }>;
 export type StatusLabel = keyof typeof STATUS_LABELS;
 const STATUS_LABEL_NAMES = Object.keys(STATUS_LABELS) as StatusLabel[];
+/** Status labels no decision gives any more, removed from any PR that still carries one. */
+const RETIRED_STATUS_LABELS = ['waiting: milestone'] as const;
 
 const WAIT_LABEL: Readonly<Record<WaitCause, StatusLabel>> = {
   'needs-info': 'waiting: you',
@@ -1030,7 +1024,6 @@ const WAIT_LABEL: Readonly<Record<WaitCause, StatusLabel>> = {
   checks: 'waiting: agent',
   snapshots: 'waiting: agent',
   review: 'waiting: agent',
-  milestone: 'waiting: milestone',
   stacked: 'waiting: parent PR',
   blocked: 'waiting: blocker',
   queued: 'waiting: queue',
@@ -1061,10 +1054,10 @@ export function statusLabel(decision: Decision, pr: StewardPr): StatusLabel | nu
 export function labelChanges(
   labels: readonly string[],
   label: StatusLabel | null,
-): { add: StatusLabel | null; remove: StatusLabel[] } {
+): { add: StatusLabel | null; remove: string[] } {
   return {
     add: label && !labels.includes(label) ? label : null,
-    remove: STATUS_LABEL_NAMES.filter((l) => l !== label && labels.includes(l)),
+    remove: [...STATUS_LABEL_NAMES, ...RETIRED_STATUS_LABELS].filter((l) => l !== label && labels.includes(l)),
   };
 }
 
@@ -1472,14 +1465,13 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
   const prs = await Promise.all(
     nodes.map((node) => withRenameSources(toStewardPr(node, snapshotRuns.get(node.number) ?? null), token)),
   );
-  const queued = prs.filter((p) => inQueue(p, defaultBranch, milestone));
+  const queued = prs.filter((p) => inQueue(p, defaultBranch));
   const map = queued.length
     ? conflictMap(queued, fetchedConflicts(queued, defaultBranch), queued[0]!.baseSha)
     : { main: [], pairs: [] };
   const { order, decisions } = mergeQueue(prs, {
     map,
     defaultBranch,
-    current: milestone,
     decideFor: (pr, front) => decide(pr, now, defaultBranch, milestone, mainRed, front),
   });
   for (const line of describeQueue(order, map)) console.log(line);

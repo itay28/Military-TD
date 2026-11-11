@@ -1,0 +1,32 @@
+name: Blocked links
+run-name: Blocked links for #${{ github.event.issue.number }}
+
+# A missing dependency is a "blocked by" link, not a needs-info question (#538). An agent whose own
+# link call was denied comments `<!-- blocked-by: #459 #460 -->` on the issue; this step adds the
+# links (scripts/blocked-links.ts). Auto-start then skips the issue until the blockers close.
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  link:
+    # Only the maintainer's account (agents comment as it) can spend a run.
+    if: >-
+      !github.event.issue.pull_request &&
+      contains(github.event.comment.body, '<!-- blocked-by:') &&
+      github.event.comment.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Link the blockers
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: node scripts/blocked-links.ts
