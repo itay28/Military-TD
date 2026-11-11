@@ -18,8 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 RENDER_TILE = 128  # render-sprite.json pxPerTile
 GAME_TILE = 48
 NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in its own pixels (sprite-compare.py)
-CELL = 1.6  # tiles per cell, enough for the largest canvas (1.5)
-KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "helicopter"]
+CELL = 1.8  # tiles per cell, enough for the largest canvas (the Heavy tank, 1.75)
+KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "heavyTank", "helicopter"]
 # v0.8.0 kinds rendered one Faction at a time ahead of their gameplay (#360): on the sheet once the Faction has one.
 NEW_KINDS = ["apc"]
 
