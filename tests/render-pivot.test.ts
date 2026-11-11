@@ -133,7 +133,9 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   }
 
   it('lists a kind as upcoming only until it is in play (then drop it from UPCOMING_KINDS)', () => {
-    for (const kind of UPCOMING_KINDS) expect(Object.keys(SPRITES), kind).not.toContain(kind);
+    // A kind may be a sim kind (the Heavy tank boss, #457) with a null sprite, but has no frame until it is in play.
+    for (const kind of UPCOMING_KINDS)
+      expect((SPRITES as Record<string, string | null>)[kind] ?? null, kind).toBeNull();
   });
 
   it('keeps the new kinds out of SPRITES until they are in play', () => {
