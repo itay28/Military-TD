@@ -169,10 +169,10 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack, `FE
   | `waiting: agent` (yellow) | a round fired or in flight, checks or the CI review running or requested, a base merge, mergeability computing |
   | `waiting: parent PR` (grey) | stacked on a branch other than `main` |
   | `waiting: blocker` (grey) | its issue is still blocked by open issues (a report PR: its milestone isn't done) |
-
-  `waiting: milestone` is retired (#536): no PR waits for its milestone, and the steward removes the label from any PR that still has it.
   | `waiting: queue` (grey) | behind or conflicting while another PR is at the front of the merge queue |
   | `ready to merge` (green) | green and answered: merges now, or waits for `AUTO_MERGE` |
+
+  `waiting: milestone` is retired (#536): no PR waits for its milestone, and the steward removes the label from any PR that still has it.
 
   Labels follow within one run: the `pull_request` (`converted_to_draft`, `ready_for_review`, `closed`) and `issues` (`labeled`, `unlabeled`, `milestoned`, `demilestoned`, `closed`) triggers, plus maintainer comments on `needs-info` issues, cover a draft toggle, an answered question, a milestone or label change and a blocker closed by hand. It doesn't run on `pull_request: labeled`, since its own label writes would wake it again.
 - Check by hand: `PROJECT_TOKEN=… node scripts/pr-steward.ts --dry-run` (it logs label changes too, and writes none).
