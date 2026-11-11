@@ -53,3 +53,8 @@ export const TURNTABLES: Readonly<Record<string, Turntable>> = Object.fromEntrie
     return [meta.id, turntable];
   }),
 );
+
+/** The faction's turntable of `kind`, or null when that kind has no model yet. */
+export function turntableFor(faction: Faction, kind: string): Turntable | null {
+  return Object.values(TURNTABLES).find((t) => t.faction === faction && t.kind === kind) ?? null;
+}
