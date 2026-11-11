@@ -41,6 +41,7 @@ test('the menu works over the demo: Settings, Credits, the Level select, and a m
   await expect(root(page)).toHaveAttribute('data-demo', 'full');
 
   await page.getByRole('button', { name: `${FIRST_MAP.name}, no stars yet` }).click();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
   await page.waitForFunction(() => window.__TD__ !== undefined);
   await expect(root(page)).not.toHaveAttribute('data-demo');
   await expect(page.locator('#hud')).toBeVisible();
