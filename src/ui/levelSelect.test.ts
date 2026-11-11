@@ -11,6 +11,7 @@ const button = (name: string) =>
   buttons().find((b) => (b.getAttribute('aria-label') ?? b.textContent?.trim()) === name);
 /** A map's button by the map name its accessible name starts with. */
 const mapButton = (name: string) => buttons().find((b) => b.getAttribute('aria-label')?.startsWith(`${name},`));
+const briefing = () => root.querySelector<HTMLElement>('[data-testid="briefing"]');
 const shown = (b: HTMLElement | undefined, testid: string) => b?.querySelector(`[data-testid="${testid}"]`);
 
 const TWO_MAPS: readonly MapEntry[] = [
@@ -61,10 +62,17 @@ describe('Level select', () => {
     expect(canvas?.width).toBeGreaterThan(0);
   });
 
-  it('calls onPick with the map id when the player picks a map', () => {
+  it('shows a map’s aerial ground image on its card (#401)', () => {
+    mount();
+    expect(mapButton(MAPS[0]!.name)?.querySelector('img')?.getAttribute('src')).toBe(MAPS[0]!.groundImageUrl);
+  });
+
+  it('calls onPick with the map id when the player deploys from the map’s briefing', () => {
     const onPick = vi.fn();
     mount({ maps: TWO_MAPS, onPick });
     mapButton('Second Map')?.click();
+    expect(onPick).not.toHaveBeenCalled();
+    button('Deploy')?.click();
     expect(onPick).toHaveBeenCalledExactlyOnceWith('second');
   });
 
@@ -100,8 +108,9 @@ describe('Level select', () => {
     expect(shown(locked, 'locked')?.textContent).toBe('Locked: complete Training Ground');
     expect(shown(locked, 'stars')).toBeNull();
     locked?.click();
-    expect(onPick).not.toHaveBeenCalled();
+    expect(briefing()).toBeNull();
     mapButton('Training Ground')?.click();
+    button('Deploy')?.click();
     expect(onPick).toHaveBeenCalledExactlyOnceWith(MAPS[0]!.id);
   });
 
@@ -145,5 +154,49 @@ describe('Level select', () => {
     expect(onBack).not.toHaveBeenCalled();
     expect(root.hidden).toBe(true);
     expect(root.childElementCount).toBe(0);
+  });
+});
+
+describe('briefing (#401)', () => {
+  it('opens when the player picks an unlocked map: the map list and Back are hidden, focus is on Deploy', () => {
+    mount({ maps: TWO_MAPS });
+    mapButton('Second Map')?.click();
+    expect(briefing()?.querySelector('h2')?.textContent).toBe(TWO_MAPS[1]!.briefing.operation);
+    expect(root.querySelector('ul')?.hidden).toBe(true);
+    expect(root.querySelector<HTMLElement>(':scope > button')?.hidden).toBe(true);
+    expect(document.activeElement?.textContent).toBe('Deploy');
+  });
+
+  it('Back closes it and returns focus to the map’s card, without picking or leaving the screen', () => {
+    const onPick = vi.fn();
+    const onBack = vi.fn();
+    mount({ maps: TWO_MAPS, onPick, onBack });
+    mapButton('Second Map')?.click();
+    buttons()
+      .find((b) => b.textContent === 'Back' && briefing()?.contains(b))
+      ?.click();
+    expect(briefing()).toBeNull();
+    expect(root.querySelector('ul')?.hidden).toBe(false);
+    expect(document.activeElement).toBe(mapButton('Second Map'));
+    expect(onPick).not.toHaveBeenCalled();
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it('Escape closes it like Back', () => {
+    mount({ maps: TWO_MAPS });
+    mapButton('Training Ground')?.click();
+    briefing()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(briefing()).toBeNull();
+    expect(document.activeElement).toBe(mapButton('Training Ground'));
+  });
+
+  it('does nothing after destroy', () => {
+    const onPick = vi.fn();
+    const screen = mount({ onPick });
+    mapButton(MAPS[0]!.name)?.click();
+    const deploy = button('Deploy')!;
+    screen.destroy();
+    deploy.click();
+    expect(onPick).not.toHaveBeenCalled();
   });
 });

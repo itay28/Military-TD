@@ -9,6 +9,10 @@ import {
   roundMeta,
   STUCK_MARKER,
   APPROVAL_MARKER,
+  SNAPSHOTS_MARKER,
+  SNAPSHOTS_STARTED_MARKER,
+  snapshotsRequested,
+  startSnapshots,
   act,
   changedFiles,
   codeCommittedAt,
@@ -24,6 +28,7 @@ import {
   settingsFromEnv,
   switchedOn,
   toStewardPr,
+  UNKNOWN_UPDATE_MARKER,
   applyStatusLabel,
   ensureStatusLabels,
   labelChanges,
@@ -326,8 +331,41 @@ describe('decide: wait', () => {
     ).toBe('wait');
   });
 
-  it('waits while GitHub is still computing mergeability', () => {
-    expect(kind(pr({ mergeable: 'UNKNOWN' }))).toBe('wait');
+  describe('mergeability UNKNOWN (#487)', () => {
+    const unknown = (over: Partial<StewardPr> = {}) =>
+      pr({
+        mergeable: 'UNKNOWN',
+        behind: true,
+        lastCommitAt: at(90),
+        codeCommittedAt: at(90),
+        comments: [review(100)],
+        ...over,
+      });
+
+    it('waits while GitHub is still computing mergeability', () => {
+      expect(kind(pr({ mergeable: 'UNKNOWN' }))).toBe('wait');
+      expect(kind(unknown({ lastCommitAt: at(30), comments: [review(30)] }))).toBe('wait');
+    });
+
+    it('merges the base in once it has been unknown for over an hour and the PR is behind', () => {
+      expect(decide(unknown(), now)).toEqual({ kind: 'update', unknown: true });
+    });
+
+    it('hands off when it is still unknown an hour after the base merge', () => {
+      const merged = unknown({ comments: [review(100), action(UNKNOWN_UPDATE_MARKER, 70)], lastCommitAt: at(70) });
+      expect(decide(merged, now)).toEqual({ kind: 'stuck', reasons: [], unknown: true });
+      expect(decide(unknown({ behind: false }), now)).toEqual({ kind: 'stuck', reasons: [], unknown: true });
+    });
+
+    it('waits an hour after the base merge before handing off', () => {
+      const merged = unknown({ comments: [review(100), action(UNKNOWN_UPDATE_MARKER, 10)], lastCommitAt: at(10) });
+      expect(kind(merged)).toBe('wait');
+    });
+
+    it('merges the base in again after a maintainer comment', () => {
+      const answered = unknown({ comments: [action(UNKNOWN_UPDATE_MARKER, 200), maintainer(100)] });
+      expect(decide(answered, now)).toEqual({ kind: 'update', unknown: true });
+    });
   });
 
   it('waits while a round is in flight, and stops waiting once it is an hour old', () => {
@@ -1105,6 +1143,20 @@ describe('act', () => {
     expect(fetchFn).toHaveBeenCalled();
   });
 
+  it('notes an update for unknown mergeability, then merges the base in', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'update', unknown: true }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `PUT ${api}/pulls/7/update-branch`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string).body).toContain(UNKNOWN_UPDATE_MARKER);
+  });
+
+  it('hands off a PR whose mergeability stays unknown', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'stuck', reasons: [], unknown: true }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string).body).toContain('unknown');
+  });
+
   it('updates the branch against the head it saw', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await act(pr(), { kind: 'update' }, 'gh-token', settings, fetchFn);
@@ -1361,5 +1413,61 @@ describe('ensureStatusLabels', () => {
 
   it('reads the repo labels in the PR query, so checking costs no request', () => {
     expect(PR_QUERY).toMatch(/labels\(first: 100\) \{ nodes \{ name \} \}/);
+  });
+});
+
+// A round that finds only stale screenshot baselines says so with a marker; the script starts
+// *Update snapshots*, so no session call can be denied (#472).
+describe('update-snapshots request (#472)', () => {
+  const asks = (minutesAgo: number) => agent(`${SNAPSHOTS_MARKER}\n${DONE_MARKER}`, minutesAgo);
+  const started = (minutesAgo: number) => action(SNAPSHOTS_STARTED_MARKER, minutesAgo);
+
+  it('is not requested without the marker', () => {
+    expect(snapshotsRequested(pr({ comments: [agent(DONE_MARKER, 5)] }))).toBe(false);
+  });
+
+  it('is requested by a done comment carrying the marker', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(5)] }))).toBe(true);
+  });
+
+  it('is requested once: a start after the request answers it', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(10), started(5)] }))).toBe(false);
+  });
+
+  it('is requested again by a newer marker after a start', () => {
+    expect(snapshotsRequested(pr({ comments: [asks(20), started(10), asks(5)] }))).toBe(true);
+  });
+
+  it('is not requested by a comment from outside the maintainer identity', () => {
+    const stranger = { ...asks(5), author: 'rando', association: 'NONE' };
+    const bot = { ...asks(5), bot: true };
+    expect(snapshotsRequested(pr({ comments: [stranger] }))).toBe(false);
+    expect(snapshotsRequested(pr({ comments: [bot] }))).toBe(false);
+  });
+
+  it('is not requested on a fork or a held PR', () => {
+    expect(snapshotsRequested(pr({ fork: true, comments: [asks(5)] }))).toBe(false);
+    expect(snapshotsRequested(pr({ labels: ['hold'], comments: [asks(5)] }))).toBe(false);
+  });
+
+  it('starts the run: comment first, then a fresh label', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await startSnapshots(pr(), 'gh-token', fetchFn);
+    expect(calls(fetchFn)).toEqual([
+      `POST ${api}/issues/7/comments`,
+      `DELETE ${api}/issues/7/labels/update-snapshots`,
+      `POST ${api}/issues/7/labels`,
+    ]);
+    const body = JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string };
+    expect(body.body).toContain(SNAPSHOTS_STARTED_MARKER);
+    expect(JSON.parse(fetchFn.mock.calls[2]![1].body as string)).toEqual({ labels: ['update-snapshots'] });
+  });
+
+  it('adds the label even when there was none to remove', async () => {
+    const fetchFn = vi.fn<Fetch>(async (_url, init) =>
+      init.method === 'DELETE' ? new Response('{}', { status: 404 }) : ok(),
+    );
+    await startSnapshots(pr(), 'gh-token', fetchFn);
+    expect(calls(fetchFn).at(-1)).toBe(`POST ${api}/issues/7/labels`);
   });
 });
