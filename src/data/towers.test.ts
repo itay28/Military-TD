@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { towerLevels } from '../sim/towers';
 import { LEVEL_NAME } from './display';
-import { TOWER_STATS, type TowerKind } from './towers';
+import { BUILD_KINDS, NOT_IN_PLAY, TOWER_STATS, type TowerKind } from './towers';
 
 const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
 
@@ -11,6 +11,15 @@ describe('tower levels', () => {
       { cost: 50, range: 2.5, fireRate: 2, damage: 10, targets: ['ground', 'air'] },
       { cost: 40, range: 3, fireRate: 2, damage: 10, targets: ['ground', 'air'] },
       { cost: 70, range: 3, fireRate: 2.5, damage: 16, targets: ['ground', 'air'] },
+    ]);
+  });
+
+  it('Sniper: optics for 88 (range 6.5), then a heavier rifle for 154 (112 damage, 0.5/s)', () => {
+    const sniper = { armorPierce: 4, targets: ['ground'], targeting: 'strongest' };
+    expect(towerLevels('sniper')).toEqual([
+      { ...sniper, cost: 110, range: 6, fireRate: 0.4, damage: 70 },
+      { ...sniper, cost: 88, range: 6.5, fireRate: 0.4, damage: 70 },
+      { ...sniper, cost: 154, range: 6.5, fireRate: 0.5, damage: 112 },
     ]);
   });
 
@@ -43,5 +52,14 @@ describe('tower levels', () => {
 
   it.each(KINDS)('%s: every level above 1 has a name', (kind) => {
     for (let level = 2; level <= towerLevels(kind).length; level++) expect(LEVEL_NAME[level]).toBeTruthy();
+  });
+});
+
+describe('kinds in play', () => {
+  // ADR-0009: a kind reaches the build bar in its rollout issue, once its renders land (the Sniper's: #364).
+  it('the build kinds are every kind not held back, in TOWER_STATS order; the Sniper is held back', () => {
+    expect(NOT_IN_PLAY.has('sniper')).toBe(true);
+    expect(BUILD_KINDS).toEqual(KINDS.filter((kind) => !NOT_IN_PLAY.has(kind)));
+    expect(BUILD_KINDS).toEqual(['rifleNest', 'aaGun', 'cannon', 'mortar']);
   });
 });
