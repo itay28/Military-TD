@@ -40,6 +40,8 @@ The maintainer also wants each map to pit two sides against each other, picked f
 
 Updated 2026-11-11 (#464): the Grenade launcher row. Its renders come one Faction per part, before it is in play; the US render combines three models (launcher, a stand-in tripod, the Rifle Nest's soldier as gunner and assistant), the first built from `parts`.
 
+Updated 2026-11-11 (#467): the Russia Grenade launcher is an AGS-40 Balkan on its own tripod, a stand-in for the AGS-30 (no free model of it), with the Russia Rifle Nest's soldier as gunner and assistant.
+
 Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind), and the AA Gun is a fast-firing gun that also hits ground targets.
 
 ## Consequences

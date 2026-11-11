@@ -53,8 +53,8 @@ describe('RENDERS', () => {
 });
 
 describe('the committed Grenade launcher renders (art-ahead: not in RENDERS until #359 puts it in play)', () => {
-  // The Factions whose Grenade launcher is rendered so far: US (#464). Later parts of #359 add theirs.
-  for (const faction of ['us']) {
+  // The Factions whose Grenade launcher is rendered so far: US (#464), Russia (#467). Later parts of #359 add theirs.
+  for (const faction of ['us', 'russia']) {
     const id = `${faction}-grenade-launcher`;
     const dir = `assets/render-${id}`;
 

@@ -90,7 +90,7 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - License: CC-BY-4.0
 - Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own; Grenade launcher: its gunner and assistant gunner) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
-- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-us-grenade-launcher/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`
+- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-us-grenade-launcher/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`, `assets/render-russia-grenade-launcher/**`
 
 ## Phalanx CIWS (top-down render and turntable)
 
@@ -190,6 +190,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-mortar/**`
+
+## AGS 40 Balkan (top-down render and turntable)
+
+- Author: SpinoCactus
+- Source: <https://sketchfab.com/3d-models/85261dcf1d4e43b2b6b7db1818c7c3ae>
+- License: CC-BY-4.0
+- Attribution: "AGS 40 Balkan" by SpinoCactus (sketchfab.com), CC-BY 4.0, rendered top-down on its tripod with a crew (a stand-in for the AGS-30), in a sandbagged pit of our own, launcher split from the tripod, plus a turntable of the whole scene (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-grenade-launcher/**`
 
 ## UAZ-469 Low Poly (top-down render)
 
