@@ -45,6 +45,7 @@ describe('display names (ADR-0010)', () => {
       victory: 'MISSION COMPLETE',
       defeat: 'MISSION FAILED',
       report: 'After-action report',
+      difficulty: 'Difficulty',
     });
   });
 

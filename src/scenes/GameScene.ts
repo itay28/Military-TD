@@ -36,7 +36,7 @@ import type { Faction } from '../sim/factions';
 import type { Enemy } from '../sim/enemies';
 import { isGameOver, TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
-import { starsFor, unlocksNext } from '../sim/progression';
+import { starsFor, winUnlocksNext } from '../sim/progression';
 import { setUpGame, type GameSetup } from '../sim/scenario';
 import type { ProgressStore, WinStars } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
@@ -1031,14 +1031,14 @@ export class GameScene extends Phaser.Scene {
   /** Saves a win of `mapId` and says what it earned, including the next map when this win unlocked it. */
   private recordWin(mapId: string, stars: WinStars, difficulty: Difficulty): VictoryResult {
     const index = MAPS.findIndex((entry) => entry.id === mapId);
-    const unlocks = unlocksNext(
+    const unlocks = winUnlocksNext(
       index,
       MAPS.map((entry) => entry.id),
       this.progress.get(),
+      difficulty,
     );
     this.progress.recordResult(mapId, stars, difficulty);
-    // Only a Normal win unlocks the next map (a Hard one needs the map won on Normal first anyway).
-    return unlocks && difficulty === 'normal' ? { stars, unlockedMap: MAPS[index + 1]!.name } : { stars };
+    return unlocks ? { stars, unlockedMap: MAPS[index + 1]!.name } : { stars };
   }
 
   /** Selects tower `id` as a tap on it would, and pans the camera to it if it is off screen (#244). */
