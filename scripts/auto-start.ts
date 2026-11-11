@@ -40,6 +40,10 @@ export const RETRY_IDLE_MS = 60 * 60 * 1000;
 export const MAX_FIRES = 2;
 /** Posted when auto-start gives up on an issue whose retry died too, so it does that once (#303). */
 export const GIVE_UP_MARKER = '<!-- auto-start:gave-up -->';
+/** Posted when the maintainer restarts a handed-off issue (`/retry`, #539): planRetries treats it like a new fire. */
+export const RESET_MARKER = '<!-- auto-start:reset -->';
+/** Added to every hand-off comment: what the maintainer can reply (#539). */
+export const RESTART_HINT = 'Reply `/retry` to try again, or `/split` to split it.';
 /** Asks the split agent (.github/workflows/split-issue.yml) to split an issue into smaller ones (#303). */
 export const SPLIT_LABEL = 'needs-split';
 /** On the issues the split agent made: one whose retry dies too goes to the maintainer, not split again. */
@@ -356,7 +360,7 @@ export interface RetryIssue {
   /** Made by the split agent (`split-part`): never split again (#303). */
   readonly splitPart?: boolean;
   /** Its latest comments, oldest first. */
-  readonly comments: readonly { readonly body: string; readonly createdAt: string }[];
+  readonly comments: readonly RetryComment[];
   /** The open PR that closes it, with the times of its latest commit and comment. */
   readonly pr?: {
     readonly number: number;
@@ -364,6 +368,13 @@ export interface RetryIssue {
     readonly draft: boolean;
     readonly activity: readonly string[];
   };
+}
+
+/** An issue comment; `author` is the GitHub login, to tell the maintainer's replies from others (#539). */
+export interface RetryComment {
+  readonly body: string;
+  readonly createdAt: string;
+  readonly author?: string;
 }
 
 /** A dead implement session to fire again: the same model and base, continuing its branch and PR. */
@@ -376,6 +387,7 @@ export interface Retry extends Start {
   readonly resume?: boolean;
 }
 
+const RESET_MODEL = /<!-- auto-start:reset model=(\S+) -->/;
 const FIRE_META = /<!-- auto-start:fire-meta model=(\S+) base=(\S+) -->/;
 
 /** The comment auto-start posts after a fire: the fired marker, plus the model and base for a retry. */
@@ -397,10 +409,13 @@ export function planRetries(issues: readonly RetryIssue[], now: number, idleMs =
     if (!i.autoAgent || i.hold || i.needsYou || i.needsInfo || (i.pr && !i.pr.draft)) continue;
     const firedAt = i.comments.findLastIndex((c) => c.body.includes(FIRED_MARKER));
     if (firedAt < 0) continue;
-    const sinceFire = i.comments.slice(firedAt);
+    // A reset (#539) is a maintainer's restart: it counts as a new fire, and fires at once.
+    const resetAt = i.comments.findLastIndex((c) => c.body.includes(RESET_MARKER));
+    const sinceFire = i.comments.slice(Math.max(firedAt, resetAt));
     if (sinceFire.some((c) => c.body.includes(GIVE_UP_MARKER))) continue;
     const meta = FIRE_META.exec(i.comments[firedAt]!.body);
-    const model = meta?.[1];
+    const resetModel = resetAt > firedAt ? RESET_MODEL.exec(i.comments[resetAt]!.body)?.[1] : undefined;
+    const model = resetModel ?? meta?.[1];
     if (model !== 'sonnet' && model !== 'opus') continue;
     const target: Retry = {
       issue: i.number,
@@ -408,6 +423,10 @@ export function planRetries(issues: readonly RetryIssue[], now: number, idleMs =
       model,
       ...(i.pr ? { branch: i.pr.head, pr: i.pr.number } : {}),
     };
+    if (resetAt > firedAt) {
+      retries.push(target);
+      continue;
+    }
     if (sinceFire.some((c) => c.body.includes(DONE_MARKER))) {
       // The session ended on purpose. With no ready PR (skipped above), that was a `needs-info`
       // question (#319): once it's off and the maintainer commented after the done marker, fire again
@@ -419,7 +438,10 @@ export function planRetries(issues: readonly RetryIssue[], now: number, idleMs =
     const times = [...i.comments.map((c) => c.createdAt), ...(i.pr?.activity ?? [])].map(Date.parse);
     const idle = now - Math.max(...times);
     if (Number.isNaN(idle) || idle < idleMs) continue;
-    const lastDone = i.comments.findLastIndex((c) => c.body.includes(DONE_MARKER));
+    const lastDone = Math.max(
+      i.comments.findLastIndex((c) => c.body.includes(DONE_MARKER)),
+      resetAt,
+    );
     const fires = i.comments.slice(lastDone + 1).filter((c) => c.body.includes(FIRED_MARKER)).length;
     retries.push({
       ...target,
@@ -472,13 +494,78 @@ export async function giveUpIssue(retry: Retry, token: string, fetchFn: Fetch = 
   const body =
     retry.giveUp === 'handoff'
       ? `${HANDOFF_MARKER}\n${tries}, and it is already a split part, so auto-start hands it to you. ` +
-        `Split it or do it yourself, then remove \`${NEEDS_YOU_LABEL}\`.`
+        `Split it or do it yourself, then remove \`${NEEDS_YOU_LABEL}\`. ${RESTART_HINT}`
       : `${tries}: auto-start asked the split agent to split it into smaller issues (\`${SPLIT_LABEL}\`, ` +
         'docs/agents/prompts/split.md).';
   await github(fetchFn, token, 'POST', `issues/${retry.issue}/comments`, { body: `${body}\n\n${GIVE_UP_MARKER}` });
   await github(fetchFn, token, 'POST', `issues/${retry.issue}/labels`, {
     labels: [retry.giveUp === 'handoff' ? NEEDS_YOU_LABEL : SPLIT_LABEL],
   });
+}
+
+/** What a maintainer's reply asks for (#539): `/retry` (also `retry`, `try again`), `/retry opus`, `/split`. */
+export interface RestartCommand {
+  readonly model?: Model;
+  readonly split?: true;
+}
+
+/** Read a whole comment as a restart command; anything else, including a command inside a longer text, is `undefined`. */
+export function parseRestartCommand(body: string): RestartCommand | undefined {
+  const text = body.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (text === '/retry' || text === 'retry' || text === 'try again') return {};
+  if (text === '/retry opus') return { model: 'opus' };
+  if (text === '/split') return { split: true };
+  return undefined;
+}
+
+/** A handed-off issue the maintainer restarted (#539). */
+export interface Restart {
+  readonly issue: number;
+  readonly split: boolean;
+  readonly model?: Model;
+}
+
+/**
+ * The `needs-you` issues claimed by auto-start whose maintainer replied with a restart command after
+ * the latest hand-off (#539), like `/approve` on a PR. A maintainer's reply is by the maintainer, with no
+ * hidden marker and no *Generated by Claude Code* footer: agents post as the maintainer, but sign.
+ */
+export function planRestarts(issues: readonly RetryIssue[]): Restart[] {
+  const restarts: Restart[] = [];
+  for (const i of issues) {
+    if (!i.autoAgent || !i.needsYou || i.hold) continue;
+    const handedAt = i.comments.findLastIndex((c) => c.body.includes(HANDOFF_MARKER));
+    const reply = i.comments
+      .slice(handedAt + 1)
+      .filter(
+        (c) => c.author === MAINTAINER && !c.body.includes('<!--') && !c.body.includes('Generated by [Claude Code]'),
+      )
+      .map((c) => parseRestartCommand(c.body))
+      .findLast((command) => command !== undefined);
+    if (reply)
+      restarts.push({ issue: i.number, split: reply.split === true, ...(reply.model ? { model: reply.model } : {}) });
+  }
+  return restarts;
+}
+
+/**
+ * Carry out a restart (#539). `/retry`: a reset marker comment (planRetries fires it on the next run),
+ * then `needs-you` off. `/split`: the give-up marker and `needs-split`, as when a retry dies twice.
+ */
+export async function applyRestart(restart: Restart, token: string, fetchFn: Fetch = fetch): Promise<void> {
+  const path = `issues/${restart.issue}`;
+  if (restart.split) {
+    await github(fetchFn, token, 'POST', `${path}/comments`, {
+      body: `Splitting on your request: asked the split agent (\`${SPLIT_LABEL}\`).\n\n${GIVE_UP_MARKER}`,
+    });
+    await github(fetchFn, token, 'POST', `${path}/labels`, { labels: [SPLIT_LABEL] });
+  } else {
+    const model = restart.model ? `\n<!-- auto-start:reset model=${restart.model} -->` : '';
+    await github(fetchFn, token, 'POST', `${path}/comments`, {
+      body: `Restarting on your request${restart.model ? ` with ${restart.model}` : ''}: auto-start fires it on its next run.\n\n${RESET_MARKER}${model}`,
+    });
+  }
+  await github(fetchFn, token, 'DELETE', `${path}/labels/${NEEDS_YOU_LABEL}`);
 }
 
 /** The fire `text`: what the implement prompt (docs/agents/prompts/implement.md) reads. */
@@ -547,7 +634,7 @@ async function handOffIssue(n: number, model: Model, error: unknown, token: stri
     body:
       `${HANDOFF_MARKER}\nAuto-start couldn't start the ${model} implement task: its API trigger refused the fire ` +
       `(HTTP ${(error as { status?: number }).status}). Check the ${secret}_URL and ${secret}_TOKEN secrets and the ` +
-      `implement-${model} routine at claude.ai/code/routines, then remove \`${NEEDS_YOU_LABEL}\` to start it again.`,
+      `implement-${model} routine at claude.ai/code/routines, then remove \`${NEEDS_YOU_LABEL}\` to start it again. ${RESTART_HINT}`,
   });
   await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [NEEDS_YOU_LABEL] });
 }
