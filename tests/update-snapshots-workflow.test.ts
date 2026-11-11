@@ -13,6 +13,10 @@ describe('Update snapshots workflow', () => {
     expect(yaml).toContain("github.event.label.name == 'update-snapshots'");
   });
 
+  it('names each run after its PR, so the PR steward can wait on it (#471)', () => {
+    expect(yaml).toContain('run-name: Update snapshots #${{ github.event.pull_request.number || inputs.pr }}');
+  });
+
   it('renders in the same Playwright image as the e2e job', () => {
     expect(image(yaml)).toBeDefined();
     expect(image(yaml)).toBe(image(ci));
@@ -28,5 +32,16 @@ describe('Update snapshots workflow', () => {
     expect(render).not.toContain('secrets.');
     expect(render).toContain('persist-credentials: false');
     expect(yaml.slice(yaml.indexOf('  commit:'))).toContain('token: ${{ secrets.PROJECT_TOKEN }}');
+  });
+
+  it('removes the label first on both paths, without failing when it is absent (#470)', () => {
+    const resolve = yaml.slice(yaml.indexOf('  resolve:'), yaml.indexOf('  render:'));
+    const steps = resolve.slice(resolve.indexOf('    steps:'));
+    const first = steps.slice(0, steps.indexOf('- name: Find the PR'));
+    expect(first).toContain('Remove the update-snapshots label');
+    expect(first).not.toMatch(/^\s+if:/m);
+    expect(first).toContain('github.event.pull_request.number || inputs.pr');
+    expect(first).toContain('update-snapshots');
+    expect(first).toMatch(/\|\| true/);
   });
 });
