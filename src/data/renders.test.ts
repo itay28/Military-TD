@@ -53,8 +53,8 @@ describe('RENDERS', () => {
 });
 
 describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 puts the Sniper in play)', () => {
-  // The Factions whose Sniper is rendered so far: US (#459). Later parts of #358 add theirs.
-  for (const faction of ['us']) {
+  // The Factions whose Sniper is rendered so far: US (#459), Russia and China (#460). Later parts of #358 add theirs.
+  for (const faction of ['us', 'russia', 'china']) {
     const id = `${faction}-sniper`;
     const dir = `assets/render-${id}`;
 
