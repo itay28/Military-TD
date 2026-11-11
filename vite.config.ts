@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
 
@@ -18,5 +18,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    // Timed checks run alone, with `npm run test:perf` (vitest.perf.config.ts).
+    exclude: [...configDefaults.exclude, '**/*.perf.test.ts'],
   },
 });

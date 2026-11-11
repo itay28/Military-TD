@@ -2,6 +2,7 @@ import renderList from '../../scripts/render-sprite.json';
 import type { Faction } from '../sim/factions';
 import type { EnemyKind } from './enemies';
 import type { TowerKind } from './towers';
+import { TURNTABLES, type Turntable as TurntableData } from './turntables';
 
 /**
  * Kinds whose renders land before their gameplay (art and rules are separate issues): the Heavy tank boss (#362).
@@ -12,13 +13,8 @@ export const UPCOMING_KINDS = ['heavyTank'] as const;
 /** A kind with a render: one in play, or one whose art is ahead of its gameplay. */
 export type ModelKind = TowerKind | EnemyKind | (typeof UPCOMING_KINDS)[number];
 
-/** A turntable sheet (#407, `render-sprite.py --turntable`): `frames` square frames of `frameSize` px, `columns` per row. */
-export interface Turntable {
-  readonly url: string;
-  readonly frames: number;
-  readonly frameSize: number;
-  readonly columns: number;
-}
+/** A turntable sheet (`src/data/turntables.ts`): `frames` square frames of `frameSize` px, `columns` per row. */
+export type Turntable = Pick<TurntableData, 'url' | 'frames' | 'frameSize' | 'columns'>;
 
 /** What the Field manual shows a model with: its turntable when there is one, else its top-down render, stacked. */
 export interface ModelView {
@@ -33,15 +29,6 @@ const TOP_DOWN = import.meta.glob<string>('../../assets/render-*/*.png', {
   import: 'default',
   eager: true,
 });
-const SHEETS = import.meta.glob<string>('../../assets/render-*/*-turntable.webp', {
-  query: '?url',
-  import: 'default',
-  eager: true,
-});
-const SHEET_META = import.meta.glob<Omit<Turntable, 'url'>>('../../assets/render-*/*-turntable.json', {
-  import: 'default',
-  eager: true,
-});
 
 /** The model view of `kind` for `faction`, from the render list (`scripts/render-sprite.json`). */
 export function modelFor(faction: Faction, kind: ModelKind): ModelView {
@@ -52,9 +39,8 @@ export function modelFor(faction: Faction, kind: ModelKind): ModelView {
   const layers = single
     ? [single]
     : [TOP_DOWN[`${dir}-hull.png`], TOP_DOWN[`${dir}-turret.png`]].filter((u): u is string => !!u);
-  const url = SHEETS[`${dir}-turntable.webp`];
-  const meta = SHEET_META[`${dir}-turntable.json`];
-  return url && meta
-    ? { turntable: { url, frames: meta.frames, frameSize: meta.frameSize, columns: meta.columns }, layers }
+  const t = TURNTABLES[model.id];
+  return t
+    ? { turntable: { url: t.url, frames: t.frames, frameSize: t.frameSize, columns: t.columns }, layers }
     : { layers };
 }

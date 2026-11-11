@@ -280,6 +280,7 @@ describe('withFieldUpdates', () => {
     feature: false,
     needsYou: false,
     needsInfo: false,
+    needsSplit: false,
     autoAgent: false,
     size: undefined,
     priority: undefined,
