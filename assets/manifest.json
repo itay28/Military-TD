@@ -216,6 +216,16 @@
       "files": ["assets/render-us-helicopter/**"]
     },
     {
+      "id": "render-us-jet",
+      "name": "F 16 Fighting Falcon (top-down render and turntable)",
+      "author": "davidmilitei09",
+      "source": "https://sketchfab.com/3d-models/c2ed832c0aa743789aa5b4452a60e97c",
+      "license": "CC-BY-4.0",
+      "attribution": "\"F 16 Fighting Falcon\" by davidmilitei09 (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-us-jet/**"]
+    },
+    {
       "id": "render-russia-aa-gun",
       "name": "ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render and turntable)",
       "author": "LuckySkink9661",
@@ -264,6 +274,16 @@
       "attribution": "\"Mi-8\" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
       "downloaded": "2026-11-02",
       "files": ["assets/render-russia-helicopter/**"]
+    },
+    {
+      "id": "render-russia-jet",
+      "name": "Su-25 (top-down render and turntable)",
+      "author": "tnikita",
+      "source": "https://sketchfab.com/3d-models/88b71eb848cf4418a95dff497c07cefc",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Su-25\" by tnikita (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-russia-jet/**"]
     },
     {
       "id": "render-china-rifle-nest",

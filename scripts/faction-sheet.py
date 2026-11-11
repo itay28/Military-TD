@@ -20,9 +20,10 @@ ROOT = Path(__file__).resolve().parent.parent
 RENDER_TILE = 128  # render-sprite.json pxPerTile
 GAME_TILE = 48
 NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in its own pixels (sprite-compare.py)
-CELL = 1.8  # tiles per cell, enough for the largest canvas (the Heavy tank, 1.75)
+CELL = 2.5  # tiles per cell, enough for the largest canvas (the jet's, for its offset shadow)
 FACTIONS = ["us", "russia", "china", "insurgents"]
-KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "heavyTank", "helicopter"]
+KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "heavyTank", "helicopter", "jet"]
+PENDING = {"jet"}  # kinds a faction may not have yet (#482: China and Insurgents jets come in the next part)
 # v0.8.0 kinds rendered one Faction at a time ahead of their gameplay (#360): on the sheet once the Faction has one.
 NEW_KINDS = ["apc"]
 
@@ -56,7 +57,8 @@ def main() -> None:
         labels, name, default_out = KINDS, args.faction, f"docs/art/faction-{args.faction}.png"
     if not args.kind:
         labels = KINDS + [k for k in NEW_KINDS if k in found]
-    missing = [k for k in labels if k not in found]
+    pending = lambda l: (l in PENDING) if args.kind is None else False
+    missing = [k for k in labels if k not in found and not pending(k)]
     if missing:
         raise SystemExit(f"{name}: no model for {', '.join(missing)}")
     small, big = round(CELL * GAME_TILE), round(CELL * RENDER_TILE)
@@ -64,10 +66,13 @@ def main() -> None:
     sheet = Image.new("RGBA", (width, small + 2 * big), (40, 40, 40, 255))
     draw = ImageDraw.Draw(sheet)
     for i, label in enumerate(labels):
+        x = i * big
+        if label not in found:
+            draw.text((x + 4, small + 2 * big - 14), f"{label}: pending", fill=(255, 255, 255, 255))
+            continue
         m = found[label]
         folder = args.assets / f"render-{m['id']}"
         whole = Image.open(folder / f"{m['id']}.png").convert("RGBA")
-        x = i * big
         sheet.alpha_composite(grass(small), (x + (big - small) // 2, 0))
         place(sheet, whole, GAME_TILE / RENDER_TILE, x + big // 2, small // 2)
         sheet.alpha_composite(grass(big), (x, small))

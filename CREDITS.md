@@ -191,6 +191,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-helicopter/**`
 
+## F 16 Fighting Falcon (top-down render and turntable)
+
+- Author: davidmilitei09
+- Source: <https://sketchfab.com/3d-models/c2ed832c0aa743789aa5b4452a60e97c>
+- License: CC-BY-4.0
+- Attribution: "F 16 Fighting Falcon" by davidmilitei09 (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-jet/**`
+
 ## ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render and turntable)
 
 - Author: LuckySkink9661
@@ -235,6 +244,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Mi-8" by tiunov.se (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-helicopter/**`
+
+## Su-25 (top-down render and turntable)
+
+- Author: tnikita
+- Source: <https://sketchfab.com/3d-models/88b71eb848cf4418a95dff497c07cefc>
+- License: CC-BY-4.0
+- Attribution: "Su-25" by tnikita (sketchfab.com), CC-BY 4.0, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-jet/**`
 
 ## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
