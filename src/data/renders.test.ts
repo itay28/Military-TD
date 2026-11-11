@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { RENDERS, RENDER_FACING, renderFor } from './renders';
+import { FACTIONS } from '../sim/factions';
 import { SPRITES, type SpriteKind } from './sprites';
 
 describe('RENDERS', () => {
@@ -53,8 +54,8 @@ describe('RENDERS', () => {
 });
 
 describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 puts the Sniper in play)', () => {
-  // The Factions whose Sniper is rendered so far: US (#459), Russia and China (#460). Later parts of #358 add theirs.
-  for (const faction of ['us', 'russia', 'china']) {
+  // The Factions whose Sniper is rendered so far: US (#459), Russia and China (#460), Insurgents (#462): every Faction.
+  for (const faction of FACTIONS) {
     const id = `${faction}-sniper`;
     const dir = `assets/render-${id}`;
 

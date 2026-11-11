@@ -120,8 +120,8 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
 describe('the Sniper renders (art-ahead, #358)', () => {
   const snipers = RENDER_CONFIG.models.filter((m) => m.kind === 'sniper');
 
-  it('covers the Factions done so far: US (#459), Russia and China (#460)', () => {
-    expect(snipers.map((m) => m.faction)).toEqual(expect.arrayContaining(['us', 'russia', 'china']));
+  it('covers every Faction: US (#459), Russia and China (#460), Insurgents (#462)', () => {
+    expect(snipers.map((m) => m.faction).sort()).toEqual([...FACTIONS].sort());
   });
 
   for (const model of snipers) {

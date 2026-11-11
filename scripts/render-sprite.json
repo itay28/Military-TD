@@ -1008,6 +1008,63 @@
       }
     },
     {
+      "id": "insurgents-sniper",
+      "kind": "sniper",
+      "faction": "insurgents",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, kit re-coloured to civilian browns and denim (stand-in kit and rifle for a Dragunov SVD pair in civilian clothes)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.68, 0.95]
+          },
+          "material_6": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "material": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "Glove": {
+            "color": [0.75, 0.6, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "insurgents-jeep",
       "kind": "jeep",
       "faction": "insurgents",
