@@ -1,5 +1,5 @@
 import { ENEMY_NAMES, ENEMY_WEAKNESS, TOWER_NAMES, TOWER_ROLES } from '../data/display';
-import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
+import { ENEMY_STATS, NOT_IN_PLAY, type EnemyKind } from '../data/enemies';
 import { START_LIVES, START_MONEY } from '../data/start';
 import { BUILD_KINDS, DISMANTLE_MS, SELL_REFUND, TOWER_STATS } from '../data/towers';
 import { KEY_MAP } from './keymap';
@@ -45,7 +45,7 @@ export function mountHowToPlay(root: HTMLElement, { onBack }: { readonly onBack:
   };
 
   const towerKinds = BUILD_KINDS;
-  const enemyKinds = Object.keys(ENEMY_STATS) as EnemyKind[];
+  const enemyKinds = (Object.keys(ENEMY_STATS) as EnemyKind[]).filter((k) => !NOT_IN_PLAY.has(k));
 
   const keys = el('table');
   const head = keys.createTHead().insertRow();
