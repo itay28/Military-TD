@@ -146,6 +146,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-jeep/**`
 
+## M113 (top-down render and turntable)
+
+- Author: arc4de
+- Source: <https://sketchfab.com/3d-models/7fe132c071584049b51d3569726021a0>
+- License: CC-BY-4.0
+- Attribution: "M113" by arc4de (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-apc/**`
+
 ## M1A2 Abrams Crows (top-down render and turntable)
 
 - Author: MirzaArrafiERV_45

@@ -1295,6 +1295,48 @@ const renamedCritical = (renamed: readonly Rename[]): string[] =>
         : [],
   );
 
+/** The REST fields of a PR that tell its mergeability (#547). */
+export interface RestMergeability {
+  mergeable: boolean | null;
+  mergeable_state: string;
+}
+
+/** REST mergeability as the steward reads it; null while GitHub is still computing it. */
+export function restMergeability(rest: RestMergeability): Pick<StewardPr, 'mergeable' | 'behind'> | null {
+  if (rest.mergeable_state === 'dirty') return { mergeable: 'CONFLICTING', behind: false };
+  if (rest.mergeable === null) return null;
+  return { mergeable: rest.mergeable ? 'MERGEABLE' : 'CONFLICTING', behind: rest.mergeable_state === 'behind' };
+}
+
+const MERGEABILITY_TRIES = 3;
+const MERGEABILITY_WAIT_MS = 3000;
+
+/**
+ * GitHub computes mergeability lazily, so the list query reports UNKNOWN for a PR nobody asked
+ * about since the base moved (#547). A REST fetch of that PR starts the computation; it is re-read
+ * a few times after a short wait. Still unknown (or a failed fetch) leaves the PR as it was, and
+ * `decide` keeps waiting; the next run asks again.
+ */
+export async function settleMergeability(
+  pr: StewardPr,
+  token: string,
+  fetchFn: Fetch = fetch,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<StewardPr> {
+  if (pr.mergeable !== 'UNKNOWN') return pr;
+  try {
+    for (let i = 0; i < MERGEABILITY_TRIES; i++) {
+      if (i) await sleep(MERGEABILITY_WAIT_MS);
+      const res = await github(fetchFn, token, 'GET', `pulls/${pr.number}`);
+      const settled = restMergeability((await res.json()) as RestMergeability);
+      if (settled) return { ...pr, ...settled };
+    }
+  } catch (error) {
+    console.log(`#${pr.number}: couldn't fetch its mergeability: ${String(error)}`);
+  }
+  return pr;
+}
+
 /** Reads the old paths of a PR's renames (one request, only for a PR that renames something). */
 async function withRenameSources(pr: StewardPr, token: string): Promise<StewardPr> {
   if (!pr.renamed.length) return pr;
@@ -1463,7 +1505,12 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
   };
   const snapshotRuns = await readSnapshotRuns(token);
   const prs = await Promise.all(
-    nodes.map((node) => withRenameSources(toStewardPr(node, snapshotRuns.get(node.number) ?? null), token)),
+    nodes.map(async (node) =>
+      settleMergeability(
+        await withRenameSources(toStewardPr(node, snapshotRuns.get(node.number) ?? null), token),
+        token,
+      ),
+    ),
   );
   const queued = prs.filter((p) => inQueue(p, defaultBranch));
   const map = queued.length
