@@ -59,13 +59,26 @@ export interface MapEntry {
   readonly defender: Faction;
   /** The painted ground image drawn under the grid, or undefined to draw the tileset (#312). */
   readonly groundImageUrl: string | undefined;
+  /** What the Operations screen's briefing says before Deploy (#401). */
+  readonly briefing: MapBriefing;
 }
 
-const entry = (name: string, data: TiledMapData, waves: readonly WaveData[]): MapEntry => ({
+/** A map's briefing text (#401): no wave contents, which are Sniper intel (#353). */
+export interface MapBriefing {
+  /** "Operation <Name>", the briefing's heading. */
+  readonly operation: string;
+  /** One or two sentences: who is coming and what to hold. */
+  readonly situation: string;
+  /** One line on the ground and the road. */
+  readonly terrain: string;
+}
+
+const entry = (name: string, data: TiledMapData, waves: readonly WaveData[], briefing: MapBriefing): MapEntry => ({
   id: data.id,
   name,
   data,
   waves,
+  briefing,
   attacker: data.attacker,
   defender: data.defender,
   groundImageUrl: groundImageUrl(data),
@@ -73,10 +86,29 @@ const entry = (name: string, data: TiledMapData, waves: readonly WaveData[]): Ma
 
 /** Every map, in Level select order. A new map is a new entry here. */
 export const MAPS: readonly MapEntry[] = [
-  entry('Training Ground', MVP_MAP, WAVES),
-  entry('Switchback', SWITCHBACK_MAP, SWITCHBACK_WAVES),
-  entry('Serpentine', SERPENTINE_MAP, SERPENTINE_WAVES),
-  entry('Hairpin', HAIRPIN_MAP, HAIRPIN_WAVES),
+  entry('Training Ground', MVP_MAP, WAVES, {
+    operation: 'Operation First Light',
+    situation:
+      'Enemy forces are probing the farmland from the west. Hold the road before they reach HQ on the east edge.',
+    terrain: 'Open fields cut by one winding dirt road, with little cover.',
+  }),
+  entry('Switchback', SWITCHBACK_MAP, SWITCHBACK_WAVES, {
+    operation: 'Operation Hollow Ridge',
+    situation:
+      'Enemy columns are coming down from the northern ridge. Stop them on the switchbacks before they reach HQ in the valley.',
+    terrain: 'A road that doubles back down a slope, so the turns bunch traffic up.',
+  }),
+  entry('Serpentine', SERPENTINE_MAP, SERPENTINE_WAVES, {
+    operation: 'Operation Long Watch',
+    situation: 'A large enemy force is pushing south toward HQ. Bleed it at every bend of the long road.',
+    terrain: 'One road snaking through five bends: long, and every bend can be covered.',
+  }),
+  entry('Hairpin', HAIRPIN_MAP, HAIRPIN_WAVES, {
+    operation: 'Operation Iron Hook',
+    situation:
+      'The enemy is driving hard down the western road toward HQ. Hold the hook where it turns back on itself.',
+    terrain: 'The road runs deep, then doubles back two rows lower; one position covers both legs.',
+  }),
 ];
 
 /** The map with this id; throws for an unknown one. */
