@@ -27,6 +27,10 @@ name: PR steward
 # requests it made and the quota left; an exhausted quota logs its reset time and passes green
 # (scripts/rate-limit.ts).
 #
+# Update snapshots (#471): a PR with an active Update snapshots run (label or by hand, matched by the
+# run's name) waits for up to 30 min instead of getting a round or a hand-off; its push starts CI,
+# and CI finishing runs this workflow again.
+#
 # Status labels (#419): every run gives each open PR one `waiting: …` / `ready to merge` label, even
 # with the switches off. So a label follows within one run, it also runs when a PR turns draft or
 # ready or closes, when an issue's labels, milestone or state change (a `needs-info` answered, a
