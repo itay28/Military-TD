@@ -218,39 +218,39 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-mortar/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted green (toward Type 07)
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted green (toward Type 07), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-infantry/**`
 
-## Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render)
+## Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render and turntable)
 
 - Author: KidBi-Gaming
 - Source: <https://sketchfab.com/3d-models/935856d763bf49aca45a48fae3a6846c>
 - License: CC-BY-4.0
-- Attribution: "Military Jeep Low Poly – Game Ready 3D Vehicle" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive
+- Attribution: "Military Jeep Low Poly – Game Ready 3D Vehicle" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-jeep/**`
 
-## Type 99 MBT (top-down render)
+## Type 99 MBT (top-down render and turntable)
 
 - Author: philano
 - Source: <https://sketchfab.com/3d-models/7075c92c5ef1408497f1530703ff2942>
 - License: CC-BY-4.0
-- Attribution: "Type 99 MBT" by philano (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "Type 99 MBT" by philano (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-tank/**`
 
-## Sikorsky UH-60M Blackhawk (top-down render)
+## Sikorsky UH-60M Blackhawk (top-down render and turntable)
 
 - Author: MirzaArrafiERV_45
 - Source: <https://sketchfab.com/3d-models/12b4e525676a49678ac3006b360c8750>
 - License: CC-BY-4.0
-- Attribution: "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-helicopter/**`
 
