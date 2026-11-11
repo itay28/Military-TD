@@ -1563,7 +1563,7 @@ describe('merge queue', () => {
       const later = pr({
         closes: [{ number: 3, blocked: false, needsInfo: false, milestone: { number: 4, title: 'v0.3.0' } }],
       });
-      expect(inQueue(later, 'main', { number: 2, title: 'v0.2.0', after: [4], done: false })).toBe(true);
+      expect(inQueue(later, 'main')).toBe(true);
     });
   });
 
