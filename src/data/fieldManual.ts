@@ -1,6 +1,6 @@
 import { counteredBy, poorAgainst, resists, strongAgainst } from './counters';
 import { ENEMY_NAMES, ENEMY_WEAKNESS, LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES } from './display';
-import { ENEMY_STATS, type EnemyKind } from './enemies';
+import { ENEMY_STATS, type EnemyKind, PLAYABLE_KINDS } from './enemies';
 import { BUILD_KINDS, TOWER_LEVELS, TOWER_STATS, type TowerKind } from './towers';
 
 /**
@@ -17,6 +17,7 @@ export const CLASS_LINES = {
   infantry: 'Rifle squad on foot: assault rifles, body armor and helmets',
   jeep: 'Light four-wheel-drive utility vehicle, unarmored',
   helicopter: 'Medium transport helicopter: twin turbines, a light armored cabin',
+  jet: 'Light fighter jet: a single engine, fast and unarmored',
   tank: 'Main battle tank: large-calibre gun, heavy composite armor',
 } as const satisfies Record<TowerKind | EnemyKind, string>;
 
@@ -103,7 +104,7 @@ function enemyEntry(kind: EnemyKind): FieldManualEntry {
   };
 }
 
-/** Every Field manual entry: the towers, then the enemy kinds, in data order. */
+/** Every Field manual entry: the towers, then the playable enemy kinds, in data order. */
 export function fieldManualEntries(): FieldManualEntry[] {
-  return [...BUILD_KINDS.map(towerEntry), ...(Object.keys(ENEMY_STATS) as EnemyKind[]).map(enemyEntry)];
+  return [...BUILD_KINDS.map(towerEntry), ...PLAYABLE_KINDS.map(enemyEntry)];
 }
