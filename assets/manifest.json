@@ -146,6 +146,16 @@
       "files": ["assets/render-us-jeep/**"]
     },
     {
+      "id": "render-china-apc",
+      "name": "ZSL-92C (top-down render and turntable)",
+      "author": "42manako",
+      "source": "https://sketchfab.com/3d-models/75cffc4e2e5e454fbcb69279599a93ed",
+      "license": "CC-BY-4.0",
+      "attribution": "\"ZSL-92C\" by 42manako (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-china-apc/**"]
+    },
+    {
       "id": "render-russia-apc",
       "name": "BTR-82A (top-down render and turntable)",
       "author": "lebedeventerprise",

@@ -1,0 +1,11 @@
+Rendered sprite of "ZSL-92C" by 42manako
+https://sketchfab.com/3d-models/75cffc4e2e5e454fbcb69279599a93ed
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+china-apc.png is a top-down render of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated).
+china-apc-turntable.webp is a turntable of the same model (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-11.
