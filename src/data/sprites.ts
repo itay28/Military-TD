@@ -27,6 +27,7 @@ export const SPRITES = {
   tank: 'tankBody_sand',
   helicopter: null, // no pack has a rotorcraft
   heavyTank: null, // shape fallback until its art lands
+  jet: null, // art comes in #361
 } as const satisfies Record<SpriteKind, string | null>;
 
 /** The atlas frame `kind` is drawn with, or null when it has none. */
@@ -74,6 +75,7 @@ export const SPRITE_HEADING = {
   tank: -Math.PI / 2,
   helicopter: 0,
   heavyTank: 0,
+  jet: 0,
 } as const satisfies Record<EnemyKind, number>;
 
 /** The frame each tower kind's turret stands on; null for a kind with no sprite (it keeps its shape). */

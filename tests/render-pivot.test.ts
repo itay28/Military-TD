@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
+import { NOT_PLAYABLE_KINDS } from '../src/data/enemies';
 import { isUpcoming, UPCOMING_KINDS } from '../src/data/modelViews';
 import { SPRITES } from '../src/data/sprites';
-import { NOT_IN_PLAY as ENEMIES_NOT_IN_PLAY, type EnemyKind } from '../src/data/enemies';
 import { NOT_IN_PLAY, type TowerKind } from '../src/data/towers';
 import { FACTIONS, type Faction } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
@@ -107,9 +107,10 @@ describe('the committed render data', () => {
 const NEW_KINDS: Readonly<Record<string, readonly Faction[]>> = { apc: ['us'] };
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  // A kind not in play yet (the Sniper, renders in #358; the Heavy tank boss) has none until its rollout.
+  // A kind not in play yet (the Sniper, renders in #358) has none until its rollout;
+  // the Heavy tank (in UPCOMING_KINDS) joins once all four Factions have it (#509).
   const inPlay = Object.keys(SPRITES).filter(
-    (kind) => !NOT_IN_PLAY.has(kind as TowerKind) && !ENEMIES_NOT_IN_PLAY.has(kind as EnemyKind),
+    (kind) => !NOT_IN_PLAY.has(kind as TowerKind) && !(NOT_PLAYABLE_KINDS as readonly string[]).includes(kind),
   );
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   // The Fighter jet (`jet`, #482) is rendered for US and Russia first; China and Insurgents are exempt until the next part.
