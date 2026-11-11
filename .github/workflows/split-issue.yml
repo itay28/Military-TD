@@ -1,11 +1,15 @@
 name: Split issue
+# Names each run after its issue: Board sync matches runs to issues by it to retry a failed split (#486).
+run-name: Split issue #${{ github.event.issue.number || inputs.issue }}
 
 # The split agent (#303): when an implement session dies twice on an issue (the first fire and
 # its one retry), auto-start gives up on it and labels it `needs-split` (with PROJECT_TOKEN, so
 # this runs). Claude (Opus) splits it into 2–4 smaller issues that each fit one session, closes
 # the original, and dispatches Board sync, which can start the first part. Prompt:
 # docs/agents/prompts/split.md. A part that dies twice too is handed to the maintainer, not split
-# again (`split-part`). The agent only gets GITHUB_TOKEN.
+# again (`split-part`). The agent only gets GITHUB_TOKEN. It doesn't link the parts: it writes
+# split-plan.json and a plain step links them (scripts/split-links.ts, #488), since the agent's own
+# link calls were denied at random. Needs the NTFY_TOPIC secret to push a link failure.
 on:
   issues:
     types: [labeled]
@@ -42,6 +46,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Split it
+        id: split
         uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,10 +55,36 @@ jobs:
           prompt: |
             Read docs/agents/prompts/split.md and follow it for issue #${{ env.ISSUE }} in ${{ github.repository }}.
             You are running in CI. Nobody can answer questions, so don't ask any.
-          claude_args: '--model opus --allowedTools "Read,Glob,Grep,Bash(git log:*),Bash(git diff:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh issue close ${{ env.ISSUE }} *),Bash(gh pr view:*),Bash(gh pr edit:*),Bash(gh api repos/${{ github.repository }}/issues/*),Bash(gh api repos/${{ github.repository }}/milestones*)"'
+          claude_args: '--model opus --allowedTools "Read,Glob,Grep,Edit(./split-plan.json),Write(./split-plan.json),Bash(git log:*),Bash(git diff:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh issue close ${{ env.ISSUE }} *),Bash(gh pr view:*),Bash(gh pr edit:*),Bash(gh api repos/${{ github.repository }}/issues/*),Bash(gh api repos/${{ github.repository }}/milestones*)"'
+
+      # Kept a week, so the agent's permission denials can be read later (#488).
+      - name: Upload Claude's execution output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-execution-output
+          path: ${{ steps.split.outputs.execution_file }}
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Set up Node
+        if: hashFiles('split-plan.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # No plan file means the agent didn't split (it handed the issue to the maintainer instead).
+      # On a missing link it comments on that part, labels it needs-you, pushes and fails.
+      - name: Link the parts
+        if: hashFiles('split-plan.json') != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node scripts/split-links.ts split-plan.json
 
       # Issues made and labels set with GITHUB_TOKEN start no workflow, but a dispatch does.
       - name: Run Board sync
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run board-sync.yml --repo ${{ github.repository }}

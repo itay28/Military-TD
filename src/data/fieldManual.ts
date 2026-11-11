@@ -13,6 +13,7 @@ export const CLASS_LINES = {
   cannon: 'Anti-tank gun position: armor-piercing rounds from a tripod or a towed carriage',
   sniper: 'Designated marksman team: a long-barrelled bolt-action rifle with a scope, in a prone firing position',
   mortar: 'Medium mortar on a bipod and baseplate, dug into a sandbagged pit',
+  grenadeLauncher: 'Automatic grenade launcher on a tripod: belt-fed, flat-trajectory low-velocity grenades',
   infantry: 'Rifle squad on foot: assault rifles, body armor and helmets',
   jeep: 'Light four-wheel-drive utility vehicle, unarmored',
   helicopter: 'Medium transport helicopter: twin turbines, a light armored cabin',

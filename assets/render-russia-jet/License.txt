@@ -1,0 +1,12 @@
+Rendered sprites of "Su-25" by tnikita
+https://sketchfab.com/3d-models/88b71eb848cf4418a95dff497c07cefc
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNG in this folder is a top-down render of that model made by
+scripts/render-sprite.py (changed: rendered from above in flight, raised off the ground so its
+shadow falls offset, lit, desaturated).
+russia-jet-turntable.webp is a turntable of the same model (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-11.

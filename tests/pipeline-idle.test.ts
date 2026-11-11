@@ -94,6 +94,16 @@ describe('idleReasons: waiting on you', () => {
     expect(texts(rs, 'waiting').join('\n')).toContain('PR #213');
   });
 
+  it('lists issues stuck waiting for the split agent (needs-split, #486)', () => {
+    const rs = reasons([issue(79, { labels: ['needs-split', 'auto-agent'], status: 'In progress', assigned: true })]);
+    expect(keys(rs.filter((r) => r.group === 'waiting'))).toEqual(['waiting:#79']);
+    expect(texts(rs, 'waiting').join('\n')).toContain('needs-split');
+  });
+
+  it('does not count a needs-split issue as an agent at work (#486)', () => {
+    expect(isStarved([{ autoAgent: true, status: 'In progress', needsSplit: true }], 0)).toBe(true);
+  });
+
   it('lists a PR waiting for an approval (needs-approval, #417)', () => {
     const rs = reasons([], [pr(214, [7], { labels: ['needs-approval'] })]);
     expect(keys(rs.filter((r) => r.group === 'waiting'))).toEqual(['waiting:PR#214']);

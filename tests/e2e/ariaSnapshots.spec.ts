@@ -84,6 +84,14 @@ test('the Level select lists each map by name and best stars, then Back', async 
   await expectAria(page.locator('#level-select'), 'level-select-initial.aria.yml');
 });
 
+test('a map’s briefing gives the operation, grid, Situation, Forces and Terrain, then Deploy and Back (#401)', async ({
+  page,
+}) => {
+  await openLevelSelect(page);
+  await page.getByRole('button', { name: /^Training Ground,/ }).click();
+  await expectAria(page.locator('#level-select'), 'briefing.aria.yml');
+});
+
 test('the End screen after a won one-wave game shows the result and the damage report tables', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('one-tower-kills-one-infantry'));
