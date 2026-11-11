@@ -290,14 +290,23 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-helicopter/**`
 
+## AGS-17 Plamya FBX (top-down render and turntable)
+
+- Author: Jeyhun1985
+- Source: <https://sketchfab.com/3d-models/c1d507d1b4dc40ef91809ee64dc9dd5b>
+- License: CC-BY-4.0
+- Attribution: "AGS-17 Plamya FBX" by Jeyhun1985 (sketchfab.com), CC-BY 4.0, rendered top-down on its tripod with a crew, in a sandbagged pit of our own, launcher split from the tripod, plus a turntable of the whole scene (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-insurgents-grenade-launcher/**`
+
 ## Tactical Soldier (game ready) low poly (top-down render)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit re-coloured to civilian browns and denim, two copies set in a sandbagged pit of our own
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit re-coloured to civilian browns and denim, two copies set in a sandbagged pit of our own; also the Grenade launcher's gunner and assistant gunner, crouched beside it
 - Downloaded: 2026-11-02
-- Files: `assets/render-insurgents-rifle-nest/**`
+- Files: `assets/render-insurgents-rifle-nest/**`, `assets/render-insurgents-grenade-launcher/**`
 
 ## SPG-9 (top-down render)
 

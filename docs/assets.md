@@ -229,6 +229,7 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | `render-china-tank/` | "Type 99 MBT" by philano, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-helicopter/` | "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-grenade-launcher/` | "AGS-17 Plamya FBX" by Jeyhun1985, "Tactical Soldier (game ready) low poly" by MissingTray1151, both CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-insurgents-cannon/` | "SPG-9" by Jack512kb, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
