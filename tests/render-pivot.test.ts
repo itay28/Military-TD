@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
-import { UPCOMING_KINDS } from '../src/data/modelViews';
+import { isUpcoming, UPCOMING_KINDS } from '../src/data/modelViews';
 import { SPRITES } from '../src/data/sprites';
 import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
@@ -107,7 +107,7 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
       expect(
         models
-          .filter((m) => !(UPCOMING_KINDS as readonly string[]).includes(m.kind))
+          .filter((m) => !isUpcoming(m.kind))
           .map((m) => m.kind)
           .sort(),
       ).toEqual(kinds);

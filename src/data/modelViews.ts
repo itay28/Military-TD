@@ -10,6 +10,9 @@ import { TURNTABLES, type Turntable as TurntableData } from './turntables';
  */
 export const UPCOMING_KINDS = ['heavyTank'] as const;
 
+/** True for a kind whose art is ahead of its gameplay. */
+export const isUpcoming = (kind: string): boolean => (UPCOMING_KINDS as readonly string[]).includes(kind);
+
 /** A kind with a render: one in play, or one whose art is ahead of its gameplay. */
 export type ModelKind = TowerKind | EnemyKind | (typeof UPCOMING_KINDS)[number];
 
