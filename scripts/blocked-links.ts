@@ -43,6 +43,7 @@ export async function linkBlockers(issue: number, blockers: number[], api: Block
   const added: string[] = [];
   const problems: Problem[] = [];
   const fail = (message: string) => problems.push({ issue, message });
+  const failed = new Set<number>();
 
   for (const blocker of blockers) {
     try {
@@ -51,6 +52,7 @@ export async function linkBlockers(issue: number, blockers: number[], api: Block
         added.push(`#${issue} blocked by #${blocker}`);
       }
     } catch (error) {
+      failed.add(blocker);
       fail(`marking it blocked by #${blocker} failed: ${reason(error)}`);
     }
   }
@@ -58,8 +60,7 @@ export async function linkBlockers(issue: number, blockers: number[], api: Block
   try {
     const now = await api.blockedBy(issue);
     for (const blocker of blockers)
-      if (!now.includes(blocker) && !problems.some((p) => p.message.includes(`#${blocker} failed`)))
-        fail(`not blocked by #${blocker}`);
+      if (!now.includes(blocker) && !failed.has(blocker)) fail(`not blocked by #${blocker}`);
   } catch (error) {
     fail(`reading what blocks it failed: ${reason(error)}`);
   }
