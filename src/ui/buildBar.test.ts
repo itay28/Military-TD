@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
 import { renderFor } from '../data/renders';
 import { towerIcon } from '../data/sprites';
-import { TOWER_STATS } from '../data/towers';
+import { BUILD_KINDS, TOWER_STATS } from '../data/towers';
 import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
 import { towerTooltip } from './towerTooltip';
 
@@ -29,25 +29,32 @@ beforeEach(() => {
 });
 
 describe('buildOptions', () => {
-  it('has every tower kind, in TOWER_STATS order, with its name, cost and colours', () => {
+  it('has every tower kind in play, in TOWER_STATS order, with its name, cost and colours', () => {
     expect(buildOptions()).toEqual(
-      Object.entries(TOWER_STATS).map(([kind, stats]) => ({
-        kind,
-        name: TOWER_NAMES[kind as keyof typeof TOWER_STATS],
-        cost: stats.cost,
-        icon: {
-          fill: TOWER_STYLE[kind as keyof typeof TOWER_STATS].fill,
-          outline: TOWER_STYLE[kind as keyof typeof TOWER_STATS].outline,
-          shape: TOWER_STYLE[kind as keyof typeof TOWER_STATS].shape,
-          size: TOWER_STYLE[kind as keyof typeof TOWER_STATS].size,
-        },
-        tooltip: towerTooltip(kind as keyof typeof TOWER_STATS),
-        ...(kind === 'aaGun'
-          ? { render: expect.objectContaining({ hullUrl: renderFor('aaGun')!.hullUrl }) }
-          : { sprite: towerIcon(kind as keyof typeof TOWER_STATS) }),
-      })),
+      Object.entries(TOWER_STATS)
+        .filter(([kind]) => BUILD_KINDS.includes(kind as keyof typeof TOWER_STATS))
+        .map(([kind, stats]) => ({
+          kind,
+          name: TOWER_NAMES[kind as keyof typeof TOWER_STATS],
+          cost: stats.cost,
+          icon: {
+            fill: TOWER_STYLE[kind as keyof typeof TOWER_STATS].fill,
+            outline: TOWER_STYLE[kind as keyof typeof TOWER_STATS].outline,
+            shape: TOWER_STYLE[kind as keyof typeof TOWER_STATS].shape,
+            size: TOWER_STYLE[kind as keyof typeof TOWER_STATS].size,
+          },
+          tooltip: towerTooltip(kind as keyof typeof TOWER_STATS),
+          ...(kind === 'aaGun'
+            ? { render: expect.objectContaining({ hullUrl: renderFor('aaGun')!.hullUrl }) }
+            : { sprite: towerIcon(kind as keyof typeof TOWER_STATS) }),
+        })),
     );
     expect(buildOptions()[0]).toMatchObject({ kind: 'rifleNest', name: 'Rifle Nest', cost: 50 });
+    expect(buildOptions().map((o) => o.kind)).not.toContain('sniper'); // not in play yet (#364)
+  });
+
+  it('leaves out a kind not in play yet: the grenade launcher waits for its renders (#75, #365)', () => {
+    expect(buildOptions().map((option) => option.kind)).not.toContain('grenadeLauncher');
   });
 });
 

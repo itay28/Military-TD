@@ -1,6 +1,6 @@
 # 9. Satellite-style milsim art and factions per map
 
-Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286)
+Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Heavy tank (boss) row for its renders (#362) · Updated 2026-11-11: an APC row in "What each kind depicts" (#478, v0.8.0); Fighter jet row and size (#482)
 
 ## Context
 
@@ -16,7 +16,7 @@ The maintainer also wants each map to pit two sides against each other, picked f
    - Ground tiles come from USGS **NAIP** aerial imagery (public domain, about 0.6 m per pixel): fields, dirt roads, treelines. Sentinel-2 (10 m) is too coarse.
    - Towers and units are **top-down renders of real equipment**: CC0/CC-BY 3D models rendered orthographically by a headless Blender script (`bpy`), with a fixed sun from the top-left, a soft ground shadow and a slight desaturation, so every sprite matches. Turret and hull render as separate layers so turrets can rotate.
    - The script and its inputs are committed, so any sprite can be re-rendered and checked (ADR-0003).
-2. **Readable before true to scale** (ADR-0007, point 4). Sizes follow real ones but small things are enlarged: a soldier about 0.4 tile, a light vehicle 0.75, a tank about 1, a helicopter 1.2. Muzzle flashes, tracers and impact smoke make the action read.
+2. **Readable before true to scale** (ADR-0007, point 4). Sizes follow real ones but small things are enlarged: a soldier about 0.4 tile, a light vehicle 0.75, a tank about 1, a helicopter 1.2, a fighter jet about 1.3, rendered in flight (raised off the ground, `liftTiles`) so its shadow falls further off than the helicopter's and it reads as higher and faster. Muzzle flashes, tracers and impact smoke make the action read.
 3. **Factions are visual skins.** Four factions: **US**, **Russia**, **China** and **Insurgents** (a GLA-style militia). Each map names its attacker and its defender. A kind keeps the same stats in every faction, so ADR-0007's balance and the counter matrix test hold for every pairing. Only sprites, names in the art description, and later sounds change.
 4. **Legal guardrails.**
    - In-game names stay generic (Tank, Jeep, AA Gun). Real designations (M1A2, T-72B3) appear only in art descriptions and docs.
@@ -36,7 +36,12 @@ The maintainer also wants each map to pit two sides against each other, picked f
 | **Jeep** (unarmored, fast) | M1097 soft-top Humvee | UAZ-469 | BJ2022 Brave Warrior | Toyota Hilux technical with a DShK |
 | **Tank** | M1A2 SEPv3 Abrams | T-72B3 | Type 99A | T-55 (captured) |
 | **Helicopter** (light armor) | UH-60 Black Hawk | Mi-8AMTSh | Z-20 | Mi-8 (captured) |
+| **Heavy tank** (boss) | M1A2 SEPv3 with TUSK (urban kit) | T-14 Armata | Type 99A with add-on armor | T-72 (captured, ideally with improvised slat armor) |
+| **APC** (armored troop carrier) | M113 (or Stryker ICV, unarmed variant) | BTR-82A | ZBL-08 / ZSL-92 | BTR-60 (captured) |
+| **Fighter jet** (`jet`) | F-16 Fighting Falcon | Su-25 Grach | pending (next part) | pending (next part) |
 | **Sniper** (rendered ahead of play, #358) | Two-man team prone in a dug-in hide, M107 / M2010, OCP | Two-man team prone in a dug-in hide, ORSIS T-5000 / ASVK, EMR | Two-man team prone in a dug-in hide, QBU-10, Type 07 | Two-man team prone in a dug-in hide, Dragunov SVD, civilian clothes |
+
+The Heavy tank is rendered about 1.4 tiles long, bigger than the Tank's 1.3, so the boss reads at a glance. Its renders were made ahead of its gameplay (#78), so it's listed as an upcoming kind until it joins the waves.
 
 Updated 2026-11-11 (#459): the Sniper row. Its renders come one Faction per part, before the Sniper is in play (#364); the US render is a stand-in rifle and kit on the same soldier model as the Rifle Nest. Updated 2026-11-11 (#460): Russia and China, the same model and pose re-coloured like their Rifle Nests. Updated 2026-11-11 (#462): Insurgents, which completes the kind for all four Factions.
 
