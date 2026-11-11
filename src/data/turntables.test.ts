@@ -12,7 +12,11 @@ const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
 };
 /** The factions rendered so far (#440 US; #442, #444, #445 add the others). */
 const DONE: readonly Faction[] = ['us'];
-const done = config.models.filter((m) => (DONE as readonly string[]).includes(m.faction));
+/** Kinds whose art landed before their turntable (#504, blocked by #440's pipeline rollout). */
+const NO_TURNTABLE_YET: readonly string[] = ['gunship'];
+const done = config.models.filter(
+  (m) => (DONE as readonly string[]).includes(m.faction) && !NO_TURNTABLE_YET.includes(m.kind),
+);
 const sheetPath = (id: string): string => `assets/render-${id}/${id}-turntable.webp`;
 
 /** Width and height from a WebP's header (lossy VP8, lossless VP8L or extended VP8X). */
