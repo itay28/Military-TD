@@ -89,6 +89,8 @@ When unsure between two levels, pick the bigger Size and the less urgent Priorit
 
 The current milestone is the open one with the earliest due date, else the lowest version.
 
+**Stale manual claims (#489, `scripts/stale-claims.ts`):** after the moves, every run (with or without `AUTO_SPAWN`) looks for open issues that are assigned, have no `auto-agent` label, no open PR and no activity for 3 days (issue update, comment, or a commit on a `*/<n>-*` branch), in the current or next milestone or milestone-less `area:infra`. Epics and issues already `needs-you`, `needs-info` or `hold` are skipped. Each one gets, once, a comment (`<!-- stale-claim -->`): "Assigned with no PR and no activity for 3 days. Unassign to let auto-start take it, or carry on.", and `needs-you`, so *Notify* pushes it. *Pipeline idle* lists it under **waiting on you** like any `needs-you` issue. Removing `needs-you` doesn't flag it again; the marker stays.
+
 **Missed schedules (#328):** GitHub drops most `schedule` runs under load. Measured 2026-10-26 → 11-05, an hourly cron reached PR steward 42 times and Board sync 39 times in ~10 days (median gap 5.6 h and 6.5 h, max 12 h). So both workflows fire the cron three times an hour (`1,21,41` and `3,23,43`), and on a `schedule` event the debounce job (`scripts/schedule-gate.ts`) skips the sweep when another run of the workflow started in the last 20 min, so the extra firings cost nothing when a sweep just ran. The job also logs a `::warning::` when the last `schedule` run is over 2 h old. Even so, expect gaps of a few hours; an event (comment, label, push) always sweeps at once.
 
 **API quota (#293):** `PROJECT_TOKEN` is the maintainer's own classic PAT, so Board sync, PR steward and every other workflow that uses it share one hourly GitHub quota (REST and GraphQL points). To keep a burst of events from spending it:
@@ -125,11 +127,14 @@ Then set the variable `AUTO_SPAWN` = `on` (and `AUTO_STACK` = `on` to stack, `FE
 | The PR | Steward does |
 | --- | --- |
 | from a fork, labelled `hold`, a draft that isn't stranded (below), or `needs-you`/`needs-approval` with no maintainer comment since the hand-off | nothing |
-| mergeability still computing, a round in flight (no done marker yet, under 1 h old), or checks running (CI, CI review) | waits |
+| mergeability still computing (under 1 h since the latest commit or comment), a round in flight (no done marker yet, under 1 h old), or checks running (CI, CI review) | waits |
 | a conflict, a failing check, a CI review with findings or a maintainer comment newer than the last done marker, or unresolved review threads (a review that ends with `<!-- code-review:clean -->` has nothing to answer and starts no round, #303) | fires a **round** of the `pr-steward` task, which fixes what it can and ends with a `<!-- pr-steward:done -->` comment |
+| mergeability **still `UNKNOWN` after 1 h** (#487) and the PR is behind | merges the base in (like for a PR that is only behind) and posts `<!-- pr-steward:unknown-update -->`, so GitHub computes it again and CI runs on the merged code |
+| mergeability still `UNKNOWN` 1 h after that, or the PR isn't behind | hands off: `needs-you` + a comment |
 | the same, after 2 rounds since the latest maintainer comment, or a conflict a round couldn't resolve | hands off: `needs-you` label + a summary comment |
 | a **stranded draft** (#326): a failing check and no commit or comment for 1 h | fires a `ci` round like for a ready PR (only `ci`: a draft never gets review, conflict or merge handling), then **marks it ready** once the round has ended with every check green and no conflict. Active drafts, and drafts that are green or have checks running, are left alone |
 | the steward's trigger refuses the fire with a setup error (any 4xx but 429: bad token, deleted routine) | hands off the same way, naming the HTTP status and the secrets to check; the run goes red |
+| a round's done comment carries `<!-- pr-steward:update-snapshots -->` (only stale screenshot baselines are red, change intended and explained, #472) | starts *Update snapshots* itself: a comment with `<!-- pr-steward:update-snapshots-started -->`, then the `update-snapshots` label with `PROJECT_TOKEN` (any stale label removed first). One request starts one run; the round makes no label or dispatch call of its own, as those are often denied in its session |
 | only behind its base | merges the base in itself (no agent, not a round) |
 | no CI review comment yet | adds `review-again` itself, once per head commit, with a comment saying so (#209): a PR marked ready while it had a conflict never started the review, as GitHub runs no PR workflow on a conflicted PR. Then waits (add `review-again` to ask again) |
 | closes an issue that is still blocked by open issues, or labelled `needs-info` | waits |
