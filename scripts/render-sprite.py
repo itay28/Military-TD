@@ -12,6 +12,14 @@ Three PNGs per model in <out>/render-<id>/, all framed by the same camera so the
   <id>-turret.png  the turret (and barrels) alone, no shadow, for the game to rotate
 A model without a `turret` (a kind with no turning part: Infantry, Jeep, Helicopter) gets just <id>.png.
 
+`--turntable` (issue #407) renders the same model, materials, tint, base and lighting rig instead as a turntable
+for the Field manual: the whole model (turret on it) with its ground shadow, seen from TURNTABLE["elevationDeg"]
+up by an orthographic camera that orbits it clockwise in TURNTABLE["stepDeg"] steps, frame 0 looking at its front.
+The sun stays put, as in the game. The frames go into one WebP sheet (TURNTABLE["columns"] wide, read left to
+right, top to bottom), lossy with alpha, its quality stepped down until it fits TURNTABLE["budgetBytes"]:
+  <id>-turntable.webp   the sheet
+  <id>-turntable.json   id, kind, faction, frames, frameSize, columns, rows, elevationDeg, stepDeg
+
 `turret` picks meshes by `names`, by the empties they sit `under`, by `allBut` (every mesh except those under
 the listed empties), by `minZ` (meshes whose lowest point is at least that many tiles up, after placing) or by
 `box` (a list of boxes, each `x`, `y` ranges and `minZ`, in tiles after placing): every mesh is first split into
@@ -35,8 +43,8 @@ clockwise), e.g. a rifle team. `base` (towers, issue #314) builds our own dug-in
 of `radiusTiles` ringed by sandbags, open at the front when `gapDeg` is set, so a dark tower reads on grass at
 48 px. The base is part of the hull layer and casts its own shadow.
 
-Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1
-Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets]
+Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow
+Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets] [--turntable]
 """
 
 import argparse
@@ -51,6 +59,8 @@ import bpy
 from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parent.parent
+TURNTABLE = {"frames": 24, "frameSize": 384, "columns": 6, "elevationDeg": 30, "budgetBytes": 300_000, "samples": 32, "alphaFloor": 8}
+TURNTABLE["stepDeg"] = 360 / TURNTABLE["frames"]
 FRONT = {"+y": 0.0, "-x": -math.pi / 2, "-y": math.pi, "+x": math.pi / 2}  # Z rotation that turns the front to +Y
 
 
@@ -344,7 +354,8 @@ def render(path: Path, cfg: dict) -> None:
     print(f"wrote {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
 
 
-def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
+def prepare_model(spec: dict, cache: Path) -> tuple[list, list, list]:
+    """Import, clean, tint, pose, place and copy the model, and build its base. Returns (model, turret, base)."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=str(download(spec["sketchfab"], cache)))
     for name in spec.get("exclude", []):
@@ -365,6 +376,11 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     if "turret" in spec and not turret:
         sys.exit(f"{spec['id']}: the turret rule matched no mesh")
     base = build_base(spec["base"]) if "base" in spec else []
+    return model, turret, base
+
+
+def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
+    model, turret, base = prepare_model(spec, cache)
     ground = build_stage(cfg, spec)
     meshes = model + base
     hull = [o for o in meshes if o not in turret]
@@ -386,6 +402,113 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     render(out / f"{spec['id']}-turret.png", cfg)
 
 
+def orbit_frame(meshes, cfg: dict, spec: dict) -> tuple[Vector, float]:
+    """The point the turntable camera orbits and the orthographic scale that keeps the model and its ground shadow
+    in frame from every side: every vertex, and where its shadow falls, projected for each frame's view."""
+    import numpy as np
+
+    lo, hi = world_bounds(meshes)
+    centre = (lo + hi) / 2
+    pts = []
+    for m in meshes:
+        co = np.empty(len(m.data.vertices) * 3, dtype=np.float64)
+        m.data.vertices.foreach_get("co", co)
+        co = np.c_[co.reshape(-1, 3), np.ones(len(co) // 3)] @ np.array(m.matrix_world).T
+        pts.append(co[:, :3])
+    pts = np.concatenate(pts)
+    sun = {**cfg["sun"], **spec.get("sun", {})}  # as build_stage lights it
+    el, az = math.radians(sun["elevationDeg"]), math.radians(sun["azimuthDeg"])
+    away = np.array((-math.sin(az), -math.cos(az), 0.0))  # shadows fall away from the sun's azimuth
+    shadows = pts * (1, 1, 0) + np.outer(np.maximum(pts[:, 2], 0) / math.tan(el), away)
+    pts = np.concatenate([pts, shadows]) - np.array(centre)
+    cam_el = math.radians(TURNTABLE["elevationDeg"])
+    reach = 0.0
+    for i in range(TURNTABLE["frames"]):
+        a = math.radians(i * TURNTABLE["stepDeg"])
+        right = np.array((-math.cos(a), math.sin(a), 0.0))  # screen axes of a camera at bearing a, looking at centre
+        up = np.cross(np.array((math.sin(a) * math.cos(cam_el), math.cos(a) * math.cos(cam_el), math.sin(cam_el))), right)
+        reach = max(reach, np.abs(pts @ right).max(), np.abs(pts @ up).max())
+    return centre, 2 * reach * 1.04
+
+
+def frame_png(path: Path) -> object:
+    from PIL import Image
+
+    with Image.open(path) as img:
+        return img.convert("RGBA").copy()
+
+
+def desaturated(img, amount: float) -> object:
+    """`img` with each pixel's colour mixed `amount` of the way to its grey (Rec. 709 luma), as desaturate() does,
+    and the near-transparent noise around the shadow cleared (it would double the WebP's size)."""
+    import numpy as np
+    from PIL import Image
+
+    px = np.asarray(img, dtype=np.float32)
+    y = px[..., :3] @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+    px[..., :3] += (y[..., None] - px[..., :3]) * amount
+    px[px[..., 3] < TURNTABLE["alphaFloor"]] = 0  # the shadow catcher's faint sky-light noise: clear, not 1-7/255
+    return Image.fromarray(np.clip(px + 0.5, 0, 255).astype(np.uint8), "RGBA")
+
+
+def save_sheet(frames: list, path: Path) -> int:
+    """Tile `frames` into one sheet and save it as WebP at the best quality under the budget. Returns the size."""
+    from PIL import Image
+
+    size, cols = TURNTABLE["frameSize"], TURNTABLE["columns"]
+    rows = math.ceil(len(frames) / cols)
+    sheet = Image.new("RGBA", (cols * size, rows * size), (0, 0, 0, 0))
+    for i, f in enumerate(frames):
+        sheet.paste(f, ((i % cols) * size, (i // cols) * size))
+    for quality in range(90, 19, -5):  # alpha at 50: the alpha plane is most of the bytes, and 50 looks the same
+        sheet.save(path, "WEBP", quality=quality, alpha_quality=50, method=6)
+        if path.stat().st_size <= TURNTABLE["budgetBytes"]:
+            return path.stat().st_size
+    sys.exit(f"{path.name}: over {TURNTABLE['budgetBytes']} bytes even at quality 20")
+
+
+def render_turntable(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
+    model, _, base = prepare_model(spec, cache)
+    meshes = model + base
+    build_stage(cfg, spec)
+    scene = bpy.context.scene
+    size = TURNTABLE["frameSize"]
+    scene.render.resolution_x = scene.render.resolution_y = size
+    scene.cycles.samples = cfg.get("samples", TURNTABLE["samples"])  # 24 frames: denoised 32 is plenty at 384 px
+    centre, scale = orbit_frame(meshes, cfg, spec)
+    cam = scene.camera
+    cam.data.ortho_scale = scale
+    cam.data.clip_end = 100
+    el = math.radians(TURNTABLE["elevationDeg"])
+    frames = []
+    tmp = cache.parent / "turntable-frames" / spec["id"]  # kept, so the sheet can be re-encoded without rendering
+    tmp.mkdir(parents=True, exist_ok=True)
+    for i in range(TURNTABLE["frames"]):
+        az = math.radians(i * TURNTABLE["stepDeg"])  # compass bearing from the model: 0 = its front (north)
+        cam.location = centre + 20 * Vector((math.sin(az) * math.cos(el), math.cos(az) * math.cos(el), math.sin(el)))
+        cam.rotation_euler = (centre - cam.location).to_track_quat("-Z", "Y").to_euler()
+        scene.render.filepath = str(tmp / f"{i:02}.png")
+        bpy.ops.render.render(write_still=True)
+        frames.append(desaturated(frame_png(Path(scene.render.filepath)), cfg["desaturate"]))
+    folder = out / f"render-{spec['id']}"
+    folder.mkdir(parents=True, exist_ok=True)
+    sheet = folder / f"{spec['id']}-turntable.webp"
+    nbytes = save_sheet(frames, sheet)
+    meta = {
+        "id": spec["id"],
+        "kind": spec["kind"],
+        "faction": spec["faction"],
+        "frames": TURNTABLE["frames"],
+        "frameSize": size,
+        "columns": TURNTABLE["columns"],
+        "rows": math.ceil(TURNTABLE["frames"] / TURNTABLE["columns"]),
+        "elevationDeg": TURNTABLE["elevationDeg"],
+        "stepDeg": TURNTABLE["stepDeg"],
+    }
+    (folder / f"{spec['id']}-turntable.json").write_text(json.dumps(meta, indent=2) + "\n")
+    print(f"wrote {sheet.relative_to(ROOT) if sheet.is_relative_to(ROOT) else sheet} ({nbytes} bytes)")
+
+
 def main() -> None:
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else sys.argv[1:]
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -394,13 +517,14 @@ def main() -> None:
     ap.add_argument("--cache", default=ROOT / ".cache/models", type=Path)
     ap.add_argument("--only", help="render just this model id")
     ap.add_argument("--samples", type=int, help="Cycles samples (default 64)")
+    ap.add_argument("--turntable", action="store_true", help="render the turntable sheet instead of the sprites")
     args = ap.parse_args(argv)
     cfg = json.loads(args.config.read_text())
     if args.samples:
         cfg["samples"] = args.samples
     for spec in cfg["models"]:
         if args.only in (None, spec["id"]):
-            render_model(cfg, spec, args.cache, args.out)
+            (render_turntable if args.turntable else render_model)(cfg, spec, args.cache, args.out)
 
 
 if __name__ == "__main__":
