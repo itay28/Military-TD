@@ -81,6 +81,26 @@
       "files": ["assets/render-russia-tank/**"]
     },
     {
+      "id": "render-russia-heavy-tank",
+      "name": "T-14 Armara Uralvagon Factory (top-down render)",
+      "author": "3DYAROSLAV2",
+      "source": "https://sketchfab.com/3d-models/9864af9626f14256a255d4faea52ec7f",
+      "license": "CC-BY-4.0",
+      "attribution": "\"T-14 Armara Uralvagon Factory\" by 3DYAROSLAV2 (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-russia-heavy-tank/**"]
+    },
+    {
+      "id": "render-us-heavy-tank",
+      "name": "WIP - Abrams M1A2 TUSK 2 (top-down render)",
+      "author": "davidfalke",
+      "source": "https://sketchfab.com/3d-models/efb7311b641f4a76afff19e5f3068298",
+      "license": "CC-BY-4.0",
+      "attribution": "\"WIP - Abrams M1A2 TUSK 2\" by davidfalke (sketchfab.com), CC-BY 4.0, rendered top-down, tinted tan",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-us-heavy-tank/**"]
+    },
+    {
       "id": "naip-field-road-treeline",
       "name": "NAIP aerial imagery (Iowa 2023)",
       "author": "USDA Farm Service Agency",
