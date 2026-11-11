@@ -88,7 +88,7 @@ test('a map’s briefing gives the operation, grid, Situation, Forces and Terrai
   page,
 }) => {
   await openLevelSelect(page);
-  await page.getByRole('button', { name: /^Training Ground,/ }).click();
+  await page.getByRole('button', { name: 'Training Ground, no stars yet' }).click();
   await expectAria(page.locator('#level-select'), 'briefing.aria.yml');
 });
 
