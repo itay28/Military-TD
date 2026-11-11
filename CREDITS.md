@@ -133,7 +133,7 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Author: GoldbergR
 - Source: <https://sketchfab.com/3d-models/2a5ecc14900440af8fe2b5b30dabbef0>
 - License: CC-BY-4.0
-- Attribution: "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR (sketchfab.com), CC-BY 4.0, rendered top-down under the Grenade launcher (US: a stand-in for the M3 tripod; China: for the QLZ-87's own heavy mount)
+- Attribution: "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR (sketchfab.com), CC-BY 4.0, rendered top-down under the Grenade launcher (US: a stand-in for the M3 tripod; China: for the QLZ-87's own heavy mount), and in those renders' turntables (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-11
 - Files: `assets/render-us-grenade-launcher/**`, `assets/render-china-grenade-launcher/**`
 
@@ -223,7 +223,7 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own; also the Grenade launcher's gunner and assistant gunner, crouched beside it
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own; also the Grenade launcher's gunner and assistant gunner, crouched beside it, also in its turntable
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-rifle-nest/**`, `assets/render-china-grenade-launcher/**`
 
