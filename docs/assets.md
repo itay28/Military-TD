@@ -219,6 +219,7 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-us-jeep/` | "Low Poly Humvee FREE" by madtrollstudio, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-tank/` | "M1A2 Abrams Crows" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-helicopter/` | "Sikorsky UH-60 Black Hawk" by helijah, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-apc/` | "M113" by arc4de, CC-BY-4.0 (the APC, #478: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
 | `render-russia-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-cannon/` | "ZiS-2 57mm anti-tank gun" by sergey.s.filin, CC-BY-4.0 | `scripts/render-sprite.py` |

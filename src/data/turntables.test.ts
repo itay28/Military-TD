@@ -32,7 +32,7 @@ function webpSize(path: string): { width: number; height: number } {
 
 describe('TURNTABLES', () => {
   it('has a turntable for every model of the factions done so far, with its kind and faction', () => {
-    expect(done.length).toBe(16);
+    expect(done.length).toBe(17); // eight kinds in play per Faction done, plus the US APC (#478)
     for (const m of done) {
       expect(TURNTABLES[m.id]!.kind, m.id).toBe(m.kind);
       expect(TURNTABLES[m.id]!.faction, m.id).toBe(m.faction);

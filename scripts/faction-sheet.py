@@ -23,6 +23,8 @@ NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in 
 CELL = 1.8  # tiles per cell, enough for the largest canvas (the Heavy tank, 1.75)
 FACTIONS = ["us", "russia", "china", "insurgents"]
 KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "heavyTank", "helicopter"]
+# v0.8.0 kinds rendered one Faction at a time ahead of their gameplay (#360): on the sheet once the Faction has one.
+NEW_KINDS = ["apc"]
 
 
 def grass(px: int) -> Image.Image:
@@ -52,6 +54,8 @@ def main() -> None:
     else:
         found = {m["kind"]: m for m in cfg["models"] if m["faction"] == args.faction}
         labels, name, default_out = KINDS, args.faction, f"docs/art/faction-{args.faction}.png"
+    if not args.kind:
+        labels = KINDS + [k for k in NEW_KINDS if k in found]
     missing = [k for k in labels if k not in found]
     if missing:
         raise SystemExit(f"{name}: no model for {', '.join(missing)}")
