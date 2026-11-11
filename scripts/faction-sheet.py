@@ -20,6 +20,8 @@ GAME_TILE = 48
 NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in its own pixels (sprite-compare.py)
 CELL = 1.6  # tiles per cell, enough for the largest canvas (1.5)
 KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "helicopter"]
+# v0.8.0 kinds rendered one Faction at a time ahead of their gameplay (#360): on the sheet once the Faction has one.
+NEW_KINDS = ["apc"]
 
 
 def grass(px: int) -> Image.Image:
@@ -44,11 +46,12 @@ def main() -> None:
     missing = [k for k in KINDS if k not in models]
     if missing:
         raise SystemExit(f"{args.faction}: no model for {', '.join(missing)}")
+    kinds = KINDS + [k for k in NEW_KINDS if k in models]
     small, big = round(CELL * GAME_TILE), round(CELL * RENDER_TILE)
-    width = len(KINDS) * big
+    width = len(kinds) * big
     sheet = Image.new("RGBA", (width, small + 2 * big), (40, 40, 40, 255))
     draw = ImageDraw.Draw(sheet)
-    for i, kind in enumerate(KINDS):
+    for i, kind in enumerate(kinds):
         m = models[kind]
         folder = args.assets / f"render-{m['id']}"
         whole = Image.open(folder / f"{m['id']}.png").convert("RGBA")
