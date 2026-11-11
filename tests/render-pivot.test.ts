@@ -97,13 +97,39 @@ describe('the committed render data', () => {
   });
 });
 
+/**
+ * Kinds rendered before their gameplay (art-ahead): each Faction gets its render in its own part, and the kind joins
+ * `SPRITES` when it is put in play (Sniper: #364).
+ */
+const ART_AHEAD_KINDS = ['sniper'];
+
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
   const kinds = Object.keys(SPRITES).sort();
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
-    it(`has one render per kind for ${faction}`, () => {
+    it(`has one render per kind for ${faction}, plus any art-ahead kinds done so far`, () => {
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
-      expect(models.map((m) => m.kind).sort()).toEqual(kinds);
+      const inPlay = models.filter((m) => !ART_AHEAD_KINDS.includes(m.kind));
+      expect(inPlay.map((m) => m.kind).sort()).toEqual(kinds);
+      const ahead = models.filter((m) => ART_AHEAD_KINDS.includes(m.kind)).map((m) => m.kind);
+      expect(new Set(ahead).size, 'one render per art-ahead kind').toBe(ahead.length);
+    });
+  }
+});
+
+describe('the Sniper renders (art-ahead, #358)', () => {
+  const snipers = RENDER_CONFIG.models.filter((m) => m.kind === 'sniper');
+
+  it('covers the Factions done so far: US (#459)', () => {
+    expect(snipers.map((m) => m.faction)).toEqual(expect.arrayContaining(['us']));
+  });
+
+  for (const model of snipers) {
+    it(`${model.id} is a team on a dug-in base that turns about the pad centre`, () => {
+      expect(model.base, 'a base').toBeDefined();
+      expect(model.turret, 'a turret layer').toBeDefined();
+      const { json } = buildRenderMeta().find((m) => m.json.id === model.id)!;
+      expect(json.pivot).toEqual({ x: json.canvasPx / 2, y: json.canvasPx / 2 });
     });
   }
 });

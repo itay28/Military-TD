@@ -36,6 +36,9 @@ The maintainer also wants each map to pit two sides against each other, picked f
 | **Jeep** (unarmored, fast) | M1097 soft-top Humvee | UAZ-469 | BJ2022 Brave Warrior | Toyota Hilux technical with a DShK |
 | **Tank** | M1A2 SEPv3 Abrams | T-72B3 | Type 99A | T-55 (captured) |
 | **Helicopter** (light armor) | UH-60 Black Hawk | Mi-8AMTSh | Z-20 | Mi-8 (captured) |
+| **Sniper** (rendered ahead of play, #358) | Two-man team prone in a dug-in hide, M107 / M2010, OCP | to come | to come | to come |
+
+Updated 2026-11-11 (#459): the Sniper row. Its renders come one Faction per part, before the Sniper is in play (#364); the US render is a stand-in rifle and kit on the same soldier model as the Rifle Nest.
 
 Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind), and the AA Gun is a fast-firing gun that also hits ground targets.
 
