@@ -7,6 +7,10 @@ name: PR steward
 # Every run looks at all open PRs, so the schedule (three cron entries an hour, GitHub delivers
 # only some, #328) fixes anything an event missed, and
 # retries a round whose session died soon after its 1 h timeout (once for free, #303).
+# Merge queue (#473): the PRs that can merge are ranked (green first, then priority, then the
+# oldest), and only the front one gets base merges and the rounds main moving causes, which don't
+# count toward the 2. A PR that conflicts with main or with a PR ahead (`git merge-tree` on the PR
+# heads, one fetch per sweep) waits as `waiting: queue`; one that overlaps nothing ahead goes on.
 # Logic and tests: scripts/pr-steward.ts.
 #
 # Switches (repo variables, off unless `on`): AUTO_STEWARD fires rounds and updates branches,
@@ -98,11 +102,13 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
+      # Full history: the merge queue's conflict map runs `git merge-tree` on the PR heads (#473).
       # No persisted GITHUB_TOKEN: a conflict in generated files is merged here without an agent
       # (scripts/auto-resolve.ts, #474) and pushed with PROJECT_TOKEN, so the push starts CI.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node

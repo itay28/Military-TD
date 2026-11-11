@@ -3,7 +3,8 @@ name: Update snapshots
 # Remakes the e2e screenshot baselines in CI's own Playwright container and commits the changed
 # ones to a PR's branch (docs/agents/workflow.md → Screenshot baselines). Cloud sessions can't
 # download the e2e job's artifact, so they add the `update-snapshots` label instead; a human can
-# also run it by hand with the PR number.
+# also run it by hand with the PR number. Either way the run removes the label from the PR first,
+# so it can be added again.
 #
 # PR code runs only in `render`, which holds no secrets. `commit` runs none of it: it copies in
 # the rendered PNGs and pushes with PROJECT_TOKEN (classic PAT), so the push starts CI.
@@ -45,12 +46,15 @@ jobs:
       sha: ${{ steps.pr.outputs.sha }}
       merge: ${{ steps.pr.outputs.merge }}
     steps:
-      # First, so the label can be added again even if this run fails.
+      # First, so the label can be added again even if this run fails. Both paths: a label left on
+      # the PR after a hand run would make adding it again fire no `labeled` event (#470). A PR
+      # without the label is fine (the DELETE 404s).
       - name: Remove the update-snapshots label
-        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label update-snapshots
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+          REPO: ${{ github.repository }}
+        run: gh api -X DELETE "repos/$REPO/issues/$PR/labels/update-snapshots" --silent || true
 
       - name: Find the PR's branch
         id: pr
