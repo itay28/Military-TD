@@ -8,6 +8,7 @@ import {
   NEEDS_INFO_LABEL,
   NEEDS_YOU_LABEL,
   READY_LABEL,
+  SPLIT_LABEL,
   stackBase,
   type Fetch,
 } from './auto-start.ts';
@@ -38,11 +39,12 @@ export function isStarved(
     readonly status: string | undefined;
     readonly needsInfo?: boolean;
     readonly needsYou?: boolean;
+    readonly needsSplit?: boolean;
     readonly hold?: boolean;
   }[],
   planned: number,
 ): boolean {
-  // Parked issues (a question, the maintainer, a hold) have no live session (#423).
+  // Parked issues (a question, the maintainer, the split agent, a hold) have no live session (#423).
   return planned === 0 && !issues.some((i) => isRunning(i));
 }
 
@@ -90,7 +92,8 @@ export interface ReasonOptions {
 const labelList = (labels: readonly string[]) => labels.map((l) => `\`${l}\``).join(', ');
 
 /**
- * Why nothing is startable, grouped by what would unblock it: waiting on you (`needs-you`/`needs-info` issues
+ * Why nothing is startable, grouped by what would unblock it: waiting on you (`needs-you`/`needs-info` issues,
+ * `needs-split` issues the split agent hasn't split (#486),
  * and PRs, `needs-approval` PRs, `ready-for-human` in the current milestone), needs triage (counts in the current and next
  * milestone), not startable (`ready-for-agent` issues in those milestones, or with none, that lack a Size, are
  * XL, are game work with no milestone, are blocked, or are frozen by the feature freeze), and nothing left (neither milestone has an open
@@ -109,7 +112,7 @@ export function idleReasons(
   const reasons: Reason[] = [];
 
   for (const i of open) {
-    const asks = i.labels.filter((l) => l === NEEDS_YOU_LABEL || l === NEEDS_INFO_LABEL);
+    const asks = i.labels.filter((l) => l === NEEDS_YOU_LABEL || l === NEEDS_INFO_LABEL || l === SPLIT_LABEL);
     const human = i.labels.includes(HUMAN_LABEL) && current !== undefined && i.milestone === current;
     if (!asks.length && !human) continue;
     const text = `#${i.number} ${labelList(human ? [...asks, HUMAN_LABEL] : asks)}`;
