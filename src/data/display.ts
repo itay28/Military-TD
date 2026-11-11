@@ -48,6 +48,7 @@ export const ENEMY_STYLE = {
   tank: { shape: 'circle', radius: 14, color: 0x4a5d3a }, // dark olive drab
   heavyTank: { shape: 'circle', radius: 20, color: 0x2f3d27 }, // darker olive drab, bigger than the Tank
   gunship: { shape: 'circle', radius: 18, color: 0x4a5560 }, // dark gunmetal grey
+  jet: { shape: 'square', radius: 8, color: 0x7a8794 }, // gunmetal grey
 } as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number; rotor?: number }>;
 
 /** The X drawn over a rotor kind. */
@@ -164,6 +165,7 @@ export const ENEMY_NAMES = {
   tank: 'Tank',
   heavyTank: 'Heavy tank',
   gunship: 'Gunship',
+  jet: 'Jet',
 } as const satisfies Record<EnemyKind, string>;
 
 /**
@@ -177,6 +179,7 @@ export const ENEMY_WEAKNESS = {
   tank: 'Armor: Rifle Nests barely scratch it. Cannons and Mortars work.',
   heavyTank: 'Boss. Heavy armor, huge HP. Leaking it costs 10 Lives.',
   gunship: 'Boss. Armored gunship. AA Guns are your best answer.',
+  jet: 'Fast, fragile jet. Needs AA coverage along the route.',
 } as const satisfies Record<EnemyKind, string>;
 
 /** The smallest tap area of an enemy, as a diameter in screen pixels, so a small one is easy to hit on a phone. */
@@ -371,4 +374,5 @@ export const AFTERMATH_OF = {
   heavyTank: { decal: 'wreck', size: 20 },
   gunship: { decal: 'crashMark', size: 18 },
   helicopter: { decal: 'crashMark', size: 12 },
+  jet: { decal: 'crashMark', size: 10 }, // a small fast jet leaves a smaller crash mark than the helicopter
 } as const satisfies Record<EnemyKind, { decal: Exclude<DecalKind, 'crater'>; size: number }>;

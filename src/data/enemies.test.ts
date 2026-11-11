@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { damageTaken } from '../sim/combat';
 import { ENEMY_STYLE } from './display';
-import { ENEMY_STATS, NOT_IN_PLAY } from './enemies';
+import { ENEMY_STATS, NOT_PLAYABLE_KINDS } from './enemies';
 import { TOWER_STATS } from './towers';
 
 describe('heavyTank (boss)', () => {
@@ -42,7 +42,7 @@ describe('gunship (boss)', () => {
   });
 
   it('is not in play yet', () => {
-    expect(NOT_IN_PLAY.has('gunship')).toBe(true);
+    expect(NOT_PLAYABLE_KINDS.includes('gunship')).toBe(true);
   });
 });
 
