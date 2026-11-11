@@ -83,6 +83,10 @@ function unresolvedConflict(
 }
 /** Posted by the Action when it hands a PR off. */
 export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
+/** Posted when the steward merges the base in because mergeability stayed UNKNOWN (#487). */
+export const UNKNOWN_UPDATE_MARKER = '<!-- pr-steward:unknown-update -->';
+/** How long GitHub may report mergeability as UNKNOWN before the steward acts (#487). */
+const UNKNOWN_MS = 60 * 60 * 1000;
 /** Posted next to the stuck marker when the hand-off asks for the maintainer's `/approve` (#206). */
 export const APPROVAL_MARKER = '<!-- pr-steward:approval -->';
 /** A maintainer comment starting with this lets a PR that touches a critical path merge. */
@@ -252,7 +256,8 @@ export type WaitCause =
 export type Decision =
   | { readonly kind: 'skip'; readonly why: string }
   | { readonly kind: 'wait'; readonly cause: WaitCause; readonly why: string }
-  | { readonly kind: 'update' }
+  /** `unknown`: mergeability stayed UNKNOWN for over an hour (#487), so a marker comment goes with the merge. */
+  | { readonly kind: 'update'; readonly unknown?: boolean }
   /** A draft whose steward round ended green (#326): mark it ready for review. */
   | { readonly kind: 'ready' }
   /** No CI review ever ran on this PR: add `review-again` to start one (#209). */
@@ -271,6 +276,8 @@ export type Decision =
       readonly reasons: readonly Reason[];
       /** A conflict round didn't resolve the conflict. */
       readonly conflict?: boolean;
+      /** Mergeability is still UNKNOWN an hour after the steward merged the base in (#487). */
+      readonly unknown?: boolean;
     }
   | { readonly kind: 'merge' }
   /** Ready to merge, but it touches a critical path (#206): hand off for the maintainer's `/approve`. */
@@ -400,8 +407,19 @@ function decideIgnoringMain(
     if (!lastStuck || lastMaintainer <= lastStuck)
       return { kind: 'skip', why: 'handed off, waiting on the maintainer' };
   }
-  if (pr.mergeable === 'UNKNOWN')
-    return { kind: 'wait', cause: 'mergeability', why: 'GitHub is computing mergeability' };
+  if (pr.mergeable === 'UNKNOWN') {
+    // Waiting forever hides a PR GitHub never recomputes (#487): after an hour, merge the base in
+    // (that makes GitHub compute it again), and after another hour hand it off.
+    const lastActivity = Math.max(
+      lastCommentAt(pr, () => true),
+      pr.lastCommitAt ? Date.parse(pr.lastCommitAt) : 0,
+    );
+    if (now.getTime() - lastActivity < UNKNOWN_MS)
+      return { kind: 'wait', cause: 'mergeability', why: 'GitHub is computing mergeability' };
+    const updated = last((c) => c.body.includes(UNKNOWN_UPDATE_MARKER)) > lastMaintainer;
+    if (pr.behind && !updated) return { kind: 'update', unknown: true };
+    return { kind: 'stuck', reasons: [], unknown: true };
+  }
   if (lastRound > lastDone && now.getTime() - lastRound < ROUND_TIMEOUT_MS)
     return { kind: 'wait', cause: 'round', why: 'a steward round is in flight' };
 
@@ -560,6 +578,11 @@ export const stewardText = (pr: StewardPr, reasons: readonly Reason[], round: nu
   `PR: #${pr.number}\nBranch base: ${pr.base}\nReasons: ${reasons.join(', ')}\nRound: ${round} of ${MAX_ROUNDS}\nRepository: itay28/Military-TD`;
 
 /** The hand-off comment for a PR the steward can't finish. */
+function stuckReason(d: { reasons: readonly Reason[]; conflict?: boolean; unknown?: boolean }): string {
+  if (d.conflict) return "The steward couldn't resolve the merge conflict: it's still there on the same base.";
+  if (d.unknown) return 'GitHub still reports mergeability as unknown, even after merging the base in.';
+  return `${MAX_ROUNDS} steward rounds didn't finish it. Still open: ${describeReasons(d.reasons)}.`;
+}
 const stuckBody = (summary: string) =>
   `**PR steward: handing this PR to you.** ${summary}\n\nComment on the PR to give it ${MAX_ROUNDS} more steward rounds, or fix it yourself.\n\n${STUCK_MARKER}`;
 
@@ -622,16 +645,7 @@ export async function act(
       return;
     }
     case 'stuck':
-      await handOff(
-        pr,
-        stuckBody(
-          decision.conflict
-            ? "The steward couldn't resolve the merge conflict: it's still there on the same base."
-            : `${MAX_ROUNDS} steward rounds didn't finish it. Still open: ${describeReasons(decision.reasons)}.`,
-        ),
-        token,
-        fetchFn,
-      );
+      await handOff(pr, stuckBody(stuckReason(decision)), token, fetchFn);
       return;
     case 'approval': {
       const paths = decision.paths.map((p) => `\`${p}\``).join(', ');
@@ -668,6 +682,10 @@ ${APPROVAL_MARKER}`,
       });
       return;
     case 'update':
+      if (decision.unknown)
+        await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+          body: `PR steward: GitHub has reported mergeability as unknown for over an hour, so I'm merging the base in to make it compute again.\n\n${UNKNOWN_UPDATE_MARKER}`,
+        });
       await github(fetchFn, token, 'PUT', `pulls/${n}/update-branch`, { expected_head_sha: pr.headSha });
       return;
     case 'merge':

@@ -24,6 +24,7 @@ import {
   settingsFromEnv,
   switchedOn,
   toStewardPr,
+  UNKNOWN_UPDATE_MARKER,
   applyStatusLabel,
   ensureStatusLabels,
   labelChanges,
@@ -326,8 +327,41 @@ describe('decide: wait', () => {
     ).toBe('wait');
   });
 
-  it('waits while GitHub is still computing mergeability', () => {
-    expect(kind(pr({ mergeable: 'UNKNOWN' }))).toBe('wait');
+  describe('mergeability UNKNOWN (#487)', () => {
+    const unknown = (over: Partial<StewardPr> = {}) =>
+      pr({
+        mergeable: 'UNKNOWN',
+        behind: true,
+        lastCommitAt: at(90),
+        codeCommittedAt: at(90),
+        comments: [review(100)],
+        ...over,
+      });
+
+    it('waits while GitHub is still computing mergeability', () => {
+      expect(kind(pr({ mergeable: 'UNKNOWN' }))).toBe('wait');
+      expect(kind(unknown({ lastCommitAt: at(30), comments: [review(30)] }))).toBe('wait');
+    });
+
+    it('merges the base in once it has been unknown for over an hour and the PR is behind', () => {
+      expect(decide(unknown(), now)).toEqual({ kind: 'update', unknown: true });
+    });
+
+    it('hands off when it is still unknown an hour after the base merge', () => {
+      const merged = unknown({ comments: [review(100), action(UNKNOWN_UPDATE_MARKER, 70)], lastCommitAt: at(70) });
+      expect(decide(merged, now)).toEqual({ kind: 'stuck', reasons: [], unknown: true });
+      expect(decide(unknown({ behind: false }), now)).toEqual({ kind: 'stuck', reasons: [], unknown: true });
+    });
+
+    it('waits an hour after the base merge before handing off', () => {
+      const merged = unknown({ comments: [review(100), action(UNKNOWN_UPDATE_MARKER, 10)], lastCommitAt: at(10) });
+      expect(kind(merged)).toBe('wait');
+    });
+
+    it('merges the base in again after a maintainer comment', () => {
+      const answered = unknown({ comments: [action(UNKNOWN_UPDATE_MARKER, 200), maintainer(100)] });
+      expect(decide(answered, now)).toEqual({ kind: 'update', unknown: true });
+    });
   });
 
   it('waits while a round is in flight, and stops waiting once it is an hour old', () => {
@@ -1103,6 +1137,20 @@ describe('act', () => {
     expect(fetchFn).not.toHaveBeenCalled();
     await act(pr(), approval, 'gh-token', { merge: true }, fetchFn);
     expect(fetchFn).toHaveBeenCalled();
+  });
+
+  it('notes an update for unknown mergeability, then merges the base in', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'update', unknown: true }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `PUT ${api}/pulls/7/update-branch`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string).body).toContain(UNKNOWN_UPDATE_MARKER);
+  });
+
+  it('hands off a PR whose mergeability stays unknown', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await act(pr(), { kind: 'stuck', reasons: [], unknown: true }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/issues/7/comments`, `POST ${api}/issues/7/labels`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string).body).toContain('unknown');
   });
 
   it('updates the branch against the head it saw', async () => {
