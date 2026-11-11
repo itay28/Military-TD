@@ -15,6 +15,7 @@ export const SOUND_IDS = [
   'vehicleExplosion',
   'infantryHit',
   'leak',
+  'coldOpen',
   'waveStart',
   'waveReinforcements',
   'victory',
