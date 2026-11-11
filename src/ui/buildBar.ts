@@ -1,7 +1,7 @@
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE, formatFunds } from '../data/display';
 import { renderFor, type RenderedSprite } from '../data/renders';
 import { towerIcon, type TowerIcon } from '../data/sprites';
-import { TOWER_STATS, type TowerKind } from '../data/towers';
+import { BUILD_KINDS, TOWER_STATS, type TowerKind } from '../data/towers';
 import { shortcutFor } from './keymap';
 import { placeTip, towerTooltip, type Rect, type TowerTooltip } from './towerTooltip';
 
@@ -55,7 +55,7 @@ export interface BuildBar<K extends string = TowerKind> {
 }
 
 function buildKinds(): TowerKind[] {
-  return Object.keys(TOWER_STATS) as TowerKind[];
+  return [...BUILD_KINDS];
 }
 
 /** A kind's 1-based place on the build bar, which is also its hotkey. */
@@ -64,7 +64,7 @@ export function buildBarNumber(kind: TowerKind): number {
 }
 
 /**
- * One option per tower kind, in `TOWER_STATS` order, so a kind added there shows up on the bar. A kind with a render
+ * One option per tower kind in play (`BUILD_KINDS`, in `TOWER_STATS` order), so a kind added there shows up on the bar. A kind with a render
  * gets its icon from it, unless `renderLoaded` says its textures didn't (then Kenney, as the map does).
  */
 export function buildOptions(renderLoaded: (render: RenderedSprite) => boolean = () => true): BuildOption[] {

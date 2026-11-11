@@ -39,6 +39,9 @@ only the soldier sets were re-rendered for #342, so re-rendering a vehicle or to
 
 `turnDeg` turns a model clockwise after `frontAxis`, for one set down at an angle (not along an axis).
 
+`liftTiles` raises the placed model that far above the ground, so its shadow falls off to the south-east, away from
+the sun: an aircraft in flight (the Fighter jet, #482). Without it the model stands on the ground.
+
 `pose` freezes a rigged model at one frame of one of its animations (`action`, `frame`), e.g. a soldier crouched
 and aiming instead of in a T-pose. `copies` places the placed model several times (`x`, `y` in tiles, `turnDeg`
 clockwise), e.g. a rifle team. `base` (towers, issue #314) builds our own dug-in pad under the model: a dirt disc
@@ -52,7 +55,7 @@ scene and placed on its own, with the same `frontAxis`, `turnDeg`, `lengthTiles`
 layer (the gunner), the others on the hull. `liftTiles` stands a model (main or part) that many tiles up, e.g. a
 launcher on its tripod's head.
 
-Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow
+Setup:  python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow
 Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets] [--turntable]
 """
 
@@ -174,8 +177,8 @@ def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict], 
 
 
 def place_model(spec: dict, objs=None) -> None:
-    """Turn the model's front north (`frontAxis`, then `turnDeg` clockwise), stand it on z = `liftTiles` (default 0)
-    and scale it so its north-south length is `lengthTiles`. `objs` limits it to one import (a part).
+    """Turn the model's front north (`frontAxis`, then `turnDeg` clockwise), stand it on z = 0, scale it so its
+    north-south length is `lengthTiles`, then raise it `liftTiles` (default 0). `objs` limits it to one import (a part).
 
     One Blender unit is one tile from here on.
     """

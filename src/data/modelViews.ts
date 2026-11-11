@@ -4,6 +4,18 @@ import type { EnemyKind } from './enemies';
 import type { TowerKind } from './towers';
 import { TURNTABLES, type Turntable as TurntableData } from './turntables';
 
+/**
+ * Kinds whose renders land before their gameplay (art and rules are separate issues): the Heavy tank boss (#362).
+ * A kind leaves this list when it joins `ENEMY_STATS` or the tower stats (a test checks it).
+ */
+export const UPCOMING_KINDS = ['heavyTank'] as const;
+
+/** True for a kind whose art is ahead of its gameplay. */
+export const isUpcoming = (kind: string): boolean => (UPCOMING_KINDS as readonly string[]).includes(kind);
+
+/** A kind with a render: one in play, or one whose art is ahead of its gameplay. */
+export type ModelKind = TowerKind | EnemyKind | (typeof UPCOMING_KINDS)[number];
+
 /** A turntable sheet (`src/data/turntables.ts`): `frames` square frames of `frameSize` px, `columns` per row. */
 export type Turntable = Pick<TurntableData, 'url' | 'frames' | 'frameSize' | 'columns'>;
 
@@ -22,7 +34,7 @@ const TOP_DOWN = import.meta.glob<string>('../../assets/render-*/*.png', {
 });
 
 /** The model view of `kind` for `faction`, from the render list (`scripts/render-sprite.json`). */
-export function modelFor(faction: Faction, kind: TowerKind | EnemyKind): ModelView {
+export function modelFor(faction: Faction, kind: ModelKind): ModelView {
   const model = renderList.models.find((m) => m.faction === faction && m.kind === kind);
   if (!model) return { layers: [] };
   const dir = `../../assets/render-${model.id}/${model.id}`;
