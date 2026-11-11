@@ -3,6 +3,7 @@ import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { isUpcoming, UPCOMING_KINDS } from '../src/data/modelViews';
 import { SPRITES } from '../src/data/sprites';
+import { NOT_IN_PLAY, type TowerKind } from '../src/data/towers';
 import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
@@ -99,8 +100,11 @@ describe('the committed render data', () => {
 });
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  // Every kind in play. The Heavy tank (in UPCOMING_KINDS) joins once all four Factions have it (#509).
-  const kinds = Object.keys(SPRITES).sort();
+  // Every kind in play. A kind not in play yet (the Sniper, renders in #358) has none until its rollout;
+  // the Heavy tank (in UPCOMING_KINDS) joins once all four Factions have it (#509).
+  const kinds = Object.keys(SPRITES)
+    .filter((kind) => !NOT_IN_PLAY.has(kind as TowerKind))
+    .sort();
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
