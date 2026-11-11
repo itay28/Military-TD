@@ -10,8 +10,9 @@ const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as
 const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
   packs: { id: string; name: string; attribution: string; files: string[] }[];
 };
-/** Every model of every faction has a turntable (#440 US; #442, #444, #445 the others). */
-const all = config.models;
+/** The factions rendered so far (#440 US, #445 Insurgents; #442, #444 add the others). */
+const DONE: readonly Faction[] = ['us', 'insurgents'];
+const done = config.models.filter((m) => (DONE as readonly string[]).includes(m.faction));
 const sheetPath = (id: string): string => `assets/render-${id}/${id}-turntable.webp`;
 
 /** Width and height from a WebP's header (lossy VP8, lossless VP8L or extended VP8X). */
@@ -29,9 +30,9 @@ function webpSize(path: string): { width: number; height: number } {
 }
 
 describe('TURNTABLES', () => {
-  it('has a turntable for every model in render-sprite.json, with its kind and faction', () => {
-    expect(all.length).toBe(32);
-    for (const m of all) {
+  it('has a turntable for every model of the factions done so far, with its kind and faction', () => {
+    expect(done.length).toBe(16);
+    for (const m of done) {
       expect(TURNTABLES[m.id]!.kind, m.id).toBe(m.kind);
       expect(TURNTABLES[m.id]!.faction, m.id).toBe(m.faction);
     }
@@ -73,7 +74,7 @@ describe('TURNTABLES', () => {
 
 describe('modelFor', () => {
   it('gives the Field manual each turntable’s sheet URL and layout', () => {
-    for (const m of all) {
+    for (const m of done) {
       const t = TURNTABLES[m.id]!;
       expect(modelFor(m.faction as Faction, m.kind as never).turntable, m.id).toEqual({
         url: t.url,
