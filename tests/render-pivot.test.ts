@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
+import { NOT_PLAYABLE_KINDS } from '../src/data/enemies';
 import { UPCOMING_KINDS } from '../src/data/modelViews';
 import { SPRITES } from '../src/data/sprites';
 import { NOT_IN_PLAY, type TowerKind } from '../src/data/towers';
@@ -108,7 +109,9 @@ const NEW_KINDS: Readonly<Record<string, readonly Faction[]>> = { apc: ['us'] };
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
   // A kind not in play yet (the Sniper, renders in #358) has none until its rollout. The upcoming ones (the Heavy tank,
   // #362) have art for every Faction (#509).
-  const inPlay = Object.keys(SPRITES).filter((kind) => !NOT_IN_PLAY.has(kind as TowerKind));
+  const inPlay = Object.keys(SPRITES).filter(
+    (kind) => !NOT_IN_PLAY.has(kind as TowerKind) && !(NOT_PLAYABLE_KINDS as readonly string[]).includes(kind),
+  );
   // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
   // The Fighter jet (`jet`, #482) is rendered for US and Russia first; China and Insurgents are exempt until the next part.
   const JET_DONE: readonly string[] = ['us', 'russia'];
@@ -126,7 +129,9 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   }
 
   it('lists a kind as upcoming only until it is in play (then drop it from UPCOMING_KINDS)', () => {
-    for (const kind of UPCOMING_KINDS) expect(Object.keys(SPRITES), kind).not.toContain(kind);
+    // A kind may be a sim kind (the Heavy tank boss, #457) with a null sprite, but has no frame until it is in play.
+    for (const kind of UPCOMING_KINDS)
+      expect((SPRITES as Record<string, string | null>)[kind] ?? null, kind).toBeNull();
   });
 
   it('keeps the new kinds out of SPRITES until they are in play', () => {
