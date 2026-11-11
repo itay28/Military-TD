@@ -1,7 +1,9 @@
+import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { classifyFireError, fireRoutine, github, type Fetch, type Routine } from './auto-start.ts';
 import { currentMilestone, graphql, milestoneOrder } from './board-sync.ts';
 import { ApiMeter, softFail } from './rate-limit.ts';
+import { autoResolve, type AutoResolveResult } from './auto-resolve.ts';
 import { markerFor } from './failure-report.ts';
 import { isMilestoneDone, releaseVersion } from './milestone-report.ts';
 
@@ -42,12 +44,15 @@ export const SNAPSHOTS_STARTED_MARKER = '<!-- pr-steward:update-snapshots-starte
 const SNAPSHOTS_LABEL = 'update-snapshots';
 
 const ROUND_META = '<!-- pr-steward:round-meta';
-/** The hidden line under a round marker: why the round fired, and the base branch's head then (#183). */
-export const roundMeta = (reasons: readonly Reason[], baseSha: string) =>
-  `${ROUND_META} reasons=${reasons.join(',')} base=${baseSha} -->`;
+/**
+ * The hidden line under a round marker: why the round fired, and the base branch's head then
+ * (#183). `free=1` marks a front-of-queue round that main moving caused (#473): it doesn't count.
+ */
+export const roundMeta = (reasons: readonly Reason[], baseSha: string, free = false) =>
+  `${ROUND_META} reasons=${reasons.join(',')} base=${baseSha}${free ? ' free=1' : ''} -->`;
 const parseRoundMeta = (body: string) => {
-  const m = new RegExp(`${ROUND_META} reasons=([\\w,]*) base=(\\S+) -->`).exec(body);
-  return m ? { reasons: m[1]!.split(','), base: m[2]! } : null;
+  const m = new RegExp(`${ROUND_META} reasons=([\\w,]*) base=(\\S+?)( free=1)? -->`).exec(body);
+  return m ? { reasons: m[1]!.split(','), base: m[2]!, free: !!m[3] } : null;
 };
 
 /**
@@ -75,7 +80,7 @@ function finishedRound(comments: readonly PrComment[]): (round: PrComment) => bo
 function countedRounds(rounds: readonly PrComment[], finished: (round: PrComment) => boolean): number {
   const counted = rounds.filter((r) => {
     const meta = parseRoundMeta(r.body);
-    return finished(r) && !(meta && meta.reasons.length === 1 && meta.reasons[0] === 'conflict');
+    return finished(r) && !(meta && (meta.free || (meta.reasons.length === 1 && meta.reasons[0] === 'conflict')));
   }).length;
   const dead = rounds.filter((r) => !finished(r)).length;
   return counted + Math.max(0, dead - 1);
@@ -152,6 +157,8 @@ const HAND_OFF_LABELS = [NEEDS_YOU_LABEL, NEEDS_APPROVAL_LABEL] as const;
 export const MAX_ROUNDS = 2;
 /** A round with no done marker after this long has died (e.g. its session hit a usage limit) and is retried, not counted (#200). Real rounds take minutes (#196). */
 const ROUND_TIMEOUT_MS = 60 * 60 * 1000;
+/** An Update snapshots run is waited on this long; after that it counts as hung, and the normal decision applies (#471). */
+export const SNAPSHOTS_TIMEOUT_MS = 30 * 60 * 1000;
 /** A draft that is red and has had no commit or comment for this long is stranded, and gets a round (#326). */
 export const DRAFT_IDLE_MS = 60 * 60 * 1000;
 /** Checks that report on bookkeeping, not on the PR's code; the CI review is judged by its comment. */
@@ -229,6 +236,8 @@ export interface StewardPr {
     readonly blocked: boolean;
     readonly needsInfo: boolean;
     readonly milestone?: MilestoneRef | null;
+    /** Its board Priority (`P0`…`P3`), which orders the merge queue (#473). */
+    readonly priority?: string | null;
   }[];
   /** Changed paths; null when the PR has more files than were read. */
   readonly files: readonly string[] | null;
@@ -238,6 +247,8 @@ export interface StewardPr {
   readonly codeCommittedAt: string | null;
   /** When the latest commit of any kind was made (a draft's activity, #326). */
   readonly lastCommitAt: string | null;
+  /** When the earliest active Update snapshots run for this PR started (#471); its push will fix the red check. */
+  readonly snapshotRunSince: string | null;
   /** Conversation comments, oldest first. */
   readonly comments: readonly PrComment[];
 }
@@ -247,21 +258,24 @@ export type Reason = 'conflict' | 'ci' | 'review' | 'comment' | 'threads';
 
 /**
  * What a `wait` waits on, so its status label (#419) doesn't depend on the wording of `why`:
- * an agent or automation (`mergeability`, `round`, `checks`, `review`), the maintainer
+ * an agent or automation (`mergeability`, `round`, `checks`, `snapshots`, `review`), the maintainer
  * (`needs-info`, `release`: a release PR to merge by hand, or a broken report PR), CI on main
- * (`main-ci`), or something queued ahead of it (`milestone`, `stacked`, `blocked`).
+ * (`main-ci`), or something queued ahead of it (`stacked`, `blocked`). A milestone never holds a
+ * merge (#536): milestones decide what a release contains, not when code lands on main.
  */
 export type WaitCause =
   | 'mergeability'
   | 'round'
   | 'checks'
+  | 'snapshots'
   | 'review'
   | 'stacked'
   | 'blocked'
   | 'needs-info'
-  | 'milestone'
   | 'main-ci'
-  | 'release';
+  | 'release'
+  /** Behind or conflicting while another PR is at the front of the merge queue (#473). */
+  | 'queued';
 
 export type Decision =
   | { readonly kind: 'skip'; readonly why: string }
@@ -280,6 +294,8 @@ export type Decision =
       readonly retry: boolean;
       /** A maintainer comment restarted a handed-off PR: the hand-off labels to remove. */
       readonly clearHandOff: readonly string[];
+      /** The front of the merge queue, fixing what main moving broke: it doesn't count toward MAX_ROUNDS (#473). */
+      readonly free?: boolean;
     }
   | {
       readonly kind: 'stuck';
@@ -332,10 +348,11 @@ const isApproval = (c: PrComment) => isMaintainer(c) && APPROVE_COMMAND.test(c.b
  * unresolved threads (hand off as stuck after MAX_ROUNDS, or at once when a round left a conflict
  * on the same base); update a PR that is only behind; wait
  * for running checks and the CI review, requesting a review that never ran (#209); then merge, if
- * it targets the default branch, no issue it closes is blocked or waiting on an answer, and none
- * is in a later milestone than `current` (#180), and, when it touches a critical path, a
+ * it targets the default branch, no issue it closes is blocked or waiting on an answer (look-ahead
+ * work for a later milestone merges too, #536), and, when it touches a critical path, a
  * maintainer `/approve` came after the latest round (#206). While `mainRed`, no merge happens except
- * the fix's (#220).
+ * the fix's (#220). At the `front` of the merge queue (#473), a round for what main moving broke is
+ * free (see `freeRound`).
  */
 export function decide(
   pr: StewardPr,
@@ -343,8 +360,9 @@ export function decide(
   defaultBranch = 'main',
   current: CurrentMilestone | null = null,
   mainRed: MainRed | null = null,
+  front = false,
 ): Decision {
-  return heldByRedMain(pr, decideIgnoringMain(pr, now, defaultBranch, current), mainRed);
+  return heldByRedMain(pr, decideIgnoringMain(pr, now, defaultBranch, current, front), mainRed);
 }
 
 /** The checks that count toward a PR's state: the latest run of each, minus the ones that never gate it. */
@@ -386,11 +404,35 @@ function draftStage(pr: StewardPr, now: Date): Decision | 'stranded' {
   return red && now.getTime() - lastActivity >= DRAFT_IDLE_MS ? 'stranded' : skip;
 }
 
+/** The head is a merge of the base, so main moved into it since its last code commit. */
+const headIsBaseMerge = (pr: StewardPr) =>
+  !!pr.lastCommitAt && !!pr.codeCommittedAt && Date.parse(pr.lastCommitAt) > Date.parse(pr.codeCommittedAt);
+
+/**
+ * Whether the front PR's round is one main moving caused (#473): only a conflict and failing
+ * checks, and checks only fail on a head that merged the base in. One per base: once a free round
+ * finished on this base, the next one counts, so a failure it couldn't fix ends in a hand-off.
+ */
+function freeRound(
+  pr: StewardPr,
+  reasons: readonly Reason[],
+  rounds: readonly PrComment[],
+  finished: (round: PrComment) => boolean,
+): boolean {
+  if (!reasons.every((r) => r === 'conflict' || r === 'ci')) return false;
+  if (reasons.includes('ci') && !headIsBaseMerge(pr)) return false;
+  return !rounds.some((r) => {
+    const meta = parseRoundMeta(r.body);
+    return finished(r) && meta?.free && meta.base === pr.baseSha;
+  });
+}
+
 function decideIgnoringMain(
   pr: StewardPr,
   now: Date,
   defaultBranch: string,
   current: CurrentMilestone | null,
+  front: boolean,
 ): Decision {
   if (pr.fork) return { kind: 'skip', why: 'fork' };
   if (pr.labels.includes(HOLD_LABEL)) return { kind: 'skip', why: HOLD_LABEL };
@@ -442,6 +484,11 @@ function decideIgnoringMain(
   // there's a conflict, which no check result changes.
   if (pending && !conflict) return { kind: 'wait', cause: 'checks', why: 'checks are running' };
 
+  // A hand-started Update snapshots run pushes the baselines that fix a red e2e (#471). Like
+  // `checks`, it never holds a conflict; a run past SNAPSHOTS_TIMEOUT_MS is taken as hung.
+  if (pr.snapshotRunSince && !conflict && now.getTime() - Date.parse(pr.snapshotRunSince) < SNAPSHOTS_TIMEOUT_MS)
+    return { kind: 'wait', cause: 'snapshots', why: 'an Update snapshots run is going' };
+
   const reasons: Reason[] = [];
   if (conflict) reasons.push('conflict');
   if (relevant.some((c) => c.state === 'failure')) reasons.push('ci');
@@ -457,9 +504,12 @@ function decideIgnoringMain(
       return { kind: 'stuck', reasons: ['conflict'], conflict: true };
     const used = countedRounds(since, finished);
     const latest = since.at(-1);
+    const retry = !!latest && !finished(latest);
+    if (front && freeRound(pr, reasons, since, finished))
+      return { kind: 'steward', reasons, round: Math.min(used + 1, MAX_ROUNDS), retry, clearHandOff, free: true };
     return used >= MAX_ROUNDS
       ? { kind: 'stuck', reasons }
-      : { kind: 'steward', reasons, round: used + 1, retry: !!latest && !finished(latest), clearHandOff };
+      : { kind: 'steward', reasons, round: used + 1, retry, clearHandOff };
   }
   if (pr.isDraft) return { kind: 'skip', why: 'draft' };
   if (pr.behind) return { kind: 'update' };
@@ -481,14 +531,6 @@ function decideIgnoringMain(
       why: held.blocked
         ? `#${held.number} is still blocked by open issues`
         : `#${held.number} has an open question (needs-info)`,
-    };
-  // Look-ahead work (auto-start's next milestone) merges only once the current milestone has shipped.
-  const ahead = current && pr.closes.find((i) => i.milestone && current.after.includes(i.milestone.number));
-  if (ahead && current)
-    return {
-      kind: 'wait',
-      cause: 'milestone',
-      why: `#${ahead.number} is in ${ahead.milestone!.title}: merges after ${current.title} ships`,
     };
   const paths = [
     ...(pr.files ? criticalFiles(pr.files) : ['(more files than were read)']),
@@ -554,11 +596,11 @@ function decideRelease(pr: StewardPr, current: CurrentMilestone | null): Decisio
  */
 function decideReport(pr: StewardPr, current: CurrentMilestone | null, version: string): Decision {
   const name = `report PR ${version}`;
-  const wrong = wrongVersion('report PR', version, current, 'milestone');
+  const wrong = wrongVersion('report PR', version, current, 'release');
   if (wrong) return wrong;
-  if (!current) return { kind: 'wait', cause: 'milestone', why: `${name}: no open milestone` };
-  if (!current.done)
-    return { kind: 'wait', cause: 'milestone', why: `${name}: ${current.title} still has open issues` };
+  if (!current) return { kind: 'wait', cause: 'release', why: `${name}: no open milestone` };
+  // Its milestone's open issues block it, like an issue's blockers (#536).
+  if (!current.done) return { kind: 'wait', cause: 'blocked', why: `${name}: ${current.title} still has open issues` };
   if (lastParagraph(pr.body) !== `Release-As: ${version}`)
     return {
       kind: 'wait',
@@ -568,10 +610,221 @@ function decideReport(pr: StewardPr, current: CurrentMilestone | null, version: 
   return whenGreen(pr, 'report PR', 'not mergeable');
 }
 
+// The merge queue (#473). With many PRs open, each merge to main breaks the others again, and a
+// round spent on a PR that main then moves under is thrown away. So the PRs that can merge are
+// ranked, and only the front one gets base merges and the rounds main moving causes. A PR that
+// conflicts with main or with a PR ahead of it waits (`queued`). One that overlaps nothing ahead
+// goes on as before, so unrelated PRs still get rounds and merge in parallel. main's branch
+// protection requires branches to be up to date, so the front PR is updated, then merged once green.
+
+/** Whether merging `a` and `b` gives a textual conflict (commits or refs). The CLI's is `gitConflicts`. */
+export type Conflicts = (a: string, b: string) => boolean;
+
+/** Who conflicts with what: PR numbers that conflict with main, and conflicting pairs (lower number first). */
+export interface ConflictMap {
+  readonly main: readonly number[];
+  readonly pairs: readonly (readonly [number, number])[];
+}
+
+/**
+ * `git merge-tree --write-tree a b` in `cwd`: exit 0 merges cleanly, 1 conflicts. Anything else (a
+ * commit that isn't there, an old git) throws, so the caller decides what an unknown means.
+ */
+export function gitConflicts(a: string, b: string, cwd?: string): boolean {
+  try {
+    execFileSync('git', ['merge-tree', '--write-tree', a, b], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    return false;
+  } catch (error) {
+    // A conflict exits 1 and still prints the merged tree; a bad commit exits 1 with only an error.
+    const { status, stdout } = error as { status?: number; stdout?: Buffer };
+    if (status === 1 && /^[0-9a-f]{40,64}\b/.test(String(stdout ?? ''))) return true;
+    throw error;
+  }
+}
+
+/** Each PR against main (GitHub's own `CONFLICTING` counts too) and each pair of PRs, through `conflicts`. */
+export function conflictMap(prs: readonly StewardPr[], conflicts: Conflicts, baseSha: string): ConflictMap {
+  const main = prs.filter((p) => p.mergeable === 'CONFLICTING' || conflicts(baseSha, p.headSha)).map((p) => p.number);
+  const pairs: [number, number][] = [];
+  for (const [i, a] of prs.entries())
+    for (const b of prs.slice(i + 1))
+      if (conflicts(a.headSha, b.headSha))
+        pairs.push(a.number < b.number ? [a.number, b.number] : [b.number, a.number]);
+  return {
+    main: main.sort((x, y) => x - y),
+    pairs: pairs.sort((x, y) => x[0] - y[0] || x[1] - y[1]),
+  };
+}
+
+/**
+ * A PR that can merge into the default branch once it's green: no draft, fork, `hold`, hand-off,
+ * stacked, release or report PR, and nothing it closes is blocked or waiting on an answer (a later
+ * milestone doesn't count, #536). Only these take a place in the queue, so the front is always a PR
+ * that can merge.
+ */
+export function inQueue(pr: StewardPr, defaultBranch: string): boolean {
+  if (pr.isDraft || pr.fork || pr.base !== defaultBranch) return false;
+  if ([HOLD_LABEL, ...HAND_OFF_LABELS].some((l) => pr.labels.includes(l))) return false;
+  if (pr.head.startsWith(RELEASE_BRANCH) || REPORT_BRANCH.test(pr.head)) return false;
+  return !pr.closes.some((i) => i.blocked || i.needsInfo);
+}
+
+/** Green for the queue: every check passed, the CI review answered, threads resolved. Mergeability doesn't count. */
+function queueGreen(pr: StewardPr): boolean {
+  const relevant = relevantChecks(pr);
+  const lastDone = lastCommentAt(pr, (c) => c.body.includes(DONE_MARKER));
+  const lastFindings = lastCommentAt(
+    pr,
+    (c) => c.body.startsWith(REVIEW_HEADING) && !c.body.includes(CLEAN_REVIEW_MARKER),
+  );
+  return (
+    relevant.length > 0 &&
+    relevant.every((c) => c.state === 'success') &&
+    !currentChecks(pr.checks).some((c) => c.state === 'pending') &&
+    pr.unresolvedThreads === 0 &&
+    lastCommentAt(pr, (c) => c.body.startsWith(REVIEW_HEADING)) > 0 &&
+    lastFindings <= lastDone
+  );
+}
+
+/** 0 for P0 … 3 for P3, from the PR's `priority:*` label or its issues' board Priority; 4 for none. */
+function priorityRank(pr: StewardPr): number {
+  const values = [
+    ...pr.labels.filter((l) => l.startsWith('priority:')).map((l) => l.slice('priority:'.length)),
+    ...pr.closes.map((i) => i.priority ?? ''),
+  ];
+  return Math.min(4, ...values.map((v) => /^P([0-3])$/.exec(v)).map((m) => (m ? Number(m[1]) : 4)));
+}
+
+/** The queue order: green first, then priority, then the oldest (lowest number). A total order, so it's stable. */
+export function queueOrder(prs: readonly StewardPr[]): number[] {
+  const key = (p: StewardPr) => [queueGreen(p) ? 0 : 1, priorityRank(p), p.number] as const;
+  return [...prs]
+    .sort((a, b) => {
+      const [x, y] = [key(a), key(b)];
+      return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
+    })
+    .map((p) => p.number);
+}
+
+/** Decisions a waiting queue PR can't make: they'd spend a round or a CI run that the PRs ahead throw away. */
+const QUEUE_HELD: readonly Decision['kind'][] = ['steward', 'stuck', 'update', 'merge'];
+
+/**
+ * Every PR's decision with the queue applied. The front gets `decideFor(pr, true)`. A PR behind it
+ * waits `queued` instead of a base merge, and instead of a round, a hand-off or a merge when it
+ * conflicts with main or with a PR ahead of it. PRs outside the queue are decided as before.
+ */
+export function mergeQueue(
+  prs: readonly StewardPr[],
+  options: {
+    readonly map: ConflictMap;
+    readonly decideFor: (pr: StewardPr, front: boolean) => Decision;
+    readonly defaultBranch?: string;
+  },
+): { order: number[]; decisions: Map<number, Decision> } {
+  const { map, decideFor, defaultBranch = 'main' } = options;
+  const order = queueOrder(prs.filter((p) => inQueue(p, defaultBranch)));
+  const decisions = new Map<number, Decision>();
+  for (const p of prs) if (!order.includes(p.number)) decisions.set(p.number, decideFor(p, false));
+  const [front] = order;
+  for (const [i, n] of order.entries()) {
+    const p = prs.find((x) => x.number === n)!;
+    const decision = decideFor(p, n === front);
+    if (n === front || !QUEUE_HELD.includes(decision.kind)) {
+      decisions.set(n, decision);
+      continue;
+    }
+    const ahead = order.slice(0, i);
+    const blockers = ahead.filter((a) => map.pairs.some(([x, y]) => (x === a && y === n) || (x === n && y === a)));
+    const why = map.main.includes(n)
+      ? `conflicts with main: its round comes at the front of the merge queue (#${front} is first)`
+      : blockers.length
+        ? `conflicts with ${blockers.map((b) => `#${b}`).join(', ')} ahead in the merge queue: waits for ${blockers.length === 1 ? 'it' : 'them'} to merge`
+        : decision.kind === 'update'
+          ? `behind main: brought up to date at the front of the merge queue (#${front} is first)`
+          : null;
+    decisions.set(n, why ? { kind: 'wait', cause: 'queued', why } : decision);
+  }
+  return { order, decisions };
+}
+
+/** The queue and its conflicts, for the run log. */
+export const describeQueue = (order: readonly number[], map: ConflictMap): string[] => [
+  `Merge queue: ${order.length ? order.map((n) => `#${n}`).join(' → ') : 'empty'}`,
+  `Conflict map: ${
+    [...map.main.map((n) => `#${n} ↔ main`), ...map.pairs.map(([a, b]) => `#${a} ↔ #${b}`)].join(', ') || 'none'
+  }`,
+];
+
+/**
+ * One fetch per sweep (#293): main and every queued PR's head, so `git merge-tree` can read them.
+ * Returns the seam the conflict map uses; a pair git can't merge counts as no conflict (today's
+ * behaviour), with a warning. With no git history (the fetch failed), only GitHub's own mergeability counts.
+ */
+function fetchedConflicts(prs: readonly StewardPr[], defaultBranch: string): Conflicts {
+  try {
+    execFileSync(
+      'git',
+      ['fetch', '--no-tags', '--quiet', 'origin', defaultBranch, ...prs.map((p) => `pull/${p.number}/head`)],
+      {
+        stdio: ['ignore', 'ignore', 'inherit'],
+      },
+    );
+  } catch (error) {
+    console.log(
+      `::warning::couldn't fetch the PR heads, so the conflict map only has GitHub's mergeability: ${String(error)}`,
+    );
+    return () => false;
+  }
+  return (a, b) => {
+    try {
+      return gitConflicts(a, b);
+    } catch (error) {
+      console.log(`::warning::git merge-tree ${a} ${b} failed, counted as no conflict: ${String(error)}`);
+      return false;
+    }
+  };
+}
+
 /** AUTO_STEWARD fires rounds and updates branches; AUTO_MERGE merges. */
 export interface StewardSettings {
   readonly steward?: Routine;
   readonly merge: boolean;
+  /** Tries to merge the base in without an agent before a conflict round (#474, scripts/auto-resolve.ts). */
+  readonly autoResolve?: (pr: StewardPr) => Promise<AutoResolveResult>;
+}
+
+/** On the comment for a conflict resolved without an agent: not a round, so it counts as none. */
+export const AUTO_RESOLVED_MARKER = '<!-- pr-steward:auto-resolved -->';
+const UPDATE_SNAPSHOTS_LABEL = 'update-snapshots';
+
+/**
+ * Before a conflict round or a conflict hand-off: merge the base in with scripts/auto-resolve.ts.
+ * True when it pushed the merge, so no agent is needed; the next run decides on the new head.
+ * A conflict it has no rule for, or any failure, leaves the PR to the round as before.
+ */
+async function resolvedMechanically(pr: StewardPr, settings: StewardSettings, token: string, fetchFn: Fetch) {
+  let result: AutoResolveResult;
+  try {
+    result = await settings.autoResolve!(pr);
+  } catch (error) {
+    result = { kind: 'aborted', why: String(error) };
+  }
+  if (result.kind === 'aborted') {
+    console.log(`#${pr.number}: no mechanical resolution (${result.why}), so an agent takes the conflict`);
+    return false;
+  }
+  const files = result.files.map((f) => `\`${f}\``).join(', ');
+  const snapshots = result.baselines
+    ? ` The screenshot baselines took \`${pr.base}\`'s version, so I added \`${UPDATE_SNAPSHOTS_LABEL}\` to remake them.`
+    : '';
+  await github(fetchFn, token, 'POST', `issues/${pr.number}/comments`, {
+    body: `PR steward: merged \`${pr.base}\` in and resolved the conflicts without an agent (#474), so no round was needed: ${files}.${snapshots}\n\n${AUTO_RESOLVED_MARKER}`,
+  });
+  if (result.baselines)
+    await github(fetchFn, token, 'POST', `issues/${pr.number}/labels`, { labels: [UPDATE_SNAPSHOTS_LABEL] });
+  return true;
 }
 
 const REASON_TEXT: Readonly<Record<Reason, string>> = {
@@ -624,6 +877,13 @@ export async function act(
 ): Promise<void> {
   const n = pr.number;
   if (!switchedOn(decision.kind, settings)) return;
+  if (
+    (decision.kind === 'steward' || decision.kind === 'stuck') &&
+    decision.reasons.includes('conflict') &&
+    settings.autoResolve &&
+    (await resolvedMechanically(pr, settings, token, fetchFn))
+  )
+    return;
   switch (decision.kind) {
     case 'steward': {
       let session: string | undefined;
@@ -649,8 +909,11 @@ export async function act(
       const retry = decision.retry
         ? ' (a retry: the last round ended without reporting, most likely out of tokens)'
         : '';
+      const free = decision.free
+        ? " (front of the merge queue, fixing what main moving broke: it doesn't count toward the limit)"
+        : '';
       await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
-        body: `PR steward round ${decision.round}/${MAX_ROUNDS} started${retry} for: ${describeReasons(decision.reasons)}.${session ? ` Session: ${session}` : ''}\n\n${ROUND_MARKER}\n${roundMeta(decision.reasons, pr.baseSha)}`,
+        body: `PR steward round ${decision.round}/${MAX_ROUNDS} started${retry}${free} for: ${describeReasons(decision.reasons)}.${session ? ` Session: ${session}` : ''}\n\n${ROUND_MARKER}\n${roundMeta(decision.reasons, pr.baseSha, decision.free)}`,
       });
       return;
     }
@@ -736,13 +999,21 @@ export const STATUS_LABELS = {
   },
   'waiting: main CI': { color: 'd93f0b', description: "PR steward: ready, but main's CI is failing" },
   'waiting: agent': { color: 'fbca04', description: 'PR steward: an agent, a check or the CI review is at work' },
-  'waiting: milestone': { color: 'cfd3d7', description: 'PR steward: its issue is in a later milestone' },
   'waiting: parent PR': { color: 'cfd3d7', description: 'PR steward: stacked, merges after its parent PR' },
-  'waiting: blocker': { color: 'cfd3d7', description: 'PR steward: its issue is still blocked by open issues' },
+  'waiting: blocker': {
+    color: 'cfd3d7',
+    description: "PR steward: its issue is still blocked by open issues (a report PR: its milestone isn't done)",
+  },
+  'waiting: queue': {
+    color: 'cfd3d7',
+    description: 'PR steward: behind or conflicting, waits for its turn at the front of the merge queue',
+  },
   'ready to merge': { color: '0e8a16', description: 'PR steward: green and answered, merges next' },
 } as const satisfies Record<string, { color: string; description: string }>;
 export type StatusLabel = keyof typeof STATUS_LABELS;
 const STATUS_LABEL_NAMES = Object.keys(STATUS_LABELS) as StatusLabel[];
+/** Status labels no decision gives any more, removed from any PR that still carries one. */
+const RETIRED_STATUS_LABELS = ['waiting: milestone'] as const;
 
 const WAIT_LABEL: Readonly<Record<WaitCause, StatusLabel>> = {
   'needs-info': 'waiting: you',
@@ -751,10 +1022,11 @@ const WAIT_LABEL: Readonly<Record<WaitCause, StatusLabel>> = {
   mergeability: 'waiting: agent',
   round: 'waiting: agent',
   checks: 'waiting: agent',
+  snapshots: 'waiting: agent',
   review: 'waiting: agent',
-  milestone: 'waiting: milestone',
   stacked: 'waiting: parent PR',
   blocked: 'waiting: blocker',
+  queued: 'waiting: queue',
 };
 
 /** The status label a PR gets for this decision: none for a draft, a fork or a `hold` PR. */
@@ -782,10 +1054,10 @@ export function statusLabel(decision: Decision, pr: StewardPr): StatusLabel | nu
 export function labelChanges(
   labels: readonly string[],
   label: StatusLabel | null,
-): { add: StatusLabel | null; remove: StatusLabel[] } {
+): { add: StatusLabel | null; remove: string[] } {
   return {
     add: label && !labels.includes(label) ? label : null,
-    remove: STATUS_LABEL_NAMES.filter((l) => l !== label && labels.includes(l)),
+    remove: [...STATUS_LABEL_NAMES, ...RETIRED_STATUS_LABELS].filter((l) => l !== label && labels.includes(l)),
   };
 }
 
@@ -899,7 +1171,10 @@ export const PR_QUERY = `query($owner: String!, $name: String!) {
         labels(first: 20) { nodes { name } }
         reviewThreads(first: 100) { nodes { isResolved } }
         closingIssuesReferences(first: 10) {
-          nodes { number labels(first: 20) { nodes { name } } issueDependenciesSummary { blockedBy } milestone { number title } }
+          nodes {
+            number labels(first: 20) { nodes { name } } issueDependenciesSummary { blockedBy } milestone { number title }
+            projectItems(first: 5) { nodes { priority: fieldValueByName(name: "Priority") { ... on ProjectV2ItemFieldSingleSelectValue { name } } } }
+          }
         }
         comments(last: 100) { nodes { author { login __typename } authorAssociation body createdAt } }
         files(first: 100) { totalCount nodes { path changeType } }
@@ -957,6 +1232,7 @@ interface PrNode {
       labels: { nodes: { name: string }[] };
       issueDependenciesSummary: { blockedBy: number } | null;
       milestone: MilestoneRef | null;
+      projectItems?: { nodes: { priority: { name?: string } | null }[] } | null;
     }[];
   };
   comments: {
@@ -1019,6 +1295,48 @@ const renamedCritical = (renamed: readonly Rename[]): string[] =>
         : [],
   );
 
+/** The REST fields of a PR that tell its mergeability (#547). */
+export interface RestMergeability {
+  mergeable: boolean | null;
+  mergeable_state: string;
+}
+
+/** REST mergeability as the steward reads it; null while GitHub is still computing it. */
+export function restMergeability(rest: RestMergeability): Pick<StewardPr, 'mergeable' | 'behind'> | null {
+  if (rest.mergeable_state === 'dirty') return { mergeable: 'CONFLICTING', behind: false };
+  if (rest.mergeable === null) return null;
+  return { mergeable: rest.mergeable ? 'MERGEABLE' : 'CONFLICTING', behind: rest.mergeable_state === 'behind' };
+}
+
+const MERGEABILITY_TRIES = 3;
+const MERGEABILITY_WAIT_MS = 3000;
+
+/**
+ * GitHub computes mergeability lazily, so the list query reports UNKNOWN for a PR nobody asked
+ * about since the base moved (#547). A REST fetch of that PR starts the computation; it is re-read
+ * a few times after a short wait. Still unknown (or a failed fetch) leaves the PR as it was, and
+ * `decide` keeps waiting; the next run asks again.
+ */
+export async function settleMergeability(
+  pr: StewardPr,
+  token: string,
+  fetchFn: Fetch = fetch,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<StewardPr> {
+  if (pr.mergeable !== 'UNKNOWN') return pr;
+  try {
+    for (let i = 0; i < MERGEABILITY_TRIES; i++) {
+      if (i) await sleep(MERGEABILITY_WAIT_MS);
+      const res = await github(fetchFn, token, 'GET', `pulls/${pr.number}`);
+      const settled = restMergeability((await res.json()) as RestMergeability);
+      if (settled) return { ...pr, ...settled };
+    }
+  } catch (error) {
+    console.log(`#${pr.number}: couldn't fetch its mergeability: ${String(error)}`);
+  }
+  return pr;
+}
+
 /** Reads the old paths of a PR's renames (one request, only for a PR that renames something). */
 async function withRenameSources(pr: StewardPr, token: string): Promise<StewardPr> {
   if (!pr.renamed.length) return pr;
@@ -1074,7 +1392,7 @@ function toCheck(node: ContextNode): Check {
   return { name: node.context ?? '', state };
 }
 
-export function toStewardPr(node: PrNode): StewardPr {
+export function toStewardPr(node: PrNode, snapshotRunSince: string | null = null): StewardPr {
   return {
     id: node.id,
     number: node.number,
@@ -1098,11 +1416,13 @@ export function toStewardPr(node: PrNode): StewardPr {
       blocked: (i.issueDependenciesSummary?.blockedBy ?? 0) > 0,
       needsInfo: i.labels.nodes.some((l) => l.name === 'needs-info'),
       milestone: i.milestone,
+      priority: i.projectItems?.nodes.find((item) => item.priority?.name)?.priority?.name ?? null,
     })),
     files: changedFiles(node.files),
     renamed: renamedFiles(node.files),
     codeCommittedAt: codeCommittedAt(node.recentCommits.nodes),
     lastCommitAt: node.recentCommits.nodes.at(-1)?.commit.committedDate ?? null,
+    snapshotRunSince,
     comments: node.comments.nodes.map((c) => ({
       author: c.author?.login ?? '',
       bot: c.author?.__typename === 'Bot',
@@ -1116,6 +1436,40 @@ export function toStewardPr(node: PrNode): StewardPr {
 /** From a milestone's open issues: only its release issue is left. A truncated list (more pages) is never done. */
 export const milestoneDone = (open: readonly { labels: { nodes: { name: string }[] } }[], truncated = false): boolean =>
   !truncated && isMilestoneDone(open.map((i) => ({ state: 'open', labels: i.labels.nodes.map((l) => l.name) })));
+
+interface WorkflowRun {
+  display_title: string;
+  status: string;
+  run_started_at?: string | null;
+}
+
+/**
+ * PR number → start of its earliest active (queued, in progress or waiting) Update snapshots run
+ * (#471). The workflow's `run-name` is `Update snapshots #<pr>`: a hand-started run isn't linked
+ * to the PR, so the title is the only way to match it.
+ */
+export function activeSnapshotRuns(runs: readonly WorkflowRun[]): Map<number, string> {
+  const active = new Map<number, string>();
+  for (const run of runs) {
+    if (!['queued', 'in_progress', 'waiting'].includes(run.status) || !run.run_started_at) continue;
+    const number = /^Update snapshots #(\d+)$/.exec(run.display_title)?.[1];
+    if (!number) continue;
+    const prev = active.get(Number(number));
+    if (!prev || run.run_started_at < prev) active.set(Number(number), run.run_started_at);
+  }
+  return active;
+}
+
+/** One request per sweep. A failure only means no PR is held (it hands off as before). */
+async function readSnapshotRuns(token: string): Promise<Map<number, string>> {
+  try {
+    const res = await github(fetch, token, 'GET', 'actions/workflows/update-snapshots.yml/runs?per_page=50');
+    return activeSnapshotRuns(((await res.json()) as { workflow_runs: WorkflowRun[] }).workflow_runs);
+  } catch (error) {
+    console.log(`Couldn't read the Update snapshots runs, so none holds a PR: ${String(error)}`);
+    return new Map();
+  }
+}
 
 async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun: boolean): Promise<void> {
   const { repository } = await graphql<PrData>(token, PR_QUERY, { owner: 'itay28', name: 'Military-TD' });
@@ -1142,25 +1496,40 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
     }
   }
   let relabelled = 0;
-  for (const pr of await Promise.all(nodes.map((node) => withRenameSources(toStewardPr(node), token)))) {
-    const decision = decide(
-      pr,
-      now,
-      repository.defaultBranchRef.name,
-      current && {
-        number: current.number,
-        title: current.title,
-        after: milestoneOrder(repository.milestones.nodes).filter((n) => n !== current.number),
-        done: milestoneDone(current.issues.nodes, current.issues.pageInfo.hasNextPage),
-      },
-      mainRed,
-    );
+  const defaultBranch = repository.defaultBranchRef.name;
+  const milestone: CurrentMilestone | null = current && {
+    number: current.number,
+    title: current.title,
+    after: milestoneOrder(repository.milestones.nodes).filter((n) => n !== current.number),
+    done: milestoneDone(current.issues.nodes, current.issues.pageInfo.hasNextPage),
+  };
+  const snapshotRuns = await readSnapshotRuns(token);
+  const prs = await Promise.all(
+    nodes.map(async (node) =>
+      settleMergeability(
+        await withRenameSources(toStewardPr(node, snapshotRuns.get(node.number) ?? null), token),
+        token,
+      ),
+    ),
+  );
+  const queued = prs.filter((p) => inQueue(p, defaultBranch));
+  const map = queued.length
+    ? conflictMap(queued, fetchedConflicts(queued, defaultBranch), queued[0]!.baseSha)
+    : { main: [], pairs: [] };
+  const { order, decisions } = mergeQueue(prs, {
+    map,
+    defaultBranch,
+    decideFor: (pr, front) => decide(pr, now, defaultBranch, milestone, mainRed, front),
+  });
+  for (const line of describeQueue(order, map)) console.log(line);
+  for (const pr of prs) {
+    const decision = decisions.get(pr.number)!;
     const switchedOff = !switchedOn(decision.kind, settings);
     const detail =
       decision.kind === 'skip' || decision.kind === 'wait'
         ? decision.why
         : decision.kind === 'steward'
-          ? `round ${decision.round}: ${describeReasons(decision.reasons)}`
+          ? `round ${decision.round}${decision.free ? ' (free)' : ''}: ${describeReasons(decision.reasons)}`
           : decision.kind === 'stuck'
             ? describeReasons(decision.reasons)
             : decision.kind === 'approval'
@@ -1209,7 +1578,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   globalThis.fetch = meter.wrap(globalThis.fetch) as typeof fetch;
   try {
     if (!token) throw new Error('PROJECT_TOKEN is not set, so no PR was checked.');
-    await reconcileOpenPrs(token, settingsFromEnv(process.env), process.argv.includes('--dry-run'));
+    const settings = settingsFromEnv(process.env);
+    // The Action's checkout keeps no credentials, so the merge is pushed with PROJECT_TOKEN and starts CI.
+    const remote = `https://x-access-token:${token}@github.com/${process.env['GITHUB_REPOSITORY'] ?? 'itay28/Military-TD'}.git`;
+    await reconcileOpenPrs(
+      token,
+      { ...settings, autoResolve: (pr) => autoResolve({ dir: process.cwd(), remote, head: pr.head, base: pr.base }) },
+      process.argv.includes('--dry-run'),
+    );
   } catch (error) {
     if (!softFail(meter)) {
       console.log(`::error::${error instanceof Error ? error.message : String(error)}`);

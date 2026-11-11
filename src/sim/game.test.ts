@@ -42,6 +42,13 @@ describe('createGame', () => {
     expect(game.spawnEnemy('infantry')).not.toBe(id);
   });
 
+  it('a spawned Heavy tank carries the boss flag; an Infantry does not', () => {
+    const game = newGame();
+    game.spawnEnemy('heavyTank');
+    game.spawnEnemy('infantry');
+    expect(game.state.enemies.map((e) => e.boss === true)).toEqual([true, false]);
+  });
+
   it('an enemy moves speed × dt along the Path each tick', () => {
     const game = newGame();
     game.spawnEnemy('infantry');

@@ -4,7 +4,7 @@ Reads a window of one NAIP scene (a cloud-optimized GeoTIFF on Microsoft Planeta
 token is fetched on the fly), centred on a point, `tiles` × `tiles` tiles of `metresPerTile` each, resampled
 to `pxPerTile` pixels per tile, into assets/<id>/<id>.png.
 
-Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install rasterio pillow numpy
+Setup:  python3.11 -m venv .venv-art && .venv-art/bin/pip install rasterio pillow numpy
 Run:    .venv-art/bin/python scripts/naip-patch.py
 """
 
