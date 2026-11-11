@@ -2,7 +2,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Faction } from '../sim/factions';
 import { modelFor } from './modelViews';
-import { TURNTABLES, TURNTABLE_BUDGET_BYTES } from './turntables';
+import { TURNTABLES, TURNTABLE_BUDGET_BYTES, turntableFor } from './turntables';
 
 const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as {
   models: { id: string; kind: string; faction: string }[];
@@ -10,8 +10,8 @@ const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as
 const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
   packs: { id: string; name: string; attribution: string; files: string[] }[];
 };
-/** The factions rendered so far (#440 US, #445 Insurgents; #442, #444 add the others). */
-const DONE: readonly Faction[] = ['us', 'insurgents'];
+/** The factions rendered so far (#440 US, #442 Russia, #445 Insurgents; #444 adds the other). */
+const DONE: readonly Faction[] = ['us', 'russia', 'insurgents'];
 const done = config.models.filter((m) => (DONE as readonly string[]).includes(m.faction));
 const sheetPath = (id: string): string => `assets/render-${id}/${id}-turntable.webp`;
 
@@ -43,6 +43,10 @@ describe('TURNTABLES', () => {
     for (const id of Object.keys(TURNTABLES)) expect(ids, id).toContain(id);
   });
 
+  it('finds a faction’s turntable by kind', () => {
+    for (const m of done) expect(turntableFor(m.faction as Faction, m.kind)?.id, m.id).toBe(m.id);
+  });
+
   it('is 24 frames of 384 px, 15° apart, from 30° up', () => {
     for (const t of Object.values(TURNTABLES)) {
       expect(t.frames, t.id).toBe(24);
@@ -69,6 +73,10 @@ describe('TURNTABLES', () => {
 
   it('serves each sheet by URL', () => {
     for (const t of Object.values(TURNTABLES)) expect(t.url).toMatch(new RegExp(`${t.id}-turntable\\.webp`));
+  });
+
+  it('has no turntable for a kind without a model', () => {
+    expect(turntableFor('us', 'noSuchKind')).toBeNull();
   });
 });
 
