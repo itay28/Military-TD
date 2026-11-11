@@ -21,6 +21,7 @@ export const SPRITES = {
   cannon: 'towerDefense_tile249',
   mortar: 'towerDefense_tile226',
   grenadeLauncher: null, // no frame until its renders land (#359): it keeps its shape
+  sniper: null, // shape until its renders land (#358)
   infantry: 'towerDefense_tile247',
   jeep: 'towerDefense_tile269',
   tank: 'tankBody_sand',
@@ -80,6 +81,7 @@ export const TOWER_BASES = {
   cannon: 'towerDefense_tile181',
   mortar: 'towerDefense_tile182',
   grenadeLauncher: null,
+  sniper: 'sandbagBeige_open', // unused while it has no turret frame
 } as const satisfies Record<TowerKind, string | null>;
 
 /** Which way each turret frame points as drawn, in radians (0 east, −π/2 north): the soldier faces east, barrels north. */
@@ -89,6 +91,7 @@ export const TURRET_FACING = {
   cannon: -Math.PI / 2,
   mortar: -Math.PI / 2,
   grenadeLauncher: -Math.PI / 2,
+  sniper: 0,
 } as const satisfies Record<TowerKind, number>;
 
 /** What a tower kind's icon is made of: a base frame, and a turret frame over it turned to point north. */

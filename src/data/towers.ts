@@ -24,19 +24,34 @@ export const TOWER_STATS = {
     targets: ['ground'],
     shell: { flightMs: 400, innerRadius: 0.35, outerRadius: 0.7 },
   },
+  sniper: {
+    cost: 110,
+    range: 6,
+    fireRate: 0.4,
+    damage: 70,
+    armorPierce: 4,
+    targets: ['ground'],
+    targeting: 'strongest',
+  },
 } as const satisfies Record<string, TowerStats>;
 
 export type TowerKind = keyof typeof TOWER_STATS;
 
 /**
- * The kinds the player can build, in build-bar order. A kind waits outside it until its renders land (ADR-0009: no map
- * mixes art styles); tests and headless scenarios can use any kind. The grenade launcher joins in #365.
+ * Kinds in the sim (tests and headless scenarios use them) but not in play yet: no build bar button. A kind joins
+ * play in its rollout issue, once its renders land (ADR-0009: no map mixes art styles). The Sniper's is #364, the
+ * grenade launcher's #365.
  */
-export const IN_PLAY_TOWERS: readonly TowerKind[] = ['rifleNest', 'aaGun', 'cannon', 'mortar'];
+export const NOT_IN_PLAY: ReadonlySet<TowerKind> = new Set<TowerKind>(['sniper', 'grenadeLauncher']);
+
+/** The kinds the player can build, in `TOWER_STATS` order: every kind not in `NOT_IN_PLAY`. */
+export const BUILD_KINDS: readonly TowerKind[] = (Object.keys(TOWER_STATS) as TowerKind[]).filter(
+  (kind) => !NOT_IN_PLAY.has(kind),
+);
 
 /**
  * How fast each kind's turret turns toward its target, in radians per second; it fires only once it faces it
- * (within `AIM_TOLERANCE`). A soldier and a light AA mount swing fast, a heavy gun slowly.
+ * (within `AIM_TOLERANCE`). A soldier and a light AA mount swing fast, a heavy gun slowly; a sniper's long rifle in between.
  * `null`: the Mortar lobs shells (indirect fire), so it fires without turning. The grenade launcher fires shells too,
  * but aimed directly from a tripod, so it turns.
  */
@@ -46,6 +61,7 @@ export const TURN_RATES: Record<TowerKind, number | null> = {
   cannon: Math.PI / 2,
   mortar: null,
   grenadeLauncher: 2 * Math.PI,
+  sniper: Math.PI,
 };
 
 /** Seconds of look-ahead every turning kind gets, on top of the time a half turn takes it (see `trackHorizon`). */
@@ -100,5 +116,9 @@ export const TOWER_LEVELS = {
   grenadeLauncher: [
     { ...TOWER_STATS.grenadeLauncher, cost: 72, range: 3.5 },
     { ...TOWER_STATS.grenadeLauncher, cost: 126, range: 3.5, fireRate: 1.875, damage: 22.4 },
+  ],
+  sniper: [
+    { ...TOWER_STATS.sniper, cost: 88, range: 6.5 },
+    { ...TOWER_STATS.sniper, cost: 154, range: 6.5, fireRate: 0.5, damage: 112 },
   ],
 } as const satisfies Record<TowerKind, readonly TowerStats[]>;

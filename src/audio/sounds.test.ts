@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
-import { IN_PLAY_TOWERS, TOWER_STATS, type TowerKind } from '../data/towers';
+import { BUILD_KINDS, TOWER_STATS, type TowerKind } from '../data/towers';
 import { FACTIONS } from '../sim/factions';
 import { SHOT_SOUND, SOUND_IDS, soundFor } from './sounds';
 
@@ -16,12 +16,12 @@ describe('SHOT_SOUND', () => {
     for (const kind of KINDS) for (const faction of FACTIONS) expect(SOUND_IDS).toContain(SHOT_SOUND[kind][faction]);
   });
 
-  // A kind not in play yet may borrow a sound (the grenade launcher until #365).
-  it('gives each tower kind in play its own shot sound within a faction', () => {
+  // A kind not in play yet (the Sniper) borrows a sound until its rollout (#364) gives it its own.
+  it("gives each tower kind in play its shot's own sound within a faction", () => {
     for (const faction of FACTIONS) {
-      const shots = IN_PLAY_TOWERS.map((kind) => soundFor(shotOf(kind), faction));
+      const shots = BUILD_KINDS.map((kind) => soundFor(shotOf(kind), faction));
       expect(shots).not.toContain(null);
-      expect(new Set(shots).size).toBe(IN_PLAY_TOWERS.length);
+      expect(new Set(shots).size).toBe(BUILD_KINDS.length);
     }
   });
 

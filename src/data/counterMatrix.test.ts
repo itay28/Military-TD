@@ -38,4 +38,10 @@ describe('counter matrix', () => {
     // 1.5 grenades/s × (14 − 8 armor) / 90 Money: the Tank barely notices.
     expect(efficiency('grenadeLauncher', 'tank')).toBeCloseTo((1.5 * 6) / 90);
   });
+
+  it('the Sniper chips Tanks (an efficient counter) but the Cannon stays the best against them', () => {
+    expect(efficientCounters('tank')).toContain('sniper');
+    const best = towerKinds.reduce((a, b) => (efficiency(b, 'tank') > efficiency(a, 'tank') ? b : a));
+    expect(best).toBe('cannon');
+  });
 });

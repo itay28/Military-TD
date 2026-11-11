@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { towerLevels } from '../sim/towers';
 import { LEVEL_NAME } from './display';
-import { IN_PLAY_TOWERS, TOWER_STATS, TURN_RATES, type TowerKind } from './towers';
+import { BUILD_KINDS, NOT_IN_PLAY, TOWER_STATS, TURN_RATES, type TowerKind } from './towers';
 
 const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
 
@@ -11,6 +11,15 @@ describe('tower levels', () => {
       { cost: 50, range: 2.5, fireRate: 2, damage: 10, targets: ['ground', 'air'] },
       { cost: 40, range: 3, fireRate: 2, damage: 10, targets: ['ground', 'air'] },
       { cost: 70, range: 3, fireRate: 2.5, damage: 16, targets: ['ground', 'air'] },
+    ]);
+  });
+
+  it('Sniper: optics for 88 (range 6.5), then a heavier rifle for 154 (112 damage, 0.5/s)', () => {
+    const sniper = { armorPierce: 4, targets: ['ground'], targeting: 'strongest' };
+    expect(towerLevels('sniper')).toEqual([
+      { ...sniper, cost: 110, range: 6, fireRate: 0.4, damage: 70 },
+      { ...sniper, cost: 88, range: 6.5, fireRate: 0.4, damage: 70 },
+      { ...sniper, cost: 154, range: 6.5, fireRate: 0.5, damage: 112 },
     ]);
   });
 
@@ -83,7 +92,16 @@ describe('automatic grenade launcher (#75)', () => {
   });
 
   it('is not in play yet (ADR-0009: it waits for its renders, #365)', () => {
-    expect(IN_PLAY_TOWERS).not.toContain('grenadeLauncher');
-    expect(IN_PLAY_TOWERS).toEqual(['rifleNest', 'aaGun', 'cannon', 'mortar']);
+    expect(NOT_IN_PLAY.has('grenadeLauncher')).toBe(true);
+    expect(BUILD_KINDS).not.toContain('grenadeLauncher');
+  });
+});
+
+describe('kinds in play', () => {
+  // ADR-0009: a kind reaches the build bar in its rollout issue, once its renders land (the Sniper's: #364, the grenade launcher's: #365).
+  it('the build kinds are every kind not held back, in TOWER_STATS order; the Sniper and the grenade launcher are held back', () => {
+    expect(NOT_IN_PLAY.has('sniper')).toBe(true);
+    expect(BUILD_KINDS).toEqual(KINDS.filter((kind) => !NOT_IN_PLAY.has(kind)));
+    expect(BUILD_KINDS).toEqual(['rifleNest', 'aaGun', 'cannon', 'mortar']);
   });
 });

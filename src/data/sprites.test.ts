@@ -38,6 +38,11 @@ describe('spriteFor', () => {
 });
 
 describe('towerIcon', () => {
+  it('draws a kind with no sprite (the Sniper, the grenade launcher: not in play yet) as its shape', () => {
+    expect(towerIcon('sniper')).toBeNull();
+    expect(towerIcon('grenadeLauncher')).toBeNull();
+  });
+
   it('gives every tower kind with a sprite its base and turret frames, both in the atlas', () => {
     for (const kind of TOWERS_WITH_SPRITES) {
       const icon = towerIcon(kind)!;

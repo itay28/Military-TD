@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENEMY_NAMES, ENEMY_WEAKNESS, TOWER_NAMES, TOWER_ROLES } from '../data/display';
 import { ENEMY_STATS } from '../data/enemies';
 import { START_LIVES, START_MONEY } from '../data/start';
-import { IN_PLAY_TOWERS, SELL_REFUND, TOWER_STATS } from '../data/towers';
+import { BUILD_KINDS, SELL_REFUND, TOWER_STATS } from '../data/towers';
 import { mountHowToPlay } from './howToPlay';
 import { KEY_MAP } from './keymap';
 
@@ -51,7 +51,7 @@ describe('How to play screen', () => {
   it('lists every tower in play with its cost and role line', () => {
     mountHowToPlay(root, { onBack: () => {} });
     const items = [...section('Towers').querySelectorAll('li')].map((li) => li.textContent);
-    expect(items).toEqual(IN_PLAY_TOWERS.map((k) => `${TOWER_NAMES[k]} (${TOWER_STATS[k].cost}): ${TOWER_ROLES[k]}`));
+    expect(items).toEqual(BUILD_KINDS.map((k) => `${TOWER_NAMES[k]} (${TOWER_STATS[k].cost}): ${TOWER_ROLES[k]}`));
   });
 
   it('lists every enemy with its reward and weakness line', () => {
