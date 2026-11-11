@@ -10,7 +10,8 @@ name: PR steward
 # Logic and tests: scripts/pr-steward.ts.
 #
 # Switches (repo variables, off unless `on`): AUTO_STEWARD fires rounds and updates branches,
-# AUTO_MERGE merges. ROUTINE_STEWARD_URL / _TOKEN are the steward task's API trigger.
+# AUTO_MERGE merges. Before a conflict round it tries scripts/auto-resolve.ts (#474).
+# ROUTINE_STEWARD_URL / _TOKEN are the steward task's API trigger.
 # PROJECT_TOKEN (classic PAT) does the writes, so its pushes and merges start CI.
 #
 # API quota (#293): PROJECT_TOKEN's requests count against the maintainer's own hourly quota,
@@ -93,8 +94,12 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
+      # No persisted GITHUB_TOKEN: a conflict in generated files is merged here without an agent
+      # (scripts/auto-resolve.ts, #474) and pushed with PROJECT_TOKEN, so the push starts CI.
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v4
