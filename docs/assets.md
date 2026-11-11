@@ -205,6 +205,7 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | `render-us-aa-gun/` | "Phalanx CIWS" by Lemper_Studio, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-mortar/` | "Mortar - M224" by jcherry3d, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-grenade-launcher/` | "MK19 Low-Poly" by lebedeventerprise, "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR, "Tactical Soldier (game ready) low poly" by MissingTray1151, all CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-us-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-jeep/` | "Low Poly Humvee FREE" by madtrollstudio, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-tank/` | "M1A2 Abrams Crows" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |

@@ -36,6 +36,9 @@ The maintainer also wants each map to pit two sides against each other, picked f
 | **Jeep** (unarmored, fast) | M1097 soft-top Humvee | UAZ-469 | BJ2022 Brave Warrior | Toyota Hilux technical with a DShK |
 | **Tank** | M1A2 SEPv3 Abrams | T-72B3 | Type 99A | T-55 (captured) |
 | **Helicopter** (light armor) | UH-60 Black Hawk | Mi-8AMTSh | Z-20 | Mi-8 (captured) |
+| **Grenade launcher** (rendered ahead of play, #359) | Mk 19 on a tripod, crew of 2 | AGS-30, crew of 2 | QLZ-87 / QLZ-04, crew of 2 | AGS-17 (captured), behind sandbags |
+
+Updated 2026-11-11 (#464): the Grenade launcher row. Its renders come one Faction per part, before it is in play; the US render combines three models (launcher, a stand-in tripod, the Rifle Nest's soldier as gunner and assistant), the first built from `parts`.
 
 Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind), and the AA Gun is a fast-firing gun that also hits ground targets.
 

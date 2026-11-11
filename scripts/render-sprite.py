@@ -35,6 +35,13 @@ clockwise), e.g. a rifle team. `base` (towers, issue #314) builds our own dug-in
 of `radiusTiles` ringed by sandbags, open at the front when `gapDeg` is set, so a dark tower reads on grass at
 48 px. The base is part of the hull layer and casts its own shadow.
 
+`parts` (issue #464) builds one sprite from several models, e.g. a launcher with no mount, a tripod and a crew: each
+entry is another Sketchfab model (`sketchfab`, `author`, `license`, credited like the main one) imported into the same
+scene and placed on its own, with the same `frontAxis`, `turnDeg`, `lengthTiles`, `liftTiles`, `exclude`, `tint`,
+`untexturedColor`, `pose` and `copies` keys (copies also take `z`). A part with `"turret": true` goes on the turret
+layer (the gunner), the others on the hull. `liftTiles` stands a model (main or part) that many tiles up, e.g. a
+launcher on its tripod's head.
+
 Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1
 Run:    .venv-art/bin/python scripts/render-sprite.py [--only <id>] [--out assets]
 """
@@ -103,15 +110,15 @@ def world_bounds(meshes) -> tuple[Vector, Vector]:
     return (Vector([min(p[i] for p in pts) for i in range(3)]), Vector([max(p[i] for p in pts) for i in range(3)]))
 
 
-def tint_untextured(color: list[float]) -> None:
+def tint_untextured(color: list[float], mats=None) -> None:
     """Give materials that lost their texture (plain base colour, no image) `color`, so they don't render white."""
-    for mat in bpy.data.materials:
+    for mat in bpy.data.materials if mats is None else mats:
         bsdf = mat.node_tree.nodes.get("Principled BSDF") if mat.node_tree else None
         if bsdf and not bsdf.inputs["Base Color"].links:
             bsdf.inputs["Base Color"].default_value = (*color, 1.0)
 
 
-def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) -> None:
+def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict], mats=None) -> None:
     """Multiply every textured base colour by `color` (a grey-painted model turned olive).
 
     `skip` keeps materials whose name starts with an entry. `overrides` gives a material (by name prefix) its own
@@ -120,7 +127,7 @@ def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) 
     material (a flat base colour) sets that colour (and `specular`) instead, for a low-poly model painted in plain
     colours; without it, untextured materials are left alone.
     """
-    for mat in bpy.data.materials:
+    for mat in bpy.data.materials if mats is None else mats:
         tree = mat.node_tree
         bsdf = tree.nodes.get("Principled BSDF") if tree else None
         if not bsdf or any(mat.name.startswith(s) for s in skip):
@@ -145,22 +152,23 @@ def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) 
         tree.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
 
 
-def place_model(spec: dict) -> None:
-    """Turn the model's front north (`frontAxis`, then `turnDeg` clockwise), stand it on z = 0 and scale it so its
-    north-south length is `lengthTiles`.
+def place_model(spec: dict, objs=None) -> None:
+    """Turn the model's front north (`frontAxis`, then `turnDeg` clockwise), stand it on z = `liftTiles` (default 0)
+    and scale it so its north-south length is `lengthTiles`. `objs` limits it to one import (a part).
 
     One Blender unit is one tile from here on.
     """
-    meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+    objs = list(bpy.data.objects) if objs is None else objs
+    meshes = [o for o in objs if o.type == "MESH"]
     turn = Matrix.Rotation(FRONT[spec["frontAxis"]] - math.radians(spec.get("turnDeg", 0)), 4, "Z")
-    roots = [o for o in bpy.data.objects if o.parent is None]
+    roots = [o for o in objs if o.parent is None]
     for o in roots:
         o.matrix_world = turn @ o.matrix_world
     bpy.context.view_layer.update()
     lo, hi = world_bounds(meshes)
     scale = spec["lengthTiles"] / (hi.y - lo.y)
     centre = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
-    fit = Matrix.Scale(scale, 4) @ Matrix.Translation(-centre)
+    fit = Matrix.Translation((0, 0, spec.get("liftTiles", 0))) @ Matrix.Scale(scale, 4) @ Matrix.Translation(-centre)
     for o in roots:
         o.matrix_world = fit @ o.matrix_world
     bpy.context.view_layer.update()
@@ -179,16 +187,20 @@ def split_loose_parts() -> None:
     bpy.context.view_layer.update()
 
 
-def apply_pose(pose: dict) -> None:
-    """Freeze every armature at `frame` of the animation `action`, then bake the meshes in that pose."""
-    action = bpy.data.actions[pose["action"]]
-    for arm in [o for o in bpy.data.objects if o.type == "ARMATURE"]:
+def apply_pose(pose: dict, objs=None, actions=None) -> None:
+    """Freeze every armature at `frame` of the animation `action`, then bake the meshes in that pose.
+
+    `objs` and `actions` limit it to one import (a part), whose action names Blender may have suffixed."""
+    objs = list(bpy.data.objects) if objs is None else objs
+    pool = bpy.data.actions if actions is None else actions
+    action = next(a for a in pool if a.name.split(".")[0] == pose["action"])
+    for arm in [o for o in objs if o.type == "ARMATURE"]:
         arm.animation_data_create().action = action
         if hasattr(arm.animation_data, "action_slot") and action.slots:
             arm.animation_data.action_slot = action.slots[0]
     bpy.context.scene.frame_set(pose["frame"])
     bpy.context.view_layer.update()
-    for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+    for o in [o for o in objs if o.type == "MESH"]:
         if not any(m.type == "ARMATURE" for m in o.modifiers):
             continue
         bpy.context.view_layer.objects.active = o
@@ -196,12 +208,15 @@ def apply_pose(pose: dict) -> None:
             bpy.ops.object.modifier_apply(modifier=m.name)
 
 
-def make_copies(copies: list[dict]) -> None:
-    """Replace the placed model by one copy per entry, moved `x`, `y` tiles and turned `turnDeg` clockwise."""
-    roots = [o for o in bpy.data.objects if o.parent is None]
-    originals = [o for o in bpy.data.objects]
+def make_copies(copies: list[dict], objs=None) -> list:
+    """Replace the placed model by one copy per entry, moved `x`, `y`, `z` tiles and turned `turnDeg` clockwise.
+
+    `objs` limits it to one import (a part). Returns every object of the copies."""
+    originals = list(bpy.data.objects) if objs is None else list(objs)
+    roots = [o for o in originals if o.parent is None]
+    made = list(originals)
     for i, c in enumerate(copies):
-        move = Matrix.Translation((c.get("x", 0), c.get("y", 0), 0)) @ Matrix.Rotation(
+        move = Matrix.Translation((c.get("x", 0), c.get("y", 0), c.get("z", 0))) @ Matrix.Rotation(
             -math.radians(c.get("turnDeg", 0)), 4, "Z"
         )
         if i == len(copies) - 1:
@@ -216,12 +231,39 @@ def make_copies(copies: list[dict]) -> None:
             for col in o.users_collection:
                 col.objects.link(d)
             dupes[o] = d
+        made += dupes.values()
         for o, d in dupes.items():
             if o.parent in dupes:
                 d.parent = dupes[o.parent]
         for o in roots:
             dupes[o].matrix_world = move @ o.matrix_world
     bpy.context.view_layer.update()
+    return made
+
+
+def add_part(part: dict, cache: Path) -> list:
+    """Import one extra model (`parts`) into the scene and place it on its own: posed, tinted, placed, copied.
+
+    Only the objects, materials and actions this import added are touched. Returns its meshes."""
+    before = (set(bpy.data.objects), set(bpy.data.materials), set(bpy.data.actions))
+    bpy.ops.import_scene.gltf(filepath=str(download(part["sketchfab"], cache)))
+    objs = [o for o in bpy.data.objects if o not in before[0]]
+    mats = [m for m in bpy.data.materials if m not in before[1]]
+    actions = [a for a in bpy.data.actions if a not in before[2]]
+    for name in part.get("exclude", []):
+        hit = next(o for o in objs if o.name.split(".")[0] == name or o.name == name)
+        objs.remove(hit)
+        bpy.data.objects.remove(hit, do_unlink=True)
+    if "tint" in part:
+        t = part["tint"]
+        tint_paint(t["color"], t.get("skip", []), t.get("overrides", {}), mats)
+    if "untexturedColor" in part:
+        tint_untextured(part["untexturedColor"], mats)
+    if "pose" in part:
+        apply_pose(part["pose"], objs, actions)
+    place_model(part, objs)
+    objs = make_copies(part.get("copies", [{}]), objs)
+    return [o for o in objs if o.type == "MESH"]
 
 
 def flat_material(name: str, color: list[float], roughness: float = 0.95) -> object:
@@ -344,7 +386,10 @@ def render(path: Path, cfg: dict) -> None:
     print(f"wrote {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
 
 
-def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
+def prepare_model(spec: dict, cache: Path) -> tuple[list, list, list]:
+    """Import, clean, tint, pose, place and copy the model and its parts, and build its base.
+
+    Returns (model, turret, base)."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=str(download(spec["sketchfab"], cache)))
     for name in spec.get("exclude", []):
@@ -362,9 +407,18 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
         split_loose_parts()
     model = [o for o in bpy.data.objects if o.type == "MESH"]
     turret = [o for o in model if "turret" in spec and is_turret(o, spec["turret"])]
+    for part in spec.get("parts", []):
+        meshes = add_part(part, cache)
+        model += meshes
+        turret += meshes if part.get("turret") else []
     if "turret" in spec and not turret:
         sys.exit(f"{spec['id']}: the turret rule matched no mesh")
     base = build_base(spec["base"]) if "base" in spec else []
+    return model, turret, base
+
+
+def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
+    model, turret, base = prepare_model(spec, cache)
     ground = build_stage(cfg, spec)
     meshes = model + base
     hull = [o for o in meshes if o not in turret]
