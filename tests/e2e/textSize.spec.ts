@@ -107,6 +107,10 @@ for (const [name, viewport] of [
         .getByRole('button', { name: /no stars yet/ })
         .first()
         .click();
+      // The briefing (#401) fits at this size too, then Deploy starts the game.
+      await page.getByTestId('briefing').waitFor();
+      expect(await fits(page, ['#level-select'])).toContain('#level-select');
+      await page.getByRole('button', { name: 'Deploy', exact: true }).click();
       await page.waitForFunction(() => window.__TD__ !== undefined);
       expect(await fits(page, ['#hud', '#build-bar'])).toEqual(expect.arrayContaining(['#hud', '#build-bar']));
       await page.getByRole('button', { name: 'Pause' }).click();
