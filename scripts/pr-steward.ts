@@ -31,6 +31,16 @@ export const ROUND_MARKER = '<!-- pr-steward:round -->';
 /** Posted by the steward (or implement) agent when it has finished a round. */
 export const DONE_MARKER = '<!-- pr-steward:done -->';
 
+/**
+ * A round puts this in its done comment when the only red checks are screenshot baselines that
+ * changed on purpose (#472). The script then starts *Update snapshots*, so it doesn't depend on
+ * what the session is allowed to call.
+ */
+export const SNAPSHOTS_MARKER = '<!-- pr-steward:update-snapshots -->';
+/** Posted by the Action when it starts the run: answers the latest request, so one request starts one run. */
+export const SNAPSHOTS_STARTED_MARKER = '<!-- pr-steward:update-snapshots-started -->';
+const SNAPSHOTS_LABEL = 'update-snapshots';
+
 const ROUND_META = '<!-- pr-steward:round-meta';
 /** The hidden line under a round marker: why the round fired, and the base branch's head then (#183). */
 export const roundMeta = (reasons: readonly Reason[], baseSha: string) =>
@@ -83,6 +93,10 @@ function unresolvedConflict(
 }
 /** Posted by the Action when it hands a PR off. */
 export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
+/** Posted when the steward merges the base in because mergeability stayed UNKNOWN (#487). */
+export const UNKNOWN_UPDATE_MARKER = '<!-- pr-steward:unknown-update -->';
+/** How long GitHub may report mergeability as UNKNOWN before the steward acts (#487). */
+const UNKNOWN_MS = 60 * 60 * 1000;
 /** Posted next to the stuck marker when the hand-off asks for the maintainer's `/approve` (#206). */
 export const APPROVAL_MARKER = '<!-- pr-steward:approval -->';
 /** A maintainer comment starting with this lets a PR that touches a critical path merge. */
@@ -257,7 +271,8 @@ export type WaitCause =
 export type Decision =
   | { readonly kind: 'skip'; readonly why: string }
   | { readonly kind: 'wait'; readonly cause: WaitCause; readonly why: string }
-  | { readonly kind: 'update' }
+  /** `unknown`: mergeability stayed UNKNOWN for over an hour (#487), so a marker comment goes with the merge. */
+  | { readonly kind: 'update'; readonly unknown?: boolean }
   /** A draft whose steward round ended green (#326): mark it ready for review. */
   | { readonly kind: 'ready' }
   /** No CI review ever ran on this PR: add `review-again` to start one (#209). */
@@ -276,6 +291,8 @@ export type Decision =
       readonly reasons: readonly Reason[];
       /** A conflict round didn't resolve the conflict. */
       readonly conflict?: boolean;
+      /** Mergeability is still UNKNOWN an hour after the steward merged the base in (#487). */
+      readonly unknown?: boolean;
     }
   | { readonly kind: 'merge' }
   /** Ready to merge, but it touches a critical path (#206): hand off for the maintainer's `/approve`. */
@@ -405,8 +422,19 @@ function decideIgnoringMain(
     if (!lastStuck || lastMaintainer <= lastStuck)
       return { kind: 'skip', why: 'handed off, waiting on the maintainer' };
   }
-  if (pr.mergeable === 'UNKNOWN')
-    return { kind: 'wait', cause: 'mergeability', why: 'GitHub is computing mergeability' };
+  if (pr.mergeable === 'UNKNOWN') {
+    // Waiting forever hides a PR GitHub never recomputes (#487): after an hour, merge the base in
+    // (that makes GitHub compute it again), and after another hour hand it off.
+    const lastActivity = Math.max(
+      lastCommentAt(pr, () => true),
+      pr.lastCommitAt ? Date.parse(pr.lastCommitAt) : 0,
+    );
+    if (now.getTime() - lastActivity < UNKNOWN_MS)
+      return { kind: 'wait', cause: 'mergeability', why: 'GitHub is computing mergeability' };
+    const updated = last((c) => c.body.includes(UNKNOWN_UPDATE_MARKER)) > lastMaintainer;
+    if (pr.behind && !updated) return { kind: 'update', unknown: true };
+    return { kind: 'stuck', reasons: [], unknown: true };
+  }
   if (lastRound > lastDone && now.getTime() - lastRound < ROUND_TIMEOUT_MS)
     return { kind: 'wait', cause: 'round', why: 'a steward round is in flight' };
 
@@ -570,6 +598,11 @@ export const stewardText = (pr: StewardPr, reasons: readonly Reason[], round: nu
   `PR: #${pr.number}\nBranch base: ${pr.base}\nReasons: ${reasons.join(', ')}\nRound: ${round} of ${MAX_ROUNDS}\nRepository: itay28/Military-TD`;
 
 /** The hand-off comment for a PR the steward can't finish. */
+function stuckReason(d: { reasons: readonly Reason[]; conflict?: boolean; unknown?: boolean }): string {
+  if (d.conflict) return "The steward couldn't resolve the merge conflict: it's still there on the same base.";
+  if (d.unknown) return 'GitHub still reports mergeability as unknown, even after merging the base in.';
+  return `${MAX_ROUNDS} steward rounds didn't finish it. Still open: ${describeReasons(d.reasons)}.`;
+}
 const stuckBody = (summary: string) =>
   `**PR steward: handing this PR to you.** ${summary}\n\nComment on the PR to give it ${MAX_ROUNDS} more steward rounds, or fix it yourself.\n\n${STUCK_MARKER}`;
 
@@ -632,16 +665,7 @@ export async function act(
       return;
     }
     case 'stuck':
-      await handOff(
-        pr,
-        stuckBody(
-          decision.conflict
-            ? "The steward couldn't resolve the merge conflict: it's still there on the same base."
-            : `${MAX_ROUNDS} steward rounds didn't finish it. Still open: ${describeReasons(decision.reasons)}.`,
-        ),
-        token,
-        fetchFn,
-      );
+      await handOff(pr, stuckBody(stuckReason(decision)), token, fetchFn);
       return;
     case 'approval': {
       const paths = decision.paths.map((p) => `\`${p}\``).join(', ');
@@ -678,6 +702,10 @@ ${APPROVAL_MARKER}`,
       });
       return;
     case 'update':
+      if (decision.unknown)
+        await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+          body: `PR steward: GitHub has reported mergeability as unknown for over an hour, so I'm merging the base in to make it compute again.\n\n${UNKNOWN_UPDATE_MARKER}`,
+        });
       await github(fetchFn, token, 'PUT', `pulls/${n}/update-branch`, { expected_head_sha: pr.headSha });
       return;
     case 'merge':
@@ -775,6 +803,34 @@ export function labelChanges(
 /** Rethrows `error` unless it is a GitHub API error with this HTTP status. */
 function ignoreStatus(error: unknown, status: number): void {
   if ((error as { status?: number }).status !== status) throw error;
+}
+
+/** Whether a round asked for *Update snapshots* and no run was started for that request yet (#472). */
+export function snapshotsRequested(pr: StewardPr): boolean {
+  if (pr.fork || pr.labels.includes(HOLD_LABEL)) return false;
+  // Only the maintainer's identity (which the steward posts as) can ask: the label starts a workflow that commits.
+  const latest = (marker: string) =>
+    lastCommentAt(pr, (c) => !c.bot && MAINTAINER_ASSOCIATIONS.includes(c.association) && c.body.includes(marker));
+  const asked = latest(SNAPSHOTS_MARKER);
+  return asked > 0 && asked > latest(SNAPSHOTS_STARTED_MARKER);
+}
+
+/**
+ * Starts *Update snapshots* for a PR: the comment first (so a failed label call is retried as a
+ * fresh run, not looped on), then the label, removed first because a label left from a hand-started
+ * run adds no event (#470). Written with PROJECT_TOKEN, so the label starts the workflow.
+ */
+export async function startSnapshots(pr: StewardPr, token: string, fetchFn: Fetch = fetch): Promise<void> {
+  const n = pr.number;
+  await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+    body: `PR steward: the round found only screenshot baselines that changed on purpose, so I added \`${SNAPSHOTS_LABEL}\` to remake them. Check the new PNGs show the intended change.\n\n${SNAPSHOTS_STARTED_MARKER}`,
+  });
+  try {
+    await github(fetchFn, token, 'DELETE', `issues/${n}/labels/${SNAPSHOTS_LABEL}`);
+  } catch (error) {
+    ignoreStatus(error, 404);
+  }
+  await github(fetchFn, token, 'POST', `issues/${n}/labels`, { labels: [SNAPSHOTS_LABEL] });
 }
 
 /**
@@ -1178,6 +1234,14 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
       await act(pr, decision, token, settings);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));
+    }
+    if (settings.steward && snapshotsRequested(pr)) {
+      try {
+        await startSnapshots(pr, token);
+        console.log(`#${pr.number}: started Update snapshots`);
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : String(error));
+      }
     }
   }
   console.log(`Status labels: ${relabelled} PR${relabelled === 1 ? '' : 's'} relabelled.`);
