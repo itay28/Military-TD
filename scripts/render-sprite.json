@@ -78,18 +78,18 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.45,
+      "lengthTiles": 0.6,
       "pose": {
         "action": "crouch_firing",
         "frame": 10
       },
       "copies": [
         {
-          "x": -0.15,
+          "x": -0.19,
           "y": 0.0
         },
         {
-          "x": 0.15,
+          "x": 0.19,
           "y": -0.03
         }
       ],
@@ -310,18 +310,18 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.45,
+      "lengthTiles": 0.6,
       "pose": {
         "action": "crouch_firing",
         "frame": 10
       },
       "copies": [
         {
-          "x": -0.15,
+          "x": -0.19,
           "y": 0.0
         },
         {
-          "x": 0.15,
+          "x": 0.19,
           "y": -0.03
         }
       ],
@@ -512,18 +512,18 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.45,
+      "lengthTiles": 0.6,
       "pose": {
         "action": "crouch_firing",
         "frame": 10
       },
       "copies": [
         {
-          "x": -0.15,
+          "x": -0.19,
           "y": 0.0
         },
         {
-          "x": 0.15,
+          "x": 0.19,
           "y": -0.03
         }
       ],
@@ -710,18 +710,18 @@
       "author": "MissingTray1151",
       "license": "CC-BY-4.0",
       "frontAxis": "+y",
-      "lengthTiles": 0.45,
+      "lengthTiles": 0.6,
       "pose": {
         "action": "crouch_firing",
         "frame": 10
       },
       "copies": [
         {
-          "x": -0.15,
+          "x": -0.19,
           "y": 0.0
         },
         {
-          "x": 0.15,
+          "x": 0.19,
           "y": -0.03
         }
       ],
