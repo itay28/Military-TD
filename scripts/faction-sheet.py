@@ -6,6 +6,8 @@ Row 3: the turret layer alone at 128 px on a neutral grey, with its pivot marked
 
 Run after render-sprite.py and `npm run render:pivot` (needs Pillow in the art venv):
     .venv-art/bin/python scripts/faction-sheet.py us [--out docs/art/faction-us.png]
+With `--kind`, the columns are one kind across every Faction instead (#509):
+    .venv-art/bin/python scripts/faction-sheet.py --kind heavyTank [--out docs/art/heavy-tanks.png]
 """
 
 import argparse
@@ -19,6 +21,7 @@ RENDER_TILE = 128  # render-sprite.json pxPerTile
 GAME_TILE = 48
 NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in its own pixels (sprite-compare.py)
 CELL = 1.8  # tiles per cell, enough for the largest canvas (the Heavy tank, 1.75)
+FACTIONS = ["us", "russia", "china", "insurgents"]
 KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "heavyTank", "helicopter"]
 
 
@@ -35,21 +38,29 @@ def place(sheet: Image.Image, sprite: Image.Image, scale: float, cx: int, cy: in
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("faction")
+    ap.add_argument("faction", nargs="?", help="one Faction's set, a column per kind")
+    ap.add_argument("--kind", help="one kind across every Faction, a column per Faction")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--assets", type=Path, default=ROOT / "assets", help="where the render-<id>/ folders are")
     args = ap.parse_args()
+    if (args.faction is None) == (args.kind is None):
+        raise SystemExit("give a Faction or --kind, not both")
     cfg = json.loads((ROOT / "scripts/render-sprite.json").read_text())
-    models = {m["kind"]: m for m in cfg["models"] if m["faction"] == args.faction}
-    missing = [k for k in KINDS if k not in models]
+    if args.kind:
+        found = {m["faction"]: m for m in cfg["models"] if m["kind"] == args.kind}
+        labels, name, default_out = FACTIONS, args.kind, f"docs/art/{args.kind}.png"
+    else:
+        found = {m["kind"]: m for m in cfg["models"] if m["faction"] == args.faction}
+        labels, name, default_out = KINDS, args.faction, f"docs/art/faction-{args.faction}.png"
+    missing = [k for k in labels if k not in found]
     if missing:
-        raise SystemExit(f"{args.faction}: no model for {', '.join(missing)}")
+        raise SystemExit(f"{name}: no model for {', '.join(missing)}")
     small, big = round(CELL * GAME_TILE), round(CELL * RENDER_TILE)
-    width = len(KINDS) * big
+    width = len(labels) * big
     sheet = Image.new("RGBA", (width, small + 2 * big), (40, 40, 40, 255))
     draw = ImageDraw.Draw(sheet)
-    for i, kind in enumerate(KINDS):
-        m = models[kind]
+    for i, label in enumerate(labels):
+        m = found[label]
         folder = args.assets / f"render-{m['id']}"
         whole = Image.open(folder / f"{m['id']}.png").convert("RGBA")
         x = i * big
@@ -68,8 +79,8 @@ def main() -> None:
             if pivot:
                 px, py = ox + pivot["x"], oy + pivot["y"]
                 draw.ellipse((px - 3, py - 3, px + 3, py + 3), outline=(255, 200, 0, 255), width=2)
-        draw.text((x + 4, small + 2 * big - 14), kind, fill=(255, 255, 255, 255))
-    out = args.out or ROOT / f"docs/art/faction-{args.faction}.png"
+        draw.text((x + 4, small + 2 * big - 14), label, fill=(255, 255, 255, 255))
+    out = args.out or ROOT / default_out
     sheet.convert("RGB").save(out)
     print(f"wrote {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}")
 

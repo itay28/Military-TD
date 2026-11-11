@@ -16,10 +16,12 @@ A model without a `turret` (a kind with no turning part: Infantry, Jeep, Helicop
 the listed empties), by `minZ` (meshes whose lowest point is at least that many tiles up, after placing) or by
 `box` (a list of boxes, each `x`, `y` ranges and `minZ`, in tiles after placing): every mesh is first split into
 its loose parts, and a part whose centre lies in a box goes to the turret. `box` is for a model whose meshes are merged by material,
-so turret and hull share them.
+so turret and hull share them. A turret modelled traversed off the front is turned back with `turnDeg` (clockwise,
+seen from above) about the centre of the `pivot` mesh (the turret ring), after placing.
 
 A model's optional `exclude` lists meshes to delete before rendering (e.g. add-on slat armour that hides the
-silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`; `overrides` gives a
+silhouette); `excludeMaterials` deletes every mesh whose materials are all in its list (e.g. a diorama's ground and
+grass, #509). `tint` multiplies the textured paint by `color` (minus materials named in `skip`; `overrides` gives a
 material its own `color` and `specular`), for a model painted in the wrong colour.
 
 `sun` (optional) overrides keys of the global sun for one model: soldiers use a higher sun so the shadow stays short
@@ -99,7 +101,16 @@ def is_turret(obj, rule: dict) -> bool:
 
 
 def world_bounds(meshes) -> tuple[Vector, Vector]:
-    pts = [m.matrix_world @ Vector(c) for m in meshes for c in m.bound_box]
+    """The world-space box around the meshes' evaluated vertices, as rendered. Not `bound_box`, which can be stale
+    after import (the China Heavy tank's track mesh claims a box a tile taller than its vertices, #509), and not the
+    raw vertices, which miss shape keys and modifiers (the Insurgents Heavy tank's barrel)."""
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    pts = []
+    for m in meshes:
+        ev = m.evaluated_get(depsgraph)
+        mesh = ev.to_mesh()
+        pts += [ev.matrix_world @ v.co for v in mesh.vertices]
+        ev.to_mesh_clear()
     return (Vector([min(p[i] for p in pts) for i in range(3)]), Vector([max(p[i] for p in pts) for i in range(3)]))
 
 
@@ -151,18 +162,34 @@ def place_model(spec: dict) -> None:
 
     One Blender unit is one tile from here on.
     """
-    meshes = [o for o in bpy.data.objects if o.type == "MESH"]
     turn = Matrix.Rotation(FRONT[spec["frontAxis"]] - math.radians(spec.get("turnDeg", 0)), 4, "Z")
     roots = [o for o in bpy.data.objects if o.parent is None]
     for o in roots:
         o.matrix_world = turn @ o.matrix_world
     bpy.context.view_layer.update()
+    fit_model(spec)
+
+
+def fit_model(spec: dict) -> None:
+    """Scale the model so its north-south length is `lengthTiles` and centre it on the origin, standing on z = 0."""
+    meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+    roots = [o for o in bpy.data.objects if o.parent is None]
     lo, hi = world_bounds(meshes)
     scale = spec["lengthTiles"] / (hi.y - lo.y)
     centre = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
     fit = Matrix.Scale(scale, 4) @ Matrix.Translation(-centre)
     for o in roots:
         o.matrix_world = fit @ o.matrix_world
+    bpy.context.view_layer.update()
+
+
+def turn_turret(turret: list, deg: float, pivot) -> None:
+    """Turn the turret meshes `deg` clockwise (seen from above) about the centre of the `pivot` mesh."""
+    lo, hi = world_bounds([pivot])
+    c = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, 0))
+    turn = Matrix.Translation(c) @ Matrix.Rotation(-math.radians(deg), 4, "Z") @ Matrix.Translation(-c)
+    for o in turret:
+        o.matrix_world = turn @ o.matrix_world
     bpy.context.view_layer.update()
 
 
@@ -349,6 +376,11 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     bpy.ops.import_scene.gltf(filepath=str(download(spec["sketchfab"], cache)))
     for name in spec.get("exclude", []):
         bpy.data.objects.remove(bpy.data.objects[name], do_unlink=True)
+    drop = set(spec.get("excludeMaterials", []))
+    for o in [o for o in bpy.data.objects if o.type == "MESH" and drop]:
+        mats = {slot.material.name for slot in o.material_slots if slot.material}
+        if mats and mats <= drop:
+            bpy.data.objects.remove(o, do_unlink=True)
     if "tint" in spec:
         tint_paint(spec["tint"]["color"], spec["tint"].get("skip", []), spec["tint"].get("overrides", {}))
     if "untexturedColor" in spec:
@@ -364,6 +396,9 @@ def render_model(cfg: dict, spec: dict, cache: Path, out: Path) -> None:
     turret = [o for o in model if "turret" in spec and is_turret(o, spec["turret"])]
     if "turret" in spec and not turret:
         sys.exit(f"{spec['id']}: the turret rule matched no mesh")
+    if "turnDeg" in spec.get("turret", {}):
+        turn_turret(turret, spec["turret"]["turnDeg"], bpy.data.objects[spec["turret"]["pivot"]])
+        fit_model(spec)  # placed with the turret askew: fit the length and centre again with it turned
     base = build_base(spec["base"]) if "base" in spec else []
     ground = build_stage(cfg, spec)
     meshes = model + base
