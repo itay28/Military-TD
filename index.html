@@ -140,6 +140,12 @@
       #hud [data-testid='hud-wave'] {
         min-width: 12ch;
       }
+      /* The Hard tag (#465): small caps in the danger colour, so it reads as a warning at a glance. */
+      #hud [data-testid='hud-difficulty'] {
+        color: var(--danger);
+        font-weight: bold;
+        text-transform: uppercase;
+      }
       #hud [data-testid='hud-dps'] {
         min-width: 8ch;
       }
@@ -273,6 +279,62 @@
       }
       #hud .dps-meter[hidden] {
         display: none;
+      }
+      /* The boss HP bar (#458): under the HUD, centred over the top of the map, while a boss is on the field. It's out
+         of the HUD's flow, so it never changes its height or moves a button, and clicks go through it to the map. */
+      #hud .hud-boss {
+        position: absolute;
+        top: calc(100% + 14px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1;
+        box-sizing: border-box;
+        width: 320px;
+        max-width: calc(100vw - 32px);
+        padding: 4px 8px;
+        font: 0.875rem var(--font-mono);
+        background: color-mix(in srgb, var(--olive-900) 88%, transparent);
+        border: 1px solid var(--danger);
+        pointer-events: none;
+      }
+      #hud .hud-boss[hidden] {
+        display: none;
+      }
+      /* On a phone, centred would run under the build bar's toggle: start it at the map's left edge instead. */
+      @media (max-width: 600px) {
+        #hud .hud-boss {
+          left: 8px;
+          transform: none;
+          max-width: calc(100vw - 80px);
+        }
+      }
+      #hud .hud-boss .boss {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      #hud .boss-name {
+        flex: none;
+        font-weight: bold;
+        white-space: nowrap;
+      }
+      #hud .boss-bar {
+        position: relative;
+        flex: 1;
+        height: 10px;
+        box-sizing: border-box;
+        border: 1px solid var(--bone-dim);
+        background: var(--olive-950);
+      }
+      #hud .boss-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: var(--danger);
+      }
+      #hud .boss-count {
+        flex: none;
+        min-width: 9ch;
+        text-align: right;
       }
       #hud .dps-scope {
         display: flex;
@@ -1010,6 +1072,30 @@
       }
       #level-select button.map[aria-disabled='true'] .map-card {
         opacity: 0.45;
+      }
+      /* A map's Hard button (#466), under its card: as wide as it, smaller; locked until the map is won on Normal. */
+      #level-select li {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      #level-select button.hard {
+        min-height: 44px;
+        padding: 6px 8px;
+        font: bold 0.875rem var(--font-mono);
+        letter-spacing: 0.05em;
+        color: var(--amber);
+        background: var(--olive-800);
+        border: 2px solid var(--olive-500);
+        cursor: pointer;
+      }
+      #level-select button.hard:hover {
+        border-color: var(--tan);
+      }
+      #level-select button.hard[aria-disabled='true'] {
+        color: var(--bone-dim);
+        border-color: var(--olive-600);
+        cursor: default;
       }
       /* A map card (#401): the aerial ground image with the tactical overlay canvas laid exactly over it. */
       #level-select .map-card {
