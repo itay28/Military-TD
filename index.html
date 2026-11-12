@@ -1073,6 +1073,30 @@
       #level-select button.map[aria-disabled='true'] .map-card {
         opacity: 0.45;
       }
+      /* A map's Hard button (#466), under its card: as wide as it, smaller; locked until the map is won on Normal. */
+      #level-select li {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      #level-select button.hard {
+        min-height: 44px;
+        padding: 6px 8px;
+        font: bold 0.875rem var(--font-mono);
+        letter-spacing: 0.05em;
+        color: var(--amber);
+        background: var(--olive-800);
+        border: 2px solid var(--olive-500);
+        cursor: pointer;
+      }
+      #level-select button.hard:hover {
+        border-color: var(--tan);
+      }
+      #level-select button.hard[aria-disabled='true'] {
+        color: var(--bone-dim);
+        border-color: var(--olive-600);
+        cursor: default;
+      }
       /* A map card (#401): the aerial ground image with the tactical overlay canvas laid exactly over it. */
       #level-select .map-card {
         position: relative;
