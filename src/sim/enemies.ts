@@ -13,6 +13,8 @@ export interface EnemyStats {
   /** Flat amount taken off each hit (at least 1 HP still gets through). */
   readonly armor: number;
   readonly layer: Layer;
+  /** A boss: the HUD boss bar and the Gunship look for it on the field. Absent on ordinary kinds. */
+  readonly boss?: boolean;
 }
 
 /** A carrier's squad: `count` fresh enemies of `kind` jump out where it dies (never when it leaks). */
@@ -104,4 +106,11 @@ export function walkEnemies(
     }
   }
   return { walking, leaked };
+}
+
+/** The boss the HUD boss bar shows: the one nearest the HQ (furthest along the Path), or none on the field. */
+export function leadBoss(enemies: readonly Enemy[]): Enemy | undefined {
+  let lead: Enemy | undefined;
+  for (const enemy of enemies) if (enemy.boss && (!lead || enemy.distance > lead.distance)) lead = enemy;
+  return lead;
 }

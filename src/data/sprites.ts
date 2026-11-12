@@ -20,12 +20,16 @@ export const SPRITES = {
   aaGun: 'towerDefense_tile203',
   cannon: 'towerDefense_tile249',
   mortar: 'towerDefense_tile226',
+  grenadeLauncher: null, // no frame until its renders land (#359): it keeps its shape
   sniper: null, // shape until its renders land (#358)
   infantry: 'towerDefense_tile247',
   jeep: 'towerDefense_tile269',
   tank: 'tankBody_sand',
   helicopter: null, // no pack has a rotorcraft
   apc: null, // shape fallback until its renders land (#360)
+  heavyTank: null, // shape fallback until its art lands
+  gunship: null, // shape fallback until its art lands
+  jet: null, // art comes in #361
 } as const satisfies Record<SpriteKind, string | null>;
 
 /** The atlas frame `kind` is drawn with, or null when it has none. */
@@ -73,16 +77,20 @@ export const SPRITE_HEADING = {
   tank: -Math.PI / 2,
   helicopter: 0,
   apc: 0,
+  heavyTank: 0,
+  gunship: 0,
+  jet: 0,
 } as const satisfies Record<EnemyKind, number>;
 
-/** The frame each tower kind's turret stands on. */
+/** The frame each tower kind's turret stands on; null for a kind with no sprite (it keeps its shape). */
 export const TOWER_BASES = {
   rifleNest: 'sandbagBeige_open',
   aaGun: 'towerDefense_tile180',
   cannon: 'towerDefense_tile181',
   mortar: 'towerDefense_tile182',
+  grenadeLauncher: null,
   sniper: 'sandbagBeige_open', // unused while it has no turret frame
-} as const satisfies Record<TowerKind, string>;
+} as const satisfies Record<TowerKind, string | null>;
 
 /** Which way each turret frame points as drawn, in radians (0 east, −π/2 north): the soldier faces east, barrels north. */
 export const TURRET_FACING = {
@@ -90,6 +98,7 @@ export const TURRET_FACING = {
   aaGun: -Math.PI / 2,
   cannon: -Math.PI / 2,
   mortar: -Math.PI / 2,
+  grenadeLauncher: -Math.PI / 2,
   sniper: 0,
 } as const satisfies Record<TowerKind, number>;
 
@@ -104,6 +113,7 @@ export interface TowerIcon {
 /** The icon layers of a tower kind (what the map draws it with), or null when it has no sprite: the icon keeps its shape. */
 export function towerIcon(kind: TowerKind): TowerIcon | null {
   const turret = spriteFor(kind);
-  if (turret === null) return null;
-  return { base: TOWER_BASES[kind], turret, turretRotation: -Math.PI / 2 - TURRET_FACING[kind] };
+  const base = TOWER_BASES[kind];
+  if (turret === null || base === null) return null;
+  return { base, turret, turretRotation: -Math.PI / 2 - TURRET_FACING[kind] };
 }

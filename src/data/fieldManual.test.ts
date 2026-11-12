@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_STATS, NOT_IN_PLAY, type EnemyKind } from './enemies';
+import { PLAYABLE_KINDS } from './enemies';
 import { CLASS_LINES, fieldManualEntries } from './fieldManual';
 import { BUILD_KINDS } from './towers';
 
@@ -7,10 +7,7 @@ describe('fieldManualEntries', () => {
   const entries = fieldManualEntries();
 
   it('has every tower, then every enemy kind, each with a class line', () => {
-    expect(entries.map((e) => e.kind)).toEqual([
-      ...BUILD_KINDS,
-      ...Object.keys(ENEMY_STATS).filter((k) => !NOT_IN_PLAY.includes(k as EnemyKind)),
-    ]);
+    expect(entries.map((e) => e.kind)).toEqual([...BUILD_KINDS, ...PLAYABLE_KINDS]);
     expect(entries.filter((e) => e.group === 'tower')).toHaveLength(BUILD_KINDS.length);
     for (const entry of entries) {
       expect(entry.classLine).toBe(CLASS_LINES[entry.kind]);

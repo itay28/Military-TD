@@ -1,3 +1,4 @@
+import { DIFFICULTY, type Difficulty } from '../data/difficulty';
 import { DISMOUNT_SPREAD_TILES, ENEMY_DISMOUNT, ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, SELL_REFUND, START_HEADING, TOWER_STATS, type TowerKind } from '../data/towers';
 import { DEFAULT_WAVE_AFTER_MS } from '../data/waves';
@@ -37,6 +38,8 @@ export interface GameConfig {
    * waves arrive on their timers, overlapping. Fixed for the game.
    */
   readonly tacticalMode?: boolean;
+  /** Scales every enemy's HP and Reward as it spawns (`DIFFICULTY`). Normal (×1) by default. Fixed for the game. */
+  readonly difficulty?: Difficulty;
 }
 
 /** Build phase while no wave is on the field, Wave phase while one or more are; Victory and Defeat end the game. */
@@ -68,6 +71,8 @@ export interface GameState {
   readonly stats: CombatStats;
   /** Tactical mode, fixed at game start (`GameConfig.tacticalMode`): no wave timers. */
   readonly tacticalMode: boolean;
+  /** The Difficulty, fixed at game start (`GameConfig.difficulty`). */
+  readonly difficulty: Difficulty;
   /** The game time the next wave arrives by itself: set in timed mode while a wave is left to start. */
   readonly nextWaveAtMs: number | undefined;
   /** The waves on the field (started, not cleared), oldest first. Several in timed mode when they overlap. */
@@ -189,6 +194,7 @@ export function createGame(config: GameConfig): Game {
     totalWaves: config.waves.length,
     stats: emptyStats(),
     tacticalMode: config.tacticalMode ?? false,
+    difficulty: config.difficulty ?? 'normal',
     nextWaveAtMs: undefined,
     activeWaves: [],
   };
@@ -200,9 +206,21 @@ export function createGame(config: GameConfig): Game {
   const waveOfEnemy = new Map<number, number>();
   const waveOf = (enemyId: number) => waveOfEnemy.get(enemyId);
 
+  const { hpScale, rewardScale } = DIFFICULTY[state.difficulty];
   const createEnemy = (kind: EnemyKind, waveNumber?: number, distance = 0): Enemy => {
     const stats = ENEMY_STATS[kind];
-    const enemy = { ...stats, id: nextId++, kind, hp: stats.maxHp, distance, position: line.positionAt(distance) };
+    const maxHp = Math.round(stats.maxHp * hpScale);
+    const reward = Math.max(1, Math.round(stats.reward * rewardScale));
+    const enemy = {
+      ...stats,
+      maxHp,
+      reward,
+      id: nextId++,
+      kind,
+      hp: maxHp,
+      distance,
+      position: line.positionAt(distance),
+    };
     if (waveNumber !== undefined) waveOfEnemy.set(enemy.id, waveNumber);
     return enemy;
   };

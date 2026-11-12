@@ -1,8 +1,50 @@
 import { describe, expect, it } from 'vitest';
 import { damageTaken } from '../sim/combat';
 import { ENEMY_STYLE } from './display';
-import { ENEMY_DISMOUNT, ENEMY_STATS, NOT_IN_PLAY } from './enemies';
+import { ENEMY_DISMOUNT, ENEMY_STATS, NOT_PLAYABLE_KINDS } from './enemies';
 import { TOWER_STATS } from './towers';
+
+describe('heavyTank (boss)', () => {
+  it('has the boss numbers: ground, armor 12, huge HP, slow, leak cost 10', () => {
+    expect(ENEMY_STATS.heavyTank).toEqual({
+      maxHp: 1500,
+      speed: 0.4,
+      reward: 120,
+      leakCost: 10,
+      armor: 12,
+      layer: 'ground',
+      boss: true,
+    });
+  });
+
+  it('are the bosses, and armor 12 sits above the Cannon pierce but still takes damage from it', () => {
+    const bosses = Object.entries(ENEMY_STATS).filter(([, s]) => 'boss' in s && s.boss);
+    expect(bosses.map(([k]) => k)).toEqual(['heavyTank', 'gunship']);
+    const { damage, armorPierce } = TOWER_STATS.cannon;
+    expect(ENEMY_STATS.heavyTank.armor).toBeGreaterThan(armorPierce);
+    expect(damageTaken(damage, ENEMY_STATS.heavyTank.armor, armorPierce, ENEMY_STATS.heavyTank.maxHp)).toBeGreaterThan(
+      1,
+    );
+  });
+});
+
+describe('gunship (boss)', () => {
+  it('has the boss numbers: air, armor 6, about 1200 HP, leak cost 10', () => {
+    expect(ENEMY_STATS.gunship).toEqual({
+      maxHp: 1200,
+      speed: 0.8,
+      reward: 100,
+      leakCost: 10,
+      armor: 6,
+      layer: 'air',
+      boss: true,
+    });
+  });
+
+  it('is not in play yet', () => {
+    expect(NOT_PLAYABLE_KINDS.includes('gunship')).toBe(true);
+  });
+});
 
 describe('tank', () => {
   it('has the starting numbers: heavy, slow, armored, ground', () => {
@@ -28,6 +70,6 @@ describe('apc', () => {
   });
 
   it('is not in play yet: its rollout adds it to the waves (ADR-0009)', () => {
-    expect(NOT_IN_PLAY).toEqual(['apc']);
+    expect(NOT_PLAYABLE_KINDS.includes('apc')).toBe(true);
   });
 });
