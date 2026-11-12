@@ -13,7 +13,7 @@ describe('RENDERS', () => {
 
   it('keeps the Gunship out of play: its art (#363) is not wired in until the rollout', () => {
     expect(Object.keys(RENDERS)).not.toContain('gunship');
-    expect(Object.keys(SPRITES)).not.toContain('gunship');
+    expect(SPRITES.gunship).toBeNull();
   });
 
   it('gives each a hull and a turret texture, both its own keys', () => {
