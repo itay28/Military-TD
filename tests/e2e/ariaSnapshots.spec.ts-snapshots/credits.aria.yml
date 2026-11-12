@@ -59,7 +59,7 @@
   - paragraph: MissingTray1151, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
     - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
-  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own; Grenade launcher: its gunner and assistant gunner) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own; Grenade launcher: its gunner and assistant gunner), prone_firing (Sniper: a shooter and an observer in a dug-in pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
   - heading "Phalanx CIWS (top-down render and turntable)" [level=2]
   - paragraph: Lemper_Studio, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d":
@@ -150,6 +150,11 @@
   - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
     - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
   - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - heading "Tactical Soldier (game ready) low poly (top-down render and turntable)" [level=2]
+  - paragraph: MissingTray1151, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
+    - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
+  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit tinted green (toward Type 07), a shooter and an observer set in a dug-in pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
   - heading "Anti-Tank Guided Missile (top-down render and turntable)" [level=2]
   - paragraph: Alhimix, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/a247197e02cf4f76b1e15fd6176328c6":
@@ -160,26 +165,31 @@
   - link "https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb":
     - /url: https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb
   - paragraph: "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
-  - heading "Tactical Soldier (game ready) low poly (top-down render)" [level=2]
+  - heading "Tactical Soldier (game ready) low poly (top-down render and turntable)" [level=2]
   - paragraph: MissingTray1151, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
     - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
-  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted green (toward Type 07)"
-  - heading "Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render)" [level=2]
+  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted green (toward Type 07), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - heading "Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render and turntable)" [level=2]
   - paragraph: KidBi-Gaming, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/935856d763bf49aca45a48fae3a6846c":
     - /url: https://sketchfab.com/3d-models/935856d763bf49aca45a48fae3a6846c
-  - paragraph: "\"Military Jeep Low Poly – Game Ready 3D Vehicle\" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive"
-  - heading "Type 99 MBT (top-down render)" [level=2]
+  - paragraph: "\"Military Jeep Low Poly – Game Ready 3D Vehicle\" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - heading "Type 99 MBT (top-down render and turntable)" [level=2]
   - paragraph: philano, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/7075c92c5ef1408497f1530703ff2942":
     - /url: https://sketchfab.com/3d-models/7075c92c5ef1408497f1530703ff2942
-  - paragraph: "\"Type 99 MBT\" by philano (sketchfab.com), CC-BY 4.0, rendered top-down"
-  - heading "Sikorsky UH-60M Blackhawk (top-down render)" [level=2]
+  - paragraph: "\"Type 99 MBT\" by philano (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - heading "Sikorsky UH-60M Blackhawk (top-down render and turntable)" [level=2]
   - paragraph: MirzaArrafiERV_45, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/12b4e525676a49678ac3006b360c8750":
     - /url: https://sketchfab.com/3d-models/12b4e525676a49678ac3006b360c8750
-  - paragraph: "\"Sikorsky UH-60M Blackhawk\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - paragraph: "\"Sikorsky UH-60M Blackhawk\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - heading "Chengdu J-10S (top-down render and turntable)" [level=2]
+  - paragraph: MirzaArrafiERV_45, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618":
+    - /url: https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618
+  - paragraph: "\"Chengdu J-10S\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, national markings painted out, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
   - heading "Tactical Soldier (game ready) low poly (top-down render)" [level=2]
   - paragraph: MissingTray1151, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
@@ -205,6 +215,11 @@
   - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
     - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
   - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit re-coloured to civilian browns and denim"
+  - heading "Tactical Soldier (game ready) low poly (top-down render)" [level=2]
+  - paragraph: MissingTray1151, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
+    - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
+  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit re-coloured to civilian browns and denim, a shooter and an observer set in a dug-in pit of our own"
   - heading "TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render)" [level=2]
   - paragraph: lm9241221, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/9dccb441c7064a11bf87446ab4f4e09b":
@@ -220,6 +235,31 @@
   - link "https://sketchfab.com/3d-models/ab981d28f7124a489cd1b1992b2e467b":
     - /url: https://sketchfab.com/3d-models/ab981d28f7124a489cd1b1992b2e467b
   - paragraph: "\"Russian Transport Heli\" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - heading "Boeing AH-64D Apache Combat Helicopter (top-down render)" [level=2]
+  - paragraph: MirzaArrafiERV_45, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/c3b58008c46b45048fdd7dd283a3c8c8":
+    - /url: https://sketchfab.com/3d-models/c3b58008c46b45048fdd7dd283a3c8c8
+  - paragraph: "\"Boeing AH-64D Apache Combat Helicopter\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - heading "Mi-28N Havoc (top-down render)" [level=2]
+  - paragraph: rukh3d, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/3e80c95bbadf46abbafba9d9a08afc68":
+    - /url: https://sketchfab.com/3d-models/3e80c95bbadf46abbafba9d9a08afc68
+  - paragraph: "\"Mi-28N Havoc\" by rukh3d (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - heading "Eurocopter Tiger Attack Helicopter (top-down render)" [level=2]
+  - paragraph: MirzaArrafiERV_45, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/a8ae9b61995a49a1a2fa2de57e8ce4ef":
+    - /url: https://sketchfab.com/3d-models/a8ae9b61995a49a1a2fa2de57e8ce4ef
+  - paragraph: "\"Eurocopter Tiger Attack Helicopter\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, re-coloured green"
+  - heading "Hind Attack Helicopter (top-down render)" [level=2]
+  - paragraph: AshleyAslett, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/bb65bdfde2c54007a52dfbe1d91d930d":
+    - /url: https://sketchfab.com/3d-models/bb65bdfde2c54007a52dfbe1d91d930d
+  - paragraph: "\"Hind Attack Helicopter\" by AshleyAslett (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - heading "Mikoyan-Gurevich MiG-21PF Fishbed (top-down render and turntable)" [level=2]
+  - paragraph: mgg8, CC0-1.0
+  - link "https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7":
+    - /url: https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7
+  - paragraph: "\"Mikoyan-Gurevich MiG-21PF Fishbed\" by mgg8 (sketchfab.com), CC0, national markings removed, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
   - heading "The Free Firearm Sound Library" [level=2]
   - paragraph: Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0-1.0
   - link "https://opengameart.org/content/the-free-firearm-sound-library":

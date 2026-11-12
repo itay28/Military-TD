@@ -15,6 +15,8 @@ const CONFIG = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as
   models: Model[];
 };
 const PX = CONFIG.pxPerTile;
+/** Every Faction has its jet: US and Russia (#482), China and Insurgents (#484). */
+const FACTIONS = ['us', 'russia', 'china', 'insurgents'];
 const jets = CONFIG.models.filter((m) => m.kind === 'jet');
 const helicopters = CONFIG.models.filter((m) => m.kind === 'helicopter');
 const pathOf = (m: Model): string => `assets/render-${m.id}/${m.id}.png`;
@@ -50,12 +52,9 @@ function shadowOffset(path: string): number {
   return (shadow.x - body.x + (shadow.y - body.y)) / Math.SQRT2;
 }
 
-describe('Fighter jet renders (#482)', () => {
-  it('has a sprite on disk for every jet model; US always has one', () => {
-    expect(
-      jets.some((m) => m.faction === 'us'),
-      'the floor: US',
-    ).toBe(true);
+describe('Fighter jet renders (#482, #484)', () => {
+  it('has one jet for every Faction (#482, #484)', () => {
+    expect(jets.map((m) => m.faction).sort()).toEqual([...FACTIONS].sort());
     for (const m of jets) expect(existsSync(pathOf(m)), pathOf(m)).toBe(true);
   });
 
