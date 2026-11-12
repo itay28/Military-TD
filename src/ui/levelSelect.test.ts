@@ -264,6 +264,12 @@ describe('Hard (#466)', () => {
     expect(hardButton('Training Ground')).toBeDefined();
   });
 
+  it('shows no Hard button on any map when showHard is off (#536)', () => {
+    mount({ maps: TWO_MAPS, showHard: false, statusOf: () => ({ unlocked: true, bestStars: 3, hardUnlocked: true }) });
+    expect(hardButton('Training Ground')).toBeUndefined();
+    expect(hardButton('Second Map')).toBeUndefined();
+  });
+
   it('still focuses the last unlocked map, not its Hard button, when it opens', () => {
     mount({ maps: TWO_MAPS, statusOf: () => ({ unlocked: true, bestStars: 3, hardUnlocked: true, hardStars: 0 }) });
     expect(document.activeElement).toBe(mapButton('Second Map'));

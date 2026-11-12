@@ -15,6 +15,8 @@ export interface LevelSelectSceneOptions {
   readonly progress: ProgressStore;
   /** Test mode's `?unlock=all`: every map, and Hard on each, can be picked. */
   readonly unlockAll: boolean;
+  /** Show the Hard buttons: `HARD_IN_PLAY`, or test mode. */
+  readonly showHard: boolean;
   /** The player's settings: Tactical mode decides the "max 2 stars" note. */
   readonly settings: Pick<SettingsStore, 'get'>;
 }
@@ -25,15 +27,17 @@ export class LevelSelectScene extends Phaser.Scene {
   private readonly root: HTMLElement;
   private readonly progress: ProgressStore;
   private readonly unlockAll: boolean;
+  private readonly showHard: boolean;
 
   private readonly settings: Pick<SettingsStore, 'get'>;
 
-  constructor({ app, root, progress, unlockAll, settings }: LevelSelectSceneOptions) {
+  constructor({ app, root, progress, unlockAll, showHard, settings }: LevelSelectSceneOptions) {
     super('LevelSelect');
     this.app = app;
     this.root = root;
     this.progress = progress;
     this.unlockAll = unlockAll;
+    this.showHard = showHard;
     this.settings = settings;
   }
 
@@ -58,6 +62,7 @@ export class LevelSelectScene extends Phaser.Scene {
       onPick: (mapId, difficulty) => this.scene.start('Game', { mapId, difficulty }),
       onBack: () => this.scene.start('Menu'),
       tacticalMode: this.settings.get().tacticalMode,
+      showHard: this.showHard,
     });
     // Starting another scene shuts this one down, which takes the screen away.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => screen.destroy());

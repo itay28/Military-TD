@@ -31,6 +31,8 @@ export interface LevelSelectOptions {
   readonly onBack: () => void;
   /** Tactical mode is on in the settings: the screen says wins earn at most 2 stars (ADR-0011). */
   readonly tacticalMode?: boolean;
+  /** Show each unlocked map's Hard button (default true). The scene turns it off until Hard is in play (#536). */
+  readonly showHard?: boolean;
 }
 
 export interface LevelSelect {
@@ -38,11 +40,12 @@ export interface LevelSelect {
   destroy(): void;
 }
 
-/** "★★☆", or "Locked: complete <the map before>": hidden from screen readers, which hear the button's name instead. */
+/** "★★☆" for a map's stars. */
 const starGlyphs = (stars: Stars): string => '★'.repeat(stars) + '☆'.repeat(3 - stars);
 
 const starsName = (stars: Stars): string => (stars === 0 ? 'no stars yet' : `${stars} of 3 stars`);
 
+/** "★★☆", or "Locked: complete <the map before>": hidden from screen readers, which hear the button's name instead. */
 function buildStatus(doc: Document, { unlocked, bestStars }: MapStatus, previous: MapEntry | undefined): HTMLElement {
   const line = doc.createElement('span');
   line.setAttribute('aria-hidden', 'true');
@@ -92,7 +95,7 @@ function buildHardButton(
  */
 export function mountLevelSelect(
   root: HTMLElement,
-  { app, maps, onPick, onBack, statusOf = () => OPEN, tacticalMode = false }: LevelSelectOptions,
+  { app, maps, onPick, onBack, statusOf = () => OPEN, tacticalMode = false, showHard = true }: LevelSelectOptions,
 ): LevelSelect {
   const doc = root.ownerDocument;
   let live = true;
@@ -143,7 +146,7 @@ export function mountLevelSelect(
     button.addEventListener('click', () => live && status.unlocked && openBriefing(entry, button, 'normal'));
     const item = doc.createElement('li');
     item.append(button);
-    if (status.unlocked) {
+    if (status.unlocked && showHard) {
       const hard = buildHardButton(doc, name, status);
       hard.addEventListener('click', () => live && status.hardUnlocked === true && openBriefing(entry, hard, 'hard'));
       item.append(hard);
