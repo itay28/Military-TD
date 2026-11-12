@@ -51,6 +51,8 @@ Updated 2026-11-11 (#464): the Grenade launcher row. Its renders come one Factio
 
 Updated 2026-11-11 (#467): the Russia Grenade launcher is an AGS-40 Balkan on its own tripod, a stand-in for the AGS-30 (no free model of it), with the Russia Rifle Nest's soldier as gunner and assistant.
 
+Updated 2026-11-11 (#468): the China Grenade launcher is the QLZ-87 itself, on the US render's stand-in tripod (the model has no mount), with the China Rifle Nest's soldier as gunner and assistant.
+
 Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind), and the AA Gun is a fast-firing gun that also hits ground targets.
 
 ## Consequences

@@ -236,6 +236,7 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-china-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-grenade-launcher/` | "QLZ-87 (Type 87)" by goncalveskauan055l, "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR, "Tactical Soldier (game ready) low poly" by MissingTray1151, all CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-china-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-jeep/` | "Military Jeep Low Poly – Game Ready 3D Vehicle" by KidBi-Gaming, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-tank/` | "Type 99 MBT" by philano, CC-BY-4.0 | `scripts/render-sprite.py` |
