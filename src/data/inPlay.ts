@@ -5,4 +5,4 @@
  */
 
 /** The Normal/Hard choice on the Level select (#466, #536). */
-export const HARD_IN_PLAY = false;
+export const HARD_IN_PLAY = true;
