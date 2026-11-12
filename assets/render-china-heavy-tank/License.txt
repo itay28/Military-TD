@@ -1,0 +1,10 @@
+Rendered sprites of "T98 Main Battle Tank" by Risama
+https://sketchfab.com/3d-models/d75cdec1a34b417fadbb72656664b54a
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated,
+diorama base and grass removed, turret turned to the front, split into hull
+and turret layers). The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-11.

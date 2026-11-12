@@ -113,8 +113,8 @@ const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet', 'sniper'];
 const ART_AHEAD_KINDS = ['grenadeLauncher'];
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  // A kind not in play yet (the Sniper, renders in #358) has none until its rollout;
-  // the Heavy tank (in UPCOMING_KINDS) joins once all four Factions have it (#509).
+  // A kind not in play yet (the Sniper, renders in #358) has none until its rollout. The upcoming ones (the Heavy tank,
+  // #362) have art for every Faction (#509).
   const inPlay = Object.keys(SPRITES).filter(
     (kind) => !NOT_IN_PLAY.has(kind as TowerKind) && !(NOT_PLAYABLE_KINDS as readonly string[]).includes(kind),
   );
@@ -129,6 +129,12 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
           .sort(),
       ).toEqual(kinds);
       expect(new Set(models.map((m) => m.kind)).size).toBe(models.length);
+      // The upcoming kinds (the Heavy tank) have art for every Faction (#509).
+      for (const kind of UPCOMING_KINDS)
+        expect(
+          models.map((m) => m.kind),
+          kind,
+        ).toContain(kind);
     });
   }
 
