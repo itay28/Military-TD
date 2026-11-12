@@ -503,6 +503,21 @@
       "canvasTiles": 1.25
     },
     {
+      "id": "china-apc",
+      "kind": "apc",
+      "faction": "china",
+      "depicts": "ZSL-92C 6x6 armored personnel carrier (the ZSL-92 family)",
+      "sketchfab": "75cffc4e2e5e454fbcb69279599a93ed",
+      "author": "42manako",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-x",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25,
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "us-apc",
       "kind": "apc",
       "faction": "us",

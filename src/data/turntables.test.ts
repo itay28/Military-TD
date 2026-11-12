@@ -16,12 +16,13 @@ const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
 const inPlay = config.models.filter((m) => !isUpcoming(m.kind));
 const hasTurntable = (m: { id: string }): boolean => TURNTABLES[m.id] !== undefined;
 /**
- * Towers and units come in separate parts (China's towers before its units), so each is done on its own. The jet's art
- * is ahead of its gameplay (#77), so it is a part of its own (China and Insurgents have it before their unit turntables),
- * and so is the Grenade launcher (#359: Insurgents have it before their tower turntables).
+ * Towers and units come in separate parts (China's towers before its units), so each is done on its own. The APC, the jet
+ * and the Grenade launcher roll out one kind at a time (the jet's art is ahead of its gameplay, #77; the APC is
+ * #480/#481; the Grenade launcher is #359: Insurgents have it before their tower turntables), so each is its own group.
  */
+const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet', 'grenadeLauncher'];
 const groupOf = (m: { kind: string }): string =>
-  m.kind === 'jet' || m.kind === 'grenadeLauncher' ? m.kind : m.kind in TOWER_STATS ? 'tower' : 'unit';
+  OPTIONAL_KINDS.includes(m.kind) ? m.kind : m.kind in TOWER_STATS ? 'tower' : 'unit';
 const key = (m: { faction: string; kind: string }): string => `${m.faction}/${groupOf(m)}`;
 /** The models of the factions that have a turntable (done when a faction has one of its group; it must then have all). */
 const done = inPlay.filter((m) => inPlay.some((o) => key(o) === key(m) && hasTurntable(o)));

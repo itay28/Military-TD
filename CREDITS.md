@@ -182,6 +182,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-jeep/**`
 
+## ZSL-92C (top-down render and turntable)
+
+- Author: 42manako
+- Source: <https://sketchfab.com/3d-models/75cffc4e2e5e454fbcb69279599a93ed>
+- License: CC-BY-4.0
+- Attribution: "ZSL-92C" by 42manako (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-china-apc/**`
+
 ## BTR-82A (top-down render and turntable)
 
 - Author: lebedeventerprise
