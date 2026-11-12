@@ -26,10 +26,12 @@
 | **Build bar** | The column of tower buttons against the right edge of the window, one per kind, with icon, cost and hotkey (`1`…`n`). The **selected kind** is the one a click on the map places and the Ghost shows. None is selected at the start; a click on the selected kind, or `Esc`, clears it, and then a click on the map builds nothing. A kind the player can't afford is greyed out. A toggle collapses the bar to give the map more room. | toolbar, shop |
 | **Camera** | What part of the map the canvas shows, and how big: it starts zoomed to fit the whole map. A drag pans it; the wheel or a pinch zooms it, between the whole map and a max zoom (`CAMERA`). Only a click or tap that doesn't move acts on the map. View state, not a game rule. | viewport, view |
 | **Tracer** | The short line drawn from a tower to the enemy it hit, fading out over about 80 ms. Cosmetic only: hits are instant (hitscan). | bullet, projectile |
-| **Enemy** | A unit that walks the Path. Kinds: **Infantry**, **Jeep**, **Tank**, **Helicopter**. | creep, mob |
+| **Enemy** | A unit that walks the Path. Kinds: **Infantry**, **Jeep**, **Tank**, **Helicopter**, **APC**. | creep, mob |
 | **Jeep** | A fast, light ground enemy: 20 HP, 3 tiles/s (twice Infantry), no armor. Tests tower fire rate and coverage, and outruns slow shots. | car, scout |
 | **Tank** | A slow, heavy ground Enemy with 250 HP and Armor 8, so a Rifle Nest hit does only 2. Leaking costs 5 Lives; killing it pays 25. | boss, heavy |
 | **Helicopter** | An Enemy on the Air layer. It follows the Path like Infantry but only towers that list `air` in `targets` can hit it. Light Armor (4): a Rifle Nest hit does 6, an AA Gun hit 9. Drawn above ground enemies with a shadow offset below it. Costs 2 Lives if it leaks. | chopper, flyer |
+| **APC** | A medium-armored ground Enemy (150 HP, Armor 4, 1 tile/s) that carries a squad. When it is killed it **Dismounts**: 3 Infantry jump out on the Path where it died, a little apart, and walk on, each paying its own reward. One that leaks dismounts nothing (costs 3 Lives). Not in any map's waves until its rollout. | carrier, transport |
+| **Dismount** | A killed carrier's squad jumping out onto the Path (`ENEMY_DISMOUNT`, sim event `dismounted`). | spawn on death |
 | **Layer** | Where an enemy moves: **Ground** or **Air**. Each tower lists the layers it can hit (`targets`) and ignores enemies on the others. | domain, altitude |
 | **Armor** | A flat amount an enemy takes off every hit: a hit removes `damage − armor`, but always at least 1 HP. | defense, resistance |
 | **Armor pierce** | How much of the target's Armor a tower's hits ignore (`armorPierce`, 0 by default). It cancels Armor up to its value and never adds damage. | penetration |
