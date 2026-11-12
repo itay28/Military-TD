@@ -21,6 +21,12 @@
         - button "Jeep"
       - listitem:
         - button "Helicopter"
+      - listitem:
+        - button "Classified"
+      - listitem:
+        - button "Classified"
+      - listitem:
+        - button "Classified"
   - img "Tank, US model"
   - button "Rotate left"
   - button "Rotate right"

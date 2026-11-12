@@ -26,6 +26,9 @@
       - listitem: "Tank (reward 25): Armor: Rifle Nests barely scratch it. Cannons and Mortars work."
       - listitem: "Jeep (reward 3): Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it."
       - listitem: "Helicopter (reward 10): Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best."
+      - listitem: "APC (reward 12): Armored carrier. Kill it and its squad jumps out."
+      - listitem: "Heavy tank (reward 120): Boss. Heavy armor, huge HP. Leaking it costs 10 Lives."
+      - listitem: "Jet (reward 6): Fast, fragile jet. Needs AA coverage along the route."
     - heading "Keys" [level=3]
     - table:
       - rowgroup:
