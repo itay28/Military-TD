@@ -64,6 +64,30 @@ describe('HUD', () => {
     expect(byTestId('hud-wave')?.textContent).toBe('Wave 0 / 2');
   });
 
+  describe('difficulty tag (#465)', () => {
+    const gameOn = (difficulty: 'normal' | 'hard'): Game =>
+      createGame({
+        map: SMALL,
+        money: 100,
+        lives: 20,
+        difficulty,
+        tacticalMode: true,
+        waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 100, delayMs: 0 }] }],
+      });
+
+    it('says "Hard" in the stats group on Hard', () => {
+      mountHud(root, gameOn('hard'), fakeSpeed());
+      const tag = byTestId('hud-difficulty');
+      expect(tag?.textContent).toBe('Hard');
+      expect(tag?.parentElement?.className).toBe('hud-stats');
+    });
+
+    it('shows nothing on Normal, the default', () => {
+      mountHud(root, gameOn('normal'), fakeSpeed());
+      expect(byTestId('hud-difficulty')).toBeNull();
+    });
+  });
+
   it('HQ drops on the next update after a leak', () => {
     const game = newGame();
     const hud = mountHud(root, game, fakeSpeed());

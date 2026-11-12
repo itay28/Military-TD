@@ -114,6 +114,7 @@ export const TERMS = {
   victory: 'MISSION COMPLETE',
   defeat: 'MISSION FAILED',
   report: 'After-action report',
+  difficulty: 'Difficulty',
 } as const;
 
 /** An amount of Money as the player reads it: "$100". */

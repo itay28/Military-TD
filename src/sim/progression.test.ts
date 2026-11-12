@@ -5,6 +5,7 @@ import {
   starsFor,
   TACTICAL_MAX_STARS,
   unlocksNext,
+  winUnlocksNext,
   type CompletedMaps,
 } from './progression';
 
@@ -84,6 +85,22 @@ describe('unlocksNext', () => {
   it('is false for the last map and for a map outside the list', () => {
     expect(unlocksNext(2, MAP_IDS, { maps: {} })).toBe(false);
     expect(unlocksNext(-1, MAP_IDS, { maps: {} })).toBe(false);
+  });
+});
+
+describe('winUnlocksNext', () => {
+  const MAP_IDS = ['first', 'second'];
+
+  it('is true for a first Normal win with a locked map after it', () => {
+    expect(winUnlocksNext(0, MAP_IDS, { maps: {} }, 'normal')).toBe(true);
+  });
+
+  it('is false for a Hard win, even when the next map is still locked', () => {
+    expect(winUnlocksNext(0, MAP_IDS, { maps: {} }, 'hard')).toBe(false);
+  });
+
+  it('is false for a Normal win when the next map is unlocked already', () => {
+    expect(winUnlocksNext(0, MAP_IDS, { maps: { first: { completed: true } } }, 'normal')).toBe(false);
   });
 });
 
