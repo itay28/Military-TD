@@ -112,7 +112,7 @@ test('the End screen after a won one-wave game shows the result and the damage r
   await expectAria(page.locator('#end-screen'), 'end-screen-victory.aria.yml');
 });
 
-test('the How to play screen has the goal, money, controls, tower and enemy lines and the keys, then Back', async ({
+test('the How to play screen has its sections in order (#571), the tower and enemy lines and the keys, then Back', async ({
   page,
 }) => {
   await openMenu(page);
