@@ -106,9 +106,9 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own), prone_firing (Sniper: a shooter and an observer in a dug-in pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own; Grenade launcher: its gunner and assistant gunner), prone_firing (Sniper: a shooter and an observer in a dug-in pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
-- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-us-sniper/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`, `assets/render-russia-sniper/**`
+- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-us-grenade-launcher/**`, `assets/render-us-sniper/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`, `assets/render-russia-sniper/**`
 
 ## Phalanx CIWS (top-down render and turntable)
 
@@ -136,6 +136,24 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Mortar - M224" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-mortar/**`
+
+## MK19 Low-Poly (top-down render)
+
+- Author: lebedeventerprise
+- Source: <https://sketchfab.com/3d-models/9965461e257f4240a86b15a784d78fb2>
+- License: CC-BY-4.0
+- Attribution: "MK19 Low-Poly" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down on a tripod with a crew, in a sandbagged pit of our own
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-grenade-launcher/**`
+
+## Machine Gun Tripod 1 (Low-Poly) (top-down render)
+
+- Author: GoldbergR
+- Source: <https://sketchfab.com/3d-models/2a5ecc14900440af8fe2b5b30dabbef0>
+- License: CC-BY-4.0
+- Attribution: "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR (sketchfab.com), CC-BY 4.0, rendered top-down under the Grenade launcher (a stand-in for the M3 tripod)
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-grenade-launcher/**`
 
 ## Low Poly Humvee FREE (top-down render and turntable)
 

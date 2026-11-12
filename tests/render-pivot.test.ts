@@ -106,6 +106,12 @@ describe('the committed render data', () => {
  */
 const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet', 'sniper'];
 
+/**
+ * Kinds rendered before their gameplay (art-ahead): each Faction gets its render in its own part, and the kind joins
+ * `SPRITES` when it is put in play (Grenade launcher: #359).
+ */
+const ART_AHEAD_KINDS = ['grenadeLauncher'];
+
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
   // A kind not in play yet (the Sniper, renders in #358) has none until its rollout;
   // the Heavy tank (in UPCOMING_KINDS) joins once all four Factions have it (#509).
@@ -118,7 +124,7 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
       const kinds = [...inPlay, ...OPTIONAL_KINDS.filter((k) => models.some((m) => m.kind === k))].sort();
       expect(
         models
-          .filter((m) => !isUpcoming(m.kind))
+          .filter((m) => !isUpcoming(m.kind) && !ART_AHEAD_KINDS.includes(m.kind))
           .map((m) => m.kind)
           .sort(),
       ).toEqual(kinds);
@@ -202,5 +208,54 @@ describe('the Sniper renders (art-ahead, #358)', () => {
       const { json } = buildRenderMeta().find((m) => m.json.id === model.id)!;
       expect(json.pivot).toEqual({ x: json.canvasPx / 2, y: json.canvasPx / 2 });
     });
+  }
+});
+
+describe('the Grenade launcher renders (art-ahead, #359)', () => {
+  const launchers = RENDER_CONFIG.models.filter((m) => m.kind === 'grenadeLauncher');
+
+  it('covers the Factions done so far: US (#464)', () => {
+    expect(launchers.map((m) => m.faction)).toEqual(expect.arrayContaining(['us']));
+  });
+
+  for (const model of launchers) {
+    it(`${model.id} is a crewed launcher on a dug-in base that turns about the pad centre`, () => {
+      expect(model.base, 'a base').toBeDefined();
+      expect(model.turret, 'a turret layer').toBeDefined();
+      expect(
+        model.parts?.some((p) => p.turret),
+        'a crew part on the turret layer (the gunner)',
+      ).toBe(true);
+      const { json } = buildRenderMeta().find((m) => m.json.id === model.id)!;
+      expect(json.pivot).toEqual({ x: json.canvasPx / 2, y: json.canvasPx / 2 });
+    });
+  }
+});
+
+describe('models built from parts (render-sprite.py `parts`)', () => {
+  const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
+    packs: { source: string; license: string; author: string; files: string[] }[];
+  };
+  const withParts = RENDER_CONFIG.models.filter((m) => m.parts !== undefined);
+
+  it('exist (the US Grenade launcher: launcher, tripod and crew, #464)', () => {
+    expect(withParts.map((m) => m.id)).toContain('us-grenade-launcher');
+  });
+
+  for (const model of withParts) {
+    for (const part of model.parts!) {
+      it(`${model.id}: part ${part.sketchfab} is credited in the manifest for that folder`, () => {
+        expect(part.author, 'an author').toBeTruthy();
+        expect(['CC0-1.0', 'CC-BY-3.0', 'CC-BY-4.0']).toContain(part.license);
+        const pack = manifest.packs.find(
+          (p) =>
+            p.source === `https://sketchfab.com/3d-models/${part.sketchfab}` &&
+            p.files.includes(`assets/render-${model.id}/**`),
+        );
+        expect(pack, 'a manifest entry with this source covering the folder').toBeDefined();
+        expect(pack!.license).toBe(part.license);
+        expect(pack!.author).toBe(part.author);
+      });
+    }
   }
 });
