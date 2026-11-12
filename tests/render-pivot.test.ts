@@ -174,3 +174,47 @@ describe('the US APC render (#478)', () => {
     expect(maxX - minX + 1).toBeLessThan(maxY - minY + 1);
   });
 });
+
+describe('the Russia APC render (#480)', () => {
+  const model = RENDER_CONFIG.models.find((m) => m.id === 'russia-apc')!;
+  const png = PNG.sync.read(readFileSync('assets/render-russia-apc/russia-apc.png'));
+
+  it('is the APC kind for Russia, a single image with no turret', () => {
+    expect(model).toMatchObject({ kind: 'apc', faction: 'russia' });
+    expect(model.turret).toBeUndefined();
+    expect(buildRenderMeta().find((m) => m.json.id === 'russia-apc')!.json.pivot).toBeUndefined();
+  });
+
+  it('fills its canvas: canvasTiles × pxPerTile, with the shadow inside the edges', () => {
+    expect(png.width).toBe(Math.round(model.canvasTiles * RENDER_CONFIG.pxPerTile));
+    expect(png.height).toBe(png.width);
+    const alpha = (x: number, y: number): number => png.data[(y * png.width + x) * 4 + 3]!;
+    for (let i = 0; i < png.width; i++) {
+      expect(alpha(i, 0)).toBe(0);
+      expect(alpha(i, png.height - 1)).toBe(0);
+      expect(alpha(0, i)).toBe(0);
+      expect(alpha(png.width - 1, i)).toBe(0);
+    }
+  });
+
+  it('is about 0.9 tile long (ADR-0009, point 2), facing north: longer than wide', () => {
+    let [minX, minY, maxX, maxY] = [Infinity, Infinity, -1, -1];
+    for (let y = 0; y < png.height; y++)
+      for (let x = 0; x < png.width; x++) {
+        if (png.data[(y * png.width + x) * 4 + 3]! < 250) continue; // the vehicle, not its softer shadow
+        [minX, minY, maxX, maxY] = [Math.min(minX, x), Math.min(minY, y), Math.max(maxX, x), Math.max(maxY, y)];
+      }
+    const length = (maxY - minY + 1) / RENDER_CONFIG.pxPerTile;
+    expect(length).toBeGreaterThan(0.82);
+    expect(length).toBeLessThan(0.98);
+    expect(maxX - minX + 1).toBeLessThan(maxY - minY + 1);
+  });
+
+  it('has a turntable for the Field manual (#408), a WebP sheet with its JSON', () => {
+    const meta = JSON.parse(readFileSync('assets/render-russia-apc/russia-apc-turntable.json', 'utf8'));
+    expect(meta).toMatchObject({ id: 'russia-apc', kind: 'apc', faction: 'russia' });
+    const sheet = readFileSync('assets/render-russia-apc/russia-apc-turntable.webp');
+    expect(sheet.toString('ascii', 8, 12)).toBe('WEBP');
+    expect(sheet.length).toBeLessThan(300_000);
+  });
+});
