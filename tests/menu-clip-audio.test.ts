@@ -47,7 +47,8 @@ describe('loopBed', () => {
 describe('lowPassLoop', () => {
   it('keeps the low rumble and cuts what is above the cutoff', () => {
     const length = RATE;
-    const mixed = tone(100, length).map((x, i) => x + tone(2500, length)[i]!);
+    const high = tone(2500, length);
+    const mixed = tone(100, length).map((x, i) => x + high[i]!);
     const muffled = lowPassLoop(mixed, RATE, 800);
     expect(energyAt(muffled, 100)).toBeGreaterThan(0.45);
     expect(energyAt(muffled, 2500)).toBeLessThan(0.01);

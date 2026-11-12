@@ -774,8 +774,9 @@ export class GameScene extends Phaser.Scene {
         if (view.hp !== enemy.hp || redrawShape) {
           view.graphics.clear();
           // The menu clip has no HP bars: most of its enemies only drive through.
-          if (view.sprite && !this.clip) drawHpBar(view.graphics, enemy);
-          else drawEnemy(view.graphics, enemy, rotorAngle(frame));
+          if (view.sprite) {
+            if (!this.clip) drawHpBar(view.graphics, enemy);
+          } else drawEnemy(view.graphics, enemy, rotorAngle(frame));
           view.hp = enemy.hp;
         }
         view.frame = frame;
