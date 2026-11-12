@@ -348,6 +348,16 @@
       "files": ["assets/render-china-helicopter/**"]
     },
     {
+      "id": "render-china-jet",
+      "name": "Chengdu J-10S (top-down render and turntable)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Chengdu J-10S\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, national markings painted out, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-china-jet/**"]
+    },
+    {
       "id": "render-insurgents-rifle-nest",
       "name": "Tactical Soldier (game ready) low poly (top-down render)",
       "author": "MissingTray1151",
@@ -476,6 +486,16 @@
       "attribution": "\"Hind Attack Helicopter\" by AshleyAslett (sketchfab.com), CC-BY 4.0, rendered top-down",
       "downloaded": "2026-11-10",
       "files": ["assets/render-insurgents-gunship/**"]
+    },
+    {
+      "id": "render-insurgents-jet",
+      "name": "Mikoyan-Gurevich MiG-21PF Fishbed (top-down render and turntable)",
+      "author": "mgg8",
+      "source": "https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7",
+      "license": "CC0-1.0",
+      "attribution": "\"Mikoyan-Gurevich MiG-21PF Fishbed\" by mgg8 (sketchfab.com), CC0, national markings removed, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-insurgents-jet/**"]
     },
     {
       "id": "free-firearm-sfx",
