@@ -27,6 +27,7 @@ export const SPRITES = {
   tank: 'tankBody_sand',
   helicopter: null, // no pack has a rotorcraft
   heavyTank: null, // shape fallback until its art lands
+  gunship: null, // shape fallback until its art lands
   jet: null, // art comes in #361
 } as const satisfies Record<SpriteKind, string | null>;
 
@@ -75,6 +76,7 @@ export const SPRITE_HEADING = {
   tank: -Math.PI / 2,
   helicopter: 0,
   heavyTank: 0,
+  gunship: 0,
   jet: 0,
 } as const satisfies Record<EnemyKind, number>;
 
