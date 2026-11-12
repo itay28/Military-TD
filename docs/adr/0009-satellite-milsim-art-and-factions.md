@@ -40,11 +40,11 @@ The maintainer also wants each map to pit two sides against each other, picked f
 | **Gunship** (boss) | AH-64D Apache | Mi-28N | Z-10 (a Tiger stand-in, re-coloured) | Mi-24D (captured) |
 | **APC** (armored troop carrier) | M113 (or Stryker ICV, unarmed variant) | BTR-82A | ZBL-08 / ZSL-92 | BTR-60 (captured) |
 | **Fighter jet** (`jet`) | F-16 Fighting Falcon | Su-25 Grach | pending (next part) | pending (next part) |
-| **Sniper** (rendered ahead of play, #358) | Two-man team prone in a dug-in hide, M107 / M2010, OCP | to come | to come | to come |
+| **Sniper** (rendered ahead of play, #358) | Two-man team prone in a dug-in hide, M107 / M2010, OCP | Two-man team prone in a dug-in hide, ORSIS T-5000 / ASVK, EMR | Two-man team prone in a dug-in hide, QBU-10, Type 07 | to come |
 
 The Heavy tank is rendered about 1.4 tiles long, bigger than the Tank's 1.3, so the boss reads at a glance. Its renders were made ahead of its gameplay (#78), so it's listed as an upcoming kind until it joins the waves. The Gunship is the same (#363), about 1.4 tiles long.
 
-Updated 2026-11-11 (#459): the Sniper row. Its renders come one Faction per part, before the Sniper is in play (#364); the US render is a stand-in rifle and kit on the same soldier model as the Rifle Nest.
+Updated 2026-11-11 (#459): the Sniper row. Its renders come one Faction per part, before the Sniper is in play (#364); the US render is a stand-in rifle and kit on the same soldier model as the Rifle Nest. Updated 2026-11-11 (#460): Russia and China, the same model and pose re-coloured like their Rifle Nests.
 
 Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind), and the AA Gun is a fast-firing gun that also hits ground targets.
 
