@@ -428,6 +428,46 @@
       "files": ["assets/render-insurgents-helicopter/**"]
     },
     {
+      "id": "render-us-gunship",
+      "name": "Boeing AH-64D Apache Combat Helicopter (top-down render)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/c3b58008c46b45048fdd7dd283a3c8c8",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Boeing AH-64D Apache Combat Helicopter\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-10",
+      "files": ["assets/render-us-gunship/**"]
+    },
+    {
+      "id": "render-russia-gunship",
+      "name": "Mi-28N Havoc (top-down render)",
+      "author": "rukh3d",
+      "source": "https://sketchfab.com/3d-models/3e80c95bbadf46abbafba9d9a08afc68",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Mi-28N Havoc\" by rukh3d (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-10",
+      "files": ["assets/render-russia-gunship/**"]
+    },
+    {
+      "id": "render-china-gunship",
+      "name": "Eurocopter Tiger Attack Helicopter (top-down render)",
+      "author": "MirzaArrafiERV_45",
+      "source": "https://sketchfab.com/3d-models/a8ae9b61995a49a1a2fa2de57e8ce4ef",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Eurocopter Tiger Attack Helicopter\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, re-coloured green",
+      "downloaded": "2026-11-10",
+      "files": ["assets/render-china-gunship/**"]
+    },
+    {
+      "id": "render-insurgents-gunship",
+      "name": "Hind Attack Helicopter (top-down render)",
+      "author": "AshleyAslett",
+      "source": "https://sketchfab.com/3d-models/bb65bdfde2c54007a52dfbe1d91d930d",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Hind Attack Helicopter\" by AshleyAslett (sketchfab.com), CC-BY 4.0, rendered top-down",
+      "downloaded": "2026-11-10",
+      "files": ["assets/render-insurgents-gunship/**"]
+    },
+    {
       "id": "free-firearm-sfx",
       "name": "The Free Firearm Sound Library",
       "author": "Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney",

@@ -11,6 +11,11 @@ describe('RENDERS', () => {
     expect(RENDERS.tank!.id).toBe('russia-tank');
   });
 
+  it('keeps the Gunship out of play: its art (#363) is not wired in until the rollout', () => {
+    expect(Object.keys(RENDERS)).not.toContain('gunship');
+    expect(SPRITES.gunship).toBeNull();
+  });
+
   it('gives each a hull and a turret texture, both its own keys', () => {
     for (const render of Object.values(RENDERS)) {
       expect(render.hullKey).toBe(`render-${render.id}-hull`);
