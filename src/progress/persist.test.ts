@@ -28,7 +28,7 @@ describe('createPersistedProgress', () => {
     progress.recordResult('a', 2);
     expect(saved(storage)).toEqual({
       version: PROGRESS_VERSION,
-      progress: { maps: { a: { completed: true, bestStars: 2 } }, hintsDone: false, metEnemies: [] },
+      progress: { maps: { a: { completed: true, bestStars: 2, hardStars: 0 } }, hintsDone: false, metEnemies: [] },
     });
     expect(PROGRESS_KEY).toBe('military-td.progress');
   });
@@ -41,7 +41,7 @@ describe('createPersistedProgress', () => {
 
   it('loads the saved progress at boot', () => {
     const progress = createPersistedProgress(withProgress({ a: { completed: true, bestStars: 3 } }));
-    expect(progress.get().maps.a).toEqual({ completed: true, bestStars: 3 });
+    expect(progress.get().maps.a).toEqual({ completed: true, bestStars: 3, hardStars: 0 });
   });
 
   it('keeps a better saved result when a worse win comes in', () => {
@@ -101,7 +101,7 @@ describe('loadProgress', () => {
 
   it('keeps map ids it does not know', () => {
     const loaded = loadProgress(withProgress({ gone: { completed: true, bestStars: 2 } }));
-    expect(loaded.maps.gone).toEqual({ completed: true, bestStars: 2 });
+    expect(loaded.maps.gone).toEqual({ completed: true, bestStars: 2, hardStars: 0 });
   });
 
   it('keeps a saved hints flag, and takes false for a bad one', () => {
@@ -114,9 +114,11 @@ describe('loadProgress', () => {
 
   it('loads a v1 save with its maps, hints done once any map was won', () => {
     const won = { a: { completed: true, bestStars: 2 } };
-    expect(loadProgress(withProgress(won, 1))).toEqual({ maps: won, hintsDone: true, metEnemies: [] });
+    const wonLoaded = { a: { completed: true, bestStars: 2, hardStars: 0 } };
+    expect(loadProgress(withProgress(won, 1))).toEqual({ maps: wonLoaded, hintsDone: true, metEnemies: [] });
     const notWon = { a: { completed: false, bestStars: 0 } };
-    expect(loadProgress(withProgress(notWon, 1))).toEqual({ maps: notWon, hintsDone: false, metEnemies: [] });
+    const notWonLoaded = { a: { completed: false, bestStars: 0, hardStars: 0 } };
+    expect(loadProgress(withProgress(notWon, 1))).toEqual({ maps: notWonLoaded, hintsDone: false, metEnemies: [] });
     expect(loadProgress(withProgress({}, 1))).toEqual({ maps: {}, hintsDone: false, metEnemies: [] });
   });
 
@@ -130,16 +132,16 @@ describe('loadProgress', () => {
       }),
     );
     expect(loaded.maps).toEqual({
-      a: { completed: false, bestStars: 2 },
-      b: { completed: true, bestStars: 0 },
-      d: { completed: true, bestStars: 1 },
+      a: { completed: false, bestStars: 2, hardStars: 0 },
+      b: { completed: true, bestStars: 0, hardStars: 0 },
+      d: { completed: true, bestStars: 1, hardStars: 0 },
     });
   });
 });
 
 describe('migrate', () => {
-  it('is at version 3', () => {
-    expect(PROGRESS_VERSION).toBe(3);
+  it('is at version 4', () => {
+    expect(PROGRESS_VERSION).toBe(4);
   });
 
   it('passes the current version through', () => {
@@ -149,9 +151,13 @@ describe('migrate', () => {
 
   it('adds hintsDone to v1 progress: true once any map was won, maps untouched', () => {
     const won = { maps: { a: { completed: true, bestStars: 3 }, b: { completed: false, bestStars: 0 } } };
-    expect(migrate(1, won)).toEqual({ ...won, hintsDone: true, metEnemies: [] });
+    expect(migrate(1, won)).toEqual({
+      maps: { a: { completed: true, bestStars: 3, hardStars: 0 }, b: { completed: false, bestStars: 0, hardStars: 0 } },
+      hintsDone: true,
+      metEnemies: [],
+    });
     expect(migrate(1, { maps: { b: { completed: false, bestStars: 0 } } })).toMatchObject({
-      maps: { b: { completed: false, bestStars: 0 } },
+      maps: { b: { completed: false, bestStars: 0, hardStars: 0 } },
       hintsDone: false,
     });
     expect(migrate(1, { maps: {} })).toEqual({ maps: {}, hintsDone: false, metEnemies: [] });
@@ -169,7 +175,7 @@ describe('migrate', () => {
   it('adds metEnemies to v2 progress: every enemy kind in the waves of each map won', () => {
     const won = { maps: { mvp: { completed: true, bestStars: 1 } }, hintsDone: true };
     const migrated = migrate(2, won) as { metEnemies: string[] };
-    expect(migrated).toMatchObject(won);
+    expect(migrated).toMatchObject({ maps: { mvp: { completed: true, bestStars: 1, hardStars: 0 } }, hintsDone: true });
     expect([...migrated.metEnemies].sort()).toEqual(['helicopter', 'infantry', 'jeep', 'tank']);
     expect(migrate(2, { maps: { mvp: { completed: false, bestStars: 0 } }, hintsDone: false })).toMatchObject({
       metEnemies: [],
@@ -190,5 +196,55 @@ describe('metEnemies', () => {
       withRaw(JSON.stringify({ version: PROGRESS_VERSION, progress: { maps: {}, hintsDone: false, metEnemies } }));
     expect(loadProgress(raw(['tank', 'dragon', 'tank', 4])).metEnemies).toEqual(['tank']);
     expect(loadProgress(raw('tank')).metEnemies).toEqual([]);
+  });
+
+  it('adds hardStars 0 to every map of v3 progress, keeping the Normal stars and the rest', () => {
+    const v3 = {
+      maps: { a: { completed: true, bestStars: 2 }, b: { completed: false, bestStars: 0 } },
+      hintsDone: true,
+      metEnemies: ['tank'],
+    };
+    expect(migrate(3, v3)).toEqual({
+      maps: { a: { completed: true, bestStars: 2, hardStars: 0 }, b: { completed: false, bestStars: 0, hardStars: 0 } },
+      hintsDone: true,
+      metEnemies: ['tank'],
+    });
+  });
+
+  it('leaves a v3 entry that already has a valid hardStars, and data that is not progress, alone', () => {
+    expect(migrate(3, { maps: { a: { completed: true, bestStars: 1, hardStars: 2 } } })).toMatchObject({
+      maps: { a: { hardStars: 2 } },
+    });
+    expect(migrate(3, 'junk')).toBe('junk');
+    expect(migrate(3, { maps: 5 })).toEqual({ maps: 5 });
+  });
+
+  it('carries v0 progress through every step to the current shape', () => {
+    expect(migrate(0, { maps: { a: { completed: true, bestStars: 1 } } })).toMatchObject({
+      maps: { a: { completed: true, bestStars: 1, hardStars: 0 } },
+      hintsDone: true,
+    });
+  });
+});
+
+describe('Hard stars in the save', () => {
+  it('saves and loads Hard stars next to the Normal ones', () => {
+    const storage = createMemoryStorage();
+    const progress = createPersistedProgress(storage);
+    progress.recordResult('a', 3);
+    progress.recordResult('a', 2, 'hard');
+    expect(saved(storage).progress.maps.a).toEqual({ completed: true, bestStars: 3, hardStars: 2 });
+    expect(createPersistedProgress(storage).get().maps.a).toEqual({ completed: true, bestStars: 3, hardStars: 2 });
+  });
+
+  it.each([
+    ['5', 5],
+    ['text', 'x'],
+    ['negative', -1],
+    ['fraction', 1.5],
+    ['null', null],
+  ])('defaults a bad hardStars (%s) to 0', (_name, hardStars) => {
+    const progress = createPersistedProgress(withProgress({ a: { completed: true, bestStars: 2, hardStars } }));
+    expect(progress.get().maps.a).toEqual({ completed: true, bestStars: 2, hardStars: 0 });
   });
 });
