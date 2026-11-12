@@ -15,6 +15,8 @@ Until now each wave started only when the player pressed Start Wave (or, with Au
 5. **Auto-start is removed** (`setAutoStart`, `AUTO_START_DELAY_MS`): the timers replace it.
 6. **Hard** (#80) changes enemy stats and is separate; the two combine. Stars are kept per difficulty, and the cap applies in either.
 
+**Updated 2026-11-12 (#570):** the flat 40 s left players waiting on the short roads, so each map's waves now get timers from its road (`timedWaves` in `src/data/waves.ts`): the first wave keeps the 40 s build window, and each later one comes ½ × the time the wave before takes to pass along the road (`waveRoadTimeMs`) + 10 s after it, rounded to the second, within 15–45 s. `DEFAULT_WAVE_AFTER_MS`, now only the fallback for wave data without a timer, is 30 s. The reference bot keeps or gains Stars on every map, on Normal and Hard (`tests/maps/maps.test.ts`).
+
 ## Consequences
 
 - The sim stays deterministic (ADR-0002): timers count game time in ticks.

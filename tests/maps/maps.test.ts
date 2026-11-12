@@ -7,6 +7,9 @@ import { describe, expect, it } from 'vitest';
 import { MAPS, MVP_MAP } from '../../src/data/maps';
 import { TOWER_STATS } from '../../src/data/towers';
 import { runScenario } from '../../src/sim/scenario';
+import { createPathLine } from '../../src/sim/enemies';
+import { starsFor } from '../../src/sim/progression';
+import { waveRoadTimeMs } from '../../src/sim/waves';
 import { FACTIONS, isFaction } from '../../src/sim/factions';
 import { createMap, tileKey } from '../../src/sim/map';
 import { importTiledMap } from '../../src/sim/tiled';
@@ -277,6 +280,57 @@ describe('Tiled map files', () => {
     const result = runScenario({ map: data, waves, autoStartWaves: true, until: 'end' });
     expect(result.outcome).toBe('defeat');
   });
+});
+
+// #570: the wave timers fit each map's road, so a short road doesn't leave the player waiting.
+describe('wave timers fit the road', () => {
+  const road = (entry: (typeof MAPS)[number]) => createPathLine(createMap(entry.data).waypointPositions).length;
+  const MARGIN_MS = 10_000;
+
+  it.each(MAPS)('$id: each wave comes at most the time the wave before takes on the road, plus a margin', (entry) => {
+    entry.waves.slice(1).forEach((wave, i) => {
+      const limit = waveRoadTimeMs(entry.waves[i]!, road(entry)) + MARGIN_MS;
+      expect({ wave: i + 2, within: wave.afterMs! <= limit }).toEqual({ wave: i + 2, within: true });
+    });
+  });
+
+  it("Training Ground's short road has shorter timers than Serpentine's long one", () => {
+    const mean = (id: string) => {
+      const timers = MAPS.find((map) => map.id === id)!
+        .waves.slice(1)
+        .map((wave) => wave.afterMs!);
+      return timers.reduce((sum, t) => sum + t, 0) / timers.length;
+    };
+    expect(road(MAPS.find((map) => map.id === 'mvp')!)).toBeLessThan(
+      road(MAPS.find((map) => map.id === 'serpentine')!),
+    );
+    expect(mean('mvp')).toBeLessThan(mean('serpentine'));
+  });
+
+  // The stars the reference bot earns on the timers alone, never calling a wave in (Normal, Hard).
+  const EXPECTED_STARS: Record<string, readonly [number, number]> = {
+    mvp: [3, 3],
+    switchback: [3, 1],
+    serpentine: [3, 3],
+    hairpin: [3, 1],
+  };
+
+  it.each(MAPS)(
+    '$id: the reference bot wins Normal and Hard on the timers at the expected stars',
+    ({ id, data, waves }) => {
+      const stars = (['normal', 'hard'] as const).map((difficulty) => {
+        const result = runScenario({
+          map: data,
+          waves,
+          difficulty,
+          bot: buildOrder(fitOrder(data, BALANCED_ORDER)),
+          until: 'end',
+        });
+        return result.outcome === 'victory' ? starsFor(result.finalState.lives, DIFFICULTY[difficulty].startLives) : 0;
+      });
+      expect(stars).toEqual(EXPECTED_STARS[id]);
+    },
+  );
 });
 
 /** Rifle Nests only, as many as Money allows, never upgraded; `fitOrder` moves each to the best free tile. */
