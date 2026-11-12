@@ -143,7 +143,8 @@
         "assets/render-us-infantry/**",
         "assets/render-us-sniper/**",
         "assets/render-russia-rifle-nest/**",
-        "assets/render-russia-infantry/**"
+        "assets/render-russia-infantry/**",
+        "assets/render-russia-sniper/**"
       ]
     },
     {
@@ -295,6 +296,16 @@
       "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
       "downloaded": "2026-11-02",
       "files": ["assets/render-china-rifle-nest/**"]
+    },
+    {
+      "id": "render-china-sniper",
+      "name": "Tactical Soldier (game ready) low poly (top-down render and turntable)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit tinted green (toward Type 07), a shooter and an observer set in a dug-in pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-china-sniper/**"]
     },
     {
       "id": "render-china-cannon",
