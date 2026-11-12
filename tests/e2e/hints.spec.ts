@@ -19,11 +19,11 @@ async function openWithHints(page: Page) {
   await page.evaluate(() => window.__TD__!.setHints(true));
 }
 
-/** Runs ticks until the first wave is over, as the real-time loop would. */
+/** Runs ticks, a second at a time, until the first wave is cleared, as the real-time loop would. Wave 2 may be due by then (#570). */
 async function clearFirstWave(page: Page) {
   await expect
-    .poll(async () => (await page.evaluate(() => window.__TD__!.step(600))).phase, { timeout: 30_000 })
-    .not.toBe('wave');
+    .poll(async () => (await page.evaluate(() => window.__TD__!.step(60))).wavesCleared, { timeout: 30_000 })
+    .toBeGreaterThanOrEqual(1);
   expect((await state(page)).wavesCleared).toBe(1);
 }
 
