@@ -30,12 +30,13 @@ import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
+import type { Difficulty } from '../data/difficulty';
 import { groundTextureKey, MAPS, mapById } from '../data/maps';
 import type { Faction } from '../sim/factions';
 import type { Enemy } from '../sim/enemies';
 import { isGameOver, TICK_MS, type Game } from '../sim/game';
 import { tileCenter, type Position, type Tile } from '../sim/map';
-import { starsFor, unlocksNext } from '../sim/progression';
+import { starsFor, winUnlocksNext } from '../sim/progression';
 import { setUpGame, type GameSetup } from '../sim/scenario';
 import type { ProgressStore, WinStars } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
@@ -249,6 +250,8 @@ export class GameScene extends Phaser.Scene {
   private setup: GameSetup = {};
   /** The map picked on the Level select, kept across restarts. A loaded scenario's own map overrides it. */
   private mapId: string = MAPS[0]!.id;
+  /** The Difficulty picked with it, kept across restarts the same way (#465). */
+  private difficulty: Difficulty = 'normal';
   private sim!: Game;
   /** Starts the incoming whistle of each shell about to land; set up by `wireSounds`. */
   private playWhistles: () => void = () => {};
@@ -665,8 +668,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
-  init(data: { readonly mapId?: string } = {}): void {
+  init(data: { readonly mapId?: string; readonly difficulty?: Difficulty } = {}): void {
     if (data.mapId !== undefined) this.mapId = mapById(data.mapId).id;
+    if (data.difficulty !== undefined) this.difficulty = data.difficulty;
   }
 
   create(): void {
@@ -686,14 +690,18 @@ export class GameScene extends Phaser.Scene {
       stopDemo(this.scene);
       // Tactical mode is fixed for the game, from the settings when it starts; a loaded scenario can set its own.
       const { tacticalMode } = this.settings.get();
-      this.sim = setUpGame({ map: mapById(this.mapId).data, tacticalMode, ...this.setup });
+      this.sim = setUpGame({ map: mapById(this.mapId).data, tacticalMode, difficulty: this.difficulty, ...this.setup });
       // A Victory records its Stars against the map played (a loaded scenario's own map included); Defeat records nothing.
       const { lives: startLives, map } = this.sim.state;
       this.sim.events.on('victory', ({ lives }) => {
         // Victory always leaves Lives, so at least 1 star.
         const tactical = this.sim.state.tacticalMode;
         const stars = starsFor(lives, startLives, { tactical });
-        if (stars !== 0) this.result = { ...this.recordWin(map.id, stars), ...(tactical ? { tactical } : {}) };
+        if (stars !== 0)
+          this.result = {
+            ...this.recordWin(map.id, stars, this.sim.state.difficulty),
+            ...(tactical ? { tactical } : {}),
+          };
       });
     }
     this.gameSpeed = this.settings.get().defaultSpeed;
@@ -1021,14 +1029,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Saves a win of `mapId` and says what it earned, including the next map when this win unlocked it. */
-  private recordWin(mapId: string, stars: WinStars): VictoryResult {
+  private recordWin(mapId: string, stars: WinStars, difficulty: Difficulty): VictoryResult {
     const index = MAPS.findIndex((entry) => entry.id === mapId);
-    const unlocks = unlocksNext(
+    const unlocks = winUnlocksNext(
       index,
       MAPS.map((entry) => entry.id),
       this.progress.get(),
+      difficulty,
     );
-    this.progress.recordResult(mapId, stars);
+    this.progress.recordResult(mapId, stars, difficulty);
     return unlocks ? { stars, unlockedMap: MAPS[index + 1]!.name } : { stars };
   }
 
