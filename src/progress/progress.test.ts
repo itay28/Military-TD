@@ -24,7 +24,7 @@ describe('createProgress', () => {
     progress.recordResult('a', 2);
     progress.setHintsDone(true);
     expect(progress.get()).toEqual({
-      maps: { a: { completed: true, bestStars: 2 } },
+      maps: { a: { completed: true, bestStars: 2, hardStars: 0 } },
       hintsDone: true,
       metEnemies: [],
     });
@@ -33,7 +33,7 @@ describe('createProgress', () => {
   it('records a win as completed with its stars', () => {
     const progress = createProgress();
     progress.recordResult('crossroads', 2);
-    expect(progress.get().maps.crossroads).toEqual({ completed: true, bestStars: 2 });
+    expect(progress.get().maps.crossroads).toEqual({ completed: true, bestStars: 2, hardStars: 0 });
   });
 
   it('raises bestStars on a better win', () => {
@@ -47,7 +47,7 @@ describe('createProgress', () => {
     const progress = createProgress();
     progress.recordResult('crossroads', 3);
     progress.recordResult('crossroads', 1);
-    expect(progress.get().maps.crossroads).toEqual({ completed: true, bestStars: 3 });
+    expect(progress.get().maps.crossroads).toEqual({ completed: true, bestStars: 3, hardStars: 0 });
   });
 
   it('keeps other maps untouched', () => {
@@ -55,8 +55,8 @@ describe('createProgress', () => {
     progress.recordResult('a', 1);
     progress.recordResult('b', 2);
     expect(progress.get().maps).toEqual({
-      a: { completed: true, bestStars: 1 },
-      b: { completed: true, bestStars: 2 },
+      a: { completed: true, bestStars: 1, hardStars: 0 },
+      b: { completed: true, bestStars: 2, hardStars: 0 },
     });
   });
 
@@ -75,5 +75,31 @@ describe('createProgress', () => {
     progress.recordMet('tank');
     expect(progress.get().metEnemies).toEqual(['tank', 'infantry']);
     expect(progress.get()).toBe(before);
+  });
+
+  it('records a Hard result in hardStars only, leaving completed and bestStars alone', () => {
+    const progress = createProgress();
+    progress.recordResult('a', 2, 'hard');
+    expect(progress.get().maps.a).toEqual({ completed: false, bestStars: 0, hardStars: 2 });
+  });
+
+  it('keeps Normal and Hard stars apart and only ever raises each', () => {
+    const progress = createProgress();
+    progress.recordResult('a', 3);
+    progress.recordResult('a', 1, 'hard');
+    progress.recordResult('a', 2, 'hard');
+    progress.recordResult('a', 1, 'hard');
+    progress.recordResult('a', 1);
+    expect(progress.get().maps.a).toEqual({ completed: true, bestStars: 3, hardStars: 2 });
+  });
+
+  it('a Normal win starts hardStars at 0', () => {
+    const progress = createProgress();
+    progress.recordResult('a', 1);
+    expect(progress.get().maps.a).toEqual({ completed: true, bestStars: 1, hardStars: 0 });
+  });
+
+  it.each([0, 4, 1.5])('rejects %s stars on Hard', (stars) => {
+    expect(() => createProgress().recordResult('a', stars as 1, 'hard')).toThrow(RangeError);
   });
 });
