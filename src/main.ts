@@ -78,7 +78,7 @@ const openFieldManual: OpenFieldManual = (onBack) =>
     progress,
     reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   });
-const openHowToPlay: OpenHowToPlay = (onBack) => mountHowToPlay(howToPlayRoot, { onBack });
+const openHowToPlay: OpenHowToPlay = (onBack, difficulty) => mountHowToPlay(howToPlayRoot, { onBack, difficulty });
 const levelSelectRoot = document.getElementById('level-select');
 if (!levelSelectRoot) throw new Error('index.html has no #level-select element');
 

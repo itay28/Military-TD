@@ -80,7 +80,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
   const callNextWave = doc.createElement('button');
   callNextWave.type = 'button';
   callNextWave.dataset.testid = 'start-wave';
-  callNextWave.textContent = tacticalMode ? TERMS.startWave : 'Call next wave';
+  callNextWave.textContent = tacticalMode ? TERMS.startWave : TERMS.callNextWave;
   controls.append(callNextWave);
   const nextWave = field('hud-next-wave', message);
   const speedButtons = mountSpeedButtons(
