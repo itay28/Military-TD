@@ -101,6 +101,26 @@
       "files": ["assets/render-us-heavy-tank/**"]
     },
     {
+      "id": "render-china-heavy-tank",
+      "name": "T98 Main Battle Tank (top-down render)",
+      "author": "Risama",
+      "source": "https://sketchfab.com/3d-models/d75cdec1a34b417fadbb72656664b54a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"T98 Main Battle Tank\" by Risama (sketchfab.com), CC-BY 4.0, rendered top-down, diorama base removed, turret turned to the front",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-china-heavy-tank/**"]
+    },
+    {
+      "id": "render-insurgents-heavy-tank",
+      "name": "T-72M1 (top-down render)",
+      "author": "ballDAYLCbusta",
+      "source": "https://sketchfab.com/3d-models/673f659618b748c4847c659aadcd2aba",
+      "license": "CC-BY-4.0",
+      "attribution": "\"T-72M1\" by ballDAYLCbusta (sketchfab.com), CC-BY 4.0, rendered top-down, painted olive",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-insurgents-heavy-tank/**"]
+    },
+    {
       "id": "naip-field-road-treeline",
       "name": "NAIP aerial imagery (Iowa 2023)",
       "author": "USDA Farm Service Agency",
@@ -188,6 +208,16 @@
       "attribution": "\"Low Poly Humvee FREE\" by madtrollstudio (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
       "downloaded": "2026-11-02",
       "files": ["assets/render-us-jeep/**"]
+    },
+    {
+      "id": "render-russia-apc",
+      "name": "BTR-82A (top-down render and turntable)",
+      "author": "lebedeventerprise",
+      "source": "https://sketchfab.com/3d-models/cd1ba0c1f16f42aaac45234ced318605",
+      "license": "CC-BY-4.0",
+      "attribution": "\"BTR-82A\" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-russia-apc/**"]
     },
     {
       "id": "render-us-apc",
