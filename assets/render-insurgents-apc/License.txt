@@ -9,3 +9,5 @@ insurgents-apc-turntable.webp is a turntable of the same model (the whole model,
 it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
 The model itself isn't committed.
 License checked on the model's Sketchfab page, 2026-11-12.
+Provenance note: the model's Sketchfab page says it was ripped from ArmA 2. The page's licence
+label is CC-BY 4.0, which is what the license check reads; the maintainer decides whether to keep it.
