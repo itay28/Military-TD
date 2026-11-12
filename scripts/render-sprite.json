@@ -326,6 +326,19 @@
       "canvasTiles": 1.5
     },
     {
+      "id": "us-jet",
+      "kind": "jet",
+      "faction": "us",
+      "depicts": "F-16 Fighting Falcon",
+      "sketchfab": "c2ed832c0aa743789aa5b4452a60e97c",
+      "author": "davidmilitei09",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.3,
+      "liftTiles": 0.3,
+      "canvasTiles": 2.5
+    },
+    {
       "id": "russia-rifle-nest",
       "kind": "rifleNest",
       "faction": "russia",
@@ -526,6 +539,19 @@
       "frontAxis": "-y",
       "lengthTiles": 1.3,
       "canvasTiles": 1.5
+    },
+    {
+      "id": "russia-jet",
+      "kind": "jet",
+      "faction": "russia",
+      "depicts": "Su-25 Grach (Frogfoot) ground-attack jet",
+      "sketchfab": "88b71eb848cf4418a95dff497c07cefc",
+      "author": "tnikita",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.3,
+      "liftTiles": 0.3,
+      "canvasTiles": 2.5
     },
     {
       "id": "china-rifle-nest",

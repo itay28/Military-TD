@@ -13,6 +13,8 @@ export interface EnemyStats {
   /** Flat amount taken off each hit (at least 1 HP still gets through). */
   readonly armor: number;
   readonly layer: Layer;
+  /** A boss: the HUD boss bar and the Gunship look for it on the field. Absent on ordinary kinds. */
+  readonly boss?: boolean;
 }
 
 /** An enemy on the Path. Its stats are copied from its kind when it spawns. */
