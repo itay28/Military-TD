@@ -1,12 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
 import { WAVE_BANNER_MS } from '../../src/data/display';
-import { DEFAULT_WAVE_AFTER_MS } from '../../src/data/waves';
+import { readFileSync } from 'node:fs';
+import { BUILD_WINDOW_MS, timedWaves, WAVES } from '../../src/data/waves';
+import { createPathLine } from '../../src/sim/enemies';
 import { TICK_MS } from '../../src/sim/game';
+import { createMap } from '../../src/sim/map';
+import { importTiledMap } from '../../src/sim/tiled';
 import { openGame, state, stepToEnd } from './helpers';
 
 // From #413 (ADR-0011): waves come on their timers by default; Tactical mode waits for the player and caps Stars at 2.
 
-const TIMER_TICKS = Math.round(DEFAULT_WAVE_AFTER_MS / TICK_MS);
+const TIMER_TICKS = Math.round(BUILD_WINDOW_MS / TICK_MS);
+// The Training Ground's own timers, which fit its road (#570).
+const TRAINING_GROUND = importTiledMap('mvp', JSON.parse(readFileSync('maps/01-training-ground.tmj', 'utf8')));
+const TIMERS = timedWaves(WAVES, createPathLine(createMap(TRAINING_GROUND).waypointPositions).length).map(
+  (wave) => wave.afterMs!,
+);
 const step = (page: Page, ticks: number) => page.evaluate((n) => window.__TD__!.step(n), ticks);
 
 /** Turns Tactical mode on from the pause menu's Settings, then restarts so the next game uses it. */
@@ -21,7 +30,7 @@ async function turnOnTactical(page: Page) {
 test('timed mode: wave 1 arrives by itself when the build window runs out', async ({ page }) => {
   await openGame(page);
   await expect(page.getByTestId('start-wave')).toHaveText('Call next wave');
-  await expect(page.getByTestId('hud-next-wave')).toHaveText(`Next ${DEFAULT_WAVE_AFTER_MS / 1000}s`);
+  await expect(page.getByTestId('hud-next-wave')).toHaveText(`Next ${BUILD_WINDOW_MS / 1000}s`);
 
   expect(await step(page, TIMER_TICKS - 1)).toMatchObject({ phase: 'build', waveNumber: 0 });
   await expect(page.getByTestId('hud-next-wave')).toHaveText('Next 1s');
@@ -41,7 +50,7 @@ test('timed mode: calling a wave in starts it now, overlapping the one on the fi
 
   const now = await state(page);
   expect(now).toMatchObject({ phase: 'wave', waveNumber: 2, activeWaves: [1, 2] });
-  expect(now.nextWaveAtMs).toBe(now.timeMs + DEFAULT_WAVE_AFTER_MS);
+  expect(now.nextWaveAtMs).toBe(now.timeMs + TIMERS[2]!);
   await expect(page.getByTestId('hud-wave')).toHaveText(/^Waves 1–2 \//);
 });
 
