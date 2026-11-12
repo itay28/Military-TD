@@ -110,6 +110,7 @@ export const TERMS = {
   money: 'Funds',
   lives: 'HQ',
   startWave: 'Start wave',
+  callNextWave: 'Call next wave',
   play: 'Deploy',
   levelSelect: 'Operations',
   victory: 'MISSION COMPLETE',
@@ -181,7 +182,7 @@ export const ENEMY_WEAKNESS = {
   helicopter: 'Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best.',
   tank: 'Armor: Rifle Nests barely scratch it. Cannons and Mortars work.',
   apc: 'Armored carrier. Kill it and its squad jumps out.',
-  heavyTank: 'Boss. Heavy armor, huge HP. Leaking it costs 10 Lives.',
+  heavyTank: 'Boss. Heavy armor, huge HP.',
   gunship: 'Boss. Armored gunship. AA Guns are your best answer.',
   jet: 'Fast, fragile jet. Needs AA coverage along the route.',
 } as const satisfies Record<EnemyKind, string>;

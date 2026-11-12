@@ -40,6 +40,7 @@ describe('display names (ADR-0010)', () => {
       money: 'Funds',
       lives: 'HQ',
       startWave: 'Start wave',
+      callNextWave: 'Call next wave',
       play: 'Deploy',
       levelSelect: 'Operations',
       victory: 'MISSION COMPLETE',

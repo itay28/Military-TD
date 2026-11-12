@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import type { Difficulty } from '../data/difficulty';
 import type { GameSpeed } from '../scenes/gameSpeed';
 import type { Phase } from '../sim/game';
 import { mountPauseMenu, type PauseMenu, type PauseMenuOptions } from './pauseMenu';
@@ -7,7 +8,7 @@ import { mountPauseMenu, type PauseMenu, type PauseMenuOptions } from './pauseMe
 let root: HTMLElement;
 let hud: HTMLElement;
 let buildBar: HTMLElement;
-let game: { state: { phase: Phase } };
+let game: { state: { phase: Phase; difficulty: Difficulty } };
 
 const pauseButton = () => hud.querySelector<HTMLButtonElement>('button[data-testid="pause"]');
 const button = (testId: string) => root.querySelector<HTMLButtonElement>(`button[data-testid="${testId}"]`);
@@ -34,7 +35,7 @@ beforeEach(() => {
   hud = document.createElement('div');
   buildBar = document.createElement('nav');
   document.body.append(hud, buildBar, root);
-  game = { state: { phase: 'wave' } };
+  game = { state: { phase: 'wave', difficulty: 'hard' } };
 });
 
 describe('mountPauseMenu', () => {
@@ -145,6 +146,13 @@ describe('mountPauseMenu', () => {
     expect(button('field-manual')!.disabled).toBe(true);
     expect(button('field-manual')!.textContent).toBe('Field manual');
     expect(button('how-to-play')!.disabled).toBe(true);
+  });
+
+  it("opens How to play with the game's difficulty, so it states that difficulty's numbers", () => {
+    const openHowToPlay = vi.fn(() => ({ close: () => {}, back: () => {} }));
+    mount({ openHowToPlay }).open();
+    button('how-to-play')!.click();
+    expect(openHowToPlay).toHaveBeenCalledWith(expect.any(Function), 'hard');
   });
 
   describe.each([
