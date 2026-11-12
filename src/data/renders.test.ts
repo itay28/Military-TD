@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { RENDERS, RENDER_FACING, renderFor } from './renders';
+import { FACTIONS } from '../sim/factions';
 import { SPRITES, type SpriteKind } from './sprites';
 
 describe('RENDERS', () => {
@@ -9,6 +10,11 @@ describe('RENDERS', () => {
     expect(Object.keys(RENDERS).sort()).toEqual(['aaGun', 'tank']);
     expect(RENDERS.aaGun!.id).toBe('china-aa-gun');
     expect(RENDERS.tank!.id).toBe('russia-tank');
+  });
+
+  it('keeps the Gunship out of play: its art (#363) is not wired in until the rollout', () => {
+    expect(Object.keys(RENDERS)).not.toContain('gunship');
+    expect(SPRITES.gunship).toBeNull();
   });
 
   it('gives each a hull and a turret texture, both its own keys', () => {
@@ -62,8 +68,8 @@ describe('RENDERS', () => {
 });
 
 describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 puts the Sniper in play)', () => {
-  // The Factions whose Sniper is rendered so far: US (#459). Later parts of #358 add theirs.
-  for (const faction of ['us']) {
+  // The Factions whose Sniper is rendered so far: US (#459), Russia and China (#460), Insurgents (#462): every Faction.
+  for (const faction of FACTIONS) {
     const id = `${faction}-sniper`;
     const dir = `assets/render-${id}`;
 
