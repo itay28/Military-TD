@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { clickTile, openGame, selectKind } from './helpers';
+import { FIRST_MAP } from './firstMap';
+import { clickTile, openGame, openLevelSelect, selectKind } from './helpers';
 
 const BESIDE_PATH = { col: 1, row: 3 };
 const SECOND_BESIDE_PATH = { col: 2, row: 3 };
@@ -65,5 +66,50 @@ for (const viewport of [
     await expect(page.getByTestId('hud-wave')).toHaveText(/^Waves 2–3 \//);
     await check('two waves overlapping');
     expect(states).toHaveLength(11);
+  });
+}
+
+/** Opens the first map on Hard through the Level select, as a player does. */
+async function openHard(page: Page, textSize?: 150) {
+  if (textSize)
+    await page.addInitScript(
+      (size) =>
+        localStorage.setItem('military-td.settings', JSON.stringify({ version: 3, settings: { textSize: size } })),
+      textSize,
+    );
+  await openLevelSelect(page, { progress: { [FIRST_MAP.id]: { completed: true, bestStars: 1 } } });
+  await page.getByRole('button', { name: `${FIRST_MAP.name}, Hard, no stars yet` }).click();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
+  await page.waitForFunction(() => window.__TD__ !== undefined);
+}
+
+// #569: the HARD tag wrapped the buttons onto a second row, and on Normal the timer was cut to "Ne…".
+for (const viewport of [
+  { width: 844, height: 390 },
+  { width: 390, height: 844 },
+  { width: 360, height: 740 },
+  { width: 900, height: 560 },
+  { width: 1280, height: 720 },
+  { width: 400, height: 800, textSize: 150 as const },
+]) {
+  test(`on ${viewport.width} × ${viewport.height}${viewport.textSize ? ` at ${viewport.textSize} %` : ''}, the timer shows in full and the layout is the same on Normal and Hard (#569)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await openGame(page, { textSize: viewport.textSize });
+    const timer = page.getByTestId('hud-next-wave');
+    await expect(timer).toHaveText(/^Next \d+s$/);
+    const untruncated = () =>
+      timer.evaluate((el) => ({ fits: el.scrollWidth <= el.clientWidth, text: el.textContent ?? '' }));
+    expect((await untruncated()).fits).toBe(true);
+    const normal = await layout(page);
+
+    await openHard(page, viewport.textSize);
+    await expect(page.getByTestId('hud-difficulty')).toHaveText('Hard');
+    await expect(timer).toHaveText(/^Next \d+s$/);
+    const hard = await untruncated();
+    expect(hard.fits).toBe(true);
+    expect(hard.text.endsWith('…')).toBe(false);
+    expect(await layout(page)).toEqual(normal);
   });
 }

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
-import { renderFor } from '../data/renders';
+import { renderFor, type RenderedSprite } from '../data/renders';
 import { towerIcon } from '../data/sprites';
 import { BUILD_KINDS, TOWER_STATS } from '../data/towers';
 import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
@@ -45,7 +45,7 @@ describe('buildOptions', () => {
           },
           tooltip: towerTooltip(kind as keyof typeof TOWER_STATS),
           ...(kind === 'aaGun'
-            ? { render: expect.objectContaining({ hullUrl: renderFor('aaGun')!.hullUrl }) }
+            ? { render: expect.objectContaining({ hullUrl: (renderFor('aaGun', 'us') as RenderedSprite).hullUrl }) }
             : { sprite: towerIcon(kind as keyof typeof TOWER_STATS) }),
         })),
     );
@@ -321,9 +321,9 @@ describe('Build bar render icons', () => {
     const options = buildOptions();
     const aa = options.find((o) => o.kind === 'aaGun')!;
     expect(aa.render).toEqual({
-      hullUrl: renderFor('aaGun')!.hullUrl,
-      turretUrl: renderFor('aaGun')!.turretUrl,
-      canvasPx: renderFor('aaGun')!.canvasPx,
+      hullUrl: (renderFor('aaGun', 'us') as RenderedSprite).hullUrl,
+      turretUrl: (renderFor('aaGun', 'us') as RenderedSprite).turretUrl,
+      canvasPx: (renderFor('aaGun', 'us') as RenderedSprite).canvasPx,
     });
     expect(aa.sprite).toBeUndefined();
     const cannon = options.find((o) => o.kind === 'cannon')!;
