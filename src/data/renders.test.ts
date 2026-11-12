@@ -92,3 +92,35 @@ describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 put
     });
   }
 });
+
+describe('the committed Grenade launcher renders (art-ahead: not in RENDERS until #359 puts it in play)', () => {
+  // The Factions whose Grenade launcher is rendered so far: US (#464), Russia (#467). Later parts of #359 add theirs.
+  for (const faction of ['us', 'russia']) {
+    const id = `${faction}-grenade-launcher`;
+    const dir = `assets/render-${id}`;
+
+    it(`${id} has its pivot data: a 1.25-tile canvas turning about the pad centre`, () => {
+      const meta = JSON.parse(readFileSync(`${dir}/${id}.json`, 'utf8'));
+      expect(meta).toMatchObject({
+        id,
+        kind: 'grenadeLauncher',
+        pxPerTile: 128,
+        canvasPx: 160,
+        pivot: { x: 80, y: 80 },
+      });
+    });
+
+    for (const layer of ['hull', 'turret'] as const) {
+      it(`${id} has a ${layer} layer on the same canvas`, () => {
+        const path = `${dir}/${id}-${layer}.png`;
+        expect(existsSync(path), path).toBe(true);
+        const png = PNG.sync.read(readFileSync(path));
+        expect([png.width, png.height]).toEqual([160, 160]);
+      });
+    }
+
+    it(`keeps ${id} out of RENDERS until it is in play`, () => {
+      expect(Object.values(RENDERS).map((r) => r.id)).not.toContain(id);
+    });
+  }
+});

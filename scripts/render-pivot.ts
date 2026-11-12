@@ -13,6 +13,16 @@ export interface RenderModel {
   readonly turret?: unknown;
   /** The sandbagged pit a tower stands in (`render-sprite.py` builds it at the canvas centre). */
   readonly base?: unknown;
+  /** Extra models set in the same scene (a tripod, a crew); `turret` puts a part on the turret layer. */
+  readonly parts?: readonly RenderPart[];
+}
+
+/** One extra model of a composite render (`parts` in `render-sprite.json`). */
+export interface RenderPart {
+  readonly sketchfab: string;
+  readonly author: string;
+  readonly license: string;
+  readonly turret?: boolean;
 }
 
 export const RENDER_CONFIG = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as {
