@@ -140,6 +140,12 @@
       #hud [data-testid='hud-wave'] {
         min-width: 12ch;
       }
+      /* The Hard tag (#465): small caps in the danger colour, so it reads as a warning at a glance. */
+      #hud [data-testid='hud-difficulty'] {
+        color: var(--danger);
+        font-weight: bold;
+        text-transform: uppercase;
+      }
       #hud [data-testid='hud-dps'] {
         min-width: 8ch;
       }
