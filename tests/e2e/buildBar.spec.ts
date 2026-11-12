@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { TOWER_STATS, type TowerKind } from '../../src/data/towers';
+import { BUILD_KINDS, TOWER_STATS, type TowerKind } from '../../src/data/towers';
 import { clickTile, openGame, selectKind, state } from './helpers';
 
-const KINDS = Object.keys(TOWER_STATS) as TowerKind[];
+const KINDS: readonly TowerKind[] = BUILD_KINDS; // the kinds in play: a held-back one (the Sniper, #364) has no button
 // Tower kinds drawn from a render (src/data/renders.ts). Not imported: Playwright can't load its PNG/JSON imports.
 const RENDERED: TowerKind[] = ['aaGun'];
 const FIRST = KINDS[0]!;

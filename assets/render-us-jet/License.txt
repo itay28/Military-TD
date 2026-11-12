@@ -1,0 +1,12 @@
+Rendered sprites of "F 16 Fighting Falcon" by davidmilitei09
+https://sketchfab.com/3d-models/c2ed832c0aa743789aa5b4452a60e97c
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNG in this folder is a top-down render of that model made by
+scripts/render-sprite.py (changed: rendered from above in flight, raised off the ground so its
+shadow falls offset, lit, desaturated).
+us-jet-turntable.webp is a turntable of the same model (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-11.

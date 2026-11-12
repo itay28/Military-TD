@@ -79,3 +79,13 @@ describe('infantry reads at game tile size (#441)', () => {
     }
   });
 });
+
+describe('rifle nest gunners read at game tile size (#443)', () => {
+  it('spans at least 0.55 tiles on the long side of the gunner layer, for every faction', () => {
+    const PX_PER_TILE = 128;
+    for (const m of MODELS.filter((x) => x.kind === 'rifleNest')) {
+      const { box } = boundingBox(`assets/render-${m.id}/${m.id}-turret.png`, (a) => a >= OPAQUE);
+      expect(Math.max(box.w, box.h) / PX_PER_TILE, `${m.id} tiles`).toBeGreaterThanOrEqual(0.55);
+    }
+  });
+});
