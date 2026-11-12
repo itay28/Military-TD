@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTIES, DIFFICULTY } from './difficulty';
+import { DIFFICULTIES, DIFFICULTY, scaledReward } from './difficulty';
 import { START_LIVES, START_MONEY } from './start';
 
 describe('DIFFICULTY', () => {
@@ -26,5 +26,13 @@ describe('DIFFICULTY', () => {
     expect(hard.startLives).toBeGreaterThan(0);
     expect(hard.startMoney).toBeLessThan(START_MONEY);
     expect(Number.isInteger(hard.startLives) && Number.isInteger(hard.startMoney)).toBe(true);
+  });
+});
+
+describe('scaledReward', () => {
+  it('scales a Reward by the difficulty, rounded, and never below 1', () => {
+    expect(scaledReward(25, 'normal')).toBe(25);
+    expect(scaledReward(25, 'hard')).toBe(Math.round(25 * DIFFICULTY.hard.rewardScale));
+    expect(scaledReward(1, 'hard')).toBe(1);
   });
 });
