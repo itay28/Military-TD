@@ -33,7 +33,13 @@ export function validateMenuClip({ loopMs, spawnEveryMs, spawns, warmUpMs, fps }
 }
 
 /** The clip's game: the real game under a script of spawns. Each `tick` must be `TICK_MS`. */
-export type MenuClipGame = Game;
+export interface MenuClipGame extends Game {
+  /**
+   * What the scene seeds enemy `id`'s walk cycle with: its place among a loop's spawns, the same every loop, where the
+   * id itself grows (so the walk and the rotors would jump at the loop point). An id it didn't spawn comes back as is.
+   */
+  animKey(id: number): number;
+}
 
 /**
  * The real game, set up from the clip (#568): its towers placed free at their levels, no waves, Lives and Money from
@@ -61,6 +67,8 @@ export function createMenuClipGame(clip: MenuClip, map: MapData): MenuClipGame {
   const spawnTicks = clipTicks(clip.spawnEveryMs);
   let ticks = 0;
   let spawned = 0;
+  const spawnsPerLoop = clipTicks(clip.loopMs) / spawnTicks;
+  const slots = new Map<number, number>();
   return {
     ...game,
     get state() {
@@ -69,12 +77,15 @@ export function createMenuClipGame(clip: MenuClip, map: MapData): MenuClipGame {
     tick(dtMs) {
       if (ticks % spawnTicks === 0) {
         const { kind, dies } = clip.spawns[spawned % clip.spawns.length]!;
-        game.spawnEnemy(kind, { hpScale: dies ? 1 : clip.survivorHpScale });
+        const id = game.spawnEnemy(kind, { hpScale: dies ? 1 : clip.survivorHpScale });
+        slots.set(id, spawned % spawnsPerLoop);
         spawned++;
+        for (const known of slots.keys()) if (!game.state.enemies.some((e) => e.id === known)) slots.delete(known);
       }
       ticks++;
       game.tick(dtMs);
     },
+    animKey: (id) => slots.get(id) ?? id,
   };
 }
 

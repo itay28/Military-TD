@@ -68,6 +68,18 @@ describe('createMenuClipGame', () => {
     expect(game.state.enemies.map((e) => e.maxHp)).toEqual([30, 20_000]);
   });
 
+  it("keys each enemy's walk cycle by its place among a loop's spawns, the same every loop", () => {
+    const game = createMenuClipGame({ ...SMALL, towers: [] }, STRIP);
+    run(game, 10);
+    const first = game.state.enemies[0]!.id;
+    expect(game.animKey(first)).toBe(0);
+    run(game, 4000);
+    const again = game.state.enemies.at(-1)!;
+    expect(again.id).not.toBe(first);
+    expect(game.animKey(again.id)).toBe(0);
+    expect(game.animKey(9999)).toBe(9999);
+  });
+
   it('never ends: no waves to win, and Lives to spare for every leak', () => {
     const game = createMenuClipGame({ ...SMALL, towers: [] }, STRIP);
     run(game, 60_000);

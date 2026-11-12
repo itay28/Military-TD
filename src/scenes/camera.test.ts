@@ -5,7 +5,7 @@ import {
   revealTile,
   clampView,
   coverZoom,
-  demoView,
+  clipView,
   fitView,
   fitZoom,
   panBy,
@@ -168,29 +168,29 @@ describe('coverZoom', () => {
   });
 });
 
-describe('demoView', () => {
+describe('clipView', () => {
   it('zooms to the cover times the factor and centres on the point', () => {
-    const view = demoView(DESKTOP, { x: 384, y: 240 }, 1.5);
+    const view = clipView(DESKTOP, { x: 384, y: 240 }, 1.5);
     expect(view.zoom).toBeCloseTo(1.875);
     expect(view.scrollX).toBeCloseTo(128);
     expect(view.scrollY).toBeCloseTo(80);
   });
 
   it('keeps the map edges at the screen edges near a corner, so no margin shows', () => {
-    expect(demoView(DESKTOP, { x: 0, y: 0 }, 1.5)).toMatchObject({ scrollX: 0, scrollY: 0 });
-    const far = demoView(DESKTOP, { x: 768, y: 480 }, 1.5);
+    expect(clipView(DESKTOP, { x: 0, y: 0 }, 1.5)).toMatchObject({ scrollX: 0, scrollY: 0 });
+    const far = clipView(DESKTOP, { x: 768, y: 480 }, 1.5);
     expect(far.scrollX).toBeCloseTo(256);
     expect(far.scrollY).toBeCloseTo(160);
   });
 
   it('ignores the player zoom limit: a wide screen still fills', () => {
     const wide = { viewport: { width: 3000, height: 800 }, world: WORLD, maxZoom: 2.5 };
-    const view = demoView(wide, { x: 384, y: 240 }, 1);
+    const view = clipView(wide, { x: 384, y: 240 }, 1);
     expect(view.zoom * WORLD.width).toBeGreaterThanOrEqual(3000);
   });
 
   it('never shows past the map on a phone either', () => {
-    const view = demoView(PHONE, { x: 384, y: 0 }, 1);
+    const view = clipView(PHONE, { x: 384, y: 0 }, 1);
     expect(view.scrollY).toBe(0);
     expect(view.scrollX + PHONE.viewport.width / view.zoom).toBeLessThanOrEqual(WORLD.width);
   });

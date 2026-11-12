@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { firstScene, frameMs, parseTestFlags } from './flags';
 
 describe('parseTestFlags', () => {
-  it('reads demo=1: the live battlefield behind the menu plays in test mode too', () => {
-    expect(parseTestFlags('?test=1&demo=1').demo).toBe(true);
-    expect(parseTestFlags('?test=1&demo=yes').demo).toBe(false);
+  it('reads backdrop=1 (the menu video in test mode) and clip=1 (the Game scene plays the menu clip)', () => {
+    expect(parseTestFlags('?test=1&backdrop=1')).toMatchObject({ backdrop: true, clip: false });
+    expect(parseTestFlags('?test=1&clip=1')).toMatchObject({ backdrop: false, clip: true });
+    expect(parseTestFlags('?test=1&backdrop=yes&clip=yes')).toMatchObject({ backdrop: false, clip: false });
   });
 
   it('with no flags, test mode is off and the game runs in real time with animation', () => {
@@ -16,7 +17,8 @@ describe('parseTestFlags', () => {
       menu: false,
       persist: false,
       unlockAll: false,
-      demo: false,
+      backdrop: false,
+      clip: false,
     });
   });
 
@@ -29,7 +31,8 @@ describe('parseTestFlags', () => {
       menu: false,
       persist: false,
       unlockAll: false,
-      demo: false,
+      backdrop: false,
+      clip: false,
     });
   });
 
@@ -42,7 +45,8 @@ describe('parseTestFlags', () => {
       menu: false,
       persist: false,
       unlockAll: false,
-      demo: false,
+      backdrop: false,
+      clip: false,
     });
   });
 

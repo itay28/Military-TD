@@ -111,10 +111,10 @@ export function coverZoom(viewport: Size, world: Size): number {
 }
 
 /**
- * The demo camera behind the menu (#402): `factor` times the cover zoom (past the player's zoom limit if need be),
+ * The menu clip's camera (#568): `factor` times the cover zoom (past the player's zoom limit if need be),
  * centred on the world point `center` but kept inside the map, so no margin ever shows.
  */
-export function demoView(
+export function clipView(
   { viewport, world }: Pick<CameraBounds, 'viewport' | 'world'>,
   center: Pixel,
   factor: number,

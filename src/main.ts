@@ -7,7 +7,6 @@ import { createAudioMix } from './audio/volume';
 import { RADIO_CUE_MS } from './data/sounds';
 import { HARD_IN_PLAY } from './data/inPlay';
 import { BootScene } from './scenes/BootScene';
-import { DEMO_SCENE_KEY, demoMode } from './scenes/demoMode';
 import { GameScene } from './scenes/GameScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MenuScene } from './scenes/MenuScene';
@@ -20,6 +19,8 @@ import { defaultSettings } from './settings/settings';
 import { SCENARIOS } from './testing/scenarios';
 import { mountFieldManual, type OpenFieldManual } from './ui/fieldManual';
 import { mountHowToPlay, type OpenHowToPlay } from './ui/howToPlay';
+import { mountMenuBackdrop } from './ui/menuBackdrop';
+import { MENU_CLIP_FILES } from './data/menuClipFiles';
 import { mountSettingsScreen, type OpenSettings } from './ui/settingsScreen';
 import { showVersion } from './ui/version';
 
@@ -106,12 +107,20 @@ const gameScene = new GameScene({
   },
 });
 
-// The live battlefield behind the menu (#402): a second Game scene playing a scripted demo, unless it's off.
-const demo = demoMode(flags, {
-  reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  coarsePointer: window.matchMedia('(pointer: coarse)').matches,
-});
-const demoScenes = demo === 'off' ? [] : [new GameScene({ ...gameOptions, demo })];
+// The menu clip's video behind the Main menu and the Level select (#568), with its battle sound on the sound effects
+// channel. Test mode leaves it out unless ?backdrop=1, so e2e see a flat background.
+const backdropRoot = document.getElementById('menu-backdrop');
+if (!backdropRoot) throw new Error('index.html has no #menu-backdrop element');
+const backdrop =
+  flags.test && !flags.backdrop
+    ? undefined
+    : mountMenuBackdrop(backdropRoot, {
+        sources: MENU_CLIP_FILES,
+        small: window.matchMedia('(pointer: coarse), (max-width: 800px)').matches,
+        reducedMotion: () => settings.get().reducedMotion,
+        volume: () => audioMix.volume('sfx'),
+      });
+const BACKDROP_SCENES: ReadonlySet<string> = new Set(['Menu', 'LevelSelect']);
 
 const gameRoot = document.getElementById('game');
 if (!gameRoot) throw new Error('index.html has no #game element');
@@ -136,7 +145,6 @@ const game = new Phaser.Game({
       settings,
     }),
     gameScene,
-    ...demoScenes,
   ],
 });
 // Phaser resizes on window resizes only; collapsing the build bar or the HUD wrapping resizes the stage without one.
@@ -173,12 +181,19 @@ const music = createMusicController(
 );
 // The Game scene ducks the music under its radio cues (#396).
 game.registry.set(MUSIC_REGISTRY_KEY, music);
-audioMix.subscribe(() => music.refreshVolume());
+// A setting change (a volume, or reduced motion) applies to a showing backdrop at once.
+audioMix.subscribe(() => {
+  music.refreshVolume();
+  backdrop?.refreshVolume();
+});
 game.events.once(Phaser.Core.Events.READY, () => {
   for (const scene of game.scene.getScenes(false)) {
-    // The demo plays under the Main menu and Level select, which pick the music.
-    if (scene.scene.key === DEMO_SCENE_KEY) continue;
-    scene.events.on(Phaser.Scenes.Events.START, () => music.enterScene(scene.scene.key));
+    const { key } = scene.scene;
+    scene.events.on(Phaser.Scenes.Events.START, () => {
+      music.enterScene(key);
+      if (BACKDROP_SCENES.has(key)) backdrop?.show();
+      else backdrop?.hide();
+    });
   }
 });
 // The sound effects sink drops sounds while Phaser's audio is locked, so the music (and its cold open) waits for Phaser
@@ -186,8 +201,13 @@ game.events.once(Phaser.Core.Events.READY, () => {
 const unlockMusic = (): void => {
   window.removeEventListener('pointerdown', unlockMusic);
   window.removeEventListener('keydown', unlockMusic);
-  if (game.sound.locked) game.sound.once(Phaser.Sound.Events.UNLOCKED, () => music.unlock());
-  else music.unlock();
+  // The backdrop's battle sound comes in at the same moment as the music.
+  const unlock = () => {
+    music.unlock();
+    backdrop?.unlock();
+  };
+  if (game.sound.locked) game.sound.once(Phaser.Sound.Events.UNLOCKED, unlock);
+  else unlock();
 };
 window.addEventListener('pointerdown', unlockMusic);
 window.addEventListener('keydown', unlockMusic);
