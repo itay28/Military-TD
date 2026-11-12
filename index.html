@@ -149,6 +149,14 @@
       #hud [data-testid='hud-dps'] {
         min-width: 8ch;
       }
+      /* The tag's slot is there on Normal too, empty, so the row is the same on both difficulties (#569). */
+      #hud [data-testid='hud-difficulty'] {
+        min-width: 4ch;
+      }
+      /* "Next 100s": always whole, since it has its own slot. */
+      #hud [data-testid='hud-next-wave'] {
+        min-width: 9ch;
+      }
       #hud .hud-message {
         flex: 1;
         min-width: 0;
@@ -470,6 +478,26 @@
         #hud button {
           padding: 3px 10px;
           font-size: 0.8125rem;
+        }
+      }
+      /* A mid-width screen, a phone in landscape included (#569): two fixed rows, the stats over the controls and the
+         banner. The stats, with the difficulty tag's slot and the countdown, no longer fit beside five buttons. */
+      @media (min-width: 641px) and (max-width: 1100px) {
+        #hud {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+        }
+        #hud .hud-stats {
+          grid-area: 1 / 1 / 2 / -1;
+          flex-wrap: wrap;
+        }
+        #hud .hud-controls {
+          grid-area: 2 / 1;
+          flex-wrap: wrap;
+        }
+        #hud .hud-message {
+          grid-area: 2 / 2;
         }
       }
       /* A narrow screen: three fixed rows, stats / controls / message. The message row is kept when empty. */
