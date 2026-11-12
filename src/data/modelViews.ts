@@ -5,10 +5,10 @@ import type { TowerKind } from './towers';
 import { TURNTABLES, type Turntable as TurntableData } from './turntables';
 
 /**
- * Kinds whose renders land before their gameplay (art and rules are separate issues): the Heavy tank boss (#362).
+ * Kinds whose renders land before their gameplay (art and rules are separate issues): the Heavy tank (#362) and Gunship (#363) bosses.
  * A kind leaves this list when it joins `ENEMY_STATS` or the tower stats (a test checks it).
  */
-export const UPCOMING_KINDS = ['heavyTank'] as const;
+export const UPCOMING_KINDS = ['heavyTank', 'gunship'] as const;
 
 /** True for a kind whose art is ahead of its gameplay. */
 export const isUpcoming = (kind: string): boolean => (UPCOMING_KINDS as readonly string[]).includes(kind);

@@ -31,6 +31,8 @@ describe('designationsIn', () => {
     'Black Hawk',
     'F-16',
     'Su-25',
+    'J-10',
+    'MiG-21',
   ])('finds %s in the render list', (name) => {
     expect(found).toContain(name);
   });
