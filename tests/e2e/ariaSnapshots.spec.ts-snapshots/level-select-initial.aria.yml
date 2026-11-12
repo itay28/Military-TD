@@ -3,6 +3,7 @@
   - list:
     - listitem:
       - button "Training Ground, no stars yet": Training Ground
+      - button "Training Ground, Hard, locked. Win Training Ground on Normal to unlock" [disabled]: 🔒 Hard
     - listitem:
       - button "Switchback, locked. Complete Training Ground to unlock" [disabled]: Switchback
     - listitem:
