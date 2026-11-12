@@ -453,6 +453,63 @@
       }
     },
     {
+      "id": "russia-sniper",
+      "kind": "sniper",
+      "faction": "russia",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, uniforms re-coloured olive (stand-in kit and rifle for the ORSIS T-5000 / ASVK team in EMR)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material_6": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "Glove": {
+            "color": [0.6, 0.62, 0.5]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "russia-aa-gun",
       "kind": "aaGun",
       "faction": "russia",
@@ -632,6 +689,63 @@
         {
           "x": 0.19,
           "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material_6": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "Glove": {
+            "color": [0.5, 0.55, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
+      "id": "china-sniper",
+      "kind": "sniper",
+      "faction": "china",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, uniforms re-coloured green (stand-in kit and rifle for the QBU-10 team in Type 07)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
         }
       ],
       "base": {
