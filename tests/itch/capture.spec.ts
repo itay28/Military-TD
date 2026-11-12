@@ -61,10 +61,22 @@ async function startMap(page: Page, name: string) {
   await page.evaluate(() => window.__TD__!.setHints(false));
 }
 
+const bots = new Map<string, ReturnType<typeof buildOrder>>();
+
+/** The balance bot for a map, built once: it holds no state between turns. */
+function botFor(mapId: string) {
+  let bot = bots.get(mapId);
+  if (!bot) {
+    const data = importTiledMap(mapId, JSON.parse(readFileSync(MAP_FILES[mapId]!, 'utf8')));
+    bot = buildOrder(fitOrder(data, BALANCED_ORDER));
+    bots.set(mapId, bot);
+  }
+  return bot;
+}
+
 /** One bot turn: its commands, the next wave once the Build phase is back, then `ticks` ticks. */
 async function botTurn(page: Page, mapId: string, ticks: number): Promise<TestState> {
-  const data = importTiledMap(mapId, JSON.parse(readFileSync(MAP_FILES[mapId]!, 'utf8')));
-  const bot = buildOrder(fitOrder(data, BALANCED_ORDER));
+  const bot = botFor(mapId);
   const now = await page.evaluate(() => window.__TD__!.state());
   // The bot reads only towers and Money, which the test state has.
   const commands = bot(now as unknown as GameState);
