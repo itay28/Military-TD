@@ -1,31 +1,41 @@
 - dialog "How to play":
   - heading "How to play" [level=2]
   - region "How to play":
-    - heading "The goal" [level=3]
-    - paragraph: Stop the enemies reaching the exit. Each one that gets through costs Lives, and you start with 20 Lives. Lose them all and the game is lost.
-    - heading "Money" [level=3]
-    - paragraph: You start with 100 Money. Every enemy you stop pays a reward. Towers and upgrades cost Money. Selling a tower refunds 70% of what you spent on it, after 2 seconds.
-    - heading "Placing, upgrading and selling" [level=3]
+    - heading "Protect HQ" [level=3]
+    - paragraph: Enemies move along the road toward your HQ. Each one that gets through damages it, and bigger enemies do more damage.
+    - paragraph: HQ starts at 20 on Normal, 15 on Hard. If it falls to 0, the mission fails. Hold out through the last wave and the mission is complete.
+    - heading "Placing towers" [level=3]
+    - paragraph: Pick a tower in the build bar, then tap a tile you can build on. The tower fires at any enemy in its range that it can hit.
+    - paragraph: Each tower costs Funds, and its button shows the price. A tower that covers several stretches of road gets more shots.
+    - heading "Funds" [level=3]
+    - paragraph: You start with $100 on Normal, $95 on Hard.
+    - paragraph: Every enemy you stop pays a reward in Funds. You spend Funds on new towers and on upgrades, so a strong defense pays for the next tower.
+    - heading "Upgrading and selling" [level=3]
+    - paragraph: "Tap a tower to open its panel. Upgrade raises it one level: Optics adds range, then Heavier weapon adds damage and fire rate."
+    - paragraph: "Sell takes the tower down:"
     - list:
-      - listitem: "Place: pick a tower in the build bar, then tap a buildable tile."
-      - listitem: "Upgrade: tap a tower to open its panel, then Upgrade. Each level adds range or firepower."
-      - listitem: "Sell: tap a tower, then Sell."
+      - listitem: It stops firing at once and takes 2 seconds to dismantle.
+      - listitem: When it's gone, you get back 70% of what you spent on it, upgrades included.
+      - listitem: The tile is free to build on again.
     - heading "Ground, air and armor" [level=3]
-    - list:
-      - listitem: "Ground and air: every enemy walks or flies, and each tower can hit only some layers."
-      - listitem: "Armor: armor is subtracted from every hit, so weak rounds do little against armored enemies."
+    - paragraph: Enemies either move on the ground or fly. Not every tower can hit both, so the tower list below says what each one reaches.
+    - paragraph: Armor takes a fixed amount off every hit. Light, fast rounds lose most of their damage against a tank, while heavy shells punch through.
+    - heading "Waves" [level=3]
+    - paragraph: Enemies come in waves, each on a timer. The HUD counts down to the next one. A wave arrives on time even if the one before is still on the field, so waves can overlap.
+    - paragraph: Call next wave brings the next wave in now and restarts the timer. Use it when your defense is ready. You get no bonus for it.
+    - paragraph: With Tactical mode on in Settings, there are no timers. Each wave starts only when you press Start wave on a clear field. A win in Tactical mode earns at most 2 stars.
     - heading "Towers" [level=3]
     - list:
-      - listitem: "Rifle Nest (50): Cheap all-rounder: hits ground and air. Light rounds that armor soaks."
-      - listitem: "AA Gun (75): Built for aircraft: fast, light rounds. Hits ground too."
-      - listitem: "Cannon (100): Slow, heavy shells that punch through armor. Ground only."
-      - listitem: "Mortar (125): Long-range shells that hit everything in the blast. Ground only, not up close."
+      - listitem: "Rifle Nest ($50): Cheap all-rounder: hits ground and air. Light rounds that armor soaks."
+      - listitem: "AA Gun ($75): Built for aircraft: fast, light rounds. Hits ground too."
+      - listitem: "Cannon ($100): Slow, heavy shells that punch through armor. Ground only."
+      - listitem: "Mortar ($125): Long-range shells that hit everything in the blast. Ground only, not up close."
     - heading "Enemies" [level=3]
     - list:
-      - listitem: "Infantry (reward 4): No armor: every tower hurts it. Mortar blasts catch whole squads."
-      - listitem: "Tank (reward 25): Armor: Rifle Nests barely scratch it. Cannons and Mortars work."
-      - listitem: "Jeep (reward 3): Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it."
-      - listitem: "Helicopter (reward 10): Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best."
+      - listitem: "Infantry (reward $4; HQ −1): No armor: every tower hurts it. Mortar blasts catch whole squads."
+      - listitem: "Tank (reward $25, $23 on Hard; HQ −5): Armor: Rifle Nests barely scratch it. Cannons and Mortars work."
+      - listitem: "Jeep (reward $3; HQ −1): Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it."
+      - listitem: "Helicopter (reward $10, $9 on Hard; HQ −2): Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best."
     - heading "Keys" [level=3]
     - table:
       - rowgroup:
