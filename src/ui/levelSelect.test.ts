@@ -48,7 +48,9 @@ describe('Level select', () => {
     expect(root.querySelector('h1')?.textContent).toBe('Operations');
     expect(buttons().map((b) => b.getAttribute('aria-label') ?? b.textContent?.trim())).toEqual([
       'Training Ground, no stars yet',
+      'Training Ground, Hard, locked. Win Training Ground on Normal to unlock',
       'Second Map, no stars yet',
+      'Second Map, Hard, locked. Win Second Map on Normal to unlock',
       'Back',
     ]);
     expect(buttons().every((b) => b.type === 'button')).toBe(true);
@@ -73,7 +75,7 @@ describe('Level select', () => {
     mapButton('Second Map')?.click();
     expect(onPick).not.toHaveBeenCalled();
     button('Deploy')?.click();
-    expect(onPick).toHaveBeenCalledExactlyOnceWith('second');
+    expect(onPick).toHaveBeenCalledExactlyOnceWith('second', 'normal');
   });
 
   it('shows an unlocked map with no stars as three empty stars, named "no stars yet"', () => {
@@ -111,7 +113,7 @@ describe('Level select', () => {
     expect(briefing()).toBeNull();
     mapButton('Training Ground')?.click();
     button('Deploy')?.click();
-    expect(onPick).toHaveBeenCalledExactlyOnceWith(MAPS[0]!.id);
+    expect(onPick).toHaveBeenCalledExactlyOnceWith(MAPS[0]!.id, 'normal');
   });
 
   it('calls onBack when the player presses Back', () => {
@@ -198,5 +200,78 @@ describe('briefing (#401)', () => {
     screen.destroy();
     deploy.click();
     expect(onPick).not.toHaveBeenCalled();
+  });
+});
+
+describe('Hard (#466)', () => {
+  const hardButton = (name: string) =>
+    buttons().find((b) => b.getAttribute('aria-label')?.startsWith(`${name}, Hard,`));
+
+  it('gives each unlocked map a Hard button under its card, showing the Hard stars and saying them in its name', () => {
+    mount({
+      maps: TWO_MAPS,
+      statusOf: (index) => ({ unlocked: true, bestStars: 3, hardUnlocked: true, hardStars: index === 0 ? 2 : 0 }),
+    });
+    const first = hardButton('Training Ground');
+    expect(first?.getAttribute('aria-label')).toBe('Training Ground, Hard, 2 of 3 stars');
+    expect(first?.textContent).toBe('Hard ★★☆');
+    expect(first?.getAttribute('aria-disabled')).toBeNull();
+    expect(first?.type).toBe('button');
+    expect(hardButton('Second Map')?.getAttribute('aria-label')).toBe('Second Map, Hard, no stars yet');
+    expect(hardButton('Second Map')?.textContent).toBe('Hard ☆☆☆');
+    expect(first?.closest('li')).toBe(mapButton('Training Ground')?.closest('li'));
+  });
+
+  it('shows a locked Hard as "🔒 Hard", focusable and aria-disabled, named with what unlocks it; a click picks nothing', () => {
+    const onPick = vi.fn();
+    mount({
+      maps: TWO_MAPS,
+      onPick,
+      statusOf: () => ({ unlocked: true, bestStars: 0, hardUnlocked: false, hardStars: 0 }),
+    });
+    const locked = button('Second Map, Hard, locked. Win Second Map on Normal to unlock');
+    expect(locked?.textContent).toBe('🔒 Hard');
+    expect(locked?.getAttribute('aria-disabled')).toBe('true');
+    expect(locked?.disabled).toBe(false);
+    locked?.click();
+    expect(briefing()).toBeNull();
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it('opens the map’s briefing from an unlocked Hard, whose Deploy picks the map on Hard', () => {
+    const onPick = vi.fn();
+    mount({
+      maps: TWO_MAPS,
+      onPick,
+      statusOf: () => ({ unlocked: true, bestStars: 1, hardUnlocked: true, hardStars: 0 }),
+    });
+    hardButton('Second Map')?.click();
+    expect(briefing()?.querySelector('h2')?.textContent).toBe(TWO_MAPS[1]!.briefing.operation);
+    button('Deploy')?.click();
+    expect(onPick).toHaveBeenCalledExactlyOnceWith('second', 'hard');
+  });
+
+  it('returns focus to the Hard button when its briefing closes', () => {
+    mount({ maps: TWO_MAPS, statusOf: () => ({ unlocked: true, bestStars: 1, hardUnlocked: true, hardStars: 0 }) });
+    hardButton('Training Ground')?.click();
+    briefing()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.activeElement).toBe(hardButton('Training Ground'));
+  });
+
+  it('shows no Hard button on a locked map', () => {
+    mount({ maps: TWO_MAPS, statusOf: (index) => ({ unlocked: index === 0, bestStars: 0 }) });
+    expect(hardButton('Second Map')).toBeUndefined();
+    expect(hardButton('Training Ground')).toBeDefined();
+  });
+
+  it('shows no Hard button on any map when showHard is off (#536)', () => {
+    mount({ maps: TWO_MAPS, showHard: false, statusOf: () => ({ unlocked: true, bestStars: 3, hardUnlocked: true }) });
+    expect(hardButton('Training Ground')).toBeUndefined();
+    expect(hardButton('Second Map')).toBeUndefined();
+  });
+
+  it('still focuses the last unlocked map, not its Hard button, when it opens', () => {
+    mount({ maps: TWO_MAPS, statusOf: () => ({ unlocked: true, bestStars: 3, hardUnlocked: true, hardStars: 0 }) });
+    expect(document.activeElement).toBe(mapButton('Second Map'));
   });
 });

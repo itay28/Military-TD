@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { isUnlocked, starsFor, TACTICAL_MAX_STARS, unlocksNext, type CompletedMaps } from './progression';
+import {
+  isHardUnlocked,
+  isUnlocked,
+  starsFor,
+  TACTICAL_MAX_STARS,
+  unlocksNext,
+  winUnlocksNext,
+  type CompletedMaps,
+} from './progression';
 
 describe('starsFor', () => {
   it.each([
@@ -77,5 +85,38 @@ describe('unlocksNext', () => {
   it('is false for the last map and for a map outside the list', () => {
     expect(unlocksNext(2, MAP_IDS, { maps: {} })).toBe(false);
     expect(unlocksNext(-1, MAP_IDS, { maps: {} })).toBe(false);
+  });
+});
+
+describe('winUnlocksNext', () => {
+  const MAP_IDS = ['first', 'second'];
+
+  it('is true for a first Normal win with a locked map after it', () => {
+    expect(winUnlocksNext(0, MAP_IDS, { maps: {} }, 'normal')).toBe(true);
+  });
+
+  it('is false for a Hard win, even when the next map is still locked', () => {
+    expect(winUnlocksNext(0, MAP_IDS, { maps: {} }, 'hard')).toBe(false);
+  });
+
+  it('is false for a Normal win when the next map is unlocked already', () => {
+    expect(winUnlocksNext(0, MAP_IDS, { maps: { first: { completed: true } } }, 'normal')).toBe(false);
+  });
+});
+
+describe('isHardUnlocked', () => {
+  const progress: CompletedMaps = { maps: { won: { completed: true }, lost: { completed: false } } };
+
+  it('unlocks Hard on a map once it is won on Normal', () => {
+    expect(isHardUnlocked('won', progress)).toBe(true);
+  });
+
+  it('keeps Hard locked on a map not yet won, and on an unknown map', () => {
+    expect(isHardUnlocked('lost', progress)).toBe(false);
+    expect(isHardUnlocked('nope', progress)).toBe(false);
+  });
+
+  it('does not unlock one map because another is won', () => {
+    expect(isHardUnlocked('lost', { maps: { won: { completed: true } } })).toBe(false);
   });
 });

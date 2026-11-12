@@ -9,6 +9,8 @@ import {
   MAX_SIZE_REQUESTS,
   NEEDS_INFO_LABEL,
   NEEDS_YOU_LABEL,
+  planRestarts,
+  applyRestart,
   planRetries,
   planSizingRequests,
   planStarts,
@@ -20,6 +22,7 @@ import {
   SPLIT_LABEL,
   SPLIT_PART_LABEL,
   startIssue,
+  type RetryComment,
   type RetryIssue,
   type Routines,
   type SizingCandidate,
@@ -401,7 +404,7 @@ export interface RetryTarget {
 export function retryQuery(targets: readonly RetryTarget[]): string {
   const parts = targets.map(
     (t, k) =>
-      `i${k}: issue(number: ${t.issue}) { comments(last: 100) { nodes { body createdAt } } }` +
+      `i${k}: issue(number: ${t.issue}) { comments(last: 100) { nodes { body createdAt author { login } } } }` +
       (t.pr === undefined
         ? ''
         : `\n    p${k}: pullRequest(number: ${t.pr}) { comments(last: 1) { nodes { createdAt } } commits(last: 1) { nodes { commit { committedDate } } } }`),
@@ -410,7 +413,7 @@ export function retryQuery(targets: readonly RetryTarget[]): string {
 }
 
 interface RetryIssueNode {
-  comments: { nodes: { body: string; createdAt: string }[] };
+  comments: { nodes: { body: string; createdAt: string; author?: { login: string } | null }[] };
 }
 interface RetryPrNode {
   comments: { nodes: { createdAt: string }[] };
@@ -420,14 +423,12 @@ interface RetryPrNode {
 type RetryData = Record<string, RetryIssueNode | RetryPrNode | null | undefined>;
 
 /** The `k`th target's issue comments and its PR's latest activity, from a `retryQuery` answer. */
-export function readRetry(
-  repository: RetryData,
-  k: number,
-): { comments: { body: string; createdAt: string }[]; activity: string[] } {
+export function readRetry(repository: RetryData, k: number): { comments: RetryComment[]; activity: string[] } {
   const issue = repository[`i${k}`] as RetryIssueNode | null | undefined;
   const pr = repository[`p${k}`] as RetryPrNode | null | undefined;
   return {
-    comments: issue?.comments.nodes ?? [],
+    comments:
+      issue?.comments.nodes.map(({ author, ...c }) => ({ ...c, ...(author ? { author: author.login } : {}) })) ?? [],
     activity: [
       ...(pr?.comments.nodes.map((c) => c.createdAt) ?? []),
       ...(pr?.commits.nodes.map((c) => c.commit.committedDate) ?? []),
@@ -641,7 +642,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
 
   // Dead implement sessions first (#201): fired again on their branch, keeping the claim and slot.
   const candidates = claimed
-    .filter((i) => !i.hold && !i.needsYou && !i.needsInfo)
+    .filter((i) => !i.hold && !i.needsInfo)
     .map((i) => ({ ...i, pr: openPrs.find((p) => p.issues.includes(i.number)) }))
     .filter((i) => !i.pr || i.pr.isDraft);
   const retryData = candidates.length
@@ -657,6 +658,20 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     const { comments, activity } = readRetry(retryData, k);
     return { ...i, comments, ...(pr ? { pr: { number: pr.number, head: pr.head, draft: pr.isDraft, activity } } : {}) };
   });
+  // A maintainer's `/retry` or `/split` reply on a handed-off issue (#539); a restart fires on the next run.
+  for (const restart of planRestarts(retryIssues)) {
+    const what = `#${restart.issue}: ${restart.split ? '/split' : '/retry'} reply, ${restart.split ? 'asking the split agent' : 'restarting'}`;
+    if (dryRun) console.log(`${what} (dry run)`);
+    else
+      try {
+        await applyRestart(restart, token);
+        console.log(what);
+      } catch (error) {
+        failures.push(
+          `#${restart.issue}: restarting failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+  }
   const retries = planRetries(retryIssues, Date.now());
   // The issues an agent started on this run; the first one closes the idle issue (#226).
   const started: number[] = [];

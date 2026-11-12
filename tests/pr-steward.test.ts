@@ -11,6 +11,8 @@ import {
   REVIEW_HEADING,
   REVIEW_REQUEST_MARKER,
   reviewRequestMarker,
+  restMergeability,
+  settleMergeability,
   ROUND_MARKER,
   roundMeta,
   STUCK_MARKER,
@@ -273,10 +275,10 @@ describe('decide: releases', () => {
     expect(decide(report('0.2.0', { behind: true }), now, 'main', done).kind).toBe('update');
   });
 
-  it('holds the report PR while its milestone has open issues', () => {
+  it('holds the report PR while its milestone has open issues, as blocked by them (#536)', () => {
     expect(decide(report('0.2.0'), now, 'main', v02)).toEqual({
       kind: 'wait',
-      cause: 'milestone',
+      cause: 'blocked',
       why: 'report PR 0.2.0: v0.2.0 — Combat depth still has open issues',
     });
   });
@@ -289,9 +291,9 @@ describe('decide: releases', () => {
     );
   });
 
-  it("holds a report PR for another milestone's version", () => {
-    expect(decide(report('0.3.0'), now, 'main', done).kind).toBe('wait');
-    expect(decide(report('0.2.0'), now, 'main', null).kind).toBe('wait');
+  it("holds a report PR for another milestone's version, for the maintainer to merge by hand", () => {
+    expect(decide(report('0.3.0'), now, 'main', done)).toMatchObject({ kind: 'wait', cause: 'release' });
+    expect(decide(report('0.2.0'), now, 'main', null)).toMatchObject({ kind: 'wait', cause: 'release' });
   });
 
   it('holds the report PR while checks run, fail or never ran', () => {
@@ -732,7 +734,9 @@ describe('decide: superseded checks', () => {
   });
 });
 
-describe('decide: milestone hold', () => {
+// Milestones decide what a release contains, not when code lands on main (#536): look-ahead work
+// merges as soon as it's green, and unfinished content stays out of play behind its switch.
+describe('decide: milestones never hold a merge (#536)', () => {
   const v03 = { number: 4, title: 'v0.3.0 — Game shell' };
   const v02 = { number: 2, title: 'v0.2.0 — Combat depth', after: [4], done: false };
   const closing = (...milestones: (typeof v02 | typeof v03 | null)[]) =>
@@ -742,19 +746,9 @@ describe('decide: milestone hold', () => {
     expect(decide(pr({ closes: closing(v02) }), now, 'main', v02).kind).toBe('merge');
   });
 
-  it('holds a PR whose issue is in a later milestone, naming both', () => {
-    expect(decide(pr({ closes: closing(v03) }), now, 'main', v02)).toEqual({
-      kind: 'wait',
-      cause: 'milestone',
-      why: '#3 is in v0.3.0 — Game shell: merges after v0.2.0 — Combat depth ships',
-    });
-  });
-
-  it('holds when any issue the PR closes is ahead', () => {
-    expect(decide(pr({ closes: closing(v02, v03) }), now, 'main', v02)).toMatchObject({
-      kind: 'wait',
-      why: expect.stringMatching(/^#4 is in v0\.3\.0/),
-    });
+  it('merges a green, ready PR whose issue is in the next milestone', () => {
+    expect(decide(pr({ closes: closing(v03) }), now, 'main', v02)).toEqual({ kind: 'merge' });
+    expect(decide(pr({ closes: closing(v02, v03) }), now, 'main', v02)).toEqual({ kind: 'merge' });
   });
 
   it('merges issues without a milestone (infra work, #225), and anything when no milestone is open', () => {
@@ -762,16 +756,17 @@ describe('decide: milestone hold', () => {
     expect(decide(pr({ closes: closing(v03) }), now, 'main', null).kind).toBe('merge');
   });
 
-  it('does not hold an issue from an already-shipped milestone', () => {
+  it('merges an issue from an already-shipped milestone', () => {
     const v01 = { number: 1, title: 'v0.1.0 — MVP' };
     expect(decide(pr({ closes: closing(v01) }), now, 'main', v02).kind).toBe('merge');
   });
 
-  it('still runs steward rounds on a held PR', () => {
-    expect(decide(pr({ closes: closing(v03), mergeable: 'CONFLICTING' }), now, 'main', v02)).toMatchObject({
-      kind: 'steward',
-      reasons: ['conflict'],
-    });
+  it('still holds look-ahead work that is blocked or touches a critical path', () => {
+    const blocked = [{ number: 3, blocked: true, needsInfo: false, milestone: v03 }];
+    expect(decide(pr({ closes: blocked }), now, 'main', v02)).toMatchObject({ kind: 'wait', cause: 'blocked' });
+    expect(decide(pr({ closes: closing(v03), files: ['scripts/pr-steward.ts'] }), now, 'main', v02).kind).toBe(
+      'approval',
+    );
   });
 });
 
@@ -1406,7 +1401,6 @@ describe('statusLabel', () => {
     ['round', 'waiting: agent'],
     ['checks', 'waiting: agent'],
     ['review', 'waiting: agent'],
-    ['milestone', 'waiting: milestone'],
     ['stacked', 'waiting: parent PR'],
     ['blocked', 'waiting: blocker'],
   ])('maps a wait for %s to %s', (cause, label) => {
@@ -1427,7 +1421,6 @@ describe('statusLabel', () => {
         'waiting: agent',
         'waiting: blocker',
         'waiting: main CI',
-        'waiting: milestone',
         'waiting: parent PR',
         'waiting: queue',
         'waiting: you',
@@ -1461,7 +1454,7 @@ describe('decide: the cause of each wait (#419)', () => {
           v02,
         ),
       ),
-    ).toBe('milestone');
+    ).toBeNull();
     expect(cause(decide(pr(), now, 'main', null, { issue: null }))).toBe('main-ci');
   });
 
@@ -1512,6 +1505,13 @@ describe('labelChanges', () => {
     expect(labelChanges(['waiting: agent', 'ready to merge', 'hold'], null)).toEqual({
       add: null,
       remove: ['waiting: agent', 'ready to merge'],
+    });
+  });
+
+  it('removes the retired `waiting: milestone` label (#536)', () => {
+    expect(labelChanges(['waiting: milestone'], 'ready to merge')).toEqual({
+      add: 'ready to merge',
+      remove: ['waiting: milestone'],
     });
   });
 });
@@ -1612,11 +1612,11 @@ describe('merge queue', () => {
       expect(inQueue(pr(over), 'main')).toBe(false);
     });
 
-    it('leaves out look-ahead work for a later milestone', () => {
+    it('queues look-ahead work for a later milestone like any other PR (#536)', () => {
       const later = pr({
         closes: [{ number: 3, blocked: false, needsInfo: false, milestone: { number: 4, title: 'v0.3.0' } }],
       });
-      expect(inQueue(later, 'main', { number: 2, title: 'v0.2.0', after: [4], done: false })).toBe(false);
+      expect(inQueue(later, 'main')).toBe(true);
     });
   });
 
@@ -1905,5 +1905,86 @@ describe('update-snapshots request (#472)', () => {
     );
     await startSnapshots(pr(), 'gh-token', fetchFn);
     expect(calls(fetchFn).at(-1)).toBe(`POST ${api}/issues/7/labels`);
+  });
+});
+
+// GitHub computes mergeability lazily: a REST fetch of the PR starts it (#547).
+describe('restMergeability', () => {
+  it('reads each REST state', () => {
+    expect(restMergeability({ mergeable: false, mergeable_state: 'dirty' })).toEqual({
+      mergeable: 'CONFLICTING',
+      behind: false,
+    });
+    expect(restMergeability({ mergeable: true, mergeable_state: 'behind' })).toEqual({
+      mergeable: 'MERGEABLE',
+      behind: true,
+    });
+    expect(restMergeability({ mergeable: true, mergeable_state: 'clean' })).toEqual({
+      mergeable: 'MERGEABLE',
+      behind: false,
+    });
+  });
+
+  it('is null while GitHub is still computing', () => {
+    expect(restMergeability({ mergeable: null, mergeable_state: 'unknown' })).toBeNull();
+  });
+});
+
+describe('settleMergeability (#547)', () => {
+  const unknownPr = pr({ mergeable: 'UNKNOWN', behind: false, lastCommitAt: at(90), comments: [] });
+  const answers = (...bodies: object[]) => {
+    const queue = [...bodies];
+    return vi.fn<Fetch>(async () => new Response(JSON.stringify(queue.length > 1 ? queue.shift() : queue[0])));
+  };
+  const sleep = vi.fn(async () => {});
+
+  it('turns an UNKNOWN list answer of dirty into a conflict round, not a hand-off', async () => {
+    const fetchFn = answers({ mergeable: false, mergeable_state: 'dirty' });
+    const settled = await settleMergeability(unknownPr, 't', fetchFn, sleep);
+    expect(settled.mergeable).toBe('CONFLICTING');
+    expect(fetchFn.mock.calls.map((c) => c[0])).toEqual([`${api}/pulls/7`]);
+    expect(decide(settled, now).kind).toBe('steward');
+  });
+
+  it('turns behind into an update', async () => {
+    const settled = await settleMergeability(
+      unknownPr,
+      't',
+      answers({ mergeable: true, mergeable_state: 'behind' }),
+      sleep,
+    );
+    expect(decide(settled, now)).toEqual({ kind: 'update' });
+  });
+
+  it('re-reads after a wait while GitHub computes', async () => {
+    const fetchFn = answers(
+      { mergeable: null, mergeable_state: 'unknown' },
+      { mergeable: false, mergeable_state: 'dirty' },
+    );
+    const settled = await settleMergeability(unknownPr, 't', fetchFn, sleep);
+    expect(settled.mergeable).toBe('CONFLICTING');
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalled();
+  });
+
+  it('leaves a PR unknown after the retries, so decide waits and only hands off after its limit', async () => {
+    const fetchFn = answers({ mergeable: null, mergeable_state: 'unknown' });
+    const settled = await settleMergeability(unknownPr, 't', fetchFn, sleep);
+    expect(settled).toEqual(unknownPr);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    const recent = { ...settled, lastCommitAt: at(10) };
+    expect(decide(recent, now).kind).toBe('wait');
+  });
+
+  it('leaves the PR as it is when the fetch fails', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => new Response('{}', { status: 500 }));
+    expect(await settleMergeability(unknownPr, 't', fetchFn, sleep)).toEqual(unknownPr);
+  });
+
+  it('makes no request for a PR the list already answered', async () => {
+    const fetchFn = answers({});
+    const known = pr({ mergeable: 'MERGEABLE' });
+    expect(await settleMergeability(known, 't', fetchFn, sleep)).toBe(known);
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 });

@@ -1,0 +1,11 @@
+Rendered sprite of "M113" by arc4de
+https://sketchfab.com/3d-models/7fe132c071584049b51d3569726021a0
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+us-apc.png is a top-down render of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated).
+us-apc-turntable.webp is a turntable of the same model (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-11.

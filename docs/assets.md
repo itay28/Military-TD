@@ -197,7 +197,15 @@ The ambience counts as a sound effect: it follows the **Sound effects** volume, 
 
 Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab models and one NAIP ground patch (`docs/art/render-spike-compare.png`). The game draws the AA Gun and Tank renders in place of their Kenney sprites (#310): the hull with its shadow, then the turret turning around its pivot. After `render-sprite.py`, run `npm run render:pivot`: it measures each turret's pivot (the centre of its body, without the barrel) from `<id>-turret.png` into `<id>.json`, which `src/data/renders.ts` reads. A test fails while that JSON is stale. A kind whose render doesn't load keeps its Kenney frame. Source models are never committed: `scripts/render-sprite.py` downloads them into the ignored `.cache/models/` with `SKETCHFAB_API_TOKEN`.
 
-**Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US models have them so far; `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
+**Art venv** (#530): every art script runs in one ignored venv, built on **Python 3.11** because `bpy` 5.0.1, the Blender the renders were made with, only ships wheels for 3.11 (a newer `bpy` can change the lighting and shadows, so the sprites stop matching):
+
+```sh
+python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow rasterio numpy
+```
+
+Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 5.1+), and don't upgrade `bpy` without re-rendering every set. Cloud sessions get the venv from the environment's setup script.
+
+**Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US (the Sniper too), Russia and China models have them so far; `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
 
 | Folder | Source | Made by |
 | --- | --- | --- |
@@ -208,17 +216,21 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | `render-us-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-mortar/` | "Mortar - M224" by jcherry3d, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-jeep/` | "Low Poly Humvee FREE" by madtrollstudio, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-tank/` | "M1A2 Abrams Crows" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-helicopter/` | "Sikorsky UH-60 Black Hawk" by helijah, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-apc/` | "M113" by arc4de, CC-BY-4.0 (the APC, #478: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
 | `render-russia-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-cannon/` | "ZiS-2 57mm anti-tank gun" by sergey.s.filin, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-jeep/` | "UAZ-469 Low Poly" by lebedeventerprise, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-helicopter/` | "Mi-8" by tiunov.se, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
@@ -230,6 +242,7 @@ Three packs hold the art-style spike: top-down renders of two CC-BY Sketchfab mo
 | `render-insurgents-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-jeep/` | "TOYOTA DO AFEGANISTÃO (LOW POLY)" by lm9241221, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-tank/` | "T 54/55 Tank" by SGAstudios3DandGameDevelopment, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-helicopter/` | "Russian Transport Heli" by jeandiz, CC-BY-4.0 | `scripts/render-sprite.py` |

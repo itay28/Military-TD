@@ -5,6 +5,7 @@ import { createPhaserMusicBackend, type LoopingSound } from './audio/phaserMusic
 import { MUSIC_REGISTRY_KEY } from './audio/radio';
 import { createAudioMix } from './audio/volume';
 import { RADIO_CUE_MS } from './data/sounds';
+import { HARD_IN_PLAY } from './data/inPlay';
 import { BootScene } from './scenes/BootScene';
 import { DEMO_SCENE_KEY, demoMode } from './scenes/demoMode';
 import { GameScene } from './scenes/GameScene';
@@ -126,7 +127,14 @@ const game = new Phaser.Game({
   scene: [
     new BootScene(flags),
     new MenuScene({ app, menuRoot, openSettings, openFieldManual, openHowToPlay }),
-    new LevelSelectScene({ app, root: levelSelectRoot, progress, unlockAll: flags.test && flags.unlockAll, settings }),
+    new LevelSelectScene({
+      app,
+      root: levelSelectRoot,
+      progress,
+      unlockAll: flags.test && flags.unlockAll,
+      showHard: HARD_IN_PLAY || flags.test,
+      settings,
+    }),
     gameScene,
     ...demoScenes,
   ],
