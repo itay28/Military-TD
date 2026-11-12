@@ -49,7 +49,6 @@ export const SPLIT_LABEL = 'needs-split';
 /** On the issues the split agent made: one whose retry dies too goes to the maintainer, not split again. */
 export const SPLIT_PART_LABEL = 'split-part';
 /** Hidden in the comment auto-start posts when it hands a ready XL issue to the split agent (#560). */
-export const SPLIT_XL_MARKER = '<!-- auto-start:split-xl -->';
 /** Left by Board sync when it dispatches *Size issue* for an issue, so it does that once (#225). */
 export const SIZE_REQUESTED_MARKER = '<!-- size-issue:requested -->';
 /** At most this many *Size issue* dispatches per Board sync run (#225). */
@@ -280,16 +279,17 @@ export const splitLine = (issue: number, info?: Pick<StartIssue, 'size' | 'sizeL
   `#${issue}: Size XL, asking the split agent${sizeNote(info)}`;
 
 /**
- * Hand a ready XL issue to the split agent (#560): a comment saying why, then `needs-split` (with
+ * Hand a ready XL issue to the split agent (#560): `needs-split`, then a comment saying why (with
  * PROJECT_TOKEN, so .github/workflows/split-issue.yml runs). It waits parked; its parts start normally.
  */
 export async function requestSplit(issue: number, token: string, fetchFn: Fetch = fetch): Promise<void> {
+  // Label first: it keeps the issue out of the next run, so a failed comment can't post twice.
+  await github(fetchFn, token, 'POST', `issues/${issue}/labels`, { labels: [SPLIT_LABEL] });
   await github(fetchFn, token, 'POST', `issues/${issue}/comments`, {
     body:
       `Auto-start doesn't start Size XL issues: they're too big for one session. It asked the split agent ` +
-      `to split this one into smaller issues (\`${SPLIT_LABEL}\`, docs/agents/prompts/split.md).\n\n${SPLIT_XL_MARKER}`,
+      `to split this one into smaller issues (\`${SPLIT_LABEL}\`, docs/agents/prompts/split.md).`,
   });
-  await github(fetchFn, token, 'POST', `issues/${issue}/labels`, { labels: [SPLIT_LABEL] });
 }
 
 /**

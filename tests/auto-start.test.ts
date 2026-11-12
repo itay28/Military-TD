@@ -25,7 +25,6 @@ import {
   planSizingRequests,
   planStarts,
   requestSplit,
-  SPLIT_XL_MARKER,
   skipLine,
   requestSizing,
   retryIssue,
@@ -650,14 +649,13 @@ describe('commentNoSize', () => {
 describe('requestSplit (#560)', () => {
   const api = 'https://api.github.com/repos/itay28/Military-TD/issues/302';
 
-  it('comments why, then labels it needs-split', async () => {
+  it('labels it needs-split, then comments why', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await requestSplit(302, 'gh-token', fetchFn);
-    expect(calls(fetchFn)).toEqual([`POST ${api}/comments`, `POST ${api}/labels`]);
-    const body = (JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string }).body;
-    expect(body).toContain(SPLIT_XL_MARKER);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/labels`, `POST ${api}/comments`]);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1].body as string)).toEqual({ labels: ['needs-split'] });
+    const body = (JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string }).body;
     expect(body).toContain('XL');
-    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: ['needs-split'] });
   });
 });
 
