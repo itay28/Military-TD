@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WAVE_BANNER_MS } from '../data/display';
 import { createGame, type Game } from '../sim/game';
+import type { Enemy } from '../sim/enemies';
 import type { MapData } from '../sim/map';
 import { waveDps } from '../sim/stats';
 import type { GameSpeed } from '../scenes/gameSpeed';
@@ -62,6 +63,30 @@ describe('HUD', () => {
     expect(byTestId('hud-money')?.textContent).toBe('Funds $100');
     expect(byTestId('hud-lives')?.textContent).toBe('HQ20/20');
     expect(byTestId('hud-wave')?.textContent).toBe('Wave 0 / 2');
+  });
+
+  describe('difficulty tag (#465)', () => {
+    const gameOn = (difficulty: 'normal' | 'hard'): Game =>
+      createGame({
+        map: SMALL,
+        money: 100,
+        lives: 20,
+        difficulty,
+        tacticalMode: true,
+        waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 100, delayMs: 0 }] }],
+      });
+
+    it('says "Hard" in the stats group on Hard', () => {
+      mountHud(root, gameOn('hard'), fakeSpeed());
+      const tag = byTestId('hud-difficulty');
+      expect(tag?.textContent).toBe('Hard');
+      expect(tag?.parentElement?.className).toBe('hud-stats');
+    });
+
+    it('shows nothing on Normal, the default', () => {
+      mountHud(root, gameOn('normal'), fakeSpeed());
+      expect(byTestId('hud-difficulty')).toBeNull();
+    });
   });
 
   it('HQ drops on the next update after a leak', () => {
@@ -475,5 +500,151 @@ describe('HUD', () => {
     playWave(game);
     expect(root.children).toHaveLength(0);
     expect(root.textContent).toBe('');
+  });
+});
+
+describe('boss HP bar', () => {
+  const bar = () => byTestId('hud-boss')!;
+  const meter = () => bar().querySelector<HTMLElement>('[role="meter"]')!;
+  const fill = () => bar().querySelector<HTMLElement>('.boss-fill')!;
+  /** Sets the HP of the enemy with `id`, as a hit would. */
+  const setHp = (game: Game, id: number, hp: number) => {
+    const enemies = game.state.enemies as Enemy[];
+    const i = enemies.findIndex((e) => e.id === id);
+    enemies[i] = { ...enemies[i]!, hp };
+  };
+
+  it('is hidden while no boss is on the field', () => {
+    mountHud(root, newGame(), fakeSpeed());
+    expect(bar().hidden).toBe(true);
+  });
+
+  it('stays hidden with only ordinary enemies on the field', () => {
+    const game = newGame();
+    const hud = mountHud(root, game, fakeSpeed());
+    game.spawnEnemy('infantry');
+    game.spawnEnemy('tank');
+    hud.update();
+    expect(bar().hidden).toBe(true);
+  });
+
+  it('shows the boss name and a full bar once a Heavy tank is on the field', () => {
+    const game = newGame();
+    const hud = mountHud(root, game, fakeSpeed());
+    game.spawnEnemy('heavyTank');
+    hud.update();
+    expect(bar().hidden).toBe(false);
+    expect(bar().textContent).toContain('Heavy tank');
+    expect(bar().textContent).toContain('1500/1500');
+    expect(fill().style.width).toBe('100%');
+  });
+
+  it('is a meter named after the boss, read as "Heavy tank 1500 of 1500 HP"', () => {
+    const game = newGame();
+    const hud = mountHud(root, game, fakeSpeed());
+    game.spawnEnemy('heavyTank');
+    hud.update();
+    expect(meter().getAttribute('aria-label')).toBe('Heavy tank');
+    expect(meter().getAttribute('aria-valuemin')).toBe('0');
+    expect(meter().getAttribute('aria-valuemax')).toBe('1500');
+    expect(meter().getAttribute('aria-valuenow')).toBe('1500');
+    expect(meter().getAttribute('aria-valuetext')).toBe('Heavy tank 1500 of 1500 HP');
+  });
+
+  it('drops its HP figure and fill after the boss takes damage', () => {
+    const game = newGame();
+    const hud = mountHud(root, game, fakeSpeed());
+    const id = game.spawnEnemy('heavyTank');
+    hud.update();
+    setHp(game, id, 375);
+    hud.update();
+    expect(bar().textContent).toContain('375/1500');
+    expect(fill().style.width).toBe('25%');
+    expect(meter().getAttribute('aria-valuenow')).toBe('375');
+    expect(meter().getAttribute('aria-valuetext')).toBe('Heavy tank 375 of 1500 HP');
+  });
+
+  it('rounds a fractional HP up, so a boss still alive never reads 0', () => {
+    const game = newGame();
+    const hud = mountHud(root, game, fakeSpeed());
+    const id = game.spawnEnemy('heavyTank');
+    setHp(game, id, 0.4);
+    hud.update();
+    expect(bar().textContent).toContain('1/1500');
+  });
+
+  it('hides again once the boss is gone from the field', () => {
+    const game = newGame();
+    const hud = mountHud(root, game, fakeSpeed());
+    game.spawnEnemy('heavyTank');
+    hud.update();
+    // 0.4 tiles/s down a 6-tile Path: it leaks after 15 s.
+    game.tick(16_000);
+    hud.update();
+    expect(game.state.enemies).toHaveLength(0);
+    expect(bar().hidden).toBe(true);
+  });
+
+  it('follows the boss nearest the HQ when two are on the field', () => {
+    const game = newGame();
+    const hud = mountHud(root, game, fakeSpeed());
+    const first = game.spawnEnemy('heavyTank');
+    game.tick(1000);
+    game.spawnEnemy('heavyTank');
+    setHp(game, first, 900);
+    hud.update();
+    expect(bar().textContent).toContain('900/1500');
+  });
+
+  describe('with the Gunship', () => {
+    it('shows "Gunship" and its full HP, as a meter', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      game.spawnEnemy('gunship');
+      hud.update();
+      expect(bar().hidden).toBe(false);
+      expect(bar().textContent).toContain('Gunship');
+      expect(bar().textContent).toContain('1200/1200');
+      expect(fill().style.width).toBe('100%');
+      expect(meter().getAttribute('aria-valuetext')).toBe('Gunship 1200 of 1200 HP');
+    });
+
+    it('drops its HP after damage', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      const id = game.spawnEnemy('gunship');
+      hud.update();
+      setHp(game, id, 300);
+      hud.update();
+      expect(bar().textContent).toContain('300/1200');
+      expect(fill().style.width).toBe('25%');
+    });
+
+    it('hides again once the Gunship leaks', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      game.spawnEnemy('gunship');
+      hud.update();
+      // 0.8 tiles/s down a 6-tile Path: it leaks after 7.5 s.
+      game.tick(8000);
+      hud.update();
+      expect(game.state.enemies).toHaveLength(0);
+      expect(bar().hidden).toBe(true);
+    });
+
+    it('hides again once the Gunship dies', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      expect(game.placeTower('aaGun', { col: 1, row: 0 })).toMatchObject({ ok: true });
+      const id = game.spawnEnemy('gunship');
+      setHp(game, id, 1);
+      hud.update();
+      expect(bar().hidden).toBe(false);
+      game.tick(1000);
+      hud.update();
+      expect(game.state.enemies).toHaveLength(0);
+      expect(game.state.lives).toBe(20);
+      expect(bar().hidden).toBe(true);
+    });
   });
 });

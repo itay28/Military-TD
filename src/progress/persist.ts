@@ -12,7 +12,7 @@ import {
 
 export const PROGRESS_KEY = 'military-td.progress';
 /** Bump when the saved shape changes, and teach `migrate` the step from the old version. */
-export const PROGRESS_VERSION = 3;
+export const PROGRESS_VERSION = 4;
 
 /** Brings progress saved at `version` up to the current shape. `null` for a version this build can't read. */
 export function migrate(version: number, data: unknown): unknown {
@@ -33,6 +33,13 @@ export function migrate(version: number, data: unknown): unknown {
     const kinds = new Set(won.flatMap((map) => map.waves.flatMap((wave) => wave.groups.map((group) => group.kind))));
     migrated = { ...migrated, metEnemies: [...kinds] };
   }
+  // v3 → v4 adds `hardStars` (#463): the stars saved so far were won on Normal, so Hard starts at 0 on every map.
+  if (version < 4 && isRecord(migrated) && isRecord(migrated.maps)) {
+    const maps = Object.fromEntries(
+      Object.entries(migrated.maps).map(([id, entry]) => [id, isRecord(entry) ? { hardStars: 0, ...entry } : entry]),
+    );
+    migrated = { ...migrated, maps };
+  }
   return migrated;
 }
 
@@ -44,10 +51,11 @@ const STARS: readonly Stars[] = [0, 1, 2, 3];
 /** Keeps each valid field of one map's entry; a bad field takes its default. `null` when it isn't an entry at all. */
 function sanitizeMap(data: unknown): MapProgress | null {
   if (!isRecord(data)) return null;
-  const { completed, bestStars } = data;
+  const { completed, bestStars, hardStars } = data;
   return {
     completed: typeof completed === 'boolean' ? completed : false,
     bestStars: STARS.find((stars) => stars === bestStars) ?? 0,
+    hardStars: STARS.find((stars) => stars === hardStars) ?? 0,
   };
 }
 
@@ -89,8 +97,8 @@ export function createPersistedProgress(storage: KeyValueStorage): ProgressStore
   };
   return {
     get: store.get,
-    recordResult(mapId, stars) {
-      store.recordResult(mapId, stars);
+    recordResult(mapId, stars, difficulty) {
+      store.recordResult(mapId, stars, difficulty);
       save();
     },
     setHintsDone(done) {

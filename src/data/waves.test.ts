@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { validateWaves } from '../sim/waves';
-import { PLAYABLE_KINDS, type EnemyKind } from './enemies';
+import { NOT_PLAYABLE_KINDS, PLAYABLE_KINDS, type EnemyKind } from './enemies';
+import { MAPS } from './maps';
 import { WAVES } from './waves';
 
 const playableKinds: string[] = [...PLAYABLE_KINDS];
@@ -17,9 +18,14 @@ describe('the wave schedule', () => {
     expect(WAVES[0]).toEqual({ groups: [{ kind: 'infantry', count: 8, spacingMs: 800, delayMs: 0 }] });
   });
 
-  it('every enemy kind appears', () => {
+  it('every enemy kind in play appears', () => {
     const seen = new Set(WAVES.flatMap((wave) => [...kindsIn(wave)]));
     expect([...seen].sort()).toEqual(playableKinds.sort());
+  });
+
+  it("no map's waves have a kind that isn't playable yet", () => {
+    const kinds = MAPS.flatMap((map) => map.waves.flatMap((wave) => [...kindsIn(wave)]));
+    expect(kinds.filter((k) => NOT_PLAYABLE_KINDS.includes(k))).toEqual([]);
   });
 
   it.each(playableKinds.filter((k) => k !== 'infantry') as EnemyKind[])(
