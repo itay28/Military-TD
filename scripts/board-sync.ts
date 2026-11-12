@@ -14,6 +14,9 @@ import {
   planRetries,
   planSizingRequests,
   planStarts,
+  requestSplit,
+  skipLine,
+  splitLine,
   READY_LABEL,
   requestSizing,
   retryIssue,
@@ -143,7 +146,8 @@ export function currentMilestone(milestones: readonly Milestone[]): number | nul
  * assigned with no PR → In progress. With no PR and no assignee, a Backlog or Ready card follows
  * the Ready rule: current milestone (or infra with no milestone, #225), `ready-for-agent` and no
  * open blockers → Ready, else Backlog. Without an open milestone only that infra work is Ready.
- * Done cards and trackers (release issues, epics) are never moved; In progress and In review cards with no PR and no assignee stay put.
+ * Done cards and trackers (release issues, epics) are never moved. An In progress or In review card with no PR and no
+ * assignee is stale (a session left it, #560): it follows the Ready rule too.
  * A PR merged into the default branch leaves the card alone: GitHub closes the issue and moves it to Done,
  * and a run that read the board before the close must not overwrite that (#258).
  */
@@ -160,13 +164,17 @@ export function desiredStatus(
   );
   const drafting = prs.some((pr) => pr.state === 'OPEN' && pr.isDraft);
   let target: CardStatus | undefined = inReview ? 'In review' : drafting || issue.assigned ? 'In progress' : undefined;
-  if (!target && (issue.status === undefined || issue.status === 'Backlog' || issue.status === 'Ready')) {
+  if (!target) {
     const inScope = issue.milestone === null ? issue.infra : current !== null && issue.milestone === current;
     const startable = inScope && issue.labelled && !issue.blocked;
     target = startable ? 'Ready' : 'Backlog';
   }
   return target === issue.status ? undefined : target;
 }
+
+/** A move of a stale In progress / In review card back by the Ready rule (#560). */
+export const isStaleMove = (move: Pick<Move, 'from' | 'to'>) =>
+  (move.from === 'In progress' || move.from === 'In review') && (move.to === 'Ready' || move.to === 'Backlog');
 
 /** The cards to move: each open issue against the PRs that close it. */
 export function planMoves(
@@ -501,6 +509,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         autoAgent: labels.includes(AUTO_AGENT_LABEL),
         feature: isFeatureWork(labels, row.infra),
         size: node.size?.name,
+        sizeLabelled: labels.some((l) => l.startsWith('size:')),
         priority: node.priority?.name,
         blockedBy: c.blockedBy?.nodes.filter((b) => b.state === 'OPEN').map((b) => b.number) ?? [],
       });
@@ -560,7 +569,8 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         field: project.field.id,
         option: option.id,
       });
-    console.log(`#${move.issue}: ${move.from ?? 'no status'} → ${move.to}${dryRun ? ' (dry run)' : ''}`);
+    const stale = isStaleMove(move) ? ' (stale: no assignee, no PR)' : '';
+    console.log(`#${move.issue}: ${move.from ?? 'no status'} → ${move.to}${stale}${dryRun ? ' (dry run)' : ''}`);
   }
 
   // Size, Priority and Area from labels (#205), before auto-start so a newly sized issue starts now.
@@ -722,7 +732,24 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     cap: autoStart.cap,
     freeze: autoStart.freeze,
   });
-  if (!plan.starts.length) console.log('Auto-start: nothing to start.');
+  if (!plan.starts.length && !plan.split.length) console.log('Auto-start: nothing to start.');
+  const byNumber = new Map(startable.map((i) => [i.number, i]));
+  // XL issues go to the split agent instead of a session (#560); their parts start normally.
+  for (const issue of plan.split) {
+    const what = splitLine(issue, byNumber.get(issue));
+    if (dryRun) console.log(`${what} (dry run)`);
+    else
+      try {
+        await requestSplit(issue, token);
+        console.log(what);
+      } catch (error) {
+        failures.push(
+          `#${issue}: asking the split agent failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+  }
+  // One line for every in-scope ready issue that isn't started, so none waits silently (#560).
+  for (const skip of plan.skips) console.log(skipLine(skip, byNumber.get(skip.issue)));
   for (const start of plan.starts) {
     const what = `#${start.issue}: start ${start.model} on ${start.base}`;
     if (limited.has(start.model)) {
@@ -746,7 +773,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     }
   }
   // The idle warning (#226): nothing planned and no agent working opens (or updates) one `needs-you` issue.
-  const starved = isStarved(startable, retries.length + plan.starts.length);
+  const starved = isStarved(startable, retries.length + plan.starts.length + plan.split.length);
   if (starved || started.length) {
     try {
       const open = await findIdleIssue(token);

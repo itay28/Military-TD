@@ -24,6 +24,9 @@ import {
   RESTART_HINT,
   planSizingRequests,
   planStarts,
+  requestSplit,
+  SPLIT_XL_MARKER,
+  skipLine,
   requestSizing,
   retryIssue,
   SIZE_REQUESTED_MARKER,
@@ -113,6 +116,118 @@ describe('planStarts: which issues are startable', () => {
 
   it('bases unblocked issues on the default branch', () => {
     expect(planStarts([issue(1)], [], order, { defaultBranch: 'trunk' }).starts[0]?.base).toBe('trunk');
+  });
+});
+
+describe('planStarts: XL goes to the split agent (#560)', () => {
+  it('asks to split a ready XL issue instead of starting it', () => {
+    const plan = planStarts([issue(1, { size: 'XL' }), issue(2)], [], order);
+    expect(plan.starts.map((s) => s.issue)).toEqual([2]);
+    expect(plan.split).toEqual([1]);
+  });
+
+  it('counts a split as something to do, not "nothing to start", and still splits with no other work', () => {
+    const plan = planStarts([issue(1, { size: 'XL' })], [], order);
+    expect(plan.starts).toEqual([]);
+    expect(plan.split).toEqual([1]);
+  });
+
+  it('does not split one already waiting for the split agent, or a blocked one', () => {
+    const plan = planStarts(
+      [issue(1, { size: 'XL', needsSplit: true }), issue(2, { size: 'XL', blockedBy: [9] })],
+      [],
+      order,
+    );
+    expect(plan.split).toEqual([]);
+  });
+
+  it('splits infra XL issues without a milestone too', () => {
+    expect(planStarts([issue(1, { size: 'XL', infra: true, milestone: null })], [], order).split).toEqual([1]);
+  });
+});
+
+describe('planStarts: a reason for every issue it skips (#560)', () => {
+  const reasons = (issues: readonly StartIssue[], prs: readonly OpenPr[] = [], options = {}) =>
+    Object.fromEntries(planStarts(issues, prs, order, options).skips.map((s) => [s.issue, s.reason]));
+
+  it('names why each in-scope ready issue waits', () => {
+    expect(
+      reasons(
+        [
+          issue(1, { assigned: true }),
+          issue(2, { hold: true }),
+          issue(3, { needsInfo: true, assigned: true }),
+          issue(4, { needsYou: true }),
+          issue(5, { needsSplit: true, size: 'XL' }),
+          issue(6),
+          issue(7, { status: 'In progress' }),
+          issue(8, { blockedBy: [99, 98] }),
+          issue(9, { size: undefined }),
+          issue(10, { size: 'XXL' }),
+          issue(11, { feature: true }),
+          issue(12),
+        ],
+        [pr('feat/6', 'main', [6])],
+        { freeze: true },
+      ),
+    ).toEqual({
+      1: 'assigned',
+      2: 'parked (`hold`)',
+      3: 'parked (`needs-info`)',
+      4: 'parked (`needs-you`)',
+      5: 'parked (`needs-split`)',
+      6: 'open PR (feat/6)',
+      7: 'card is In progress',
+      8: 'blocked by #99, #98',
+      9: 'no Size',
+      10: 'Size XXL is not XS–L',
+      11: 'feature freeze',
+    });
+  });
+
+  it('says when the cap left no slot', () => {
+    expect(reasons([issue(1), issue(2), issue(3)], [], { cap: 2 })).toEqual({ 3: 'no slot (cap 2)' });
+  });
+
+  it('says a next-milestone issue is out of scope while the current one has work', () => {
+    expect(reasons([issue(1), issue(2, { milestone: 3 })])).toEqual({
+      2: 'not in scope (later milestone; the current one has work)',
+    });
+  });
+
+  it('says when look-ahead is capped', () => {
+    const plan = planStarts([issue(1, { milestone: 3 }), issue(2, { milestone: 3 })], [], order, { cap: 2 });
+    expect(plan.starts.map((s) => s.issue)).toEqual([1]);
+    expect(plan.skips).toEqual([{ issue: 2, reason: 'no slot (look-ahead cap 1)' }]);
+  });
+
+  it('says game work with no milestone never starts', () => {
+    expect(reasons([issue(1, { milestone: null })])).toEqual({ 1: 'game work with no milestone' });
+  });
+
+  it('leaves out trackers, unlabelled issues and later milestones', () => {
+    expect(
+      reasons([issue(1, { tracker: true }), issue(2, { labelled: false }), issue(3, { milestone: 4 }), issue(4)]),
+    ).toEqual({});
+  });
+
+  it('accounts for every in-scope ready issue: started, split or skipped', () => {
+    const issues = [issue(1), issue(2, { size: 'XL' }), issue(3, { assigned: true }), issue(4, { milestone: 3 })];
+    const plan = planStarts(issues, [], order);
+    const seen = [...plan.starts.map((s) => s.issue), ...plan.split, ...plan.skips.map((s) => s.issue)].sort();
+    expect(seen).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe('skipLine (#560)', () => {
+  it('prints the reason, naming a board Size with no size label', () => {
+    expect(skipLine({ issue: 302, reason: 'no slot (cap 5)' }, issue(302, { size: 'XL' }))).toBe(
+      '#302: not started: no slot (cap 5) (board Size XL, no `size:` label)',
+    );
+    expect(skipLine({ issue: 3, reason: 'assigned' }, issue(3, { sizeLabelled: true }))).toBe(
+      '#3: not started: assigned',
+    );
+    expect(skipLine({ issue: 4, reason: 'no Size' }, issue(4, { size: undefined }))).toBe('#4: not started: no Size');
   });
 });
 
@@ -240,7 +355,11 @@ describe('planStarts: infra issues without a milestone', () => {
   });
 
   it('still needs a Size, blockers cleared and no hold or needs-you', () => {
-    expect(planStarts([infra(2, { size: undefined })], [], order)).toEqual({ starts: [], noSize: [2] });
+    expect(planStarts([infra(2, { size: undefined })], [], order)).toMatchObject({
+      starts: [],
+      noSize: [2],
+      split: [],
+    });
     expect(numbers([infra(2, { blockedBy: [9] }), infra(3, { hold: true }), infra(4, { needsYou: true })])).toEqual([]);
   });
 
@@ -525,6 +644,20 @@ describe('commentNoSize', () => {
     const fetchFn = vi.fn<Fetch>(async () => ok([{ body: `Needs a Size.\n${NO_SIZE_MARKER}` }]));
     expect(await commentNoSize(4, 'gh-token', fetchFn)).toBe(false);
     expect(calls(fetchFn)).toEqual([`GET ${api}?per_page=100`]);
+  });
+});
+
+describe('requestSplit (#560)', () => {
+  const api = 'https://api.github.com/repos/itay28/Military-TD/issues/302';
+
+  it('comments why, then labels it needs-split', async () => {
+    const fetchFn = vi.fn<Fetch>(async () => ok());
+    await requestSplit(302, 'gh-token', fetchFn);
+    expect(calls(fetchFn)).toEqual([`POST ${api}/comments`, `POST ${api}/labels`]);
+    const body = (JSON.parse(fetchFn.mock.calls[0]![1].body as string) as { body: string }).body;
+    expect(body).toContain(SPLIT_XL_MARKER);
+    expect(body).toContain('XL');
+    expect(JSON.parse(fetchFn.mock.calls[1]![1].body as string)).toEqual({ labels: ['needs-split'] });
   });
 });
 
