@@ -30,6 +30,13 @@ A model's optional `exclude` lists meshes to delete before rendering (e.g. add-o
 silhouette). `tint` multiplies the textured paint by `color` (minus materials named in `skip`; `overrides` gives a
 material its own `color` and `specular`), for a model painted in the wrong colour.
 
+`paintOver` (no national insignia on enemy units, ADR-0009 point 4) repaints markings baked into a texture: for
+each material named, the strongly coloured texels (HSV saturation above `minSaturation`, default 0.35) inside each of
+its `boxes` (`[u0, v0, u1, v1]` in image fractions, from the top-left) take the median colour of the box's other
+texels, the plain paint around them. `dropFaces` deletes the faces of mesh `mesh` whose base-colour texel (at the
+face's mean UV) is within `within` (default 0.03 per channel) of one of `colors`: markings modelled as decal geometry
+on a palette texture.
+
 `sun` (optional) overrides keys of the global sun for one model: soldiers use a higher sun so the shadow stays short
 (issue #342). The global `alphaFloor` zeroes the faint alpha the shadow catcher leaves over the whole ground plane
 (sky occlusion), so a sprite has no baked haze and its frame can be cropped to the figure. It applies to every model:
@@ -156,6 +163,71 @@ def tint_paint(color: list[float], skip: list[str], overrides: dict[str, dict]) 
         mix.inputs["B"].default_value = (*own.get("color", color), 1.0)
         tree.links.new(link.from_socket, mix.inputs["A"])
         tree.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
+
+
+def base_image(mat) -> object:
+    """The image that feeds a material's base colour, or None."""
+    bsdf = mat.node_tree.nodes.get("Principled BSDF") if mat.node_tree else None
+    if not bsdf or not bsdf.inputs["Base Color"].links:
+        return None
+    node = bsdf.inputs["Base Color"].links[0].from_node
+    return node.image if node.type == "TEX_IMAGE" else None
+
+
+def paint_over(rules: dict[str, dict]) -> None:
+    """Repaint the strongly coloured texels (markings) in each box with the box's median plain paint (`paintOver`)."""
+    import numpy as np
+
+    for name, rule in rules.items():
+        img = base_image(bpy.data.materials[name])
+        if img is None:
+            sys.exit(f"paintOver: material {name} has no base-colour image")
+        w, h = img.size
+        px = np.empty(w * h * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+        px = px.reshape(h, w, 4)  # Blender stores rows bottom-up
+        for u0, v0, u1, v1 in rule["boxes"]:
+            rows = slice(h - round(v1 * h), h - round(v0 * h))
+            cols = slice(round(u0 * w), round(u1 * w))
+            box = px[rows, cols, :3]
+            hi, lo = box.max(axis=2), box.min(axis=2)
+            marked = (hi - lo) / np.maximum(hi, 1e-6) > rule.get("minSaturation", 0.35)
+            if marked.all():
+                sys.exit(f"paintOver: box {[u0, v0, u1, v1]} of {name} has no plain paint")
+            box[marked] = np.median(box[~marked], axis=0)
+            px[rows, cols, :3] = box
+        img.pixels.foreach_set(px.ravel())
+        img.update()
+        img.pack()
+
+
+def drop_faces(rules: list[dict]) -> None:
+    """Delete the faces whose base-colour texel matches one of `colors` (`dropFaces`): decal geometry."""
+    import bmesh
+
+    for rule in rules:
+        obj = bpy.data.objects[rule["mesh"]]
+        img = base_image(obj.data.materials[0])
+        w, h = img.size
+        px = list(img.pixels)
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        uv = bm.loops.layers.uv.active
+        tol = rule.get("within", 0.03)
+        doomed = []
+        for f in bm.faces:
+            u = sum(l[uv].uv.x for l in f.loops) / len(f.loops)
+            v = sum(l[uv].uv.y for l in f.loops) / len(f.loops)
+            i = (min(h - 1, max(0, int(v % 1 * h))) * w + min(w - 1, max(0, int(u % 1 * w)))) * 4
+            c = px[i : i + 3]
+            if any(all(abs(c[k] - col[k]) <= tol for k in range(3)) for col in rule["colors"]):
+                doomed.append(f)
+        if not doomed:
+            sys.exit(f"dropFaces: no face of {rule['mesh']} matched")
+        bmesh.ops.delete(bm, geom=doomed, context="FACES")
+        bm.to_mesh(obj.data)
+        bm.free()
+        print(f"dropFaces: {rule['mesh']}: deleted {len(doomed)} faces")
 
 
 def place_model(spec: dict) -> None:
@@ -364,6 +436,10 @@ def prepare_model(spec: dict, cache: Path) -> tuple[list, list, list]:
     bpy.ops.import_scene.gltf(filepath=str(download(spec["sketchfab"], cache)))
     for name in spec.get("exclude", []):
         bpy.data.objects.remove(bpy.data.objects[name], do_unlink=True)
+    if "paintOver" in spec:
+        paint_over(spec["paintOver"])
+    if "dropFaces" in spec:
+        drop_faces(spec["dropFaces"])
     if "tint" in spec:
         tint_paint(spec["tint"]["color"], spec["tint"].get("skip", []), spec["tint"].get("overrides", {}))
     if "untexturedColor" in spec:

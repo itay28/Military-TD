@@ -1,6 +1,6 @@
 # 9. Satellite-style milsim art and factions per map
 
-Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Heavy tank (boss) row for its renders (#362) · Updated 2026-11-11: an APC row in "What each kind depicts" (#478, v0.8.0); Fighter jet row and size (#482) · Updated 2026-11-11: a Gunship row (#363)
+Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Heavy tank (boss) row for its renders (#362) · Updated 2026-11-11: an APC row in "What each kind depicts" (#478, v0.8.0); Fighter jet row and size (#482), its China and Insurgents cells (#484) · Updated 2026-11-11: a Gunship row (#363)
 
 ## Context
 
@@ -39,7 +39,7 @@ The maintainer also wants each map to pit two sides against each other, picked f
 | **Heavy tank** (boss) | M1A2 SEPv3 with TUSK (urban kit) | T-14 Armata | Type 99A with add-on armor | T-72 (captured, ideally with improvised slat armor) |
 | **Gunship** (boss) | AH-64D Apache | Mi-28N | Z-10 (a Tiger stand-in, re-coloured) | Mi-24D (captured) |
 | **APC** (armored troop carrier) | M113 (or Stryker ICV, unarmed variant) | BTR-82A | ZBL-08 / ZSL-92 | BTR-60 (captured) |
-| **Fighter jet** (`jet`) | F-16 Fighting Falcon | Su-25 Grach | pending (next part) | pending (next part) |
+| **Fighter jet** (`jet`) | F-16 Fighting Falcon | Su-25 Grach | J-10 (a two-seat J-10S model, markings painted out) | MiG-21 (captured; a MiG-21PF in sand and green camouflage, markings removed) |
 | **Sniper** (rendered ahead of play, #358) | Two-man team prone in a dug-in hide, M107 / M2010, OCP | Two-man team prone in a dug-in hide, ORSIS T-5000 / ASVK, EMR | Two-man team prone in a dug-in hide, QBU-10, Type 07 | Two-man team prone in a dug-in hide, Dragunov SVD, civilian clothes |
 
 The Heavy tank is rendered about 1.4 tiles long, bigger than the Tank's 1.3, so the boss reads at a glance. Its renders were made ahead of its gameplay (#78), so it's listed as an upcoming kind until it joins the waves. The Gunship is the same (#363), about 1.4 tiles long.

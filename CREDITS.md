@@ -308,6 +308,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-helicopter/**`
 
+## Chengdu J-10S (top-down render and turntable)
+
+- Author: MirzaArrafiERV_45
+- Source: <https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618>
+- License: CC-BY-4.0
+- Attribution: "Chengdu J-10S" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, national markings painted out, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-china-jet/**`
+
 ## Tactical Soldier (game ready) low poly (top-down render)
 
 - Author: MissingTray1151
@@ -424,6 +433,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Hind Attack Helicopter" by AshleyAslett (sketchfab.com), CC-BY 4.0, rendered top-down
 - Downloaded: 2026-11-10
 - Files: `assets/render-insurgents-gunship/**`
+
+## Mikoyan-Gurevich MiG-21PF Fishbed (top-down render and turntable)
+
+- Author: mgg8
+- Source: <https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7>
+- License: CC0-1.0
+- Attribution: "Mikoyan-Gurevich MiG-21PF Fishbed" by mgg8 (sketchfab.com), CC0, national markings removed, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-insurgents-jet/**`
 
 ## The Free Firearm Sound Library
 
