@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isUnlocked, starsFor, TACTICAL_MAX_STARS, unlocksNext, type CompletedMaps } from './progression';
+import {
+  isHardUnlocked,
+  isUnlocked,
+  starsFor,
+  TACTICAL_MAX_STARS,
+  unlocksNext,
+  type CompletedMaps,
+} from './progression';
 
 describe('starsFor', () => {
   it.each([
@@ -77,5 +84,22 @@ describe('unlocksNext', () => {
   it('is false for the last map and for a map outside the list', () => {
     expect(unlocksNext(2, MAP_IDS, { maps: {} })).toBe(false);
     expect(unlocksNext(-1, MAP_IDS, { maps: {} })).toBe(false);
+  });
+});
+
+describe('isHardUnlocked', () => {
+  const progress: CompletedMaps = { maps: { won: { completed: true }, lost: { completed: false } } };
+
+  it('unlocks Hard on a map once it is won on Normal', () => {
+    expect(isHardUnlocked('won', progress)).toBe(true);
+  });
+
+  it('keeps Hard locked on a map not yet won, and on an unknown map', () => {
+    expect(isHardUnlocked('lost', progress)).toBe(false);
+    expect(isHardUnlocked('nope', progress)).toBe(false);
+  });
+
+  it('does not unlock one map because another is won', () => {
+    expect(isHardUnlocked('lost', { maps: { won: { completed: true } } })).toBe(false);
   });
 });
