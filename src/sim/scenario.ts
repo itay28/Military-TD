@@ -112,6 +112,7 @@ const GAME_EVENT_TYPES = Object.keys({
   shellFired: true,
   shellLanded: true,
   enemyKilled: true,
+  dismounted: true,
   towerSold: true,
   waveStarted: true,
   waveCleared: true,

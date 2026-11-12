@@ -1,9 +1,9 @@
 import { DIFFICULTY, type Difficulty } from '../data/difficulty';
-import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
+import { DISMOUNT_SPREAD_TILES, ENEMY_DISMOUNT, ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, SELL_REFUND, START_HEADING, TOWER_STATS, type TowerKind } from '../data/towers';
 import { DEFAULT_WAVE_AFTER_MS } from '../data/waves';
 import { coverageIntervals } from './coverage';
-import { createPathLine, walkEnemies, type Enemy } from './enemies';
+import { createPathLine, dismountDistances, walkEnemies, type Enemy } from './enemies';
 import { createEmitter, type Events } from './events';
 import { createMap, tileCenter, type GameMap, type MapData, type Position, type Tile } from './map';
 import { createShell, landShells, type Shell, type ShellLanding } from './shells';
@@ -95,6 +95,8 @@ export interface GameEvents {
   shellLanded: ShellLanding;
   /** An enemy's HP reached 0 and it was removed. `reward` is the Money it paid, already in `state.money`. */
   enemyKilled: { readonly enemy: Enemy; readonly reward: number };
+  /** A carrier was killed (its enemyKilled comes first) and its squad, `spawned`, jumped out onto the Path. */
+  dismounted: { readonly enemy: Enemy; readonly spawned: readonly Enemy[] };
   /** A tower finished dismantling and left `tile`. `refund` is the Money it gave back, already in `state.money`. */
   towerSold: { readonly towerId: number; readonly tile: Tile; readonly refund: number };
   /** A wave began. `holdovers` is how many enemies were already on the field before its first spawn. */
@@ -205,13 +207,31 @@ export function createGame(config: GameConfig): Game {
   const waveOf = (enemyId: number) => waveOfEnemy.get(enemyId);
 
   const { hpScale, rewardScale } = DIFFICULTY[state.difficulty];
-  const createEnemy = (kind: EnemyKind, waveNumber?: number): Enemy => {
+  const createEnemy = (kind: EnemyKind, waveNumber?: number, distance = 0): Enemy => {
     const stats = ENEMY_STATS[kind];
     const maxHp = Math.round(stats.maxHp * hpScale);
     const reward = Math.max(1, Math.round(stats.reward * rewardScale));
-    const enemy = { ...stats, maxHp, reward, id: nextId++, kind, hp: maxHp, distance: 0, position: line.positionAt(0) };
+    const enemy = {
+      ...stats,
+      maxHp,
+      reward,
+      id: nextId++,
+      kind,
+      hp: maxHp,
+      distance,
+      position: line.positionAt(distance),
+    };
     if (waveNumber !== undefined) waveOfEnemy.set(enemy.id, waveNumber);
     return enemy;
+  };
+
+  /** The squad a killed carrier drops where it died, in the carrier's wave; none for a kind that carries nobody. */
+  const dismountFrom = (carrier: Enemy): Enemy[] => {
+    const squad = ENEMY_DISMOUNT[carrier.kind];
+    if (!squad) return [];
+    return dismountDistances(carrier.distance, squad.count, DISMOUNT_SPREAD_TILES, line.length).map((distance) =>
+      createEnemy(squad.kind, waveOf(carrier.id), distance),
+    );
   };
 
   /** In timed mode, the next wave is due its `afterMs` after `fromMs` (the latest wave start, or the game start). */
@@ -304,6 +324,12 @@ export function createGame(config: GameConfig): Game {
       state.shells = [...landing.shells, ...launched];
       const kills = [...landing.kills, ...fired.kills];
       for (const enemy of kills) state.money += enemy.reward;
+      // Leaks never dismount: only kills do, before the clear check, so the wave waits for the squad.
+      const dismounts = kills.flatMap((enemy) => {
+        const spawned = dismountFrom(enemy);
+        return spawned.length > 0 ? [{ enemy, spawned }] : [];
+      });
+      state.enemies = [...state.enemies, ...dismounts.flatMap((d) => d.spawned)];
       // Shells landed before towers fired, so their hits come first.
       const strikes = [...landing.landed, ...fired.shots];
       state.stats = recordShots(state.stats, strikes, new Set(kills.map((enemy) => enemy.id)), waveOf);
@@ -366,6 +392,7 @@ export function createGame(config: GameConfig): Game {
       for (const shot of fired.shots) emitter.emit('towerFired', shot);
       for (const landed of landing.landed) emitter.emit('shellLanded', landed);
       for (const enemy of kills) emitter.emit('enemyKilled', { enemy, reward: enemy.reward });
+      for (const dismount of dismounts) emitter.emit('dismounted', dismount);
       for (const sale of sold) emitter.emit('towerSold', sale);
       for (const waveNumber of cleared) emitter.emit('waveCleared', { waveNumber });
       if (state.phase === 'victory') emitter.emit('victory', { lives: state.lives });
