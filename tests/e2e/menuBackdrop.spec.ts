@@ -28,11 +28,9 @@ test('the clip plays on loop behind a see-through menu and the Level select, and
   await expect.poll(() => playing(page)).toBe(true);
   await expect(page.locator('#menu')).toHaveCSS('background-image', /radial-gradient/);
   await expect(page.getByRole('button', { name: 'Deploy', exact: true })).toBeFocused();
-  // No Game scene behind the menu: the canvas under the video doesn't change.
-  const canvas = page.locator('#game canvas');
-  const before = await canvas.screenshot();
+  // No Game scene behind the menu: none has started (test mode's __TD__ comes with the first one), so no sim runs.
   await page.waitForTimeout(500);
-  expect((await canvas.screenshot()).equals(before)).toBe(true);
+  expect(await page.evaluate(() => window.__TD__ === undefined)).toBe(true);
 
   await page.getByRole('button', { name: 'Deploy', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
@@ -47,13 +45,15 @@ test('its sound comes in on the first input, follows the sound effects volume an
   await expect.poll(() => playing(page)).toBe(true);
   expect((await audio(page)).muted).toBe(true);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect.poll(() => audio(page)).toEqual({ muted: false, volume: 0.8 });
+  // Master (80%) × sound effects (80%).
+  await expect.poll(() => audio(page)).toEqual({ muted: false, volume: 0.64 });
 
   const sfx = page.getByRole('slider', { name: 'Sound effects volume' });
   await sfx.fill('40');
-  await expect.poll(() => audio(page)).toEqual({ muted: false, volume: 0.4 });
+  await expect.poll(() => audio(page)).toEqual({ muted: false, volume: 0.32 });
   await page.getByRole('slider', { name: 'Music volume' }).fill('10');
-  await expect.poll(() => audio(page)).toEqual({ muted: false, volume: 0.4 });
+  await page.waitForTimeout(200);
+  expect(await audio(page)).toEqual({ muted: false, volume: 0.32 });
   await page.getByRole('slider', { name: 'Master volume' }).fill('0');
   await expect.poll(() => audio(page)).toMatchObject({ muted: true });
 });
