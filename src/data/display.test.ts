@@ -45,6 +45,7 @@ describe('display names (ADR-0010)', () => {
       victory: 'MISSION COMPLETE',
       defeat: 'MISSION FAILED',
       report: 'After-action report',
+      difficulty: 'Difficulty',
     });
   });
 
@@ -92,6 +93,11 @@ describe('names and role lines', () => {
   it.each(Object.keys(TOWER_STATS) as TowerKind[])('tower %s has a name and a role line', (kind) => {
     expect(TOWER_NAMES[kind]?.trim()).toBeTruthy();
     expect(TOWER_ROLES[kind]?.trim()).toBeTruthy();
+  });
+
+  it('the Sniper is named and says what it is for, intel included (#353)', () => {
+    expect(TOWER_NAMES.sniper).toBe('Sniper');
+    expect(TOWER_ROLES.sniper).toBe('Long range, slow, hits the toughest target. Reports on the next wave.');
   });
 
   it.each(Object.keys(ENEMY_STATS) as EnemyKind[])('enemy %s has a name and a line on what hurts it', (kind) => {

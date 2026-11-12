@@ -9,6 +9,8 @@ import {
   MAX_SIZE_REQUESTS,
   NEEDS_INFO_LABEL,
   NEEDS_YOU_LABEL,
+  planRestarts,
+  applyRestart,
   planRetries,
   planSizingRequests,
   planStarts,
@@ -17,8 +19,10 @@ import {
   retryIssue,
   MAX_AGENTS,
   giveUpIssue,
+  SPLIT_LABEL,
   SPLIT_PART_LABEL,
   startIssue,
+  type RetryComment,
   type RetryIssue,
   type Routines,
   type SizingCandidate,
@@ -27,6 +31,7 @@ import {
 } from './auto-start.ts';
 import { flagStale, isStaleExempt, planStaleClaims, readStale, staleQuery, type StaleIssue } from './stale-claims.ts';
 import { ApiMeter, softFail } from './rate-limit.ts';
+import { giveUpSplit, planSplitRetries, readSplitIssues, retrySplit } from './split-retry.ts';
 import { applyIdle, findIdleIssue, idleReasons, isStarved, planIdle, type IdleIssue } from './pipeline-idle.ts';
 
 // Keeps each issue's card on the project board in step with its PRs, assignees and the Ready rule
@@ -399,7 +404,7 @@ export interface RetryTarget {
 export function retryQuery(targets: readonly RetryTarget[]): string {
   const parts = targets.map(
     (t, k) =>
-      `i${k}: issue(number: ${t.issue}) { comments(last: 100) { nodes { body createdAt } } }` +
+      `i${k}: issue(number: ${t.issue}) { comments(last: 100) { nodes { body createdAt author { login } } } }` +
       (t.pr === undefined
         ? ''
         : `\n    p${k}: pullRequest(number: ${t.pr}) { comments(last: 1) { nodes { createdAt } } commits(last: 1) { nodes { commit { committedDate } } } }`),
@@ -408,7 +413,7 @@ export function retryQuery(targets: readonly RetryTarget[]): string {
 }
 
 interface RetryIssueNode {
-  comments: { nodes: { body: string; createdAt: string }[] };
+  comments: { nodes: { body: string; createdAt: string; author?: { login: string } | null }[] };
 }
 interface RetryPrNode {
   comments: { nodes: { createdAt: string }[] };
@@ -418,14 +423,12 @@ interface RetryPrNode {
 type RetryData = Record<string, RetryIssueNode | RetryPrNode | null | undefined>;
 
 /** The `k`th target's issue comments and its PR's latest activity, from a `retryQuery` answer. */
-export function readRetry(
-  repository: RetryData,
-  k: number,
-): { comments: { body: string; createdAt: string }[]; activity: string[] } {
+export function readRetry(repository: RetryData, k: number): { comments: RetryComment[]; activity: string[] } {
   const issue = repository[`i${k}`] as RetryIssueNode | null | undefined;
   const pr = repository[`p${k}`] as RetryPrNode | null | undefined;
   return {
-    comments: issue?.comments.nodes ?? [],
+    comments:
+      issue?.comments.nodes.map(({ author, ...c }) => ({ ...c, ...(author ? { author: author.login } : {}) })) ?? [],
     activity: [
       ...(pr?.comments.nodes.map((c) => c.createdAt) ?? []),
       ...(pr?.commits.nodes.map((c) => c.commit.committedDate) ?? []),
@@ -494,6 +497,7 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
         hold: labels.includes(HOLD_LABEL),
         needsYou: labels.includes(NEEDS_YOU_LABEL),
         needsInfo: labels.includes(NEEDS_INFO_LABEL),
+        needsSplit: labels.includes(SPLIT_LABEL),
         autoAgent: labels.includes(AUTO_AGENT_LABEL),
         feature: isFeatureWork(labels, row.infra),
         size: node.size?.name,
@@ -610,22 +614,35 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     }
   }
 
+  // Retry failed splits (#486): a `needs-split` issue the split agent never split is dispatched again,
+  // a few per run, and handed to the maintainer after MAX_SPLIT_ATTEMPTS failed runs.
+  // A failure here fails the run, but only after auto-start had its turn.
+  let splitFailure: string | undefined;
+  try {
+    await retrySplits(startIssues, token, defaultBranch, dryRun);
+  } catch (error) {
+    splitFailure = `Retrying failed splits failed: ${error instanceof Error ? error.message : String(error)}`;
+  }
+
   await flagStaleClaims(token, dryRun, assignedIssues, prs, order.slice(0, 2));
 
-  if (!autoStart) return;
+  if (!autoStart) {
+    if (splitFailure) throw new Error(splitFailure);
+    return;
+  }
   // An unread open PR could close an issue that would then be started a second time.
   if (repository.open.totalCount > repository.open.nodes.length)
     throw new Error('Auto-start skipped: not every open PR was read (see the warning above). Paginate PR_QUERY.');
   const moved = new Map(moves.map((m) => [m.issue, m.to]));
   const openPrs = prs.filter((pr) => pr.state === 'OPEN');
   // Try every fire and comment before failing the run, so one bad fire doesn't block the rest.
-  const failures: string[] = [];
+  const failures: string[] = splitFailure ? [splitFailure] : [];
   // Each routine has its own fire limit; one that refused for now isn't fired again this run (#200).
   const limited = new Set<string>();
 
   // Dead implement sessions first (#201): fired again on their branch, keeping the claim and slot.
   const candidates = claimed
-    .filter((i) => !i.hold && !i.needsYou && !i.needsInfo)
+    .filter((i) => !i.hold && !i.needsInfo)
     .map((i) => ({ ...i, pr: openPrs.find((p) => p.issues.includes(i.number)) }))
     .filter((i) => !i.pr || i.pr.isDraft);
   const retryData = candidates.length
@@ -641,6 +658,20 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     const { comments, activity } = readRetry(retryData, k);
     return { ...i, comments, ...(pr ? { pr: { number: pr.number, head: pr.head, draft: pr.isDraft, activity } } : {}) };
   });
+  // A maintainer's `/retry` or `/split` reply on a handed-off issue (#539); a restart fires on the next run.
+  for (const restart of planRestarts(retryIssues)) {
+    const what = `#${restart.issue}: ${restart.split ? '/split' : '/retry'} reply, ${restart.split ? 'asking the split agent' : 'restarting'}`;
+    if (dryRun) console.log(`${what} (dry run)`);
+    else
+      try {
+        await applyRestart(restart, token);
+        console.log(what);
+      } catch (error) {
+        failures.push(
+          `#${restart.issue}: restarting failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+  }
   const retries = planRetries(retryIssues, Date.now());
   // The issues an agent started on this run; the first one closes the idle issue (#226).
   const started: number[] = [];
@@ -744,6 +775,28 @@ async function sync(token: string, dryRun: boolean, autoStart: AutoStart | undef
     else if (await commentNoSize(issue, token)) console.log(`#${issue}: no Size, asked for one`);
   }
   if (failures.length) throw new Error(failures.join('\n'));
+}
+
+/** Dispatch the splits that are due again and hand over the ones that failed too often (#486). */
+async function retrySplits(issues: readonly StartIssue[], token: string, ref: string, dryRun: boolean): Promise<void> {
+  const waiting = issues
+    .filter((i) => i.needsSplit)
+    .map((i) => ({ number: i.number, hold: i.hold, needsYou: i.needsYou }));
+  if (!waiting.length) return;
+  const plan = planSplitRetries(await readSplitIssues(waiting, token), Date.now());
+  for (const giveUp of plan.giveUp) {
+    const what = `#${giveUp.issue}: the split agent failed ${giveUp.failed.length} times, handing it to the maintainer`;
+    if (!dryRun) await giveUpSplit(giveUp, token);
+    console.log(`${what}${dryRun ? ' (dry run)' : ''}`);
+  }
+  for (const issue of plan.retry) {
+    const what = `#${issue}: the split failed, asking the split agent again`;
+    if (dryRun) console.log(`${what} (dry run)`);
+    else if ((await retrySplit(issue, token, ref)) === 'later') {
+      console.log(`#${issue}: dispatching the split agent was refused for now; retrying next run`);
+      break;
+    } else console.log(what);
+  }
 }
 
 /**

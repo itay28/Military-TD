@@ -31,4 +31,27 @@ describe('counter matrix', () => {
     // Cannon vs Jeep: a 60-damage shell kills a 20-HP Jeep, so it counts 20.
     expect(efficiency('cannon', 'jeep')).toBeCloseTo((0.5 * 20) / 100);
   });
+
+  it('the Heavy tank boss keeps the Cannon and the Sniper as efficient counters', () => {
+    expect(efficientCounters('heavyTank')).toEqual(expect.arrayContaining(['cannon', 'sniper']));
+  });
+
+  // The matrix scores a lone enemy, so it doesn't count the blast that makes the launcher good against groups.
+  it('does not count the grenade launcher an efficient counter to the Tank: armor eats each grenade (#75)', () => {
+    expect(efficientCounters('tank')).not.toContain('grenadeLauncher');
+    // 1.5 grenades/s × (14 − 8 armor) / 90 Money: the Tank barely notices.
+    expect(efficiency('grenadeLauncher', 'tank')).toBeCloseTo((1.5 * 6) / 90);
+  });
+
+  it('the Gunship boss keeps the Rifle Nest and the AA Gun as efficient counters, the AA Gun best', () => {
+    expect(efficientCounters('gunship')).toEqual(expect.arrayContaining(['rifleNest', 'aaGun']));
+    const best = towerKinds.reduce((a, b) => (efficiency(b, 'gunship') > efficiency(a, 'gunship') ? b : a));
+    expect(best).toBe('aaGun');
+  });
+
+  it('the Sniper chips Tanks (an efficient counter) but the Cannon stays the best against them', () => {
+    expect(efficientCounters('tank')).toContain('sniper');
+    const best = towerKinds.reduce((a, b) => (efficiency(b, 'tank') > efficiency(a, 'tank') ? b : a));
+    expect(best).toBe('cannon');
+  });
 });

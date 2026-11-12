@@ -13,6 +13,14 @@ export interface EnemyStats {
   /** Flat amount taken off each hit (at least 1 HP still gets through). */
   readonly armor: number;
   readonly layer: Layer;
+  /** A boss: the HUD boss bar and the Gunship look for it on the field. Absent on ordinary kinds. */
+  readonly boss?: boolean;
+}
+
+/** A carrier's squad: `count` fresh enemies of `kind` jump out where it dies (never when it leaks). */
+export interface Dismount {
+  readonly kind: EnemyKind;
+  readonly count: number;
 }
 
 /** An enemy on the Path. Its stats are copied from its kind when it spawns. */
@@ -63,6 +71,18 @@ export function createPathLine(points: readonly Position[]): PathLine {
   };
 }
 
+/**
+ * Where a squad of `count` lands when its carrier dies `at` tiles along a Path `length` long: `spread` tiles apart,
+ * centred on the carrier, each kept on the Path.
+ */
+export function dismountDistances(at: number, count: number, spread: number, length: number): number[] {
+  return Array.from({ length: count }, (_, i) => {
+    const distance = at + (i - (count - 1) / 2) * spread;
+    // Rounded so a centred offset comes out exact (5 − 0.3 is 4.7, not 4.699…).
+    return Math.min(length, Math.max(0, Math.round(distance * 1e9) / 1e9));
+  });
+}
+
 /** Slack for float sums of tick distances, so an enemy due at the end on a tick arrives on it. */
 const DISTANCE_EPSILON = 1e-9;
 
@@ -86,4 +106,11 @@ export function walkEnemies(
     }
   }
   return { walking, leaked };
+}
+
+/** The boss the HUD boss bar shows: the one nearest the HQ (furthest along the Path), or none on the field. */
+export function leadBoss(enemies: readonly Enemy[]): Enemy | undefined {
+  let lead: Enemy | undefined;
+  for (const enemy of enemies) if (enemy.boss && (!lead || enemy.distance > lead.distance)) lead = enemy;
+  return lead;
 }

@@ -17,6 +17,8 @@ Sessions run locally (this PC), over Remote Control or `claude --bg` (also this 
 | `GH_TOKEN`: repo-scoped fine-grained PAT | `gh auth login` | the cloud environment's env vars | `github.token` |
 | `PROJECT_TOKEN`: classic PAT, `project` + `repo` | user env var `GH_PROJECT_TOKEN`, or `~/.config/gh-project-token.txt` (only to set fields on new issues) | the cloud environment's env vars (same use) | repo secret `PROJECT_TOKEN` (Board sync, release board) |
 
+**Hosts:** PR bodies link sounds on `cdn.jsdelivr.net` (**4b** → **Sounds** in `workflow.md`). A cloud environment or CI step that wants to check such a link (response headers, an `<audio>` reaching `canplay`) must allow that host; the default cloud proxy returns 403 for it.
+
 Same names everywhere, each environment reading its own store; tokens never go in the repo. Prefer a separate token per environment, so one can be revoked without breaking the others.
 
 So **board work always lives in Actions** (*Board sync* moves Status and keeps *Ready* exact), never in a skill or hook a session has to run.

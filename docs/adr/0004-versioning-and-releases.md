@@ -1,6 +1,6 @@
 # 4. Versioning: SemVer, 0.x until release, automated with release-please
 
-Date: 2026-10-24 · Status: Accepted · Updated 2026-10-24: milestone releases go through a milestone report PR (#95) · Updated 2026-10-26: the PR steward ships milestone releases; patch releases are manual (#187)
+Date: 2026-10-24 · Status: Accepted · Updated 2026-10-24: milestone releases go through a milestone report PR (#95) · Updated 2026-10-26: the PR steward ships milestone releases; patch releases are manual (#187) · Changed 2026-11-11: work from a later milestone merges early; the milestone report is the release's record (#536)
 
 ## Context
 
@@ -21,6 +21,7 @@ Mechanics:
 - **release-please** keeps an open release PR with the next version and a generated `CHANGELOG.md`. Config: `bump-minor-pre-major: true`, `bump-patch-for-minor-pre-major: true`. Milestone releases are forced with a `Release-As: 0.N.0` commit footer.
 - A milestone release goes through a **milestone report PR** (`chore: release 0.N.0`). It is opened when the milestone's last issue other than its release issue closes, adds an audit of what the milestone delivered (`docs/releases/0.N.0.md`), and carries the `Release-As: 0.N.0` footer. Once the milestone is done, the PR steward merges it and then the release PR, which ships `v0.N.0` (#187); a human can hold the report PR with `hold` to review it first. The steward never merges a release PR for any other version: a patch release ships only when a human merges the release PR. Each milestone has a **release issue** that tracks it on the project board and closes on the release. The flow is in `docs/agents/releasing.md` → **Milestone release**.
 - Merging the release PR tags `vX.Y.Z` and publishes a GitHub Release. That triggers the itch.io deploy (ADR-0005).
+- **Milestones decide what a release contains, not when code lands** (#536). The PR steward merges a green PR whatever its issue's milestone. Content the player would see before its milestone ships stays out of play (`NOT_IN_PLAY` or a similar switch) until its rollout issue. Release notes: release-please's `CHANGELOG.md` lists commits by when they merged, so a look-ahead feature merged during v0.7 shows in v0.7's changelog. We accept that and don't mark titles. The milestone report (`docs/releases/0.N.0.md`, Planned/Delivered by milestone) is the record of what each milestone ships, and the GitHub Release notes for `v0.N.0` are written from it.
 - The build embeds the version, and the game shows it in a corner. Bug reports should include it.
 
 ## Consequences

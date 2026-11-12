@@ -183,7 +183,7 @@ export function mountEndScreen(
     const { phase, wavesCleared, totalWaves } = game.state;
     if (destroyed || !root.hidden || !isGameOver(phase)) return;
     heading.textContent = phase === 'victory' ? TERMS.victory : TERMS.defeat;
-    difficulty.textContent = `Difficulty: ${DIFFICULTY[game.state.difficulty].label}`;
+    difficulty.textContent = `${TERMS.difficulty}: ${DIFFICULTY[game.state.difficulty].label}`;
     wavesSurvived.textContent = `Waves survived ${wavesCleared} / ${totalWaves}`;
     const won = phase === 'victory' ? result?.() : undefined;
     if (won) heading.after(...buildResult(doc, won));

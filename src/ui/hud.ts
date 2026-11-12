@@ -1,6 +1,7 @@
 import { DIFFICULTY } from '../data/difficulty';
-import { TERMS, WAVE_BANNER_MS, contactBanner, formatFunds, hqLevel } from '../data/display';
+import { ENEMY_NAMES, TERMS, WAVE_BANNER_MS, contactBanner, formatFunds, hqLevel } from '../data/display';
 import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
+import { leadBoss } from '../sim/enemies';
 import { isGameOver, type Game } from '../sim/game';
 import { waveDps } from '../sim/stats';
 import { mountDpsMeter, type DpsMeterOptions } from './dpsMeter';
@@ -95,6 +96,27 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
   banner.className = 'hud-banner';
   banner.dataset.testid = 'wave-banner';
   message.append(banner);
+  // The boss HP bar (#458): hangs under the HUD while a boss is on the field, so it never moves a button.
+  const boss = doc.createElement('div');
+  boss.dataset.testid = 'hud-boss';
+  boss.className = 'hud-boss';
+  boss.hidden = true;
+  const bossMeter = doc.createElement('div');
+  bossMeter.className = 'boss';
+  bossMeter.setAttribute('role', 'meter');
+  bossMeter.setAttribute('aria-valuemin', '0');
+  const bossName = doc.createElement('span');
+  bossName.className = 'boss-name';
+  const bossBar = doc.createElement('span');
+  bossBar.className = 'boss-bar';
+  const bossFill = doc.createElement('span');
+  bossFill.className = 'boss-fill';
+  bossBar.append(bossFill);
+  const bossCount = doc.createElement('span');
+  bossCount.className = 'boss-count';
+  bossMeter.append(bossName, bossBar, bossCount);
+  boss.append(bossMeter);
+  root.append(boss);
   const meter = mountDpsMeter(root, game, dpsMeter);
   dps.addEventListener('click', () => {
     meter.toggle();
@@ -144,7 +166,25 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
     // slot at 900 px beside an overlap counter; the "cleared" banner follows it there when there's room.
     const { nextWaveAtMs } = state;
     setText(nextWave, nextWaveAtMs === undefined ? '' : `Next ${Math.ceil((nextWaveAtMs - state.timeMs) / 1000)}s`);
+    updateBoss();
     meter.update();
+  };
+  const updateBoss = () => {
+    const lead = leadBoss(game.state.enemies);
+    if (boss.hidden !== !lead) boss.hidden = !lead;
+    if (!lead) return;
+    const name = ENEMY_NAMES[lead.kind];
+    // Rounded up, so a boss still on the field never reads 0 HP.
+    const hp = Math.ceil(lead.hp);
+    const count = `${hp}/${lead.maxHp}`;
+    if (bossName.textContent === name && bossCount.textContent === count) return;
+    bossName.textContent = name;
+    bossCount.textContent = count;
+    bossMeter.setAttribute('aria-label', name);
+    bossMeter.setAttribute('aria-valuemax', String(lead.maxHp));
+    bossMeter.setAttribute('aria-valuenow', String(hp));
+    bossMeter.setAttribute('aria-valuetext', `${name} ${hp} of ${lead.maxHp} HP`);
+    bossFill.style.width = `${lead.maxHp > 0 ? (100 * hp) / lead.maxHp : 0}%`;
   };
   const showBanner = (text: string) => {
     bannerText = text;

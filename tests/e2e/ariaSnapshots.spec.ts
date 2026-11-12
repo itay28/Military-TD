@@ -20,6 +20,18 @@ test('the HUD at the start shows Funds, the HQ meter, Wave, DPS, the countdown a
   await expectAria(page.locator('#hud'), 'hud-initial.aria.yml');
 });
 
+test('the HUD with a Heavy tank on the field adds its boss HP bar: a meter named Heavy tank, read as HP of max', async ({
+  page,
+}) => {
+  await openGame(page);
+  await page.evaluate(() => {
+    window.__TD__!.command({ type: 'spawnEnemy', kind: 'heavyTank' });
+    window.__TD__!.step(1);
+  });
+  await expect(page.getByTestId('hud-boss')).toBeVisible();
+  await expectAria(page.getByTestId('hud-boss'), 'hud-boss.aria.yml');
+});
+
 test('the build bar at the start lists every tower with its cost, none selected, the unaffordable ones disabled', async ({
   page,
 }) => {

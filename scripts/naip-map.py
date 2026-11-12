@@ -10,7 +10,7 @@ file, and the game draws it in place of the tile sprites.
 Everything is pinned: the NAIP scene, the window centres (in the scene's UTM metres) and the noise seed. A rerun
 writes the same image.
 
-Setup:  python3 -m venv .venv-art && .venv-art/bin/pip install rasterio pillow numpy
+Setup:  python3.11 -m venv .venv-art && .venv-art/bin/pip install rasterio pillow numpy
 Run:    .venv-art/bin/python scripts/naip-map.py
 """
 
