@@ -1,3 +1,4 @@
+import { DIFFICULTY } from '../data/difficulty';
 import { ENEMY_NAMES, TERMS, WAVE_BANNER_MS, contactBanner, formatFunds, hqLevel } from '../data/display';
 import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { leadBoss } from '../sim/enemies';
@@ -63,6 +64,9 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
   hqCount.className = 'hq-count';
   lives.append(hqLabel, hqBar, hqCount);
   const wave = field('hud-wave', stats);
+  // Only Hard is tagged: Normal is the default, so it adds nothing and keeps the phone HUD's room (#465).
+  if (game.state.difficulty !== 'normal')
+    field('hud-difficulty', stats).textContent = DIFFICULTY[game.state.difficulty].label;
   // The DPS figure opens and closes the DPS meter, a panel under the HUD (#243).
   const dps = doc.createElement('button');
   dps.type = 'button';
