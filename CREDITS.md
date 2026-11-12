@@ -191,6 +191,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-11
 - Files: `assets/render-china-apc/**`
 
+## BTR-60PB - Takistan (top-down render and turntable)
+
+- Author: Mr_Chiko
+- Source: <https://sketchfab.com/3d-models/f2fe515e186c4aa1b9294fd364ad2417>
+- License: CC-BY-4.0
+- Attribution: "BTR-60PB - Takistan" by Mr_Chiko (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-12
+- Files: `assets/render-insurgents-apc/**`
+
 ## BTR-82A (top-down render and turntable)
 
 - Author: lebedeventerprise
