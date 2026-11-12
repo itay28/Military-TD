@@ -8,6 +8,7 @@ import mortarWhistleUrl from '../../assets/weapon-sounds/mortarWhistle.ogg?url';
 import mortarBlastUrl from '../../assets/weapon-sounds/mortarBlast.ogg?url';
 import vehicleExplosionUrl from '../../assets/weapon-sounds/vehicleExplosion.ogg?url';
 import infantryHitUrl from '../../assets/weapon-sounds/infantryHit.ogg?url';
+import coldOpenUrl from '../../assets/radio-cues/coldOpen.ogg?url';
 import waveStartUrl from '../../assets/radio-cues/waveStart.ogg?url';
 import waveReinforcementsUrl from '../../assets/radio-cues/waveReinforcements.ogg?url';
 import leakUrl from '../../assets/radio-cues/leak.ogg?url';
@@ -33,6 +34,7 @@ export const SOUND_URLS: Record<SoundId, string> = {
   vehicleExplosion: vehicleExplosionUrl,
   infantryHit: infantryHitUrl,
   leak: leakUrl,
+  coldOpen: coldOpenUrl,
   waveStart: waveStartUrl,
   waveReinforcements: waveReinforcementsUrl,
   victory: victoryUrl,
@@ -49,10 +51,11 @@ export const SOUND_THROTTLE: ThrottleConfig = { maxPlays: 3, windowMs: 150 };
 export const SOUND_THROTTLE_BY_ID: Partial<Record<SoundId, ThrottleConfig>> = { leak: { maxPlays: 1, windowMs: 6000 } };
 
 /**
- * The radio comms cues (#396, the leak call #405) and each one's length in ms: the music ducks while one plays. Built by
+ * The radio comms cues (#396, the leak call #405, the cold open #477) and each one's length in ms: the music ducks while one plays. Built by
  * `scripts/radio-fx.ts`, which prints the lengths; a test checks them against the files.
  */
 export const RADIO_CUE_MS: Partial<Record<SoundId, number>> = {
+  coldOpen: 2680,
   waveStart: 2750,
   waveReinforcements: 3500,
   leak: 1450,

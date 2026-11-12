@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { createMusicController } from './audio/music';
+import { createPhaserAudio } from './audio/phaserAudio';
 import { createPhaserMusicBackend, type LoopingSound } from './audio/phaserMusic';
 import { MUSIC_REGISTRY_KEY } from './audio/radio';
 import { createAudioMix } from './audio/volume';
+import { RADIO_CUE_MS } from './data/sounds';
 import { BootScene } from './scenes/BootScene';
 import { DEMO_SCENE_KEY, demoMode } from './scenes/demoMode';
 import { GameScene } from './scenes/GameScene';
@@ -135,6 +137,7 @@ new ResizeObserver(() => {
 }).observe(gameRoot);
 
 // Music (#66): each scene's track, crossfaded on a change, from the first input on (browsers block audio before it).
+// The radio cold open (#479) plays first, once a session, at the sound effects volume, and the menu music follows it.
 // Test mode is muted, so e2e runs and scenarios are unchanged.
 const music = createMusicController(
   createPhaserMusicBackend({
@@ -146,7 +149,19 @@ const music = createMusicController(
       return () => window.clearInterval(id);
     },
   }),
-  { muted: flags.test, volume: () => audioMix.volume('music') },
+  {
+    muted: flags.test,
+    volume: () => audioMix.volume('music'),
+    coldOpen: {
+      audio: createPhaserAudio(
+        game.sound,
+        (key) => game.cache.audio.exists(key),
+        () => audioMix.volume('sfx'),
+      ),
+      ms: RADIO_CUE_MS.coldOpen ?? 0,
+      schedule: (ms, run) => window.setTimeout(run, ms),
+    },
+  },
 );
 // The Game scene ducks the music under its radio cues (#396).
 game.registry.set(MUSIC_REGISTRY_KEY, music);
@@ -158,10 +173,13 @@ game.events.once(Phaser.Core.Events.READY, () => {
     scene.events.on(Phaser.Scenes.Events.START, () => music.enterScene(scene.scene.key));
   }
 });
+// The sound effects sink drops sounds while Phaser's audio is locked, so the music (and its cold open) waits for Phaser
+// to unlock it, which it does on this same first input.
 const unlockMusic = (): void => {
-  music.unlock();
   window.removeEventListener('pointerdown', unlockMusic);
   window.removeEventListener('keydown', unlockMusic);
+  if (game.sound.locked) game.sound.once(Phaser.Sound.Events.UNLOCKED, () => music.unlock());
+  else music.unlock();
 };
 window.addEventListener('pointerdown', unlockMusic);
 window.addEventListener('keydown', unlockMusic);

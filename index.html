@@ -1064,12 +1064,103 @@
         border-color: var(--olive-600);
         cursor: default;
       }
-      #level-select button.map[aria-disabled='true'] canvas {
+      #level-select button.map[aria-disabled='true'] .map-card {
         opacity: 0.45;
       }
-      #level-select canvas {
+      /* A map card (#401): the aerial ground image with the tactical overlay canvas laid exactly over it. */
+      #level-select .map-card {
+        position: relative;
         display: block;
         max-width: 100%;
+        border: 1px solid var(--olive-600);
+      }
+      #level-select .map-card img,
+      #level-select .map-card canvas {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+      #level-select .map-card img + canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      /* The briefing (#401): replaces the cards once a map is picked, with Deploy and Back under it. */
+      #level-select .briefing {
+        box-sizing: border-box;
+        width: min(560px, calc(100% - 32px));
+        padding: 16px 20px;
+        background: var(--brackets), var(--olive-800);
+        border: 1px solid var(--olive-600);
+      }
+      #level-select .briefing h2 {
+        margin: 0;
+        font: normal 1.5rem var(--font-stencil);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--amber);
+        overflow-wrap: anywhere;
+      }
+      #level-select .briefing .grid-ref {
+        margin: 4px 0 12px;
+        font-size: 0.875rem;
+        color: var(--bone-dim);
+      }
+      #level-select .briefing dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 8px 16px;
+        margin: 0 0 16px;
+      }
+      #level-select .briefing dt {
+        font-size: 0.8125rem;
+        font-variant: small-caps;
+        letter-spacing: 0.06em;
+        color: var(--tan);
+      }
+      #level-select .briefing dd {
+        margin: 0;
+      }
+      #level-select .briefing .force {
+        display: block;
+      }
+      #level-select .briefing .enemy .insignia {
+        color: var(--danger);
+      }
+      #level-select .briefing .friendly .insignia {
+        color: var(--ok);
+      }
+      #level-select .briefing .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+      }
+      #level-select .briefing button {
+        min-width: 140px;
+        padding: 8px 16px;
+        font: bold 1.125rem var(--font-mono);
+        color: var(--olive-900);
+        background: var(--tan);
+        border: 0;
+        cursor: pointer;
+      }
+      #level-select .briefing button.deploy {
+        background: var(--amber);
+      }
+      @media (max-width: 480px) {
+        #level-select .briefing dl {
+          grid-template-columns: 1fr;
+          gap: 2px;
+        }
+        #level-select .briefing dd {
+          margin-bottom: 8px;
+        }
+      }
+      #level-select ul[hidden],
+      #level-select > button[hidden] {
+        display: none;
       }
       /* The Settings screen covers the whole page, over the Main menu or the paused game, whichever opened it. */
       #settings,
