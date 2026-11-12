@@ -223,3 +223,20 @@ describe('the Russia APC render (#480)', () => {
     expect(sheet.length).toBeLessThan(300_000);
   });
 });
+
+describe('the Sniper renders (art-ahead, #358)', () => {
+  const snipers = RENDER_CONFIG.models.filter((m) => m.kind === 'sniper');
+
+  it('covers every Faction: US (#459), Russia and China (#460), Insurgents (#462)', () => {
+    expect(snipers.map((m) => m.faction).sort()).toEqual([...FACTIONS].sort());
+  });
+
+  for (const model of snipers) {
+    it(`${model.id} is a team on a dug-in base that turns about the pad centre`, () => {
+      expect(model.base, 'a base').toBeDefined();
+      expect(model.turret, 'a turret layer').toBeDefined();
+      const { json } = buildRenderMeta().find((m) => m.json.id === model.id)!;
+      expect(json.pivot).toEqual({ x: json.canvasPx / 2, y: json.canvasPx / 2 });
+    });
+  }
+});
