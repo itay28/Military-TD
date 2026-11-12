@@ -91,6 +91,11 @@ const MUZZLES: Record<string, RenderedSprite['muzzles']> = {
   'russia-tank': [{ x: 0, y: -104.5 }],
   'china-tank': [{ x: -0.5, y: -100 }],
   'insurgents-tank': [{ x: 0, y: -96.5 }],
+  // One barrel each (top row 19 of the turret image).
+  'us-heavy-tank': [{ x: -0.5, y: -116 }],
+  'russia-heavy-tank': [{ x: -0.5, y: -120 }],
+  'china-heavy-tank': [{ x: -0.5, y: -108 }],
+  'insurgents-heavy-tank': [{ x: -1, y: -117.5 }],
 };
 
 interface RenderMeta {

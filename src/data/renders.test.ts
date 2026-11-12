@@ -19,7 +19,7 @@ import { NOT_PLAYABLE_KINDS, PLAYABLE_KINDS } from './enemies';
 import { MAPS } from './maps';
 
 const IN_PLAY: readonly SpriteKind[] = [...BUILD_KINDS, ...PLAYABLE_KINDS];
-const SINGLE_IMAGE: readonly SpriteKind[] = ['infantry', 'jeep', 'helicopter'];
+const SINGLE_IMAGE: readonly SpriteKind[] = ['infantry', 'jeep', 'helicopter', 'apc', 'jet'];
 const kebab = (kind: string) => kind.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 const render = (kind: SpriteKind, faction: Faction): AnyRender => {
   const found = renderFor(kind, faction);
@@ -29,9 +29,21 @@ const render = (kind: SpriteKind, faction: Faction): AnyRender => {
 const turretRenders = () => ALL_RENDERS.filter(isTurretRender);
 
 describe('the render table (#566)', () => {
-  it('covers the 8 in-play kinds', () => {
+  it('covers the 11 in-play kinds', () => {
     expect([...IN_PLAY].sort()).toEqual(
-      ['aaGun', 'cannon', 'helicopter', 'infantry', 'jeep', 'mortar', 'rifleNest', 'tank'].sort(),
+      [
+        'aaGun',
+        'apc',
+        'cannon',
+        'heavyTank',
+        'helicopter',
+        'infantry',
+        'jeep',
+        'jet',
+        'mortar',
+        'rifleNest',
+        'tank',
+      ].sort(),
     );
   });
 
@@ -53,7 +65,7 @@ describe('the render table (#566)', () => {
       for (const faction of FACTIONS) expect(renderFor(kind, faction), `${faction} ${kind}`).toBeNull();
   });
 
-  it('gives Infantry, Jeep and Helicopter one image and no turret', () => {
+  it('gives Infantry, Jeep, Helicopter, APC and Jet one image and no turret', () => {
     for (const kind of SINGLE_IMAGE)
       for (const faction of FACTIONS) {
         const r = render(kind, faction);
@@ -66,7 +78,7 @@ describe('the render table (#566)', () => {
       }
   });
 
-  it('gives every tower and the Tank a hull and a turret, both its own keys', () => {
+  it('gives every tower, the Tank and the Heavy tank a hull and a turret, both its own keys', () => {
     for (const kind of IN_PLAY.filter((k) => !SINGLE_IMAGE.includes(k)))
       for (const faction of FACTIONS) {
         const r = render(kind, faction);
