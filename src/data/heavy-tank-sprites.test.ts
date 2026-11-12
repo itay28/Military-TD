@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
-import type { Faction } from '../sim/factions';
+import { FACTIONS, type Faction } from '../sim/factions';
 import { modelFor } from './modelViews';
 
 /** Pixels at least this opaque are the vehicle; softer ones are its shadow and anti-aliasing. */
@@ -41,12 +41,12 @@ function longSide(path: string): number {
   return x1 < 0 ? 0 : Math.max(x1 - x0 + 1, y1 - y0 + 1);
 }
 
-/** The Factions rendered so far: China and Insurgents come with the next part (#509). */
-const RENDERED: readonly Faction[] = ['us', 'russia'];
+/** Every Faction has one: US and Russia (#508), China and Insurgents (#509). */
+const RENDERED: readonly Faction[] = FACTIONS;
 
 const file = (id: string, suffix = '') => `assets/render-${id}/${id}${suffix}.png`;
 
-describe('Heavy tank boss renders (#362, #508)', () => {
+describe('Heavy tank boss renders (#362, #508, #509)', () => {
   for (const faction of RENDERED) {
     describe(faction, () => {
       const heavy = modelOf(faction, 'heavyTank');

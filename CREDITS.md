@@ -92,6 +92,24 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-11
 - Files: `assets/render-us-heavy-tank/**`
 
+## T98 Main Battle Tank (top-down render)
+
+- Author: Risama
+- Source: <https://sketchfab.com/3d-models/d75cdec1a34b417fadbb72656664b54a>
+- License: CC-BY-4.0
+- Attribution: "T98 Main Battle Tank" by Risama (sketchfab.com), CC-BY 4.0, rendered top-down, diorama base removed, turret turned to the front
+- Downloaded: 2026-11-11
+- Files: `assets/render-china-heavy-tank/**`
+
+## T-72M1 (top-down render)
+
+- Author: ballDAYLCbusta
+- Source: <https://sketchfab.com/3d-models/673f659618b748c4847c659aadcd2aba>
+- License: CC-BY-4.0
+- Attribution: "T-72M1" by ballDAYLCbusta (sketchfab.com), CC-BY 4.0, rendered top-down, painted olive
+- Downloaded: 2026-11-11
+- Files: `assets/render-insurgents-heavy-tank/**`
+
 ## NAIP aerial imagery (Iowa 2023)
 
 - Author: USDA Farm Service Agency
@@ -163,6 +181,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Low Poly Humvee FREE" by madtrollstudio (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-jeep/**`
+
+## BTR-82A (top-down render and turntable)
+
+- Author: lebedeventerprise
+- Source: <https://sketchfab.com/3d-models/cd1ba0c1f16f42aaac45234ced318605>
+- License: CC-BY-4.0
+- Attribution: "BTR-82A" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-apc/**`
 
 ## M113 (top-down render and turntable)
 

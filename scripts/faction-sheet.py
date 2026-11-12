@@ -7,6 +7,8 @@ Art-ahead kinds (rendered before their gameplay, e.g. the Sniper, #358, and the 
 
 Run after render-sprite.py and `npm run render:pivot` (needs Pillow in the art venv):
     .venv-art/bin/python scripts/faction-sheet.py us [--out docs/art/faction-us.png]
+With `--kind`, the columns are one kind across every Faction instead (#509):
+    .venv-art/bin/python scripts/faction-sheet.py --kind heavyTank [--out docs/art/heavyTank.png]
 """
 
 import argparse
@@ -20,6 +22,7 @@ RENDER_TILE = 128  # render-sprite.json pxPerTile
 GAME_TILE = 48
 NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in its own pixels (sprite-compare.py)
 CELL = 2.5  # tiles per cell, enough for the largest canvas (the jet's, for its offset shadow; the Gunship's is 1.75)
+FACTIONS = ["us", "russia", "china", "insurgents"]
 KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "heavyTank", "helicopter", "gunship", "jet"]
 PENDING = {"heavyTank"}  # kinds a faction may not have yet (the Heavy tank: US and Russia only so far; every jet is in, #484)
 # v0.8.0 kinds rendered one Faction at a time ahead of their gameplay (#360, #358): on the sheet once the Faction has one.
@@ -41,26 +44,36 @@ def place(sheet: Image.Image, sprite: Image.Image, scale: float, cx: int, cy: in
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("faction")
+    ap.add_argument("faction", nargs="?", help="one Faction's set, a column per kind")
+    ap.add_argument("--kind", help="one kind across every Faction, a column per Faction")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--assets", type=Path, default=ROOT / "assets", help="where the render-<id>/ folders are")
     args = ap.parse_args()
+    if (args.faction is None) == (args.kind is None):
+        raise SystemExit("give a Faction or --kind, not both")
     cfg = json.loads((ROOT / "scripts/render-sprite.json").read_text())
-    models = {m["kind"]: m for m in cfg["models"] if m["faction"] == args.faction}
-    missing = [k for k in KINDS if k not in models and k not in PENDING]
+    if args.kind:
+        found = {m["faction"]: m for m in cfg["models"] if m["kind"] == args.kind}
+        labels, name, default_out = FACTIONS, args.kind, f"docs/art/{args.kind}.png"
+    else:
+        found = {m["kind"]: m for m in cfg["models"] if m["faction"] == args.faction}
+        labels, name, default_out = KINDS, args.faction, f"docs/art/faction-{args.faction}.png"
+    if not args.kind:
+        labels = KINDS + [k for k in NEW_KINDS + ART_AHEAD_KINDS if k in found]
+    pending = lambda l: (l in PENDING) if args.kind is None else False
+    missing = [k for k in labels if k not in found and not pending(k)]
     if missing:
-        raise SystemExit(f"{args.faction}: no model for {', '.join(missing)}")
-    kinds = KINDS + [k for k in NEW_KINDS + ART_AHEAD_KINDS if k in models]
+        raise SystemExit(f"{name}: no model for {', '.join(missing)}")
     small, big = round(CELL * GAME_TILE), round(CELL * RENDER_TILE)
-    width = len(kinds) * big
+    width = len(labels) * big
     sheet = Image.new("RGBA", (width, small + 2 * big), (40, 40, 40, 255))
     draw = ImageDraw.Draw(sheet)
-    for i, kind in enumerate(kinds):
+    for i, label in enumerate(labels):
         x = i * big
-        if kind not in models:
-            draw.text((x + 4, small + 2 * big - 14), f"{kind}: pending", fill=(255, 255, 255, 255))
+        if label not in found:
+            draw.text((x + 4, small + 2 * big - 14), f"{label}: pending", fill=(255, 255, 255, 255))
             continue
-        m = models[kind]
+        m = found[label]
         folder = args.assets / f"render-{m['id']}"
         whole = Image.open(folder / f"{m['id']}.png").convert("RGBA")
         sheet.alpha_composite(grass(small), (x + (big - small) // 2, 0))
@@ -78,8 +91,8 @@ def main() -> None:
             if pivot:
                 px, py = ox + pivot["x"], oy + pivot["y"]
                 draw.ellipse((px - 3, py - 3, px + 3, py + 3), outline=(255, 200, 0, 255), width=2)
-        draw.text((x + 4, small + 2 * big - 14), kind, fill=(255, 255, 255, 255))
-    out = args.out or ROOT / f"docs/art/faction-{args.faction}.png"
+        draw.text((x + 4, small + 2 * big - 14), label, fill=(255, 255, 255, 255))
+    out = args.out or ROOT / default_out
     sheet.convert("RGB").save(out)
     print(f"wrote {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}")
 

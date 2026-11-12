@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import {
   CLEAN_REVIEW_MARKER,
+  MERGE_CONFLICT_MARKER,
+  MERGE_CONFLICT_LIMIT,
   DONE_MARKER,
   REVIEW_HEADING,
   REVIEW_REQUEST_MARKER,
@@ -995,6 +997,14 @@ describe('decide: approval gate (#206)', () => {
     expect(kind(pr({ comments: [review(60), agent(DONE_MARKER, 30), approve(10)] }))).toBe('merge');
   });
 
+  it('merges an approved PR after a conflict round that only added a merge commit (#556)', () => {
+    const approved = critical({
+      comments: [review(60), agent(DONE_MARKER, 30), approve(20), agent(ROUND_MARKER, 10), agent(DONE_MARKER, 5)],
+      codeCommittedAt: at(40),
+    });
+    expect(kind(approved)).toBe('merge');
+  });
+
   it('waits on the maintainer after asking, then merges on /approve', () => {
     const asked = { ...action(`${STUCK_MARKER}\n${APPROVAL_MARKER}`, 20) };
     const waiting = critical({ labels: ['needs-approval'], comments: [review(60), agent(DONE_MARKER, 30), asked] });
@@ -1301,6 +1311,47 @@ describe('act', () => {
     expect(calls(fetchFn)).toEqual([`PUT ${api}/pulls/7/merge`]);
   });
 
+  it('leaves the PR for a conflict round when GitHub refuses the merge for conflicts (#556)', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url) =>
+      String(url).endsWith('/merge')
+        ? new Response('{"message":"Pull Request has merge conflicts"}', { status: 405 })
+        : ok(),
+    );
+    await act(pr(), { kind: 'merge' }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([`PUT ${api}/pulls/7/merge`, `POST ${api}/issues/7/comments`]);
+    const { body } = JSON.parse(fetchFn.mock.calls[1]![1].body as string) as { body: string };
+    expect(body).toContain(MERGE_CONFLICT_MARKER);
+  });
+
+  it('still hands off on any other merge error', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url) =>
+      String(url).endsWith('/merge') ? new Response('{"message":"Required status check"}', { status: 405 }) : ok(),
+    );
+    await act(pr(), { kind: 'merge' }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([
+      `PUT ${api}/pulls/7/merge`,
+      `POST ${api}/issues/7/comments`,
+      `POST ${api}/issues/7/labels`,
+    ]);
+  });
+
+  it('hands off when the merge was refused for conflicts too many times in a row', async () => {
+    const fetchFn = vi.fn<Fetch>(async (url) =>
+      String(url).endsWith('/merge')
+        ? new Response('{"message":"Pull Request has merge conflicts"}', { status: 405 })
+        : ok(),
+    );
+    const marks = Array.from({ length: MERGE_CONFLICT_LIMIT - 1 }, (_, i) => ({
+      ...agent(MERGE_CONFLICT_MARKER, 30 - i),
+    }));
+    await act(pr({ comments: marks }), { kind: 'merge' }, 'gh-token', settings, fetchFn);
+    expect(calls(fetchFn)).toEqual([
+      `PUT ${api}/pulls/7/merge`,
+      `POST ${api}/issues/7/comments`,
+      `POST ${api}/issues/7/labels`,
+    ]);
+  });
+
   it('only logs when its switch is off', async () => {
     const fetchFn = vi.fn<Fetch>(async () => ok());
     await act(pr(), steward, 'gh-token', { merge: false }, fetchFn);
@@ -1601,6 +1652,8 @@ describe('merge queue', () => {
         execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
           cwd: dir,
           encoding: 'utf8',
+          // A pre-commit hook exports GIT_INDEX_FILE & co; they must not reach the scratch repo.
+          env: Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))),
         }).trim();
       const commit = (file: string, text: string) => {
         writeFileSync(join(dir, file), text);
