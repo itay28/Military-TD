@@ -43,6 +43,12 @@ describe('counter matrix', () => {
     expect(efficiency('grenadeLauncher', 'tank')).toBeCloseTo((1.5 * 6) / 90);
   });
 
+  it('the Gunship boss keeps the Rifle Nest and the AA Gun as efficient counters, the AA Gun best', () => {
+    expect(efficientCounters('gunship')).toEqual(expect.arrayContaining(['rifleNest', 'aaGun']));
+    const best = towerKinds.reduce((a, b) => (efficiency(b, 'gunship') > efficiency(a, 'gunship') ? b : a));
+    expect(best).toBe('aaGun');
+  });
+
   it('the Sniper chips Tanks (an efficient counter) but the Cannon stays the best against them', () => {
     expect(efficientCounters('tank')).toContain('sniper');
     const best = towerKinds.reduce((a, b) => (efficiency(b, 'tank') > efficiency(a, 'tank') ? b : a));
