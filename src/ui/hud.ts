@@ -64,9 +64,9 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
   hqCount.className = 'hq-count';
   lives.append(hqLabel, hqBar, hqCount);
   const wave = field('hud-wave', stats);
-  // Only Hard is tagged: Normal is the default, so it adds nothing and keeps the phone HUD's room (#465).
-  if (game.state.difficulty !== 'normal')
-    field('hud-difficulty', stats).textContent = DIFFICULTY[game.state.difficulty].label;
+  // Only Hard is tagged (#465), but the slot is always there at a fixed width, so the row is the same on both (#569).
+  field('hud-difficulty', stats).textContent =
+    game.state.difficulty === 'normal' ? '' : DIFFICULTY[game.state.difficulty].label;
   // The DPS figure opens and closes the DPS meter, a panel under the HUD (#243).
   const dps = doc.createElement('button');
   dps.type = 'button';
@@ -75,6 +75,8 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
   dps.setAttribute('aria-controls', 'dps-meter');
   dps.setAttribute('aria-expanded', 'false');
   stats.append(dps);
+  // The countdown has a stats slot of its own, wide enough for "Next 100s", so it's never clipped (#569).
+  const nextWave = field('hud-next-wave', stats);
   const { tacticalMode } = game.state;
   // Timed mode (ADR-0011): waves come on their timers and this calls the next one in early. Tactical: it starts each.
   const callNextWave = doc.createElement('button');
@@ -82,7 +84,6 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
   callNextWave.dataset.testid = 'start-wave';
   callNextWave.textContent = tacticalMode ? TERMS.startWave : 'Call next wave';
   controls.append(callNextWave);
-  const nextWave = field('hud-next-wave', message);
   const speedButtons = mountSpeedButtons(
     controls,
     speed,
