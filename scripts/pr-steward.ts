@@ -103,6 +103,10 @@ export const UNKNOWN_UPDATE_MARKER = '<!-- pr-steward:unknown-update -->';
 /** How long GitHub may report mergeability as UNKNOWN before the steward acts (#487). */
 const UNKNOWN_MS = 60 * 60 * 1000;
 /** Posted next to the stuck marker when the hand-off asks for the maintainer's `/approve` (#206). */
+/** Posted when GitHub refused a merge for conflicts (#556): the next run starts a conflict round. */
+export const MERGE_CONFLICT_MARKER = '<!-- pr-steward:merge-conflict -->';
+/** Merge refusals for conflicts, with no maintainer comment between, before the steward hands off. */
+export const MERGE_CONFLICT_LIMIT = 3;
 export const APPROVAL_MARKER = '<!-- pr-steward:approval -->';
 /** A maintainer comment starting with this lets a PR that touches a critical path merge. */
 const APPROVE_COMMAND = /^\/approve\b/;
@@ -544,7 +548,9 @@ function decideIgnoringMain(
     ...(pr.files ? criticalFiles(pr.files) : ['(more files than were read)']),
     ...renamedCritical(pr.renamed),
   ];
-  const approvedAfter = Math.max(lastRound, pr.codeCommittedAt ? Date.parse(pr.codeCommittedAt) : 0);
+  // An approval stands until new code lands (a non-merge commit). A round that only merged the base in
+  // (a conflict round, #556) adds none, so it keeps the approval; any other round pushes code and so moves it.
+  const approvedAfter = pr.codeCommittedAt ? Date.parse(pr.codeCommittedAt) : lastRound;
   if (paths.length && last(isApproval) <= approvedAfter) return { kind: 'approval', paths };
   return { kind: 'merge' };
 }
@@ -859,6 +865,9 @@ function stuckReason(d: { reasons: readonly Reason[]; conflict?: boolean; unknow
 const stuckBody = (summary: string) =>
   `**PR steward: handing this PR to you.** ${summary}\n\nComment on the PR to give it ${MAX_ROUNDS} more steward rounds, or fix it yourself.\n\n${STUCK_MARKER}`;
 
+const isMergeConflictRefusal = (error: unknown) =>
+  (error as { status?: number }).status === 405 && /merge conflict|not mergeable/i.test(String(error));
+
 async function handOff(
   pr: StewardPr,
   body: string,
@@ -982,6 +991,20 @@ ${APPROVAL_MARKER}`,
       } catch (error) {
         // The head moved since this run read it (e.g. a steward push): the next run decides again.
         if ((error as { status?: number }).status === 409) return;
+        // Another PR merged first and this one now conflicts: normal on a busy main (#556). The next run
+        // re-reads mergeability and starts a conflict round, unless it keeps happening.
+        if (isMergeConflictRefusal(error)) {
+          const lastMaintainer = Math.max(0, ...pr.comments.filter(isMaintainer).map((c) => Date.parse(c.createdAt)));
+          const refused = pr.comments.filter(
+            (c) => c.body.includes(MERGE_CONFLICT_MARKER) && Date.parse(c.createdAt) > lastMaintainer,
+          ).length;
+          if (refused + 1 < MERGE_CONFLICT_LIMIT) {
+            await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+              body: `PR steward: GitHub refused the merge because the PR now conflicts with \`${pr.base}\` (another PR merged first). Leaving it for the next run to resolve (${refused + 1} of ${MERGE_CONFLICT_LIMIT - 1}).\n\n${MERGE_CONFLICT_MARKER}`,
+            });
+            return;
+          }
+        }
         await handOff(
           pr,
           stuckBody(`It's green and answered, but GitHub refused the merge: ${String(error)}`),
