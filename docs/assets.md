@@ -205,7 +205,7 @@ python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow rast
 
 Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 5.1+), and don't upgrade `bpy` without re-rendering every set. Cloud sessions get the venv from the environment's setup script.
 
-**Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US models have them so far; `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
+**Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US (the Sniper too), Russia and China models have them so far; `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
 
 | Folder | Source | Made by |
 | --- | --- | --- |
@@ -217,6 +217,7 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-us-mortar/` | "Mortar - M224" by jcherry3d, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-grenade-launcher/` | "MK19 Low-Poly" by lebedeventerprise, "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR, "Tactical Soldier (game ready) low poly" by MissingTray1151, all CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-us-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-jeep/` | "Low Poly Humvee FREE" by madtrollstudio, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-tank/` | "M1A2 Abrams Crows" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-helicopter/` | "Sikorsky UH-60 Black Hawk" by helijah, CC-BY-4.0 | `scripts/render-sprite.py` |
@@ -227,9 +228,11 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-russia-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-grenade-launcher/` | "AGS 40 Balkan" by SpinoCactus, "Tactical Soldier (game ready) low poly" by MissingTray1151, both CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-russia-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-jeep/` | "UAZ-469 Low Poly" by lebedeventerprise, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-helicopter/` | "Mi-8" by tiunov.se, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-grenade-launcher/` | "QLZ-87 (Type 87)" by goncalveskauan055l, "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR, "Tactical Soldier (game ready) low poly" by MissingTray1151, all CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
@@ -242,6 +245,7 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-insurgents-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-jeep/` | "TOYOTA DO AFEGANISTÃO (LOW POLY)" by lm9241221, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-tank/` | "T 54/55 Tank" by SGAstudios3DandGameDevelopment, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-helicopter/` | "Russian Transport Heli" by jeandiz, CC-BY-4.0 | `scripts/render-sprite.py` |

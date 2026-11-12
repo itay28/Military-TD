@@ -56,6 +56,23 @@ describe('End screen', () => {
     expect(root.hidden).toBe(true);
   });
 
+  it.each([
+    ['normal', 'Difficulty: Normal'],
+    ['hard', 'Difficulty: Hard'],
+  ] as const)('says the difficulty on %s (#465)', (difficulty, text) => {
+    const game = createGame({
+      map: SMALL,
+      money: 100,
+      lives: 1,
+      difficulty,
+      waves: [{ groups: [{ kind: 'infantry' as const, count: 1, spacingMs: 100, delayMs: 0 }] }],
+    });
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
+    playWave(game);
+    end.update();
+    expect(byTestId('difficulty')?.textContent).toBe(text);
+  });
+
   it('after Victory shows "MISSION COMPLETE" and every wave survived', () => {
     const game = newGame();
     const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });

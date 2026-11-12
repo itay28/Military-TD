@@ -106,9 +106,9 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own; Grenade launcher: its gunner and assistant gunner) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own; Grenade launcher: its gunner and assistant gunner), prone_firing (Sniper: a shooter and an observer in a dug-in pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
-- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-us-grenade-launcher/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`, `assets/render-russia-grenade-launcher/**`
+- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-us-grenade-launcher/**`, `assets/render-us-sniper/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`, `assets/render-russia-grenade-launcher/**`, `assets/render-russia-sniper/**`
 
 ## Phalanx CIWS (top-down render and turntable)
 
@@ -272,6 +272,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-rifle-nest/**`, `assets/render-china-grenade-launcher/**`
 
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
+
+- Author: MissingTray1151
+- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
+- License: CC-BY-4.0
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit tinted green (toward Type 07), a shooter and an observer set in a dug-in pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-china-sniper/**`
+
 ## Anti-Tank Guided Missile (top-down render and turntable)
 
 - Author: Alhimix
@@ -299,41 +308,50 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-11
 - Files: `assets/render-china-grenade-launcher/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted green (toward Type 07)
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit tinted green (toward Type 07), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-infantry/**`
 
-## Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render)
+## Military Jeep Low Poly – Game Ready 3D Vehicle (top-down render and turntable)
 
 - Author: KidBi-Gaming
 - Source: <https://sketchfab.com/3d-models/935856d763bf49aca45a48fae3a6846c>
 - License: CC-BY-4.0
-- Attribution: "Military Jeep Low Poly – Game Ready 3D Vehicle" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive
+- Attribution: "Military Jeep Low Poly – Game Ready 3D Vehicle" by KidBi-Gaming (sketchfab.com), CC-BY 4.0, rendered top-down, pintle machine gun removed, repainted olive, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-jeep/**`
 
-## Type 99 MBT (top-down render)
+## Type 99 MBT (top-down render and turntable)
 
 - Author: philano
 - Source: <https://sketchfab.com/3d-models/7075c92c5ef1408497f1530703ff2942>
 - License: CC-BY-4.0
-- Attribution: "Type 99 MBT" by philano (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "Type 99 MBT" by philano (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-tank/**`
 
-## Sikorsky UH-60M Blackhawk (top-down render)
+## Sikorsky UH-60M Blackhawk (top-down render and turntable)
 
 - Author: MirzaArrafiERV_45
 - Source: <https://sketchfab.com/3d-models/12b4e525676a49678ac3006b360c8750>
 - License: CC-BY-4.0
-- Attribution: "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-helicopter/**`
+
+## Chengdu J-10S (top-down render and turntable)
+
+- Author: MirzaArrafiERV_45
+- Source: <https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618>
+- License: CC-BY-4.0
+- Attribution: "Chengdu J-10S" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, national markings painted out, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-china-jet/**`
 
 ## Tactical Soldier (game ready) low poly (top-down render)
 
@@ -380,6 +398,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-infantry/**`
 
+## Tactical Soldier (game ready) low poly (top-down render)
+
+- Author: MissingTray1151
+- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
+- License: CC-BY-4.0
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit re-coloured to civilian browns and denim, a shooter and an observer set in a dug-in pit of our own
+- Downloaded: 2026-11-11
+- Files: `assets/render-insurgents-sniper/**`
+
 ## TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render)
 
 - Author: lm9241221
@@ -406,6 +433,51 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Russian Transport Heli" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-helicopter/**`
+
+## Boeing AH-64D Apache Combat Helicopter (top-down render)
+
+- Author: MirzaArrafiERV_45
+- Source: <https://sketchfab.com/3d-models/c3b58008c46b45048fdd7dd283a3c8c8>
+- License: CC-BY-4.0
+- Attribution: "Boeing AH-64D Apache Combat Helicopter" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-10
+- Files: `assets/render-us-gunship/**`
+
+## Mi-28N Havoc (top-down render)
+
+- Author: rukh3d
+- Source: <https://sketchfab.com/3d-models/3e80c95bbadf46abbafba9d9a08afc68>
+- License: CC-BY-4.0
+- Attribution: "Mi-28N Havoc" by rukh3d (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-10
+- Files: `assets/render-russia-gunship/**`
+
+## Eurocopter Tiger Attack Helicopter (top-down render)
+
+- Author: MirzaArrafiERV_45
+- Source: <https://sketchfab.com/3d-models/a8ae9b61995a49a1a2fa2de57e8ce4ef>
+- License: CC-BY-4.0
+- Attribution: "Eurocopter Tiger Attack Helicopter" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, re-coloured green
+- Downloaded: 2026-11-10
+- Files: `assets/render-china-gunship/**`
+
+## Hind Attack Helicopter (top-down render)
+
+- Author: AshleyAslett
+- Source: <https://sketchfab.com/3d-models/bb65bdfde2c54007a52dfbe1d91d930d>
+- License: CC-BY-4.0
+- Attribution: "Hind Attack Helicopter" by AshleyAslett (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-10
+- Files: `assets/render-insurgents-gunship/**`
+
+## Mikoyan-Gurevich MiG-21PF Fishbed (top-down render and turntable)
+
+- Author: mgg8
+- Source: <https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7>
+- License: CC0-1.0
+- Attribution: "Mikoyan-Gurevich MiG-21PF Fishbed" by mgg8 (sketchfab.com), CC0, national markings removed, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-insurgents-jet/**`
 
 ## The Free Firearm Sound Library
 

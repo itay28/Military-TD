@@ -2,6 +2,7 @@
   - heading "MISSION COMPLETE" [level=2]
   - paragraph: 3 of 3 stars
   - paragraph: "New map unlocked: Switchback"
+  - paragraph: "Difficulty: Normal"
   - heading "After-action report" [level=3]
   - paragraph: Waves survived 1 / 1
   - table "By tower":
