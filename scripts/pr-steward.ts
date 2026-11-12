@@ -102,11 +102,11 @@ export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
 export const UNKNOWN_UPDATE_MARKER = '<!-- pr-steward:unknown-update -->';
 /** How long GitHub may report mergeability as UNKNOWN before the steward acts (#487). */
 const UNKNOWN_MS = 60 * 60 * 1000;
-/** Posted next to the stuck marker when the hand-off asks for the maintainer's `/approve` (#206). */
 /** Posted when GitHub refused a merge for conflicts (#556): the next run starts a conflict round. */
 export const MERGE_CONFLICT_MARKER = '<!-- pr-steward:merge-conflict -->';
 /** Merge refusals for conflicts, with no maintainer comment between, before the steward hands off. */
 export const MERGE_CONFLICT_LIMIT = 3;
+/** Posted next to the stuck marker when the hand-off asks for the maintainer's `/approve` (#206). */
 export const APPROVAL_MARKER = '<!-- pr-steward:approval -->';
 /** A maintainer comment starting with this lets a PR that touches a critical path merge. */
 const APPROVE_COMMAND = /^\/approve\b/;

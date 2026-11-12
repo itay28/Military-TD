@@ -1652,6 +1652,8 @@ describe('merge queue', () => {
         execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
           cwd: dir,
           encoding: 'utf8',
+          // A pre-commit hook exports GIT_INDEX_FILE & co; they must not reach the scratch repo.
+          env: Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))),
         }).trim();
       const commit = (file: string, text: string) => {
         writeFileSync(join(dir, file), text);
