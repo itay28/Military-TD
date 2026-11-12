@@ -104,7 +104,7 @@ describe('the committed render data', () => {
  * v0.8.0 kinds whose renders come before the kind is in play (#360). They aren't a `SpriteKind` until their gameplay
  * issue lands (the APC: #76). A Faction has one when `render-sprite.json` lists a model of it; the rest are exempt.
  */
-const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet'];
+const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet', 'sniper'];
 
 /**
  * Kinds rendered before their gameplay (art-ahead): each Faction gets its render in its own part, and the kind joins
@@ -132,6 +132,14 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
     });
   }
 
+  it('has a Fighter jet for every Faction (#482, #484)', () => {
+    for (const faction of FACTIONS)
+      expect(
+        RENDER_CONFIG.models.some((m) => m.faction === faction && m.kind === 'jet'),
+        faction,
+      ).toBe(true);
+  });
+
   it('lists a kind as upcoming only until it is in play (then drop it from UPCOMING_KINDS)', () => {
     // A kind may be a sim kind (the Heavy tank boss, #457) with a null sprite, but has no frame until it is in play.
     for (const kind of UPCOMING_KINDS)
@@ -139,9 +147,14 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   });
 
   it('keeps the new kinds out of SPRITES until they are in play', () => {
-    // The jet is already a sprite kind, kept out of play by NOT_PLAYABLE_KINDS.
-    for (const kind of OPTIONAL_KINDS.filter((k) => !(NOT_PLAYABLE_KINDS as readonly string[]).includes(k)))
-      expect(kind in SPRITES, kind).toBe(false);
+    // The jet is already a sprite kind, kept out of play by NOT_PLAYABLE_KINDS; the Sniper by NOT_IN_PLAY.
+    for (const kind of OPTIONAL_KINDS)
+      expect(
+        kind in SPRITES &&
+          !(NOT_PLAYABLE_KINDS as readonly string[]).includes(kind) &&
+          !NOT_IN_PLAY.has(kind as TowerKind),
+        kind,
+      ).toBe(false);
   });
 });
 
@@ -179,6 +192,23 @@ describe('the US APC render (#478)', () => {
     expect(length).toBeLessThan(0.98);
     expect(maxX - minX + 1).toBeLessThan(maxY - minY + 1);
   });
+});
+
+describe('the Sniper renders (art-ahead, #358)', () => {
+  const snipers = RENDER_CONFIG.models.filter((m) => m.kind === 'sniper');
+
+  it('covers every Faction: US (#459), Russia and China (#460), Insurgents (#462)', () => {
+    expect(snipers.map((m) => m.faction).sort()).toEqual([...FACTIONS].sort());
+  });
+
+  for (const model of snipers) {
+    it(`${model.id} is a team on a dug-in base that turns about the pad centre`, () => {
+      expect(model.base, 'a base').toBeDefined();
+      expect(model.turret, 'a turret layer').toBeDefined();
+      const { json } = buildRenderMeta().find((m) => m.json.id === model.id)!;
+      expect(json.pivot).toEqual({ x: json.canvasPx / 2, y: json.canvasPx / 2 });
+    });
+  }
 });
 
 describe('the Grenade launcher renders (art-ahead, #359)', () => {
