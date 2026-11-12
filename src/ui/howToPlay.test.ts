@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ENEMY_NAMES, ENEMY_WEAKNESS, TOWER_NAMES, TOWER_ROLES } from '../data/display';
+import { ENEMY_NAMES, ENEMY_WEAKNESS, LEVEL_NAME, TERMS, TOWER_NAMES, TOWER_ROLES, formatFunds } from '../data/display';
 import { ENEMY_STATS, PLAYABLE_KINDS } from '../data/enemies';
-import { START_LIVES, START_MONEY } from '../data/start';
-import { BUILD_KINDS, SELL_REFUND, TOWER_STATS } from '../data/towers';
+import { DIFFICULTIES, DIFFICULTY, scaledReward } from '../data/difficulty';
+import { BUILD_KINDS, DISMANTLE_MS, SELL_REFUND, TOWER_STATS } from '../data/towers';
+import { TACTICAL_MAX_STARS } from '../sim/progression';
 import { mountHowToPlay } from './howToPlay';
 import { KEY_MAP } from './keymap';
 
@@ -27,40 +28,91 @@ describe('How to play screen', () => {
     expect(document.activeElement?.textContent).toBe('Back');
   });
 
-  it('has a heading for each short section, in order', () => {
+  it('has a heading for each section, in the order the player meets them', () => {
     mountHowToPlay(root, { onBack: () => {} });
     expect(headings()).toEqual([
-      'The goal',
-      'Money',
-      'Placing, upgrading and selling',
+      'Protect HQ',
+      'Placing towers',
+      TERMS.money,
+      'Upgrading and selling',
       'Ground, air and armor',
+      'Waves',
       'Towers',
       'Enemies',
       'Keys',
     ]);
   });
 
-  it('states the starting Lives and Money and the sell refund from the data', () => {
+  it.each([undefined, ...DIFFICULTIES])("uses the game's wording, never Lives, Money or exit (%s)", (difficulty) => {
+    mountHowToPlay(root, { onBack: () => {}, difficulty });
+    const text = root.textContent!;
+    expect(text).not.toMatch(/Lives|Money|exit/i);
+    for (const term of [TERMS.lives, TERMS.money, TERMS.callNextWave, TERMS.startWave]) expect(text).toContain(term);
+  });
+
+  it('from the menu, states the starting HQ and Funds for every difficulty', () => {
     mountHowToPlay(root, { onBack: () => {} });
-    expect(section('The goal').textContent).toContain(`${START_LIVES} Lives`);
-    const money = section('Money').textContent!;
-    expect(money).toContain(`${START_MONEY}`);
-    expect(money).toContain(`${Math.round(SELL_REFUND * 100)}%`);
+    const goal = section('Protect HQ').textContent!;
+    const funds = section(TERMS.money).textContent!;
+    for (const d of DIFFICULTIES) {
+      expect(goal).toContain(`${DIFFICULTY[d].startLives} on ${DIFFICULTY[d].label}`);
+      expect(funds).toContain(`${formatFunds(DIFFICULTY[d].startMoney)} on ${DIFFICULTY[d].label}`);
+    }
+  });
+
+  it.each(DIFFICULTIES)("in a game on %s, states only that difficulty's starting HQ and Funds", (difficulty) => {
+    mountHowToPlay(root, { onBack: () => {}, difficulty });
+    const { startLives, startMoney } = DIFFICULTY[difficulty];
+    expect(section('Protect HQ').textContent).toContain(`${TERMS.lives} starts at ${startLives}.`);
+    expect(section(TERMS.money).textContent).toContain(`You start with ${formatFunds(startMoney)}.`);
+    for (const d of DIFFICULTIES) expect(root.textContent).not.toContain(` on ${DIFFICULTY[d].label}`);
+  });
+
+  it('states the sell refund, the dismantle time and the upgrade levels from the data', () => {
+    mountHowToPlay(root, { onBack: () => {} });
+    const text = section('Upgrading and selling').textContent!;
+    expect(text).toContain(`${Math.round(SELL_REFUND * 100)}%`);
+    expect(text).toContain(`${DISMANTLE_MS / 1000} seconds`);
+    expect(text).toContain(LEVEL_NAME[2]);
+    expect(text).toContain(LEVEL_NAME[3]);
+    expect(section('Upgrading and selling').querySelectorAll('li')).toHaveLength(3);
+  });
+
+  it('names Call next wave, Tactical mode and its star cap', () => {
+    mountHowToPlay(root, { onBack: () => {} });
+    const text = section('Waves').textContent!;
+    expect(text).toContain(TERMS.callNextWave);
+    expect(text).toContain('Tactical mode');
+    expect(text).toContain(`at most ${TACTICAL_MAX_STARS} stars`);
   });
 
   it('lists every tower in play with its cost and role line', () => {
     mountHowToPlay(root, { onBack: () => {} });
     const items = [...section('Towers').querySelectorAll('li')].map((li) => li.textContent);
-    expect(items).toEqual(BUILD_KINDS.map((k) => `${TOWER_NAMES[k]} (${TOWER_STATS[k].cost}): ${TOWER_ROLES[k]}`));
-  });
-
-  it('lists every playable enemy (not the Jet yet) with its reward and weakness line', () => {
-    mountHowToPlay(root, { onBack: () => {} });
-    const items = [...section('Enemies').querySelectorAll('li')].map((li) => li.textContent);
     expect(items).toEqual(
-      PLAYABLE_KINDS.map((k) => `${ENEMY_NAMES[k]} (reward ${ENEMY_STATS[k].reward}): ${ENEMY_WEAKNESS[k]}`),
+      BUILD_KINDS.map((k) => `${TOWER_NAMES[k]} (${formatFunds(TOWER_STATS[k].cost)}): ${TOWER_ROLES[k]}`),
     );
   });
+
+  it.each([undefined, ...DIFFICULTIES])(
+    'lists every playable enemy with its reward, HQ cost and weakness line (%s)',
+    (difficulty) => {
+      mountHowToPlay(root, { onBack: () => {}, difficulty });
+      const items = [...section('Enemies').querySelectorAll('li')].map((li) => li.textContent);
+      const reward = (k: (typeof PLAYABLE_KINDS)[number]) => {
+        const base = ENEMY_STATS[k].reward;
+        if (difficulty) return formatFunds(scaledReward(base, difficulty));
+        const hard = scaledReward(base, 'hard');
+        return hard === base ? formatFunds(base) : `${formatFunds(base)}, ${formatFunds(hard)} on Hard`;
+      };
+      expect(items).toEqual(
+        PLAYABLE_KINDS.map(
+          (k) =>
+            `${ENEMY_NAMES[k]} (reward ${reward(k)}; ${TERMS.lives} −${ENEMY_STATS[k].leakCost}): ${ENEMY_WEAKNESS[k]}`,
+        ),
+      );
+    },
+  );
 
   it('lists every row of the key map', () => {
     mountHowToPlay(root, { onBack: () => {} });

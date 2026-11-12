@@ -8,7 +8,7 @@ import type { OpenSettings } from './settingsScreen';
 
 /** The parts of the Game the pause menu reads. */
 export interface PauseMenuGame {
-  readonly state: Pick<GameState, 'phase'>;
+  readonly state: Pick<GameState, 'phase' | 'difficulty'>;
 }
 
 export interface PauseMenuOptions {
@@ -153,7 +153,11 @@ export function mountPauseMenu(
   };
   const settings = subScreenButton('settings', 'Settings', openSettings);
   const fieldManual = subScreenButton('field-manual', 'Field manual', openFieldManual);
-  const howToPlay = subScreenButton('how-to-play', 'How to play', openHowToPlay);
+  const howToPlay = subScreenButton(
+    'how-to-play',
+    'How to play',
+    openHowToPlay && ((onBack) => openHowToPlay(onBack, game.state.difficulty)),
+  );
   // Opened from the Paused dialog, Back returns to it.
   let helpOverlay: HelpOverlay | undefined;
   const keys = makeButton('keys', 'Keys', () => showHelp(() => keys.focus()));
