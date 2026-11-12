@@ -226,6 +226,7 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-russia-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-cannon/` | "ZiS-2 57mm anti-tank gun" by sergey.s.filin, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-grenade-launcher/` | "AGS 40 Balkan" by SpinoCactus, "Tactical Soldier (game ready) low poly" by MissingTray1151, both CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-russia-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-jeep/` | "UAZ-469 Low Poly" by lebedeventerprise, CC-BY-4.0 | `scripts/render-sprite.py` |

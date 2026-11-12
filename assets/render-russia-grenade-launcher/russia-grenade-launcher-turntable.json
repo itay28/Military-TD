@@ -1,0 +1,11 @@
+{
+  "id": "russia-grenade-launcher",
+  "kind": "grenadeLauncher",
+  "faction": "russia",
+  "frames": 24,
+  "frameSize": 384,
+  "columns": 6,
+  "rows": 4,
+  "elevationDeg": 30,
+  "stepDeg": 15.0
+}
