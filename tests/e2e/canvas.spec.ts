@@ -82,15 +82,17 @@ test("a tower's shot draws a tracer from the tower's barrel tip to its target, w
 
   const fired = await stepUntilTracer(page);
   const [tower] = fired.state.towers;
-  expect(fired.view.tracers).toHaveLength(1);
-  const [tracer] = fired.view.tracers;
-  // Starts at a barrel tip: near the tile center, not at it (#340).
+  // One per barrel: the Rifle Nest's render has two riflemen (#567).
+  expect(fired.view.tracers).toHaveLength(2);
   const center = centerOf(tower!.tile);
-  expect(Math.hypot(tracer!.from.x - center.x, tracer!.from.y - center.y)).toBeLessThanOrEqual(TILE_PX);
-  expect(tracer!.alpha).toBe(1);
-  const length = Math.hypot(tracer!.to.x - tracer!.from.x, tracer!.to.y - tracer!.from.y);
-  expect(length).toBeGreaterThan(0);
-  expect(length).toBeLessThanOrEqual(tower!.range * TILE_PX);
+  for (const tracer of fired.view.tracers) {
+    // Starts at a barrel tip: near the tile center, not at it (#340).
+    expect(Math.hypot(tracer.from.x - center.x, tracer.from.y - center.y)).toBeLessThanOrEqual(TILE_PX);
+    expect(tracer.alpha).toBe(1);
+    const length = Math.hypot(tracer.to.x - tracer.from.x, tracer.to.y - tracer.from.y);
+    expect(length).toBeGreaterThan(0);
+    expect(length).toBeLessThanOrEqual(tower!.range * TILE_PX);
+  }
 
   // Cosmetic only: tracers fade on frame time, even with the game paused.
   await expect.poll(async () => (await view(page)).tracers).toEqual([]);
