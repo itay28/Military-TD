@@ -3,7 +3,7 @@
 Row 1: each kind at 48 px per tile (the game's TILE_PX), on a plain-grass crop of the NAIP patch.
 Row 2: the same at 128 px per tile (the render resolution), on grass.
 Row 3: the turret layer alone at 128 px on a neutral grey, with its pivot marked (kinds without a turret: blank).
-Art-ahead kinds (rendered before their gameplay, e.g. the Sniper, #358) get a last column when the Faction has one.
+Art-ahead kinds (rendered before their gameplay, e.g. the Sniper, #358, and the Grenade launcher, #359) get a last column when the Faction has one.
 
 Run after render-sprite.py and `npm run render:pivot` (needs Pillow in the art venv):
     .venv-art/bin/python scripts/faction-sheet.py us [--out docs/art/faction-us.png]
@@ -21,9 +21,11 @@ GAME_TILE = 48
 NAIP_GRASS_BOX = (0, 192, 128, 320)  # a plain-grass crop of the NAIP patch, in its own pixels (sprite-compare.py)
 CELL = 2.5  # tiles per cell, enough for the largest canvas (the jet's, for its offset shadow; the Gunship's is 1.75)
 KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "heavyTank", "helicopter", "gunship", "jet"]
-PENDING = {"jet"}  # kinds a faction may not have yet (#482: China and Insurgents jets come in the next part)
+PENDING = {"heavyTank"}  # kinds a faction may not have yet (the Heavy tank: US and Russia only so far; every jet is in, #484)
 # v0.8.0 kinds rendered one Faction at a time ahead of their gameplay (#360, #358): on the sheet once the Faction has one.
 NEW_KINDS = ["apc", "sniper"]
+# Kinds rendered before their gameplay (#359): a column only for a Faction that has one so far.
+ART_AHEAD_KINDS = ["grenadeLauncher"]
 
 
 def grass(px: int) -> Image.Image:
@@ -48,7 +50,7 @@ def main() -> None:
     missing = [k for k in KINDS if k not in models and k not in PENDING]
     if missing:
         raise SystemExit(f"{args.faction}: no model for {', '.join(missing)}")
-    kinds = KINDS + [k for k in NEW_KINDS if k in models]
+    kinds = KINDS + [k for k in NEW_KINDS + ART_AHEAD_KINDS if k in models]
     small, big = round(CELL * GAME_TILE), round(CELL * RENDER_TILE)
     width = len(kinds) * big
     sheet = Image.new("RGBA", (width, small + 2 * big), (40, 40, 40, 255))

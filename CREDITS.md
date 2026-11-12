@@ -106,9 +106,9 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own), prone_firing (Sniper: a shooter and an observer in a dug-in pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own; Grenade launcher: its gunner and assistant gunner), prone_firing (Sniper: a shooter and an observer in a dug-in pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
-- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-us-sniper/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`, `assets/render-russia-sniper/**`
+- Files: `assets/render-us-rifle-nest/**`, `assets/render-us-infantry/**`, `assets/render-us-grenade-launcher/**`, `assets/render-us-sniper/**`, `assets/render-russia-rifle-nest/**`, `assets/render-russia-infantry/**`, `assets/render-russia-grenade-launcher/**`, `assets/render-russia-sniper/**`
 
 ## Phalanx CIWS (top-down render and turntable)
 
@@ -136,6 +136,24 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Mortar - M224" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-us-mortar/**`
+
+## MK19 Low-Poly (top-down render)
+
+- Author: lebedeventerprise
+- Source: <https://sketchfab.com/3d-models/9965461e257f4240a86b15a784d78fb2>
+- License: CC-BY-4.0
+- Attribution: "MK19 Low-Poly" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down on a tripod with a crew, in a sandbagged pit of our own
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-grenade-launcher/**`
+
+## Machine Gun Tripod 1 (Low-Poly) (top-down render)
+
+- Author: GoldbergR
+- Source: <https://sketchfab.com/3d-models/2a5ecc14900440af8fe2b5b30dabbef0>
+- License: CC-BY-4.0
+- Attribution: "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR (sketchfab.com), CC-BY 4.0, rendered top-down under the Grenade launcher (a stand-in for the M3 tripod)
+- Downloaded: 2026-11-11
+- Files: `assets/render-us-grenade-launcher/**`
 
 ## Low Poly Humvee FREE (top-down render and turntable)
 
@@ -217,6 +235,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-mortar/**`
+
+## AGS 40 Balkan (top-down render and turntable)
+
+- Author: SpinoCactus
+- Source: <https://sketchfab.com/3d-models/85261dcf1d4e43b2b6b7db1818c7c3ae>
+- License: CC-BY-4.0
+- Attribution: "AGS 40 Balkan" by SpinoCactus (sketchfab.com), CC-BY 4.0, rendered top-down on its tripod with a crew (a stand-in for the AGS-30), in a sandbagged pit of our own, launcher split from the tripod, plus a turntable of the whole scene (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-russia-grenade-launcher/**`
 
 ## UAZ-469 Low Poly (top-down render and turntable)
 
@@ -316,6 +343,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-china-helicopter/**`
+
+## Chengdu J-10S (top-down render and turntable)
+
+- Author: MirzaArrafiERV_45
+- Source: <https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618>
+- License: CC-BY-4.0
+- Attribution: "Chengdu J-10S" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, national markings painted out, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-china-jet/**`
 
 ## Tactical Soldier (game ready) low poly (top-down render)
 
@@ -433,6 +469,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Attribution: "Hind Attack Helicopter" by AshleyAslett (sketchfab.com), CC-BY 4.0, rendered top-down
 - Downloaded: 2026-11-10
 - Files: `assets/render-insurgents-gunship/**`
+
+## Mikoyan-Gurevich MiG-21PF Fishbed (top-down render and turntable)
+
+- Author: mgg8
+- Source: <https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7>
+- License: CC0-1.0
+- Attribution: "Mikoyan-Gurevich MiG-21PF Fishbed" by mgg8 (sketchfab.com), CC0, national markings removed, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
+- Downloaded: 2026-11-11
+- Files: `assets/render-insurgents-jet/**`
 
 ## The Free Firearm Sound Library
 

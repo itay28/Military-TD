@@ -59,7 +59,7 @@
   - paragraph: MissingTray1151, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
     - /url: https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
-  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own), prone_firing (Sniper: a shooter and an observer in a dug-in pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - paragraph: "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed from its crouch_firing (Rifle Nest: two copies in a sandbagged pit of our own; Grenade launcher: its gunner and assistant gunner), prone_firing (Sniper: a shooter and an observer in a dug-in pit of our own) and walking_firing (Infantry) animations; US kit tinted toward OCP, Russia kit tinted olive (toward EMR), plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
   - heading "Phalanx CIWS (top-down render and turntable)" [level=2]
   - paragraph: Lemper_Studio, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/b811949a2ba543aab5fde70ecdf0bf6d":
@@ -75,6 +75,16 @@
   - link "https://sketchfab.com/3d-models/c86a73e40d994431bcdb57dc741cf8be":
     - /url: https://sketchfab.com/3d-models/c86a73e40d994431bcdb57dc741cf8be
   - paragraph: "\"Mortar - M224\" by jcherry3d (sketchfab.com), CC-BY 4.0, rendered top-down, set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - heading "MK19 Low-Poly (top-down render)" [level=2]
+  - paragraph: lebedeventerprise, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/9965461e257f4240a86b15a784d78fb2":
+    - /url: https://sketchfab.com/3d-models/9965461e257f4240a86b15a784d78fb2
+  - paragraph: "\"MK19 Low-Poly\" by lebedeventerprise (sketchfab.com), CC-BY 4.0, rendered top-down on a tripod with a crew, in a sandbagged pit of our own"
+  - heading "Machine Gun Tripod 1 (Low-Poly) (top-down render)" [level=2]
+  - paragraph: GoldbergR, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/2a5ecc14900440af8fe2b5b30dabbef0":
+    - /url: https://sketchfab.com/3d-models/2a5ecc14900440af8fe2b5b30dabbef0
+  - paragraph: "\"Machine Gun Tripod 1 (Low-Poly)\" by GoldbergR (sketchfab.com), CC-BY 4.0, rendered top-down under the Grenade launcher (a stand-in for the M3 tripod)"
   - heading "Low Poly Humvee FREE (top-down render and turntable)" [level=2]
   - paragraph: madtrollstudio, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/c0e2ddcc4ccf4d49a9303303a6307bcf":
@@ -120,6 +130,11 @@
   - link "https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb":
     - /url: https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb
   - paragraph: "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - heading "AGS 40 Balkan (top-down render and turntable)" [level=2]
+  - paragraph: SpinoCactus, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/85261dcf1d4e43b2b6b7db1818c7c3ae":
+    - /url: https://sketchfab.com/3d-models/85261dcf1d4e43b2b6b7db1818c7c3ae
+  - paragraph: "\"AGS 40 Balkan\" by SpinoCactus (sketchfab.com), CC-BY 4.0, rendered top-down on its tripod with a crew (a stand-in for the AGS-30), in a sandbagged pit of our own, launcher split from the tripod, plus a turntable of the whole scene (24 views from 30 degrees up) for the Field manual"
   - heading "UAZ-469 Low Poly (top-down render and turntable)" [level=2]
   - paragraph: lebedeventerprise, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/77bdfa6804334b2794e65654e9dd8f3a":
@@ -175,6 +190,11 @@
   - link "https://sketchfab.com/3d-models/12b4e525676a49678ac3006b360c8750":
     - /url: https://sketchfab.com/3d-models/12b4e525676a49678ac3006b360c8750
   - paragraph: "\"Sikorsky UH-60M Blackhawk\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
+  - heading "Chengdu J-10S (top-down render and turntable)" [level=2]
+  - paragraph: MirzaArrafiERV_45, CC-BY-4.0
+  - link "https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618":
+    - /url: https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618
+  - paragraph: "\"Chengdu J-10S\" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, national markings painted out, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
   - heading "Tactical Soldier (game ready) low poly (top-down render)" [level=2]
   - paragraph: MissingTray1151, CC-BY-4.0
   - link "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a":
@@ -240,6 +260,11 @@
   - link "https://sketchfab.com/3d-models/bb65bdfde2c54007a52dfbe1d91d930d":
     - /url: https://sketchfab.com/3d-models/bb65bdfde2c54007a52dfbe1d91d930d
   - paragraph: "\"Hind Attack Helicopter\" by AshleyAslett (sketchfab.com), CC-BY 4.0, rendered top-down"
+  - heading "Mikoyan-Gurevich MiG-21PF Fishbed (top-down render and turntable)" [level=2]
+  - paragraph: mgg8, CC0-1.0
+  - link "https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7":
+    - /url: https://sketchfab.com/3d-models/e23e79075b9e41c3badd18bf43dc15c7
+  - paragraph: "\"Mikoyan-Gurevich MiG-21PF Fishbed\" by mgg8 (sketchfab.com), CC0, national markings removed, rendered top-down in flight, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual"
   - heading "The Free Firearm Sound Library" [level=2]
   - paragraph: Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney, CC0-1.0
   - link "https://opengameart.org/content/the-free-firearm-sound-library":
