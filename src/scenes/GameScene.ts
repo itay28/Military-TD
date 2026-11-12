@@ -26,12 +26,20 @@ import type { AudioMix } from '../audio/volume';
 import { createWhistleTracker } from '../audio/whistle';
 import { DEMO_SCRIPTS, type DemoScript } from '../data/demo';
 import { RADIO_CUE_MS, SOUND_FALLOFF, SOUND_THROTTLE, SOUND_THROTTLE_BY_ID, WHISTLE_LEAD_MS } from '../data/sounds';
-import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
+import {
+  DRAWN_KINDS,
+  RENDER_FACING,
+  factionFor,
+  isTurretRender,
+  renderFor,
+  renderTextures,
+  type RenderedSprite,
+} from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import type { Difficulty } from '../data/difficulty';
-import { groundTextureKey, MAPS, mapById } from '../data/maps';
+import { groundTextureKey, MAPS, mapById, type MapEntry } from '../data/maps';
 import type { Faction } from '../sim/factions';
 import type { Enemy } from '../sim/enemies';
 import { isGameOver, TICK_MS, type Game } from '../sim/game';
@@ -467,10 +475,16 @@ export class GameScene extends Phaser.Scene {
 
   /** The render `kind` is drawn with, or null for Kenney: it has none, or its textures didn't load. */
   private renderOf(kind: SpriteKind): RenderedSprite | null {
-    const render = renderFor(kind);
-    if (render === null || !this.textures.exists(render.hullKey) || !this.textures.exists(render.turretKey))
-      return null;
+    if (!DRAWN_KINDS.has(kind)) return null;
+    const render = renderFor(kind, factionFor(kind, this.sides()));
+    if (render === null || !isTurretRender(render)) return null;
+    if (!this.textures.exists(render.hullKey) || !this.textures.exists(render.turretKey)) return null;
     return render;
+  }
+
+  /** The Factions of the map actually played (a loaded scenario's own map included), else the selected map's. */
+  private sides(): MapEntry {
+    return MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId);
   }
 
   /** A sprite of `kind` and a Graphics over it on `layer`, both at `at`; no sprite when `kind` has no frame. */
@@ -635,8 +649,7 @@ export class GameScene extends Phaser.Scene {
     const audio = radio ?? silentAudio;
     if (radio) this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => radio.dispose());
     // The map actually played (a loaded scenario's own map included); one outside the registry falls back to the selected map.
-    const defenderOf = (): Faction =>
-      (MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId)).defender;
+    const defenderOf = (): Faction => this.sides().defender;
     const play = (event: SoundEvent, at?: Position): void => {
       const id = soundFor(event, defenderOf());
       if (id === null) return;
@@ -665,6 +678,12 @@ export class GameScene extends Phaser.Scene {
       const { shells, timeMs } = this.sim.state;
       for (const shell of whistles.due(shells, timeMs)) play({ type: 'shellIncoming' }, shell.target);
     };
+  }
+
+  /** Loads the renders of this map's two sets that the Boot scene didn't (it loads the Training Ground pair). */
+  preload(): void {
+    for (const { key, url } of renderTextures(mapById(this.mapId)))
+      if (!this.textures.exists(key)) this.load.image(key, url);
   }
 
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
@@ -872,7 +891,10 @@ export class GameScene extends Phaser.Scene {
     this.buildBar = mountBuildBar(
       this.buildBarRoot,
       this.sim,
-      buildOptions((render) => this.textures.exists(render.hullKey) && this.textures.exists(render.turretKey)),
+      buildOptions(
+        (render) => this.textures.exists(render.hullKey) && this.textures.exists(render.turretKey),
+        this.sides().defender,
+      ),
       {
         onSelect: () => {
           this.towerPanel.select(undefined);
