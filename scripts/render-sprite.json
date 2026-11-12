@@ -491,6 +491,18 @@
       "canvasTiles": 1.0
     },
     {
+      "id": "russia-apc",
+      "kind": "apc",
+      "faction": "russia",
+      "depicts": "BTR-82A 8x8 armored personnel carrier",
+      "sketchfab": "cd1ba0c1f16f42aaac45234ced318605",
+      "author": "lebedeventerprise",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25
+    },
+    {
       "id": "us-apc",
       "kind": "apc",
       "faction": "us",
