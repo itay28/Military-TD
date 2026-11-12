@@ -127,6 +127,63 @@
       }
     },
     {
+      "id": "us-sniper",
+      "kind": "sniper",
+      "faction": "us",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer (stand-in kit and rifle for the M107 / M2010 team in OCP)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [1.25, 1.15, 0.85]
+          },
+          "material_6": {
+            "color": [1.25, 1.15, 0.85]
+          },
+          "material": {
+            "color": [1.4, 1.15, 0.9]
+          },
+          "Glove": {
+            "color": [1.3, 1.1, 0.85]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "us-aa-gun",
       "kind": "aaGun",
       "faction": "us",
@@ -411,6 +468,63 @@
       }
     },
     {
+      "id": "russia-sniper",
+      "kind": "sniper",
+      "faction": "russia",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, uniforms re-coloured olive (stand-in kit and rifle for the ORSIS T-5000 / ASVK team in EMR)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material_6": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "Glove": {
+            "color": [0.6, 0.62, 0.5]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "russia-aa-gun",
       "kind": "aaGun",
       "faction": "russia",
@@ -590,6 +704,63 @@
         {
           "x": 0.19,
           "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material_6": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "Glove": {
+            "color": [0.5, 0.55, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
+      "id": "china-sniper",
+      "kind": "sniper",
+      "faction": "china",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, uniforms re-coloured green (stand-in kit and rifle for the QBU-10 team in Type 07)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
         }
       ],
       "base": {
@@ -936,6 +1107,63 @@
       }
     },
     {
+      "id": "insurgents-sniper",
+      "kind": "sniper",
+      "faction": "insurgents",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, kit re-coloured to civilian browns and denim (stand-in kit and rifle for a Dragunov SVD pair in civilian clothes)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.68, 0.95]
+          },
+          "material_6": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "material": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "Glove": {
+            "color": [0.75, 0.6, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "insurgents-jeep",
       "kind": "jeep",
       "faction": "insurgents",
@@ -989,6 +1217,57 @@
       "frontAxis": "-y",
       "lengthTiles": 1.3,
       "canvasTiles": 1.5
+    },
+    {
+      "id": "us-gunship",
+      "kind": "gunship",
+      "faction": "us",
+      "depicts": "AH-64D Apache",
+      "sketchfab": "c3b58008c46b45048fdd7dd283a3c8c8",
+      "author": "MirzaArrafiERV_45",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 1.4,
+      "canvasTiles": 1.75
+    },
+    {
+      "id": "russia-gunship",
+      "kind": "gunship",
+      "faction": "russia",
+      "depicts": "Mi-28N",
+      "sketchfab": "3e80c95bbadf46abbafba9d9a08afc68",
+      "author": "rukh3d",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.4,
+      "canvasTiles": 1.75
+    },
+    {
+      "id": "china-gunship",
+      "kind": "gunship",
+      "faction": "china",
+      "depicts": "Tiger attack helicopter, re-coloured PLA green (stand-in for the Z-10, a slim tandem gunship of the same class)",
+      "sketchfab": "a8ae9b61995a49a1a2fa2de57e8ce4ef",
+      "author": "MirzaArrafiERV_45",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.4,
+      "canvasTiles": 1.75,
+      "tint": {
+        "color": [0.5, 0.66, 0.36]
+      }
+    },
+    {
+      "id": "insurgents-gunship",
+      "kind": "gunship",
+      "faction": "insurgents",
+      "depicts": "Mi-24D (the captured Mi-24)",
+      "sketchfab": "bb65bdfde2c54007a52dfbe1d91d930d",
+      "author": "AshleyAslett",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.4,
+      "canvasTiles": 1.75
     }
   ],
   "alphaFloor": 0.06
