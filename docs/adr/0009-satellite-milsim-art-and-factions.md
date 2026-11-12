@@ -53,6 +53,8 @@ Updated 2026-11-11 (#467): the Russia Grenade launcher is an AGS-40 Balkan on it
 
 Updated 2026-11-11 (#468): the China Grenade launcher is the QLZ-87 itself, on the US render's stand-in tripod (the model has no mount), with the China Rifle Nest's soldier as gunner and assistant.
 
+Updated 2026-11-11 (#469): the Insurgents Grenade launcher is the AGS-17 itself on its own tripod (a captured Soviet weapon), with the Insurgents Rifle Nest's soldier as gunner and assistant. All four Factions now have the kind's render.
+
 Picks match the stats: the Jeep has no armor (so no armored Humvee or Tigr), the Helicopter has light armor (a transport, not an Apache or Hind), and the AA Gun is a fast-firing gun that also hits ground targets.
 
 ## Consequences

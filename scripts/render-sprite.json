@@ -1502,6 +1502,109 @@
       }
     },
     {
+      "id": "insurgents-grenade-launcher",
+      "kind": "grenadeLauncher",
+      "faction": "insurgents",
+      "depicts": "AGS-17 Plamya 30 mm automatic grenade launcher on its tripod (a captured Soviet weapon), gunner and assistant gunner in civilian browns and denim, in a sandbagged pit",
+      "sketchfab": "c1d507d1b4dc40ef91809ee64dc9dd5b",
+      "author": "Jeyhun1985",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 0.64,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": ["Ensamble general del tripode AGS17:1"]
+      },
+      "parts": [
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.0,
+              "y": -0.16
+            }
+          ],
+          "turret": true,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.62, 0.68, 0.95]
+              },
+              "material_6": {
+                "color": [1.15, 0.95, 0.7]
+              },
+              "material": {
+                "color": [1.15, 0.95, 0.7]
+              },
+              "Glove": {
+                "color": [0.75, 0.6, 0.45]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.22,
+              "y": -0.02,
+              "turnDeg": 15
+            }
+          ],
+          "turret": false,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.62, 0.68, 0.95]
+              },
+              "material_6": {
+                "color": [1.15, 0.95, 0.7]
+              },
+              "material": {
+                "color": [1.15, 0.95, 0.7]
+              },
+              "Glove": {
+                "color": [0.75, 0.6, 0.45]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        }
+      ],
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "insurgents-infantry",
       "kind": "infantry",
       "faction": "insurgents",

@@ -264,8 +264,8 @@ describe('the Sniper renders (art-ahead, #358)', () => {
 describe('the Grenade launcher renders (art-ahead, #359)', () => {
   const launchers = RENDER_CONFIG.models.filter((m) => m.kind === 'grenadeLauncher');
 
-  it('covers the Factions done so far: US (#464)', () => {
-    expect(launchers.map((m) => m.faction)).toEqual(expect.arrayContaining(['us']));
+  it('covers every Faction, one each (#464, #467, #468, #469)', () => {
+    expect(launchers.map((m) => m.faction).sort()).toEqual([...FACTIONS].sort());
   });
 
   for (const model of launchers) {
