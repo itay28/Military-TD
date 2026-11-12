@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from './firstMap';
 import { START_LIVES, START_MONEY } from '../../src/data/start';
 import { SWITCHBACK_WAVES } from '../../src/data/waves';
-import { openLevelSelect, state } from './helpers';
+import { openGame, openLevelSelect, state, stepToEnd } from './helpers';
 
 // From #51: Main menu → Play → Level select → Game on the chosen map; Back returns to the Main menu.
 
@@ -28,6 +28,7 @@ test('with fresh progress only the first map can be picked, with no stars yet; e
 });
 
 test('with ?unlock=all every map can be picked', async ({ page }) => {
+  // Hard on each too (#466): nothing on the screen is aria-disabled.
   await openLevelSelect(page, { unlockAll: true });
   for (const map of [FIRST_MAP, SECOND_MAP, THIRD_MAP, FOURTH_MAP]) {
     await expect(page.getByRole('button', { name: `${map.name}, no stars yet` })).not.toHaveAttribute('aria-disabled');
@@ -94,7 +95,7 @@ test('picking a map and pressing Deploy on its briefing starts a new game on it,
 
 test('the Level select lists every map in registry order', async ({ page }) => {
   await openLevelSelect(page);
-  await expect(page.locator('#level-select li button')).toHaveText([
+  await expect(page.locator('#level-select li button.map')).toHaveText([
     ...[first, SECOND_MAP, THIRD_MAP, FOURTH_MAP].map(({ name }) => new RegExp(`^${name}`)),
   ]);
 });
@@ -137,4 +138,41 @@ test('on a phone the briefing fits the width and Deploy is on screen (#401)', as
   expect(box!.x + box!.width).toBeLessThanOrEqual(360);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   await expect(briefing.getByRole('button', { name: 'Deploy', exact: true })).toBeInViewport();
+});
+
+test('winning a map on Normal unlocks Hard on it, while Hard on the next map stays locked (#466)', async ({ page }) => {
+  await openGame(page, { persist: true });
+  // The test-mode fast path: one Infantry leaks on the MVP map, Victory with 2 stars.
+  await page.evaluate(() => window.__TD__!.loadScenario('single-infantry-leaks'));
+  await page.evaluate(() => window.__TD__!.command({ type: 'callNextWave' }));
+  expect((await stepToEnd(page)).phase).toBe('victory');
+
+  // Back to the Level select with the saved progress.
+  await page.goto('/?test=1&menu=1&step=manual&anim=0&persist=1');
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
+  const hard = page.getByRole('button', { name: `${first.name}, Hard, no stars yet` });
+  await expect(hard).toHaveText('Hard ☆☆☆');
+  await expect(hard).not.toHaveAttribute('aria-disabled');
+  await expect(
+    page.getByRole('button', { name: `${SECOND_MAP.name}, Hard, locked. Win ${SECOND_MAP.name} on Normal to unlock` }),
+  ).toHaveAttribute('aria-disabled', 'true');
+
+  // Hard opens the same briefing; its Deploy starts the game on Hard.
+  await hard.click();
+  await page.getByRole('button', { name: 'Deploy', exact: true }).click();
+  await page.waitForFunction(() => window.__TD__ !== undefined);
+  await expect(page.getByTestId('hud-difficulty')).toHaveText('Hard');
+  expect(await state(page)).toMatchObject({ mapId: first.id, difficulty: 'hard' });
+});
+
+test('with fresh progress the first map’s Hard is locked and says what unlocks it (#466)', async ({ page }) => {
+  await openLevelSelect(page);
+  const locked = page.getByRole('button', {
+    name: `${first.name}, Hard, locked. Win ${first.name} on Normal to unlock`,
+  });
+  await expect(locked).toHaveText('🔒 Hard');
+  await expect(locked).toHaveAttribute('aria-disabled', 'true');
+  // Playwright won't click an aria-disabled button on its own; a player's tap still reaches it and does nothing.
+  await locked.click({ force: true });
+  await expect(page.getByTestId('briefing')).toBeHidden();
 });
