@@ -21,10 +21,11 @@ import { MENU_CLIP_MIX } from './mix';
 
 // Records the menu clip (#568): the real game with ?clip=1 steps it a video frame at a time, each frame is
 // screenshotted straight into ffmpeg, and the muffled battle track is mixed from the scene's own sound events. Writes
-// the videos and still to assets/menu-clip/, and the evidence (first and last frames, the track) to test-results/.
+// the videos and still to assets/menu-clip/, and the evidence (first and last frames, the track) to menu-clip-evidence/.
 
 const OUT = 'assets/menu-clip';
-const EVIDENCE = 'test-results/menu-clip';
+// Not test-results/: Playwright empties that at the start of every run, e2e included.
+const EVIDENCE = 'menu-clip-evidence';
 const RATE = 48_000;
 const BUDGET_BYTES = 3.2 * 1024 * 1024;
 
