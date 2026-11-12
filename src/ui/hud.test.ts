@@ -595,4 +595,56 @@ describe('boss HP bar', () => {
     hud.update();
     expect(bar().textContent).toContain('900/1500');
   });
+
+  describe('with the Gunship', () => {
+    it('shows "Gunship" and its full HP, as a meter', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      game.spawnEnemy('gunship');
+      hud.update();
+      expect(bar().hidden).toBe(false);
+      expect(bar().textContent).toContain('Gunship');
+      expect(bar().textContent).toContain('1200/1200');
+      expect(fill().style.width).toBe('100%');
+      expect(meter().getAttribute('aria-valuetext')).toBe('Gunship 1200 of 1200 HP');
+    });
+
+    it('drops its HP after damage', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      const id = game.spawnEnemy('gunship');
+      hud.update();
+      setHp(game, id, 300);
+      hud.update();
+      expect(bar().textContent).toContain('300/1200');
+      expect(fill().style.width).toBe('25%');
+    });
+
+    it('hides again once the Gunship leaks', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      game.spawnEnemy('gunship');
+      hud.update();
+      // 0.8 tiles/s down a 6-tile Path: it leaks after 7.5 s.
+      game.tick(8000);
+      hud.update();
+      expect(game.state.enemies).toHaveLength(0);
+      expect(bar().hidden).toBe(true);
+    });
+
+    it('hides again once the Gunship dies', () => {
+      const game = newGame();
+      const hud = mountHud(root, game, fakeSpeed());
+      expect(game.placeTower('aaGun', { col: 1, row: 0 })).toMatchObject({ ok: true });
+      const id = game.spawnEnemy('gunship');
+      setHp(game, id, 1);
+      hud.update();
+      expect(bar().hidden).toBe(false);
+      game.tick(1000);
+      hud.update();
+      expect(game.state.enemies).toHaveLength(0);
+      expect(game.state.lives).toBe(20);
+      expect(bar().hidden).toBe(true);
+    });
+  });
 });
