@@ -237,11 +237,13 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-china-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-grenade-launcher/` | "QLZ-87 (Type 87)" by goncalveskauan055l, "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR, "Tactical Soldier (game ready) low poly" by MissingTray1151, all CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-china-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-jeep/` | "Military Jeep Low Poly – Game Ready 3D Vehicle" by KidBi-Gaming, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-tank/` | "Type 99 MBT" by philano, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-helicopter/` | "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-grenade-launcher/` | "AGS-17 Plamya FBX" by Jeyhun1985, "Tactical Soldier (game ready) low poly" by MissingTray1151, both CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-insurgents-cannon/` | "SPG-9" by Jack512kb, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |

@@ -195,9 +195,9 @@
       "author": "GoldbergR",
       "source": "https://sketchfab.com/3d-models/2a5ecc14900440af8fe2b5b30dabbef0",
       "license": "CC-BY-4.0",
-      "attribution": "\"Machine Gun Tripod 1 (Low-Poly)\" by GoldbergR (sketchfab.com), CC-BY 4.0, rendered top-down under the Grenade launcher (a stand-in for the M3 tripod)",
+      "attribution": "\"Machine Gun Tripod 1 (Low-Poly)\" by GoldbergR (sketchfab.com), CC-BY 4.0, rendered top-down under the Grenade launcher (US: a stand-in for the M3 tripod; China: for the QLZ-87's own heavy mount), and in those renders' turntables (24 views from 30 degrees up) for the Field manual",
       "downloaded": "2026-11-11",
-      "files": ["assets/render-us-grenade-launcher/**"]
+      "files": ["assets/render-us-grenade-launcher/**", "assets/render-china-grenade-launcher/**"]
     },
     {
       "id": "render-us-jeep",
@@ -345,9 +345,9 @@
       "author": "MissingTray1151",
       "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
       "license": "CC-BY-4.0",
-      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit tinted green (toward Type 07), two copies set in a sandbagged pit of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual; also the Grenade launcher's gunner and assistant gunner, crouched beside it, also in its turntable",
       "downloaded": "2026-11-02",
-      "files": ["assets/render-china-rifle-nest/**"]
+      "files": ["assets/render-china-rifle-nest/**", "assets/render-china-grenade-launcher/**"]
     },
     {
       "id": "render-china-sniper",
@@ -378,6 +378,16 @@
       "attribution": "\"Pindad Mortars\" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
       "downloaded": "2026-11-02",
       "files": ["assets/render-china-mortar/**"]
+    },
+    {
+      "id": "render-china-grenade-launcher",
+      "name": "QLZ-87 (Type 87) (top-down render and turntable)",
+      "author": "goncalveskauan055l",
+      "source": "https://sketchfab.com/3d-models/56a2e9531c5a432f8e833bfd62c6a7ea",
+      "license": "CC-BY-4.0",
+      "attribution": "\"QLZ-87 (Type 87)\" by goncalveskauan055l (sketchfab.com), CC-BY 4.0, rendered top-down on a tripod with a crew, in a sandbagged pit of our own, its see-through export made opaque and painted dark grey, plus a turntable of the whole scene (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-china-grenade-launcher/**"]
     },
     {
       "id": "render-china-infantry",
@@ -430,14 +440,24 @@
       "files": ["assets/render-china-jet/**"]
     },
     {
+      "id": "render-insurgents-grenade-launcher",
+      "name": "AGS-17 Plamya FBX (top-down render and turntable)",
+      "author": "Jeyhun1985",
+      "source": "https://sketchfab.com/3d-models/c1d507d1b4dc40ef91809ee64dc9dd5b",
+      "license": "CC-BY-4.0",
+      "attribution": "\"AGS-17 Plamya FBX\" by Jeyhun1985 (sketchfab.com), CC-BY 4.0, rendered top-down on its tripod with a crew, in a sandbagged pit of our own, launcher split from the tripod, plus a turntable of the whole scene (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-insurgents-grenade-launcher/**"]
+    },
+    {
       "id": "render-insurgents-rifle-nest",
       "name": "Tactical Soldier (game ready) low poly (top-down render)",
       "author": "MissingTray1151",
       "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
       "license": "CC-BY-4.0",
-      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit re-coloured to civilian browns and denim, two copies set in a sandbagged pit of our own",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit re-coloured to civilian browns and denim, two copies set in a sandbagged pit of our own; also the Grenade launcher's gunner and assistant gunner, crouched beside it",
       "downloaded": "2026-11-02",
-      "files": ["assets/render-insurgents-rifle-nest/**"]
+      "files": ["assets/render-insurgents-rifle-nest/**", "assets/render-insurgents-grenade-launcher/**"]
     },
     {
       "id": "render-insurgents-cannon",
