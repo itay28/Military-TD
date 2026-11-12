@@ -48,6 +48,7 @@ export const RESTART_HINT = 'Reply `/retry` to try again, or `/split` to split i
 export const SPLIT_LABEL = 'needs-split';
 /** On the issues the split agent made: one whose retry dies too goes to the maintainer, not split again. */
 export const SPLIT_PART_LABEL = 'split-part';
+/** Hidden in the comment auto-start posts when it hands a ready XL issue to the split agent (#560). */
 /** Left by Board sync when it dispatches *Size issue* for an issue, so it does that once (#225). */
 export const SIZE_REQUESTED_MARKER = '<!-- size-issue:requested -->';
 /** At most this many *Size issue* dispatches per Board sync run (#225). */
@@ -82,6 +83,8 @@ export interface StartIssue {
   /** Feature work (isFeatureWork): not started during the feature freeze (#84). */
   readonly feature: boolean;
   readonly size: string | undefined;
+  /** Has a `size:*` label (Board sync copies and removes it); without one, a Size came from the board alone (#560). */
+  readonly sizeLabelled?: boolean;
   readonly priority: string | undefined;
   readonly milestone: number | null;
   /** The issues blocking it that are still open. */
@@ -106,6 +109,16 @@ export interface StartPlan {
   readonly starts: Start[];
   /** Startable but for a missing Size: they get a one-time comment instead. */
   readonly noSize: number[];
+  /** Startable but sized XL: labelled `needs-split` for the split agent instead (#560). */
+  readonly split: number[];
+  /** Every other in-scope `ready-for-agent` issue not started, with why (#560). */
+  readonly skips: Skip[];
+}
+
+/** An issue auto-start didn't start this run, and why (#560). */
+export interface Skip {
+  readonly issue: number;
+  readonly reason: string;
 }
 
 export interface StartOptions {
@@ -160,6 +173,9 @@ export function stackBase(blockedBy: readonly number[], prs: readonly OpenPr[], 
  * Look-ahead may fill at most `cap − 1` slots (at least 1, so `cap` 1 isn't starved), counting
  * look-ahead issues already running; the current milestone and infra can use every slot. With
  * `freeze` on (the feature freeze, #84), feature work doesn't start.
+ * A startable issue sized XL goes to `split` instead (the split agent, #560), using no slot. Every
+ * other `ready-for-agent` issue in scope (current and next milestone, infra, game work with no
+ * milestone) that isn't started or split gets one line in `skips` saying why (#560).
  */
 export function planStarts(
   issues: readonly StartIssue[],
@@ -170,48 +186,110 @@ export function planStarts(
   const running = issues.filter((i) => isRunning(i));
   const slots = Math.max(0, cap - running.length);
   const lookRunning = running.filter((i) => order[1] !== undefined && i.milestone === order[1]).length;
-  let lookSlots = Math.max(0, Math.max(1, cap - 1) - lookRunning);
+  const lookCap = Math.max(1, cap - 1);
+  let lookSlots = Math.max(0, lookCap - lookRunning);
+  // Why an in-scope issue can't start at all, before its blockers and Size are looked at.
+  const notEligible = (i: StartIssue): string | undefined => {
+    const parked = (
+      [
+        [i.hold, HOLD_LABEL],
+        [i.needsInfo, NEEDS_INFO_LABEL],
+        [i.needsYou, NEEDS_YOU_LABEL],
+        [i.needsSplit, SPLIT_LABEL],
+      ] as const
+    ).flatMap(([on, label]) => (on ? [`\`${label}\``] : []));
+    if (parked.length) return `parked (${parked.join(', ')})`;
+    if (i.assigned) return 'assigned';
+    const open = prs.find((pr) => pr.issues.includes(i.number));
+    if (open) return `open PR (${open.head})`;
+    if (!(i.status === undefined || i.status === 'Backlog' || i.status === 'Ready')) return `card is ${i.status}`;
+    if (freeze && i.feature) return 'feature freeze';
+    return undefined;
+  };
   const candidates = (inScope: (i: StartIssue) => boolean) => {
     const starts: { issue: StartIssue; start: Start }[] = [];
     const noSize: number[] = [];
-    const eligible = issues.filter(
-      (i) =>
-        inScope(i) &&
-        (i.status === undefined || i.status === 'Backlog' || i.status === 'Ready') &&
-        !i.assigned &&
-        !i.tracker &&
-        i.labelled &&
-        !i.hold &&
-        !i.needsYou &&
-        !(freeze && i.feature) &&
-        !prs.some((pr) => pr.issues.includes(i.number)),
-    );
-    for (const i of eligible) {
+    const split: number[] = [];
+    const skips: Skip[] = [];
+    for (const i of issues.filter((i) => inScope(i) && i.labelled && !i.tracker)) {
+      const skip = (reason: string) => skips.push({ issue: i.number, reason });
+      const why = notEligible(i);
+      if (why) {
+        skip(why);
+        continue;
+      }
       const base = i.blockedBy.length && !stack ? null : stackBase(i.blockedBy, prs, defaultBranch);
-      if (base === null) continue;
-      if (i.size === undefined) noSize.push(i.number);
-      else if (MODEL_BY_SIZE[i.size])
-        starts.push({ issue: i, start: { issue: i.number, base, model: MODEL_BY_SIZE[i.size]! } });
+      const model = i.size === undefined ? undefined : MODEL_BY_SIZE[i.size];
+      if (base === null)
+        skip(`blocked by ${i.blockedBy.map((b) => `#${b}`).join(', ')}${stack ? ' (not stackable)' : ''}`);
+      else if (i.size === undefined) {
+        noSize.push(i.number);
+        skip('no Size');
+      } else if (i.size === 'XL') split.push(i.number);
+      else if (!model) skip(`Size ${i.size} is not XS–L`);
+      else starts.push({ issue: i, start: { issue: i.number, base, model } });
     }
-    return { starts, noSize };
+    return { starts, noSize, split, skips };
   };
   const inMilestone = (milestone: number | undefined) => (i: StartIssue) =>
     milestone !== undefined && i.milestone === milestone;
   const infra = candidates((i) => i.infra && i.milestone === null);
   const current = candidates(inMilestone(order[0]));
+  const next = candidates(inMilestone(order[1]));
   const lookingAhead = !current.starts.length;
-  const plan = lookingAhead ? candidates(inMilestone(order[1])) : current;
-  const starts = [...infra.starts, ...plan.starts]
-    .sort((a, b) => rank(a.issue.priority) - rank(b.issue.priority) || a.issue.number - b.issue.number)
-    .filter((s) => {
-      if (!lookingAhead || s.issue.milestone === null) return true;
-      return lookSlots-- > 0;
-    })
-    .map((s) => s.start);
+  const skips: Skip[] = [...infra.skips, ...current.skips, ...next.skips];
+  for (const i of issues)
+    if (i.milestone === null && !i.infra && i.labelled && !i.tracker)
+      skips.push({ issue: i.number, reason: 'game work with no milestone' });
+  const later = 'not in scope (later milestone; the current one has work)';
+  if (!lookingAhead)
+    for (const n of [...next.starts.map((s) => s.issue.number), ...next.split]) skips.push({ issue: n, reason: later });
+  const plan = lookingAhead ? next : current;
+  const ranked = [...infra.starts, ...plan.starts].sort(
+    (a, b) => rank(a.issue.priority) - rank(b.issue.priority) || a.issue.number - b.issue.number,
+  );
+  const starts: Start[] = [];
+  for (const s of ranked) {
+    if (lookingAhead && s.issue.milestone !== null && lookSlots-- <= 0)
+      skips.push({ issue: s.issue.number, reason: `no slot (look-ahead cap ${lookCap})` });
+    else if (starts.length >= slots) skips.push({ issue: s.issue.number, reason: `no slot (cap ${cap})` });
+    else starts.push(s.start);
+  }
   return {
-    starts: starts.slice(0, slots),
-    noSize: [...new Set([...infra.noSize, ...current.noSize, ...plan.noSize])],
+    starts,
+    noSize: [...new Set([...infra.noSize, ...current.noSize, ...(lookingAhead ? next.noSize : [])])],
+    split: [...new Set([...infra.split, ...current.split, ...(lookingAhead ? next.split : [])])],
+    skips: skips.sort((a, b) => a.issue - b.issue),
   };
+}
+
+/**
+ * The run-log line for a skipped issue (#560). A board Size with no `size:` label is named, so a
+ * Size set on the board alone can be seen from the issue's side.
+ */
+export function skipLine(skip: Skip, issue?: Pick<StartIssue, 'size' | 'sizeLabelled'>): string {
+  return `#${skip.issue}: not started: ${skip.reason}${sizeNote(issue)}`;
+}
+
+const sizeNote = (issue?: Pick<StartIssue, 'size' | 'sizeLabelled'>) =>
+  issue?.size !== undefined && !issue.sizeLabelled ? ` (board Size ${issue.size}, no \`size:\` label)` : '';
+
+/** The run-log line for an XL issue handed to the split agent (#560). */
+export const splitLine = (issue: number, info?: Pick<StartIssue, 'size' | 'sizeLabelled'>) =>
+  `#${issue}: Size XL, asking the split agent${sizeNote(info)}`;
+
+/**
+ * Hand a ready XL issue to the split agent (#560): `needs-split`, then a comment saying why (with
+ * PROJECT_TOKEN, so .github/workflows/split-issue.yml runs). It waits parked; its parts start normally.
+ */
+export async function requestSplit(issue: number, token: string, fetchFn: Fetch = fetch): Promise<void> {
+  // Label first: it keeps the issue out of the next run, so a failed comment can't post twice.
+  await github(fetchFn, token, 'POST', `issues/${issue}/labels`, { labels: [SPLIT_LABEL] });
+  await github(fetchFn, token, 'POST', `issues/${issue}/comments`, {
+    body:
+      `Auto-start doesn't start Size XL issues: they're too big for one session. It asked the split agent ` +
+      `to split this one into smaller issues (\`${SPLIT_LABEL}\`, docs/agents/prompts/split.md).`,
+  });
 }
 
 /**
