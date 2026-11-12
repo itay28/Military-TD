@@ -89,3 +89,10 @@ export function walkEnemies(
   }
   return { walking, leaked };
 }
+
+/** The boss the HUD boss bar shows: the one nearest the HQ (furthest along the Path), or none on the field. */
+export function leadBoss(enemies: readonly Enemy[]): Enemy | undefined {
+  let lead: Enemy | undefined;
+  for (const enemy of enemies) if (enemy.boss && (!lead || enemy.distance > lead.distance)) lead = enemy;
+  return lead;
+}
