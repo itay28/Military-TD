@@ -205,7 +205,7 @@ python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow rast
 
 Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 5.1+), and don't upgrade `bpy` without re-rendering every set. Cloud sessions get the venv from the environment's setup script.
 
-**Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US models have them so far; `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
+**Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US (the Sniper too), Russia and China models have them so far; `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
 
 | Folder | Source | Made by |
 | --- | --- | --- |
@@ -215,29 +215,41 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-us-aa-gun/` | "Phalanx CIWS" by Lemper_Studio, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-mortar/` | "Mortar - M224" by jcherry3d, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-grenade-launcher/` | "MK19 Low-Poly" by lebedeventerprise, "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR, "Tactical Soldier (game ready) low poly" by MissingTray1151, all CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-us-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-jeep/` | "Low Poly Humvee FREE" by madtrollstudio, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-tank/` | "M1A2 Abrams Crows" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-helicopter/` | "Sikorsky UH-60 Black Hawk" by helijah, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-us-apc/` | "M113" by arc4de, CC-BY-4.0 (the APC, #478: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
+| `render-china-apc/` | "ZSL-92C" by 42manako, CC-BY-4.0 (the APC for China, #481: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
+| `render-insurgents-apc/` | "BTR-60PB - Takistan" by Mr_Chiko, CC-BY-4.0 (the APC for the Insurgents, #483: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
+| `render-russia-apc/` | "BTR-82A" by lebedeventerprise, CC-BY-4.0 (the APC for Russia, #480: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
 | `render-russia-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-cannon/` | "ZiS-2 57mm anti-tank gun" by sergey.s.filin, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-grenade-launcher/` | "AGS 40 Balkan" by SpinoCactus, "Tactical Soldier (game ready) low poly" by MissingTray1151, both CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-russia-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-russia-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-jeep/` | "UAZ-469 Low Poly" by lebedeventerprise, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-helicopter/` | "Mi-8" by tiunov.se, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-cannon/` | "Anti-Tank Guided Missile" by Alhimix, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-china-grenade-launcher/` | "QLZ-87 (Type 87)" by goncalveskauan055l, "Machine Gun Tripod 1 (Low-Poly)" by GoldbergR, "Tactical Soldier (game ready) low poly" by MissingTray1151, all CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-china-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-jeep/` | "Military Jeep Low Poly – Game Ready 3D Vehicle" by KidBi-Gaming, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-tank/` | "Type 99 MBT" by philano, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-china-helicopter/` | "Sikorsky UH-60M Blackhawk" by MirzaArrafiERV_45, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-grenade-launcher/` | "AGS-17 Plamya FBX" by Jeyhun1985, "Tactical Soldier (game ready) low poly" by MissingTray1151, both CC-BY-4.0 | `scripts/render-sprite.py` (`parts`) |
 | `render-insurgents-cannon/` | "SPG-9" by Jack512kb, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-mortar/` | "Pindad Mortars" by sakigakefuruzawa, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-infantry/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
+| `render-insurgents-sniper/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-jeep/` | "TOYOTA DO AFEGANISTÃO (LOW POLY)" by lm9241221, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-tank/` | "T 54/55 Tank" by SGAstudios3DandGameDevelopment, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-insurgents-helicopter/` | "Russian Transport Heli" by jeandiz, CC-BY-4.0 | `scripts/render-sprite.py` |
@@ -250,6 +262,8 @@ The **Russia** Faction's set (#315, the first map's Attacker) is complete too, s
 The **China** Faction's set (#316) is complete as well: the spike's GDF-006, now on the same sandbagged pad as the other towers (the game's AA Gun draws this render, so it gains the pad), plus seven new renders, previewed in `docs/art/faction-china.png` (`scripts/faction-sheet.py china`). Stand-ins, named in `depicts`: GDF-006 for the PG-99, the tripod ATGM for the HJ-8, Pindad MO-3 for the PP-87, a UH-60M for the Z-20 (built to the UH-60's layout), Type 99 for the Type 99A, and an open-top military 4×4 (machine gun removed, repainted olive) for the BJ2022. Rifle Nest, Infantry and the ATGM reuse models from the other sets, tinted green. Sketchfab uploads that say they were ripped from a game (several PLA vehicles, e.g. a War Thunder ZTZ-99A and a Mercenaries 2 BJ2022) were skipped: their uploader can't license them.
 
 The **Insurgents** Faction's set (#317) completes all four, so every Faction has its 8 kinds (`tests/render-pivot.test.ts` checks each Faction in `FACTIONS`). It is previewed in `docs/art/faction-insurgents.png` (`scripts/faction-sheet.py insurgents`). The T-55 (the "T 54/55 Tank" model, desert sand), a weathered bare-metal Mi-8, a Toyota pickup technical with a heavy machine gun in the bed (its ground disc removed, brightened) and the SPG-9 (untextured, painted olive) are new models. The others are reused: the ZU-23-2 repainted sand stands in for the ZPU-4 (no free ZPU-4 exists, and insurgents field the ZU-23-2 as widely), the Pindad MO-3 is the mortar, and Rifle Nest and Infantry use the soldier model with its kit re-coloured to civilian browns and denim (the free Taliban figures are T-posed with no animations). Skipped: 42manako's T-55AM ("ripped from WARNO"), an "Insurgent" figure tagged Escape from Tarkov, and Sleepykingzzz's twin DShK emplacements, whose gun texture is named `textures\wpn\wpn_dshk` (S.T.A.L.K.E.R.'s naming), a sign it came from a game. Look at a model's material and texture names too, not just its page.
+
+The **Heavy tank** boss (#362) has one render per Faction, set at 1.45 tiles (bigger than the Tank, ADR-0009 point 2) with the turret as its own layer: the T-14 Armata (Russia) and an M1A2 Abrams TUSK II, untextured and tinted tan (US) in #508; a Type 98 standing in for the Type 99A (China) and a T-72M1 standing in for an insurgent T-72, untextured and painted olive, with no slat armour (Insurgents) in #509. The Type 98 sits on a diorama (ground and grass, dropped with `excludeMaterials`) with its turret traversed about 47°, turned back to the front with `turret.turnDeg` about the hull's turret ring. Previewed in `docs/art/heavyTank.png` (`scripts/faction-sheet.py --kind heavyTank`).
 
 ## Map ground images (#312, ADR-0009)
 

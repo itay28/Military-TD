@@ -55,6 +55,86 @@
       }
     },
     {
+      "id": "russia-heavy-tank",
+      "kind": "heavyTank",
+      "faction": "russia",
+      "depicts": "T-14 Armata main battle tank",
+      "sketchfab": "9864af9626f14256a255d4faea52ec7f",
+      "author": "3DYAROSLAV2",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.45,
+      "canvasTiles": 1.75,
+      "turret": {
+        "names": ["Object_8", "Object_9", "Object_10", "Object_11", "Object_14", "Object_15"]
+      }
+    },
+    {
+      "id": "china-heavy-tank",
+      "kind": "heavyTank",
+      "faction": "china",
+      "depicts": "Type 98 main battle tank (stand-in for the Type 99A)",
+      "sketchfab": "d75cdec1a34b417fadbb72656664b54a",
+      "author": "Risama",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 1.45,
+      "canvasTiles": 1.75,
+      "excludeMaterials": ["T98MBT_Base", "Grass"],
+      "turret": {
+        "names": [
+          "121_T98MBT_Turret_0",
+          "Box012_T98MBT_Turret_0",
+          "Box013_T98MBT_Turret_0",
+          "Box036_T98MBT_Turret_0",
+          "Box037_T98MBT_Turret_0",
+          "Cylinder035_T98MBT_Turret_0",
+          "Cylinder037_T98MBT_Turret_0",
+          "Cylinder075_T98MBT_Turret_0",
+          "Cylinder076_T98MBT_Turret_0",
+          "Cylinder094_T98MBT_Turret_0",
+          "Cylinder113_T98MBT_Turret_0",
+          "Cylinder114_T98MBT_Turret_0",
+          "Cylinder115_T98MBT_Turret_0",
+          "Object007_T98MBT_Turret_0",
+          "Object008_T98MBT_Turret_0",
+          "Object010_T98MBT_Turret_0",
+          "Object016_T98MBT_Turret_0",
+          "Object042_T98MBT_Turret_0",
+          "Object045_T98MBT_Turret_0",
+          "Object051_T98MBT_Turret_0",
+          "Object060_T98MBT_Turret_0",
+          "Object062_T98MBT_Turret_0",
+          "Object071_T98MBT_Turret_0",
+          "Object096_T98MBT_Turret_0",
+          "Object097_T98MBT_Turret_0",
+          "Object106_T98MBT_Turret_0",
+          "Object107_T98MBT_Turret_0",
+          "Object132_T98MBT_Turret_0",
+          "Object133_T98MBT_Turret_0"
+        ],
+        "turnDeg": -47.3,
+        "pivot": "Cylinder042_T98MBT_Main_0"
+      }
+    },
+    {
+      "id": "insurgents-heavy-tank",
+      "kind": "heavyTank",
+      "faction": "insurgents",
+      "depicts": "T-72M1 main battle tank (stand-in for an insurgent-held T-72 with slat armour; no slat armour)",
+      "sketchfab": "673f659618b748c4847c659aadcd2aba",
+      "author": "ballDAYLCbusta",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 1.45,
+      "canvasTiles": 1.75,
+      "exclude": ["Icosphere"],
+      "untexturedColor": [0.13, 0.13, 0.07],
+      "turret": {
+        "names": ["Main.002__0", "Object_14", "Object_16"]
+      }
+    },
+    {
       "id": "us-rifle-nest",
       "kind": "rifleNest",
       "faction": "us",
@@ -76,6 +156,63 @@
         {
           "x": 0.19,
           "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [1.25, 1.15, 0.85]
+          },
+          "material_6": {
+            "color": [1.25, 1.15, 0.85]
+          },
+          "material": {
+            "color": [1.4, 1.15, 0.9]
+          },
+          "Glove": {
+            "color": [1.3, 1.1, 0.85]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
+      "id": "us-sniper",
+      "kind": "sniper",
+      "faction": "us",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer (stand-in kit and rifle for the M107 / M2010 team in OCP)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
         }
       ],
       "base": {
@@ -178,6 +315,130 @@
       }
     },
     {
+      "id": "us-grenade-launcher",
+      "kind": "grenadeLauncher",
+      "faction": "us",
+      "depicts": "Mk 19 40 mm automatic grenade launcher on a tripod (stand-in tripod for the M3), gunner and assistant gunner in OCP, in a sandbagged pit",
+      "sketchfab": "9965461e257f4240a86b15a784d78fb2",
+      "author": "lebedeventerprise",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "liftTiles": 0.2,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "parts": [
+        {
+          "sketchfab": "2a5ecc14900440af8fe2b5b30dabbef0",
+          "author": "GoldbergR",
+          "license": "CC-BY-4.0",
+          "frontAxis": "-y",
+          "lengthTiles": 0.45,
+          "copies": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            }
+          ],
+          "liftTiles": -0.22
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.03,
+              "y": -0.23
+            }
+          ],
+          "turret": true,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [1.25, 1.15, 0.85]
+              },
+              "material_6": {
+                "color": [1.25, 1.15, 0.85]
+              },
+              "material": {
+                "color": [1.4, 1.15, 0.9]
+              },
+              "Glove": {
+                "color": [1.3, 1.1, 0.85]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.26,
+              "y": -0.06,
+              "turnDeg": 15
+            }
+          ],
+          "turret": false,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [1.25, 1.15, 0.85]
+              },
+              "material_6": {
+                "color": [1.25, 1.15, 0.85]
+              },
+              "material": {
+                "color": [1.4, 1.15, 0.9]
+              },
+              "Glove": {
+                "color": [1.3, 1.1, 0.85]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        }
+      ],
+      "sun": {
+        "elevationDeg": 70
+      },
+      "copies": [
+        {
+          "x": -0.067,
+          "y": 0.03
+        }
+      ]
+    },
+    {
       "id": "us-infantry",
       "kind": "infantry",
       "faction": "us",
@@ -230,6 +491,57 @@
       "canvasTiles": 1.0
     },
     {
+      "id": "russia-apc",
+      "kind": "apc",
+      "faction": "russia",
+      "depicts": "BTR-82A 8x8 armored personnel carrier",
+      "sketchfab": "cd1ba0c1f16f42aaac45234ced318605",
+      "author": "lebedeventerprise",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25
+    },
+    {
+      "id": "china-apc",
+      "kind": "apc",
+      "faction": "china",
+      "depicts": "ZSL-92C 6x6 armored personnel carrier (the ZSL-92 family)",
+      "sketchfab": "75cffc4e2e5e454fbcb69279599a93ed",
+      "author": "42manako",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-x",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25,
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
+      "id": "insurgents-apc",
+      "kind": "apc",
+      "faction": "insurgents",
+      "depicts": "BTR-60PB 8x8 armored personnel carrier (the BTR-60 family, a captured one)",
+      "sketchfab": "f2fe515e186c4aa1b9294fd364ad2417",
+      "author": "Mr_Chiko",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-x",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25
+    },
+    {
+      "id": "us-apc",
+      "kind": "apc",
+      "faction": "us",
+      "depicts": "M113 armored personnel carrier, woodland camo",
+      "sketchfab": "7fe132c071584049b51d3569726021a0",
+      "author": "arc4de",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25
+    },
+    {
       "id": "us-tank",
       "kind": "tank",
       "faction": "us",
@@ -256,6 +568,25 @@
       }
     },
     {
+      "id": "us-heavy-tank",
+      "kind": "heavyTank",
+      "faction": "us",
+      "depicts": "M1A2 Abrams with TUSK II (stand-in for the M1A2 SEPv3 with TUSK); untextured, so tinted",
+      "sketchfab": "efb7311b641f4a76afff19e5f3068298",
+      "author": "davidfalke",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.45,
+      "untexturedColor": [0.16, 0.13, 0.07],
+      "canvasTiles": 1.75,
+      "turret": {
+        "box": [
+          { "x": [-0.27, 0.27], "y": [-0.5, 0.12], "minZ": 0.226 },
+          { "x": [-0.05, 0.05], "y": [0.1, 0.74], "minZ": 0.21 }
+        ]
+      }
+    },
+    {
       "id": "us-helicopter",
       "kind": "helicopter",
       "faction": "us",
@@ -266,6 +597,19 @@
       "frontAxis": "-x",
       "lengthTiles": 1.3,
       "canvasTiles": 1.5
+    },
+    {
+      "id": "us-jet",
+      "kind": "jet",
+      "faction": "us",
+      "depicts": "F-16 Fighting Falcon",
+      "sketchfab": "c2ed832c0aa743789aa5b4452a60e97c",
+      "author": "davidmilitei09",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.3,
+      "liftTiles": 0.3,
+      "canvasTiles": 2.5
     },
     {
       "id": "russia-rifle-nest",
@@ -289,6 +633,63 @@
         {
           "x": 0.19,
           "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material_6": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "material": {
+            "color": [0.95, 1.0, 0.72]
+          },
+          "Glove": {
+            "color": [0.6, 0.62, 0.5]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
+      "id": "russia-sniper",
+      "kind": "sniper",
+      "faction": "russia",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, uniforms re-coloured olive (stand-in kit and rifle for the ORSIS T-5000 / ASVK team in EMR)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
         }
       ],
       "base": {
@@ -394,6 +795,109 @@
       }
     },
     {
+      "id": "russia-grenade-launcher",
+      "kind": "grenadeLauncher",
+      "faction": "russia",
+      "depicts": "AGS-40 Balkan 40 mm automatic grenade launcher on its tripod (stand-in for the AGS-30 30 mm, the same tripod-mounted layout), gunner and assistant gunner in olive (toward EMR), in a sandbagged pit",
+      "sketchfab": "85261dcf1d4e43b2b6b7db1818c7c3ae",
+      "author": "SpinoCactus",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.6,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": ["Tripod", "Tripod_Rings", "Seat"]
+      },
+      "parts": [
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.0,
+              "y": -0.13
+            }
+          ],
+          "turret": true,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "material_6": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "material": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "Glove": {
+                "color": [0.6, 0.62, 0.5]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.24,
+              "y": -0.05,
+              "turnDeg": 15
+            }
+          ],
+          "turret": false,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "material_6": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "material": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "Glove": {
+                "color": [0.6, 0.62, 0.5]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        }
+      ],
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "russia-infantry",
       "kind": "infantry",
       "faction": "russia",
@@ -470,6 +974,19 @@
       "canvasTiles": 1.5
     },
     {
+      "id": "russia-jet",
+      "kind": "jet",
+      "faction": "russia",
+      "depicts": "Su-25 Grach (Frogfoot) ground-attack jet",
+      "sketchfab": "88b71eb848cf4418a95dff497c07cefc",
+      "author": "tnikita",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.3,
+      "liftTiles": 0.3,
+      "canvasTiles": 2.5
+    },
+    {
       "id": "china-rifle-nest",
       "kind": "rifleNest",
       "faction": "china",
@@ -491,6 +1008,63 @@
         {
           "x": 0.19,
           "y": -0.03
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material_6": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "material": {
+            "color": [0.62, 0.85, 0.58]
+          },
+          "Glove": {
+            "color": [0.5, 0.55, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
+      "id": "china-sniper",
+      "kind": "sniper",
+      "faction": "china",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, uniforms re-coloured green (stand-in kit and rifle for the QBU-10 team in Type 07)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
         }
       ],
       "base": {
@@ -571,6 +1145,135 @@
       "canvasTiles": 1.25,
       "turret": {
         "allBut": ["Base"]
+      }
+    },
+    {
+      "id": "china-grenade-launcher",
+      "kind": "grenadeLauncher",
+      "faction": "china",
+      "depicts": "QLZ-87 35 mm automatic grenade launcher with its drum magazine, on a tripod (stand-in tripod for its own heavy mount), gunner and assistant gunner in green (Type 07), in a sandbagged pit",
+      "sketchfab": "56a2e9531c5a432f8e833bfd62c6a7ea",
+      "author": "goncalveskauan055l",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.42,
+      "liftTiles": 0.2,
+      "opaque": true,
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "overrides": {
+          "Tex_": {
+            "color": [0.035, 0.038, 0.033],
+            "flat": true,
+            "specular": 0.1
+          }
+        }
+      },
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "parts": [
+        {
+          "sketchfab": "2a5ecc14900440af8fe2b5b30dabbef0",
+          "author": "GoldbergR",
+          "license": "CC-BY-4.0",
+          "frontAxis": "-y",
+          "lengthTiles": 0.45,
+          "copies": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            }
+          ],
+          "liftTiles": -0.22
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.0,
+              "y": -0.25
+            }
+          ],
+          "turret": true,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "material_6": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "material": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "Glove": {
+                "color": [0.5, 0.55, 0.45]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.26,
+              "y": -0.06,
+              "turnDeg": 15
+            }
+          ],
+          "turret": false,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "material_6": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "material": {
+                "color": [0.62, 0.85, 0.58]
+              },
+              "Glove": {
+                "color": [0.5, 0.55, 0.45]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        }
+      ],
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -666,6 +1369,35 @@
       "frontAxis": "-y",
       "lengthTiles": 1.3,
       "canvasTiles": 1.5
+    },
+    {
+      "id": "china-jet",
+      "kind": "jet",
+      "faction": "china",
+      "depicts": "Chengdu J-10S (two-seat J-10), PLAAF markings painted out",
+      "sketchfab": "aa7c517fbded47439a526cafb78b4618",
+      "author": "MirzaArrafiERV_45",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.3,
+      "liftTiles": 0.3,
+      "canvasTiles": 2.5,
+      "paintOver": {
+        "body.0": {
+          "boxes": [
+            [0.199, 0.231, 0.364, 0.305],
+            [0.199, 0.631, 0.364, 0.704]
+          ]
+        },
+        "body.3": {
+          "boxes": [
+            [0.135, 0.4, 0.298, 0.474],
+            [0.701, 0.4, 0.864, 0.474],
+            [0.045, 0.807, 0.208, 0.88],
+            [0.791, 0.807, 0.954, 0.88]
+          ]
+        }
+      }
     },
     {
       "id": "insurgents-rifle-nest",
@@ -797,6 +1529,109 @@
       }
     },
     {
+      "id": "insurgents-grenade-launcher",
+      "kind": "grenadeLauncher",
+      "faction": "insurgents",
+      "depicts": "AGS-17 Plamya 30 mm automatic grenade launcher on its tripod (a captured Soviet weapon), gunner and assistant gunner in civilian browns and denim, in a sandbagged pit",
+      "sketchfab": "c1d507d1b4dc40ef91809ee64dc9dd5b",
+      "author": "Jeyhun1985",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 0.64,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": ["Ensamble general del tripode AGS17:1"]
+      },
+      "parts": [
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.0,
+              "y": -0.16
+            }
+          ],
+          "turret": true,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.62, 0.68, 0.95]
+              },
+              "material_6": {
+                "color": [1.15, 0.95, 0.7]
+              },
+              "material": {
+                "color": [1.15, 0.95, 0.7]
+              },
+              "Glove": {
+                "color": [0.75, 0.6, 0.45]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.22,
+              "y": -0.02,
+              "turnDeg": 15
+            }
+          ],
+          "turret": false,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.62, 0.68, 0.95]
+              },
+              "material_6": {
+                "color": [1.15, 0.95, 0.7]
+              },
+              "material": {
+                "color": [1.15, 0.95, 0.7]
+              },
+              "Glove": {
+                "color": [0.75, 0.6, 0.45]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        }
+      ],
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
       "id": "insurgents-infantry",
       "kind": "infantry",
       "faction": "insurgents",
@@ -811,6 +1646,63 @@
         "frame": 10
       },
       "canvasTiles": 1.6,
+      "tint": {
+        "color": [1.0, 1.0, 1.0],
+        "skip": ["Eyewear"],
+        "overrides": {
+          "Bottom": {
+            "color": [0.62, 0.68, 0.95]
+          },
+          "material_6": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "material": {
+            "color": [1.15, 0.95, 0.7]
+          },
+          "Glove": {
+            "color": [0.75, 0.6, 0.45]
+          },
+          "Body": {
+            "color": [0.85, 0.72, 0.58]
+          }
+        }
+      },
+      "sun": {
+        "elevationDeg": 70
+      }
+    },
+    {
+      "id": "insurgents-sniper",
+      "kind": "sniper",
+      "faction": "insurgents",
+      "depicts": "Sniper team prone in a dug-in hide, shooter and observer, kit re-coloured to civilian browns and denim (stand-in kit and rifle for a Dragunov SVD pair in civilian clothes)",
+      "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+      "author": "MissingTray1151",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "pose": {
+        "action": "prone_firing",
+        "frame": 5
+      },
+      "copies": [
+        {
+          "x": -0.12,
+          "y": 0.0
+        },
+        {
+          "x": 0.12,
+          "y": -0.06
+        }
+      ],
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
       "tint": {
         "color": [1.0, 1.0, 1.0],
         "skip": ["Eyewear"],
@@ -890,6 +1782,80 @@
       "frontAxis": "-y",
       "lengthTiles": 1.3,
       "canvasTiles": 1.5
+    },
+    {
+      "id": "us-gunship",
+      "kind": "gunship",
+      "faction": "us",
+      "depicts": "AH-64D Apache",
+      "sketchfab": "c3b58008c46b45048fdd7dd283a3c8c8",
+      "author": "MirzaArrafiERV_45",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+x",
+      "lengthTiles": 1.4,
+      "canvasTiles": 1.75
+    },
+    {
+      "id": "russia-gunship",
+      "kind": "gunship",
+      "faction": "russia",
+      "depicts": "Mi-28N",
+      "sketchfab": "3e80c95bbadf46abbafba9d9a08afc68",
+      "author": "rukh3d",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.4,
+      "canvasTiles": 1.75
+    },
+    {
+      "id": "china-gunship",
+      "kind": "gunship",
+      "faction": "china",
+      "depicts": "Tiger attack helicopter, re-coloured PLA green (stand-in for the Z-10, a slim tandem gunship of the same class)",
+      "sketchfab": "a8ae9b61995a49a1a2fa2de57e8ce4ef",
+      "author": "MirzaArrafiERV_45",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.4,
+      "canvasTiles": 1.75,
+      "tint": {
+        "color": [0.5, 0.66, 0.36]
+      }
+    },
+    {
+      "id": "insurgents-gunship",
+      "kind": "gunship",
+      "faction": "insurgents",
+      "depicts": "Mi-24D (the captured Mi-24)",
+      "sketchfab": "bb65bdfde2c54007a52dfbe1d91d930d",
+      "author": "AshleyAslett",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.4,
+      "canvasTiles": 1.75
+    },
+    {
+      "id": "insurgents-jet",
+      "kind": "jet",
+      "faction": "insurgents",
+      "depicts": "MiG-21PF Fishbed in sand and green camouflage, markings removed (a captured MiG-21)",
+      "sketchfab": "e23e79075b9e41c3badd18bf43dc15c7",
+      "author": "mgg8",
+      "license": "CC0-1.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.34,
+      "liftTiles": 0.3,
+      "canvasTiles": 2.5,
+      "dropFaces": [
+        {
+          "mesh": "Object_8",
+          "colors": [
+            [0.74, 0.15, 0.15],
+            [0.93, 0.94, 0.94]
+          ],
+          "within": 0.015
+        }
+      ]
     }
   ],
   "alphaFloor": 0.06

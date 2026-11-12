@@ -1,7 +1,7 @@
 import { counteredBy, poorAgainst, resists, strongAgainst } from './counters';
 import { ENEMY_NAMES, ENEMY_WEAKNESS, LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES } from './display';
-import { ENEMY_STATS, type EnemyKind } from './enemies';
-import { TOWER_LEVELS, TOWER_STATS, type TowerKind } from './towers';
+import { ENEMY_STATS, type EnemyKind, PLAYABLE_KINDS } from './enemies';
+import { BUILD_KINDS, TOWER_LEVELS, TOWER_STATS, type TowerKind } from './towers';
 
 /**
  * What each kind is, in one descriptive line under its name in the Field manual. Generic classes only: never a real
@@ -11,11 +11,17 @@ export const CLASS_LINES = {
   rifleNest: 'Infantry fire team: assault rifles and a light machine gun behind sandbags',
   aaGun: 'Light anti-aircraft mount: a rapid-fire automatic gun on a towed carriage',
   cannon: 'Anti-tank gun position: armor-piercing rounds from a tripod or a towed carriage',
+  sniper: 'Designated marksman team: a long-barrelled bolt-action rifle with a scope, in a prone firing position',
   mortar: 'Medium mortar on a bipod and baseplate, dug into a sandbagged pit',
+  grenadeLauncher: 'Automatic grenade launcher on a tripod: belt-fed, flat-trajectory low-velocity grenades',
   infantry: 'Rifle squad on foot: assault rifles, body armor and helmets',
   jeep: 'Light four-wheel-drive utility vehicle, unarmored',
   helicopter: 'Medium transport helicopter: twin turbines, a light armored cabin',
+  apc: 'Armored personnel carrier: wheeled hull with a troop compartment, carries a rifle squad',
+  jet: 'Light fighter jet: a single engine, fast and unarmored',
   tank: 'Main battle tank: large-calibre gun, heavy composite armor',
+  heavyTank: 'Heavy tank: a thickly armored, slow main battle tank',
+  gunship: 'Attack helicopter gunship: heavy armor plating, rotor and chin gun',
 } as const satisfies Record<TowerKind | EnemyKind, string>;
 
 /** One Field manual entry: a tower or an enemy kind, with everything its info side shows. */
@@ -38,6 +44,8 @@ export interface FieldManualEntry {
 
 /** A number as the player reads it: at most two decimals, no trailing zeros. */
 const num = (n: number) => String(Math.round(n * 100) / 100);
+/** Only towers in play are listed (ADR-0009), so the not-in-play Sniper stays out of the enemy lines too. */
+const inPlay = (tower: TowerKind) => BUILD_KINDS.includes(tower);
 
 function towerEntry(kind: TowerKind): FieldManualEntry {
   const stats: {
@@ -89,16 +97,17 @@ function enemyEntry(kind: EnemyKind): FieldManualEntry {
       ['Leak cost', `${stats.leakCost} ${stats.leakCost === 1 ? 'Life' : 'Lives'}`],
     ],
     effectiveLabel: 'Weak against',
-    effective: counteredBy(kind).map((tower) => TOWER_NAMES[tower]),
+    effective: counteredBy(kind)
+      .filter(inPlay)
+      .map((tower) => TOWER_NAMES[tower]),
     weakLabel: 'Shrugs off',
-    weak: resists(kind).map((tower) => TOWER_NAMES[tower]),
+    weak: resists(kind)
+      .filter(inPlay)
+      .map((tower) => TOWER_NAMES[tower]),
   };
 }
 
-/** Every Field manual entry: the towers, then the enemy kinds, in data order. */
+/** Every Field manual entry: the towers, then the playable enemy kinds, in data order. */
 export function fieldManualEntries(): FieldManualEntry[] {
-  return [
-    ...(Object.keys(TOWER_STATS) as TowerKind[]).map(towerEntry),
-    ...(Object.keys(ENEMY_STATS) as EnemyKind[]).map(enemyEntry),
-  ];
+  return [...BUILD_KINDS.map(towerEntry), ...PLAYABLE_KINDS.map(enemyEntry)];
 }

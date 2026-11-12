@@ -102,6 +102,10 @@ export const STUCK_MARKER = '<!-- pr-steward:stuck -->';
 export const UNKNOWN_UPDATE_MARKER = '<!-- pr-steward:unknown-update -->';
 /** How long GitHub may report mergeability as UNKNOWN before the steward acts (#487). */
 const UNKNOWN_MS = 60 * 60 * 1000;
+/** Posted when GitHub refused a merge for conflicts (#556): the next run starts a conflict round. */
+export const MERGE_CONFLICT_MARKER = '<!-- pr-steward:merge-conflict -->';
+/** Merge refusals for conflicts, with no maintainer comment between, before the steward hands off. */
+export const MERGE_CONFLICT_LIMIT = 3;
 /** Posted next to the stuck marker when the hand-off asks for the maintainer's `/approve` (#206). */
 export const APPROVAL_MARKER = '<!-- pr-steward:approval -->';
 /** A maintainer comment starting with this lets a PR that touches a critical path merge. */
@@ -260,7 +264,8 @@ export type Reason = 'conflict' | 'ci' | 'review' | 'comment' | 'threads';
  * What a `wait` waits on, so its status label (#419) doesn't depend on the wording of `why`:
  * an agent or automation (`mergeability`, `round`, `checks`, `snapshots`, `review`), the maintainer
  * (`needs-info`, `release`: a release PR to merge by hand, or a broken report PR), CI on main
- * (`main-ci`), or something queued ahead of it (`milestone`, `stacked`, `blocked`).
+ * (`main-ci`), or something queued ahead of it (`stacked`, `blocked`). A milestone never holds a
+ * merge (#536): milestones decide what a release contains, not when code lands on main.
  */
 export type WaitCause =
   | 'mergeability'
@@ -271,7 +276,6 @@ export type WaitCause =
   | 'stacked'
   | 'blocked'
   | 'needs-info'
-  | 'milestone'
   | 'main-ci'
   | 'release'
   /** Behind or conflicting while another PR is at the front of the merge queue (#473). */
@@ -348,8 +352,8 @@ const isApproval = (c: PrComment) => isMaintainer(c) && APPROVE_COMMAND.test(c.b
  * unresolved threads (hand off as stuck after MAX_ROUNDS, or at once when a round left a conflict
  * on the same base); update a PR that is only behind; wait
  * for running checks and the CI review, requesting a review that never ran (#209); then merge, if
- * it targets the default branch, no issue it closes is blocked or waiting on an answer, and none
- * is in a later milestone than `current` (#180), and, when it touches a critical path, a
+ * it targets the default branch, no issue it closes is blocked or waiting on an answer (look-ahead
+ * work for a later milestone merges too, #536), and, when it touches a critical path, a
  * maintainer `/approve` came after the latest round (#206). While `mainRed`, no merge happens except
  * the fix's (#220). At the `front` of the merge queue (#473), a round for what main moving broke is
  * free (see `freeRound`).
@@ -532,19 +536,13 @@ function decideIgnoringMain(
         ? `#${held.number} is still blocked by open issues`
         : `#${held.number} has an open question (needs-info)`,
     };
-  // Look-ahead work (auto-start's next milestone) merges only once the current milestone has shipped.
-  const ahead = current && pr.closes.find((i) => i.milestone && current.after.includes(i.milestone.number));
-  if (ahead && current)
-    return {
-      kind: 'wait',
-      cause: 'milestone',
-      why: `#${ahead.number} is in ${ahead.milestone!.title}: merges after ${current.title} ships`,
-    };
   const paths = [
     ...(pr.files ? criticalFiles(pr.files) : ['(more files than were read)']),
     ...renamedCritical(pr.renamed),
   ];
-  const approvedAfter = Math.max(lastRound, pr.codeCommittedAt ? Date.parse(pr.codeCommittedAt) : 0);
+  // An approval stands until new code lands (a non-merge commit). A round that only merged the base in
+  // (a conflict round, #556) adds none, so it keeps the approval; any other round pushes code and so moves it.
+  const approvedAfter = pr.codeCommittedAt ? Date.parse(pr.codeCommittedAt) : lastRound;
   if (paths.length && last(isApproval) <= approvedAfter) return { kind: 'approval', paths };
   return { kind: 'merge' };
 }
@@ -604,11 +602,11 @@ function decideRelease(pr: StewardPr, current: CurrentMilestone | null): Decisio
  */
 function decideReport(pr: StewardPr, current: CurrentMilestone | null, version: string): Decision {
   const name = `report PR ${version}`;
-  const wrong = wrongVersion('report PR', version, current, 'milestone');
+  const wrong = wrongVersion('report PR', version, current, 'release');
   if (wrong) return wrong;
-  if (!current) return { kind: 'wait', cause: 'milestone', why: `${name}: no open milestone` };
-  if (!current.done)
-    return { kind: 'wait', cause: 'milestone', why: `${name}: ${current.title} still has open issues` };
+  if (!current) return { kind: 'wait', cause: 'release', why: `${name}: no open milestone` };
+  // Its milestone's open issues block it, like an issue's blockers (#536).
+  if (!current.done) return { kind: 'wait', cause: 'blocked', why: `${name}: ${current.title} still has open issues` };
   if (lastParagraph(pr.body) !== `Release-As: ${version}`)
     return {
       kind: 'wait',
@@ -666,16 +664,15 @@ export function conflictMap(prs: readonly StewardPr[], conflicts: Conflicts, bas
 
 /**
  * A PR that can merge into the default branch once it's green: no draft, fork, `hold`, hand-off,
- * stacked, release or report PR, and nothing it closes is blocked, waiting on an answer, or in a
- * later milestone. Only these take a place in the queue, so the front is always a PR that can merge.
+ * stacked, release or report PR, and nothing it closes is blocked or waiting on an answer (a later
+ * milestone doesn't count, #536). Only these take a place in the queue, so the front is always a PR
+ * that can merge.
  */
-export function inQueue(pr: StewardPr, defaultBranch: string, current: CurrentMilestone | null = null): boolean {
+export function inQueue(pr: StewardPr, defaultBranch: string): boolean {
   if (pr.isDraft || pr.fork || pr.base !== defaultBranch) return false;
   if ([HOLD_LABEL, ...HAND_OFF_LABELS].some((l) => pr.labels.includes(l))) return false;
   if (pr.head.startsWith(RELEASE_BRANCH) || REPORT_BRANCH.test(pr.head)) return false;
-  return !pr.closes.some(
-    (i) => i.blocked || i.needsInfo || (!!current && !!i.milestone && current.after.includes(i.milestone.number)),
-  );
+  return !pr.closes.some((i) => i.blocked || i.needsInfo);
 }
 
 /** Green for the queue: every check passed, the CI review answered, threads resolved. Mergeability doesn't count. */
@@ -730,11 +727,10 @@ export function mergeQueue(
     readonly map: ConflictMap;
     readonly decideFor: (pr: StewardPr, front: boolean) => Decision;
     readonly defaultBranch?: string;
-    readonly current?: CurrentMilestone | null;
   },
 ): { order: number[]; decisions: Map<number, Decision> } {
-  const { map, decideFor, defaultBranch = 'main', current = null } = options;
-  const order = queueOrder(prs.filter((p) => inQueue(p, defaultBranch, current)));
+  const { map, decideFor, defaultBranch = 'main' } = options;
+  const order = queueOrder(prs.filter((p) => inQueue(p, defaultBranch)));
   const decisions = new Map<number, Decision>();
   for (const p of prs) if (!order.includes(p.number)) decisions.set(p.number, decideFor(p, false));
   const [front] = order;
@@ -859,6 +855,9 @@ function stuckReason(d: { reasons: readonly Reason[]; conflict?: boolean; unknow
 const stuckBody = (summary: string) =>
   `**PR steward: handing this PR to you.** ${summary}\n\nComment on the PR to give it ${MAX_ROUNDS} more steward rounds, or fix it yourself.\n\n${STUCK_MARKER}`;
 
+const isMergeConflictRefusal = (error: unknown) =>
+  (error as { status?: number }).status === 405 && /merge conflict|not mergeable/i.test(String(error));
+
 async function handOff(
   pr: StewardPr,
   body: string,
@@ -982,6 +981,20 @@ ${APPROVAL_MARKER}`,
       } catch (error) {
         // The head moved since this run read it (e.g. a steward push): the next run decides again.
         if ((error as { status?: number }).status === 409) return;
+        // Another PR merged first and this one now conflicts: normal on a busy main (#556). The next run
+        // re-reads mergeability and starts a conflict round, unless it keeps happening.
+        if (isMergeConflictRefusal(error)) {
+          const lastMaintainer = Math.max(0, ...pr.comments.filter(isMaintainer).map((c) => Date.parse(c.createdAt)));
+          const refused = pr.comments.filter(
+            (c) => c.body.includes(MERGE_CONFLICT_MARKER) && Date.parse(c.createdAt) > lastMaintainer,
+          ).length;
+          if (refused + 1 < MERGE_CONFLICT_LIMIT) {
+            await github(fetchFn, token, 'POST', `issues/${n}/comments`, {
+              body: `PR steward: GitHub refused the merge because the PR now conflicts with \`${pr.base}\` (another PR merged first). Leaving it for the next run to resolve (${refused + 1} of ${MERGE_CONFLICT_LIMIT - 1}).\n\n${MERGE_CONFLICT_MARKER}`,
+            });
+            return;
+          }
+        }
         await handOff(
           pr,
           stuckBody(`It's green and answered, but GitHub refused the merge: ${String(error)}`),
@@ -1009,9 +1022,11 @@ export const STATUS_LABELS = {
   },
   'waiting: main CI': { color: 'd93f0b', description: "PR steward: ready, but main's CI is failing" },
   'waiting: agent': { color: 'fbca04', description: 'PR steward: an agent, a check or the CI review is at work' },
-  'waiting: milestone': { color: 'cfd3d7', description: 'PR steward: its issue is in a later milestone' },
   'waiting: parent PR': { color: 'cfd3d7', description: 'PR steward: stacked, merges after its parent PR' },
-  'waiting: blocker': { color: 'cfd3d7', description: 'PR steward: its issue is still blocked by open issues' },
+  'waiting: blocker': {
+    color: 'cfd3d7',
+    description: "PR steward: its issue is still blocked by open issues (a report PR: its milestone isn't done)",
+  },
   'waiting: queue': {
     color: 'cfd3d7',
     description: 'PR steward: behind or conflicting, waits for its turn at the front of the merge queue',
@@ -1020,6 +1035,8 @@ export const STATUS_LABELS = {
 } as const satisfies Record<string, { color: string; description: string }>;
 export type StatusLabel = keyof typeof STATUS_LABELS;
 const STATUS_LABEL_NAMES = Object.keys(STATUS_LABELS) as StatusLabel[];
+/** Status labels no decision gives any more, removed from any PR that still carries one. */
+const RETIRED_STATUS_LABELS = ['waiting: milestone'] as const;
 
 const WAIT_LABEL: Readonly<Record<WaitCause, StatusLabel>> = {
   'needs-info': 'waiting: you',
@@ -1030,7 +1047,6 @@ const WAIT_LABEL: Readonly<Record<WaitCause, StatusLabel>> = {
   checks: 'waiting: agent',
   snapshots: 'waiting: agent',
   review: 'waiting: agent',
-  milestone: 'waiting: milestone',
   stacked: 'waiting: parent PR',
   blocked: 'waiting: blocker',
   queued: 'waiting: queue',
@@ -1061,10 +1077,10 @@ export function statusLabel(decision: Decision, pr: StewardPr): StatusLabel | nu
 export function labelChanges(
   labels: readonly string[],
   label: StatusLabel | null,
-): { add: StatusLabel | null; remove: StatusLabel[] } {
+): { add: StatusLabel | null; remove: string[] } {
   return {
     add: label && !labels.includes(label) ? label : null,
-    remove: STATUS_LABEL_NAMES.filter((l) => l !== label && labels.includes(l)),
+    remove: [...STATUS_LABEL_NAMES, ...RETIRED_STATUS_LABELS].filter((l) => l !== label && labels.includes(l)),
   };
 }
 
@@ -1302,6 +1318,48 @@ const renamedCritical = (renamed: readonly Rename[]): string[] =>
         : [],
   );
 
+/** The REST fields of a PR that tell its mergeability (#547). */
+export interface RestMergeability {
+  mergeable: boolean | null;
+  mergeable_state: string;
+}
+
+/** REST mergeability as the steward reads it; null while GitHub is still computing it. */
+export function restMergeability(rest: RestMergeability): Pick<StewardPr, 'mergeable' | 'behind'> | null {
+  if (rest.mergeable_state === 'dirty') return { mergeable: 'CONFLICTING', behind: false };
+  if (rest.mergeable === null) return null;
+  return { mergeable: rest.mergeable ? 'MERGEABLE' : 'CONFLICTING', behind: rest.mergeable_state === 'behind' };
+}
+
+const MERGEABILITY_TRIES = 3;
+const MERGEABILITY_WAIT_MS = 3000;
+
+/**
+ * GitHub computes mergeability lazily, so the list query reports UNKNOWN for a PR nobody asked
+ * about since the base moved (#547). A REST fetch of that PR starts the computation; it is re-read
+ * a few times after a short wait. Still unknown (or a failed fetch) leaves the PR as it was, and
+ * `decide` keeps waiting; the next run asks again.
+ */
+export async function settleMergeability(
+  pr: StewardPr,
+  token: string,
+  fetchFn: Fetch = fetch,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<StewardPr> {
+  if (pr.mergeable !== 'UNKNOWN') return pr;
+  try {
+    for (let i = 0; i < MERGEABILITY_TRIES; i++) {
+      if (i) await sleep(MERGEABILITY_WAIT_MS);
+      const res = await github(fetchFn, token, 'GET', `pulls/${pr.number}`);
+      const settled = restMergeability((await res.json()) as RestMergeability);
+      if (settled) return { ...pr, ...settled };
+    }
+  } catch (error) {
+    console.log(`#${pr.number}: couldn't fetch its mergeability: ${String(error)}`);
+  }
+  return pr;
+}
+
 /** Reads the old paths of a PR's renames (one request, only for a PR that renames something). */
 async function withRenameSources(pr: StewardPr, token: string): Promise<StewardPr> {
   if (!pr.renamed.length) return pr;
@@ -1470,16 +1528,20 @@ async function reconcileOpenPrs(token: string, settings: StewardSettings, dryRun
   };
   const snapshotRuns = await readSnapshotRuns(token);
   const prs = await Promise.all(
-    nodes.map((node) => withRenameSources(toStewardPr(node, snapshotRuns.get(node.number) ?? null), token)),
+    nodes.map(async (node) =>
+      settleMergeability(
+        await withRenameSources(toStewardPr(node, snapshotRuns.get(node.number) ?? null), token),
+        token,
+      ),
+    ),
   );
-  const queued = prs.filter((p) => inQueue(p, defaultBranch, milestone));
+  const queued = prs.filter((p) => inQueue(p, defaultBranch));
   const map = queued.length
     ? conflictMap(queued, fetchedConflicts(queued, defaultBranch), queued[0]!.baseSha)
     : { main: [], pairs: [] };
   const { order, decisions } = mergeQueue(prs, {
     map,
     defaultBranch,
-    current: milestone,
     decideFor: (pr, front) => decide(pr, now, defaultBranch, milestone, mainRed, front),
   });
   for (const line of describeQueue(order, map)) console.log(line);

@@ -4,6 +4,7 @@
 /** Trade names and nicknames in the `depicts` lines that carry no digits, so the code pattern misses them. */
 const TRADE_NAMES = [
   'Abrams',
+  'Apache',
   'Black Hawk',
   'Brave Warrior',
   'CROWS',
@@ -16,6 +17,7 @@ const TRADE_NAMES = [
   'Podnos',
   'Rapira',
   'Ratnik',
+  'Tiger',
   'Toyota',
   'Vulcan',
   'AKM',

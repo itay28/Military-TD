@@ -1,3 +1,4 @@
+import type { Difficulty } from '../data/difficulty';
 /** A win's rating: 3★ no Lives lost, 2★ at least half the start Lives left, 1★ any other win. 0 for a Defeat. */
 export type Stars = 0 | 1 | 2 | 3;
 
@@ -35,4 +36,19 @@ export function isUnlocked(mapIndex: number, mapIds: readonly string[], progress
  */
 export function unlocksNext(mapIndex: number, mapIds: readonly string[], progress: CompletedMaps): boolean {
   return mapIndex >= 0 && mapIndex + 1 < mapIds.length && !isUnlocked(mapIndex + 1, mapIds, progress);
+}
+
+/** Whether a win on `difficulty` unlocks the next map: only a Normal win does (#465). */
+export function winUnlocksNext(
+  mapIndex: number,
+  mapIds: readonly string[],
+  progress: CompletedMaps,
+  difficulty: Difficulty,
+): boolean {
+  return difficulty === 'normal' && unlocksNext(mapIndex, mapIds, progress);
+}
+
+/** Whether Hard is unlocked on `mapId`: once that map is won on Normal (#463). Unknown maps are not. */
+export function isHardUnlocked(mapId: string, progress: CompletedMaps): boolean {
+  return progress.maps[mapId]?.completed === true;
 }

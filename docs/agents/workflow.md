@@ -103,10 +103,10 @@ A PR that changes how anything looks shows it in images, and a PR that changes h
 - **A state you can't capture** (for example one only a test-mode scenario reaches): say so under the screenshots, and name the test that covers it.
 
 #### Sounds
-A PR that adds or changes a sound (an `.ogg` under `assets/`, a cue built by `npm run radio-fx` / `npm run weapon-fx`, a change to which sound plays when, its volume or ducking) gives a reviewer a way to hear each one. GitHub doesn't play audio inline in a PR, so the sounds go on `pr-assets` and the PR links them.
+A PR that adds or changes a sound (an `.ogg` under `assets/`, a cue built by `npm run radio-fx` / `npm run weapon-fx`, a change to which sound plays when, its volume or ducking) gives a reviewer a way to hear each one. GitHub doesn't play audio inline in a PR, so the sounds go on `pr-assets` and the PR links them through the jsDelivr CDN, which serves them inline so they play in the browser. Don't link `github.com/.../blob/...?raw=true`: it redirects to `raw.githubusercontent.com`, which sends `content-disposition: attachment`, so browsers download the file and the GitHub mobile app shows nothing (#526).
 - **Files:** for each new or changed sound, an `.mp3` copy (every browser, including iOS Safari, plays it; not all play `.ogg`): `ffmpeg -i assets/<pack>/<id>.ogg -q:a 2 <pr-number>/<id>-after.mp3`. For a replaced sound, also the old one from the base branch (`git show origin/main:assets/<pack>/<id>.ogg > old.ogg`, then the same ffmpeg call) as `<id>-before.mp3`. When the change is when or how loud it plays rather than the file, record a short in-game clip instead, or say so and name the test that covers it.
 - **Upload:** the same `pr-assets` steps as the screenshots above, into the same `<pr-number>/` folder.
-- **PR body:** an **Audio** section with a table: sound, when it plays, before, after. Each cell links the file as `[▶ after](https://github.com/itay28/Military-TD/blob/pr-assets/<pr-number>/<id>-after.mp3?raw=true)`; it opens in the browser's player (or downloads, on some browsers). Add one line per sound on what to listen for ("shorter tail, less hiss").
+- **PR body:** an **Audio** section with a table: sound, when it plays, before, after. Each cell links the file as `[▶ after](https://cdn.jsdelivr.net/gh/itay28/Military-TD@pr-assets/<pr-number>/<id>-after.mp3)`; it opens in the browser's player, with no download step. Use the new `-r2` file name after a re-upload, since jsDelivr caches a path (**Follow-up changes**). Add one line per sound on what to listen for ("shorter tail, less hiss").
 - **Session tracker** (when there is one): an `<audio controls>` per sound with the file as a `data:audio/mpeg;base64,…` URI.
 
 #### Follow-up changes
@@ -131,7 +131,7 @@ Agents also run in cloud sessions: claude.ai/code, and the auto-start and PR ste
 - **GitHub: REST only.** Use the built-in GitHub tools, or `gh api repos/itay28/Military-TD/...`. GraphQL is blocked, so `gh pr`, `gh issue` and `gh project` don't work. For review threads, auto-merge and draft/ready, the proxy's REST routes are `/repos/{owner}/{repo}/pulls/{n}/ccr/review_threads`, `.../ccr/comments/{id}/resolve`, `.../ccr/auto_merge` and `.../ccr/ready_for_review`.
 - **Board:** never move cards. *Board sync* does it from PR and issue events.
 - **Skills:** no plugins. `tdd`, `pr` and `diagnosing-bugs` come from `.claude/skills/` (vendored, `.claude/skills/README.md`). `code-review` stays in CI.
-- **Questions:** ask on the issue, add `needs-info` (that pushes to the maintainer's phone), and move on. Never guess.
+- **Questions:** ask on the issue, add `needs-info` (that pushes to the maintainer's phone), and move on. Never guess. Only real decisions (design, feel, mechanics, scope) are questions: unfinished work you depend on is a blocked-by link plus a one-line comment, unassign and stop, no `needs-info` (`agent-brief.md` → **Cloud limits**; fallback marker `<!-- blocked-by: #n -->`, #538).
 - **Merging:** never merge, not even as the steward. The *PR steward* Action (`scripts/pr-steward.ts`) merges a PR itself once it's green, the review is answered and the threads are resolved.
 
 ## Token budget
@@ -147,7 +147,7 @@ Each tool call re-sends the whole conversation, so a long session costs more wit
 - [ ] Acceptance criteria met
 - [ ] Issue has progress comments; description updated if the idea changed
 - [ ] Session tracker (maintainer sessions only) shows the final status and the PR link
-- [ ] Anything looks different: before/after images embedded in the PR body (and the session tracker, if any); any sound added or changed: playable links in the PR body; both showing the latest version after follow-up commits (step 4b)
+- [ ] Anything looks different: before/after images embedded in the PR body (and the session tracker, if any); any sound added or changed: links in the PR body that play in the browser (jsDelivr, not `?raw=true`); both showing the latest version after follow-up commits (step 4b)
 - [ ] Tests written first, now passing; new behaviour covered at the right layer
 - [ ] `npm run check` green locally and in CI (plus e2e if UI changed)
 - [ ] The CI review's findings are addressed, or the PR says why not

@@ -1,7 +1,9 @@
 import { readFileSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Faction } from '../sim/factions';
-import { modelFor } from './modelViews';
+import { missingModels } from '../../tests/faction-art';
+import { isUpcoming, modelFor } from './modelViews';
+import { TOWER_STATS } from './towers';
 import { TURNTABLES, TURNTABLE_BUDGET_BYTES, turntableFor } from './turntables';
 
 const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as {
@@ -10,9 +12,20 @@ const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as
 const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
   packs: { id: string; name: string; attribution: string; files: string[] }[];
 };
-/** The factions rendered so far (#440 US, #442 Russia, #445 Insurgents; #444 adds the other). */
-const DONE: readonly Faction[] = ['us', 'russia', 'insurgents'];
-const done = config.models.filter((m) => (DONE as readonly string[]).includes(m.faction));
+/** In-play models only: a kind whose art is ahead of its gameplay (`UPCOMING_KINDS`, e.g. the Heavy tank) gets its turntable later. */
+const inPlay = config.models.filter((m) => !isUpcoming(m.kind));
+const hasTurntable = (m: { id: string }): boolean => TURNTABLES[m.id] !== undefined;
+/**
+ * Towers and units come in separate parts (China's towers before its units), so each is done on its own. The APC, the jet
+ * and the Grenade launcher roll out one kind at a time (the jet's art is ahead of its gameplay, #77; the APC is
+ * #480/#481; the Grenade launcher is #359: Insurgents have it before their tower turntables), so each is its own group.
+ */
+const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet', 'grenadeLauncher'];
+const groupOf = (m: { kind: string }): string =>
+  OPTIONAL_KINDS.includes(m.kind) ? m.kind : m.kind in TOWER_STATS ? 'tower' : 'unit';
+const key = (m: { faction: string; kind: string }): string => `${m.faction}/${groupOf(m)}`;
+/** The models of the factions that have a turntable (done when a faction has one of its group; it must then have all). */
+const done = inPlay.filter((m) => inPlay.some((o) => key(o) === key(m) && hasTurntable(o)));
 const sheetPath = (id: string): string => `assets/render-${id}/${id}-turntable.webp`;
 
 /** Width and height from a WebP's header (lossy VP8, lossless VP8L or extended VP8X). */
@@ -31,7 +44,8 @@ function webpSize(path: string): { width: number; height: number } {
 
 describe('TURNTABLES', () => {
   it('has a turntable for every model of the factions done so far, with its kind and faction', () => {
-    expect(done.length).toBe(16);
+    expect(done.some((m) => m.faction === 'us')).toBe(true); // the floor: the first faction (#440) is always done
+    expect(missingModels(inPlay, hasTurntable, groupOf)).toEqual([]);
     for (const m of done) {
       expect(TURNTABLES[m.id]!.kind, m.id).toBe(m.kind);
       expect(TURNTABLES[m.id]!.faction, m.id).toBe(m.faction);

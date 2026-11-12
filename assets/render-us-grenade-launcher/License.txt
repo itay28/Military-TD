@@ -1,0 +1,17 @@
+Rendered sprites of three models, set together in one scene:
+
+"MK19 Low-Poly" by lebedeventerprise (the launcher)
+https://sketchfab.com/3d-models/9965461e257f4240a86b15a784d78fb2
+"Machine Gun Tripod 1 (Low-Poly)" by GoldbergR (the tripod)
+https://sketchfab.com/3d-models/2a5ecc14900440af8fe2b5b30dabbef0
+"Tactical Soldier (game ready) low poly" by MissingTray1151 (the gunner and the assistant gunner)
+https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a
+License (all three): Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of those models made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated, combined, the soldier posed crouched, tinted and duplicated, set in a generated sandbag pit, split into hull and turret layers).
+us-grenade-launcher-turntable.webp is a turntable of the same scene (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
+The models themselves aren't committed.
+Licenses checked on the models' Sketchfab pages, 2026-11-11.

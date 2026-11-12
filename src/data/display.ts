@@ -46,6 +46,10 @@ export const ENEMY_STYLE = {
   jeep: { shape: 'square', radius: 7, color: 0x6b7d3a }, // olive drab
   helicopter: { shape: 'circle', radius: 11, color: 0x3f6f8f, rotor: 12 }, // steel blue, X rotor reaching 12 px along each axis
   tank: { shape: 'circle', radius: 14, color: 0x4a5d3a }, // dark olive drab
+  apc: { shape: 'square', radius: 11, color: 0x7a6a4f }, // khaki brown, a boxy hull
+  heavyTank: { shape: 'circle', radius: 20, color: 0x2f3d27 }, // darker olive drab, bigger than the Tank
+  gunship: { shape: 'circle', radius: 18, color: 0x4a5560 }, // dark gunmetal grey
+  jet: { shape: 'square', radius: 8, color: 0x7a8794 }, // gunmetal grey
 } as const satisfies Record<EnemyKind, { shape: 'circle' | 'square'; radius: number; color: number; rotor?: number }>;
 
 /** The X drawn over a rotor kind. */
@@ -94,6 +98,8 @@ export const TOWER_STYLE = {
   cannon: { shape: 'square', size: 36, fill: 0x6b4f2a, outline: 0xf0b429, outlineWidth: 3 }, // bronze, amber outline
   aaGun: { shape: 'circle', size: 30, fill: 0x8a5a2b, outline: 0xe5e1cf, outlineWidth: 2 }, // rust brown circle, bone outline
   mortar: { shape: 'circle', size: 34, fill: 0x4a3f2a, outline: 0xd9b45a, outlineWidth: 2 }, // dug-in brown pit, brass rim
+  grenadeLauncher: { shape: 'square', size: 30, fill: 0x4b5320, outline: 0xd9b45a, outlineWidth: 2 }, // olive, brass outline
+  sniper: { shape: 'square', size: 26, fill: 0x4b5a3a, outline: 0xe5e1cf, outlineWidth: 2 }, // small olive hide, bone outline
 } as const satisfies Record<TowerKind, TowerStyle>;
 
 /**
@@ -109,6 +115,7 @@ export const TERMS = {
   victory: 'MISSION COMPLETE',
   defeat: 'MISSION FAILED',
   report: 'After-action report',
+  difficulty: 'Difficulty',
 } as const;
 
 /** An amount of Money as the player reads it: "$100". */
@@ -138,6 +145,8 @@ export const TOWER_NAMES = {
   cannon: 'Cannon',
   aaGun: 'AA Gun',
   mortar: 'Mortar',
+  grenadeLauncher: 'Grenade Launcher',
+  sniper: 'Sniper',
 } as const satisfies Record<TowerKind, string>;
 
 /** What each tower kind is for, in one line: the tower panel leads with it. Every kind needs one; keep it true to the stats. */
@@ -146,6 +155,8 @@ export const TOWER_ROLES = {
   aaGun: 'Built for aircraft: fast, light rounds. Hits ground too.',
   cannon: 'Slow, heavy shells that punch through armor. Ground only.',
   mortar: 'Long-range shells that hit everything in the blast. Ground only, not up close.',
+  grenadeLauncher: 'Fast bursts of grenades. Shreds infantry, bounces off armor.',
+  sniper: 'Long range, slow, hits the toughest target. Reports on the next wave.',
 } as const satisfies Record<TowerKind, string>;
 
 /** What the player calls each enemy kind. Every kind needs one. */
@@ -154,6 +165,10 @@ export const ENEMY_NAMES = {
   jeep: 'Jeep',
   helicopter: 'Helicopter',
   tank: 'Tank',
+  apc: 'APC',
+  heavyTank: 'Heavy tank',
+  gunship: 'Gunship',
+  jet: 'Jet',
 } as const satisfies Record<EnemyKind, string>;
 
 /**
@@ -165,6 +180,10 @@ export const ENEMY_WEAKNESS = {
   jeep: 'Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it.',
   helicopter: 'Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best.',
   tank: 'Armor: Rifle Nests barely scratch it. Cannons and Mortars work.',
+  apc: 'Armored carrier. Kill it and its squad jumps out.',
+  heavyTank: 'Boss. Heavy armor, huge HP. Leaking it costs 10 Lives.',
+  gunship: 'Boss. Armored gunship. AA Guns are your best answer.',
+  jet: 'Fast, fragile jet. Needs AA coverage along the route.',
 } as const satisfies Record<EnemyKind, string>;
 
 /** The smallest tap area of an enemy, as a diameter in screen pixels, so a small one is easy to hit on a phone. */
@@ -253,7 +272,9 @@ export const TRACER_STYLE = {
   rifleNest: { color: 0xffe9a0, width: 2 },
   cannon: { color: 0xffb347, width: 4 },
   mortar: { color: 0xd9b45a, width: 3 }, // unused: the Mortar fires Shells, not tracers
+  grenadeLauncher: { color: 0xd9b45a, width: 2 }, // unused: grenades fly as Shells
   aaGun: { color: 0xffd27a, width: 1 },
+  sniper: { color: 0xfff4d6, width: 1 },
 } as const satisfies Record<TowerKind, { color: number; width: number }>;
 
 /** A shell in flight (a dot) and its blast when it lands (a circle at the outer ring, fading over `blastFadeMs`). */
@@ -354,5 +375,9 @@ export const AFTERMATH_OF = {
   infantry: { decal: 'fallen', size: 8 },
   jeep: { decal: 'wreck', size: 8 },
   tank: { decal: 'wreck', size: 14 },
+  apc: { decal: 'wreck', size: 12 },
+  heavyTank: { decal: 'wreck', size: 20 },
+  gunship: { decal: 'crashMark', size: 18 },
   helicopter: { decal: 'crashMark', size: 12 },
+  jet: { decal: 'crashMark', size: 10 }, // a small fast jet leaves a smaller crash mark than the helicopter
 } as const satisfies Record<EnemyKind, { decal: Exclude<DecalKind, 'crater'>; size: number }>;

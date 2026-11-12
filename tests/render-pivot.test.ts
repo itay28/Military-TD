@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
+import { NOT_PLAYABLE_KINDS } from '../src/data/enemies';
+import { isUpcoming, UPCOMING_KINDS } from '../src/data/modelViews';
 import { SPRITES } from '../src/data/sprites';
+import { NOT_IN_PLAY, type TowerKind } from '../src/data/towers';
 import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
@@ -97,13 +100,300 @@ describe('the committed render data', () => {
   });
 });
 
+/**
+ * v0.8.0 kinds whose renders come before the kind is in play (#360). They aren't a `SpriteKind` until their gameplay
+ * issue lands (the APC: #76). A Faction has one when `render-sprite.json` lists a model of it; the rest are exempt.
+ */
+const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet', 'sniper'];
+
+/**
+ * Kinds rendered before their gameplay (art-ahead): each Faction gets its render in its own part, and the kind joins
+ * `SPRITES` when it is put in play (Grenade launcher: #359).
+ */
+const ART_AHEAD_KINDS = ['grenadeLauncher'];
+
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
-  const kinds = Object.keys(SPRITES).sort();
-  // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
+  // A kind not in play yet (the Sniper, renders in #358) has none until its rollout. The upcoming ones (the Heavy tank,
+  // #362) have art for every Faction (#509).
+  const inPlay = Object.keys(SPRITES).filter(
+    (kind) => !NOT_IN_PLAY.has(kind as TowerKind) && !(NOT_PLAYABLE_KINDS as readonly string[]).includes(kind),
+  );
   for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
-      expect(models.map((m) => m.kind).sort()).toEqual(kinds);
+      const kinds = [...inPlay, ...OPTIONAL_KINDS.filter((k) => models.some((m) => m.kind === k))].sort();
+      expect(
+        models
+          .filter((m) => !isUpcoming(m.kind) && !ART_AHEAD_KINDS.includes(m.kind))
+          .map((m) => m.kind)
+          .sort(),
+      ).toEqual(kinds);
+      expect(new Set(models.map((m) => m.kind)).size).toBe(models.length);
+      // The upcoming kinds (the Heavy tank) have art for every Faction (#509).
+      for (const kind of UPCOMING_KINDS)
+        expect(
+          models.map((m) => m.kind),
+          kind,
+        ).toContain(kind);
     });
+  }
+
+  it('has a Fighter jet for every Faction (#482, #484)', () => {
+    for (const faction of FACTIONS)
+      expect(
+        RENDER_CONFIG.models.some((m) => m.faction === faction && m.kind === 'jet'),
+        faction,
+      ).toBe(true);
+  });
+
+  it('lists a kind as upcoming only until it is in play (then drop it from UPCOMING_KINDS)', () => {
+    // A kind may be a sim kind (the Heavy tank boss, #457) with a null sprite, but has no frame until it is in play.
+    for (const kind of UPCOMING_KINDS)
+      expect((SPRITES as Record<string, string | null>)[kind] ?? null, kind).toBeNull();
+  });
+
+  it('keeps the new kinds out of SPRITES until they are in play', () => {
+    // The jet is already a sprite kind, kept out of play by NOT_PLAYABLE_KINDS; the Sniper by NOT_IN_PLAY.
+    for (const kind of OPTIONAL_KINDS)
+      expect(
+        kind in SPRITES &&
+          !(NOT_PLAYABLE_KINDS as readonly string[]).includes(kind) &&
+          !NOT_IN_PLAY.has(kind as TowerKind),
+        kind,
+      ).toBe(false);
+  });
+});
+
+describe('the US APC render (#478)', () => {
+  const model = RENDER_CONFIG.models.find((m) => m.id === 'us-apc')!;
+  const png = PNG.sync.read(readFileSync('assets/render-us-apc/us-apc.png'));
+
+  it('is the APC kind for the US, a single image with no turret', () => {
+    expect(model).toMatchObject({ kind: 'apc', faction: 'us' });
+    expect(model.turret).toBeUndefined();
+    expect(buildRenderMeta().find((m) => m.json.id === 'us-apc')!.json.pivot).toBeUndefined();
+  });
+
+  it('fills its canvas: canvasTiles × pxPerTile, with the shadow inside the edges', () => {
+    expect(png.width).toBe(Math.round(model.canvasTiles * RENDER_CONFIG.pxPerTile));
+    expect(png.height).toBe(png.width);
+    const alpha = (x: number, y: number): number => png.data[(y * png.width + x) * 4 + 3]!;
+    for (let i = 0; i < png.width; i++) {
+      expect(alpha(i, 0)).toBe(0);
+      expect(alpha(i, png.height - 1)).toBe(0);
+      expect(alpha(0, i)).toBe(0);
+      expect(alpha(png.width - 1, i)).toBe(0);
+    }
+  });
+
+  it('is about 0.9 tile long (ADR-0009, point 2), facing north: longer than wide', () => {
+    let [minX, minY, maxX, maxY] = [Infinity, Infinity, -1, -1];
+    for (let y = 0; y < png.height; y++)
+      for (let x = 0; x < png.width; x++) {
+        if (png.data[(y * png.width + x) * 4 + 3]! < 250) continue; // the vehicle, not its softer shadow
+        [minX, minY, maxX, maxY] = [Math.min(minX, x), Math.min(minY, y), Math.max(maxX, x), Math.max(maxY, y)];
+      }
+    const length = (maxY - minY + 1) / RENDER_CONFIG.pxPerTile;
+    expect(length).toBeGreaterThan(0.82);
+    expect(length).toBeLessThan(0.98);
+    expect(maxX - minX + 1).toBeLessThan(maxY - minY + 1);
+  });
+});
+
+describe('the Russia APC render (#480)', () => {
+  const model = RENDER_CONFIG.models.find((m) => m.id === 'russia-apc')!;
+  const png = PNG.sync.read(readFileSync('assets/render-russia-apc/russia-apc.png'));
+
+  it('is the APC kind for Russia, a single image with no turret', () => {
+    expect(model).toMatchObject({ kind: 'apc', faction: 'russia' });
+    expect(model.turret).toBeUndefined();
+    expect(buildRenderMeta().find((m) => m.json.id === 'russia-apc')!.json.pivot).toBeUndefined();
+  });
+
+  it('fills its canvas: canvasTiles × pxPerTile, with the shadow inside the edges', () => {
+    expect(png.width).toBe(Math.round(model.canvasTiles * RENDER_CONFIG.pxPerTile));
+    expect(png.height).toBe(png.width);
+    const alpha = (x: number, y: number): number => png.data[(y * png.width + x) * 4 + 3]!;
+    for (let i = 0; i < png.width; i++) {
+      expect(alpha(i, 0)).toBe(0);
+      expect(alpha(i, png.height - 1)).toBe(0);
+      expect(alpha(0, i)).toBe(0);
+      expect(alpha(png.width - 1, i)).toBe(0);
+    }
+  });
+
+  it('is about 0.9 tile long (ADR-0009, point 2), facing north: longer than wide', () => {
+    let [minX, minY, maxX, maxY] = [Infinity, Infinity, -1, -1];
+    for (let y = 0; y < png.height; y++)
+      for (let x = 0; x < png.width; x++) {
+        if (png.data[(y * png.width + x) * 4 + 3]! < 250) continue; // the vehicle, not its softer shadow
+        [minX, minY, maxX, maxY] = [Math.min(minX, x), Math.min(minY, y), Math.max(maxX, x), Math.max(maxY, y)];
+      }
+    const length = (maxY - minY + 1) / RENDER_CONFIG.pxPerTile;
+    expect(length).toBeGreaterThan(0.82);
+    expect(length).toBeLessThan(0.98);
+    expect(maxX - minX + 1).toBeLessThan(maxY - minY + 1);
+  });
+
+  it('has a turntable for the Field manual (#408), a WebP sheet with its JSON', () => {
+    const meta = JSON.parse(readFileSync('assets/render-russia-apc/russia-apc-turntable.json', 'utf8'));
+    expect(meta).toMatchObject({ id: 'russia-apc', kind: 'apc', faction: 'russia' });
+    const sheet = readFileSync('assets/render-russia-apc/russia-apc-turntable.webp');
+    expect(sheet.toString('ascii', 8, 12)).toBe('WEBP');
+    expect(sheet.length).toBeLessThan(300_000);
+  });
+});
+
+describe('the China APC render (#481)', () => {
+  const model = RENDER_CONFIG.models.find((m) => m.id === 'china-apc')!;
+  const png = PNG.sync.read(readFileSync('assets/render-china-apc/china-apc.png'));
+
+  it('is the APC kind for China, a single image with no turret', () => {
+    expect(model).toMatchObject({ kind: 'apc', faction: 'china' });
+    expect(model.turret).toBeUndefined();
+    expect(buildRenderMeta().find((m) => m.json.id === 'china-apc')!.json.pivot).toBeUndefined();
+  });
+
+  it('fills its canvas: canvasTiles × pxPerTile, with the shadow inside the edges', () => {
+    expect(png.width).toBe(Math.round(model.canvasTiles * RENDER_CONFIG.pxPerTile));
+    expect(png.height).toBe(png.width);
+    const alpha = (x: number, y: number): number => png.data[(y * png.width + x) * 4 + 3]!;
+    for (let i = 0; i < png.width; i++) {
+      expect(alpha(i, 0)).toBe(0);
+      expect(alpha(i, png.height - 1)).toBe(0);
+      expect(alpha(0, i)).toBe(0);
+      expect(alpha(png.width - 1, i)).toBe(0);
+    }
+  });
+
+  it('is about 0.9 tile long (ADR-0009, point 2), facing north: longer than wide', () => {
+    let [minX, minY, maxX, maxY] = [Infinity, Infinity, -1, -1];
+    for (let y = 0; y < png.height; y++)
+      for (let x = 0; x < png.width; x++) {
+        if (png.data[(y * png.width + x) * 4 + 3]! < 250) continue; // the vehicle, not its softer shadow
+        [minX, minY, maxX, maxY] = [Math.min(minX, x), Math.min(minY, y), Math.max(maxX, x), Math.max(maxY, y)];
+      }
+    const length = (maxY - minY + 1) / RENDER_CONFIG.pxPerTile;
+    expect(length).toBeGreaterThan(0.82);
+    expect(length).toBeLessThan(0.98);
+    expect(maxX - minX + 1).toBeLessThan(maxY - minY + 1);
+  });
+
+  it('has a turntable for the Field manual (#408), a WebP sheet with its JSON', () => {
+    const meta = JSON.parse(readFileSync('assets/render-china-apc/china-apc-turntable.json', 'utf8'));
+    expect(meta).toMatchObject({ id: 'china-apc', kind: 'apc', faction: 'china' });
+    const sheet = readFileSync('assets/render-china-apc/china-apc-turntable.webp');
+    expect(sheet.toString('ascii', 8, 12)).toBe('WEBP');
+    expect(sheet.length).toBeLessThan(300_000);
+  });
+});
+
+describe('the Insurgents APC render (#483)', () => {
+  const model = RENDER_CONFIG.models.find((m) => m.id === 'insurgents-apc')!;
+  const png = PNG.sync.read(readFileSync('assets/render-insurgents-apc/insurgents-apc.png'));
+
+  it('is the APC kind for Insurgents, a single image with no turret', () => {
+    expect(model).toMatchObject({ kind: 'apc', faction: 'insurgents' });
+    expect(model.turret).toBeUndefined();
+    expect(buildRenderMeta().find((m) => m.json.id === 'insurgents-apc')!.json.pivot).toBeUndefined();
+  });
+
+  it('fills its canvas: canvasTiles × pxPerTile, with the shadow inside the edges', () => {
+    expect(png.width).toBe(Math.round(model.canvasTiles * RENDER_CONFIG.pxPerTile));
+    expect(png.height).toBe(png.width);
+    const alpha = (x: number, y: number): number => png.data[(y * png.width + x) * 4 + 3]!;
+    for (let i = 0; i < png.width; i++) {
+      expect(alpha(i, 0)).toBe(0);
+      expect(alpha(i, png.height - 1)).toBe(0);
+      expect(alpha(0, i)).toBe(0);
+      expect(alpha(png.width - 1, i)).toBe(0);
+    }
+  });
+
+  it('is about 0.9 tile long (ADR-0009, point 2), facing north: longer than wide', () => {
+    let [minX, minY, maxX, maxY] = [Infinity, Infinity, -1, -1];
+    for (let y = 0; y < png.height; y++)
+      for (let x = 0; x < png.width; x++) {
+        if (png.data[(y * png.width + x) * 4 + 3]! < 250) continue; // the vehicle, not its softer shadow
+        [minX, minY, maxX, maxY] = [Math.min(minX, x), Math.min(minY, y), Math.max(maxX, x), Math.max(maxY, y)];
+      }
+    const length = (maxY - minY + 1) / RENDER_CONFIG.pxPerTile;
+    expect(length).toBeGreaterThan(0.82);
+    expect(length).toBeLessThan(0.98);
+    expect(maxX - minX + 1).toBeLessThan(maxY - minY + 1);
+  });
+
+  it('has a turntable for the Field manual (#408), a WebP sheet with its JSON', () => {
+    const meta = JSON.parse(readFileSync('assets/render-insurgents-apc/insurgents-apc-turntable.json', 'utf8'));
+    expect(meta).toMatchObject({ id: 'insurgents-apc', kind: 'apc', faction: 'insurgents' });
+    const sheet = readFileSync('assets/render-insurgents-apc/insurgents-apc-turntable.webp');
+    expect(sheet.toString('ascii', 8, 12)).toBe('WEBP');
+    expect(sheet.length).toBeLessThan(300_000);
+  });
+});
+
+describe('the Sniper renders (art-ahead, #358)', () => {
+  const snipers = RENDER_CONFIG.models.filter((m) => m.kind === 'sniper');
+
+  it('covers every Faction: US (#459), Russia and China (#460), Insurgents (#462)', () => {
+    expect(snipers.map((m) => m.faction).sort()).toEqual([...FACTIONS].sort());
+  });
+
+  for (const model of snipers) {
+    it(`${model.id} is a team on a dug-in base that turns about the pad centre`, () => {
+      expect(model.base, 'a base').toBeDefined();
+      expect(model.turret, 'a turret layer').toBeDefined();
+      const { json } = buildRenderMeta().find((m) => m.json.id === model.id)!;
+      expect(json.pivot).toEqual({ x: json.canvasPx / 2, y: json.canvasPx / 2 });
+    });
+  }
+});
+
+describe('the Grenade launcher renders (art-ahead, #359)', () => {
+  const launchers = RENDER_CONFIG.models.filter((m) => m.kind === 'grenadeLauncher');
+
+  it('covers every Faction, one each (#464, #467, #468, #469)', () => {
+    expect(launchers.map((m) => m.faction).sort()).toEqual([...FACTIONS].sort());
+  });
+
+  for (const model of launchers) {
+    it(`${model.id} is a crewed launcher on a dug-in base that turns about the pad centre`, () => {
+      expect(model.base, 'a base').toBeDefined();
+      expect(model.turret, 'a turret layer').toBeDefined();
+      expect(
+        model.parts?.some((p) => p.turret),
+        'a crew part on the turret layer (the gunner)',
+      ).toBe(true);
+      const { json } = buildRenderMeta().find((m) => m.json.id === model.id)!;
+      expect(json.pivot).toEqual({ x: json.canvasPx / 2, y: json.canvasPx / 2 });
+    });
+  }
+});
+
+describe('models built from parts (render-sprite.py `parts`)', () => {
+  const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
+    packs: { source: string; license: string; author: string; files: string[] }[];
+  };
+  const withParts = RENDER_CONFIG.models.filter((m) => m.parts !== undefined);
+
+  it('exist (the US Grenade launcher: launcher, tripod and crew, #464)', () => {
+    expect(withParts.map((m) => m.id)).toContain('us-grenade-launcher');
+  });
+
+  for (const model of withParts) {
+    for (const part of model.parts!) {
+      it(`${model.id}: part ${part.sketchfab} is credited in the manifest for that folder`, () => {
+        expect(part.author, 'an author').toBeTruthy();
+        expect(['CC0-1.0', 'CC-BY-3.0', 'CC-BY-4.0']).toContain(part.license);
+        const pack = manifest.packs.find(
+          (p) =>
+            p.source === `https://sketchfab.com/3d-models/${part.sketchfab}` &&
+            p.files.includes(`assets/render-${model.id}/**`),
+        );
+        expect(pack, 'a manifest entry with this source covering the folder').toBeDefined();
+        expect(pack!.license).toBe(part.license);
+        expect(pack!.author).toBe(part.author);
+      });
+    }
   }
 });

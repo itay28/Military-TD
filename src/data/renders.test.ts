@@ -1,12 +1,21 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { RENDERS, RENDER_FACING, renderFor } from './renders';
+import { FACTIONS } from '../sim/factions';
 import { SPRITES, type SpriteKind } from './sprites';
+import { TURNTABLE_BUDGET_BYTES } from './turntables';
 
 describe('RENDERS', () => {
   it('has the spike’s two renders: the China AA Gun and the Russia Tank', () => {
     expect(Object.keys(RENDERS).sort()).toEqual(['aaGun', 'tank']);
     expect(RENDERS.aaGun!.id).toBe('china-aa-gun');
     expect(RENDERS.tank!.id).toBe('russia-tank');
+  });
+
+  it('keeps the Gunship out of play: its art (#363) is not wired in until the rollout', () => {
+    expect(Object.keys(RENDERS)).not.toContain('gunship');
+    expect(SPRITES.gunship).toBeNull();
   });
 
   it('gives each a hull and a turret texture, both its own keys', () => {
@@ -45,7 +54,81 @@ describe('RENDERS', () => {
     expect(SPRITES.tank).not.toBeNull();
   });
 
+  it('has no hull/turret render for the Fighter jet: it is one top-down sprite (#482, src/data/jet-sprites.test.ts)', () => {
+    expect('jet' in RENDERS).toBe(false);
+  });
+
+  it('leaves the APC out until it is in play (#76): its US (#478), Russia (#480), China (#481) and Insurgents (#483) renders are only in the Field manual for now', () => {
+    expect('apc' in RENDERS).toBe(false);
+    expect(SPRITES.apc).toBeNull();
+  });
+
   it('renders face north', () => {
     expect(RENDER_FACING).toBeCloseTo(-Math.PI / 2);
   });
+});
+
+describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 puts the Sniper in play)', () => {
+  // The Factions whose Sniper is rendered so far: US (#459), Russia and China (#460), Insurgents (#462): every Faction.
+  for (const faction of FACTIONS) {
+    const id = `${faction}-sniper`;
+    const dir = `assets/render-${id}`;
+
+    it(`${id} has its pivot data: a 1.25-tile canvas turning about the pad centre`, () => {
+      const meta = JSON.parse(readFileSync(`${dir}/${id}.json`, 'utf8'));
+      expect(meta).toMatchObject({ id, kind: 'sniper', pxPerTile: 128, canvasPx: 160, pivot: { x: 80, y: 80 } });
+    });
+
+    for (const layer of ['hull', 'turret'] as const) {
+      it(`${id} has a ${layer} layer on the same canvas`, () => {
+        const path = `${dir}/${id}-${layer}.png`;
+        expect(existsSync(path), path).toBe(true);
+        const png = PNG.sync.read(readFileSync(path));
+        expect([png.width, png.height]).toEqual([160, 160]);
+      });
+    }
+
+    it(`keeps ${id} out of RENDERS until it is in play`, () => {
+      expect(Object.values(RENDERS).map((r) => r.id)).not.toContain(id);
+    });
+  }
+});
+
+describe('the committed Grenade launcher renders (art-ahead: not in RENDERS until #359 puts it in play)', () => {
+  // Every Faction: US (#464), Russia (#467), China (#468), Insurgents (#469).
+  for (const faction of FACTIONS) {
+    const id = `${faction}-grenade-launcher`;
+    const dir = `assets/render-${id}`;
+
+    it(`${id} has its pivot data: a 1.25-tile canvas turning about the pad centre`, () => {
+      const meta = JSON.parse(readFileSync(`${dir}/${id}.json`, 'utf8'));
+      expect(meta).toMatchObject({
+        id,
+        kind: 'grenadeLauncher',
+        pxPerTile: 128,
+        canvasPx: 160,
+        pivot: { x: 80, y: 80 },
+      });
+    });
+
+    for (const layer of ['hull', 'turret'] as const) {
+      it(`${id} has a ${layer} layer on the same canvas`, () => {
+        const path = `${dir}/${id}-${layer}.png`;
+        expect(existsSync(path), path).toBe(true);
+        const png = PNG.sync.read(readFileSync(path));
+        expect([png.width, png.height]).toEqual([160, 160]);
+      });
+    }
+
+    it(`${id} has a turntable for the Field manual, within the 300 KB budget`, () => {
+      const path = `${dir}/${id}-turntable.webp`;
+      expect(existsSync(path), path).toBe(true);
+      expect(readFileSync(path).length).toBeLessThanOrEqual(TURNTABLE_BUDGET_BYTES);
+      expect(JSON.parse(readFileSync(`${dir}/${id}-turntable.json`, 'utf8'))).toMatchObject({ id, frames: 24 });
+    });
+
+    it(`keeps ${id} out of RENDERS until it is in play`, () => {
+      expect(Object.values(RENDERS).map((r) => r.id)).not.toContain(id);
+    });
+  }
 });

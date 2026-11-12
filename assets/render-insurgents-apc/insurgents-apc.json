@@ -1,0 +1,6 @@
+{
+  "id": "insurgents-apc",
+  "kind": "apc",
+  "pxPerTile": 128,
+  "canvasPx": 160
+}

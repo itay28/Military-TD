@@ -1,0 +1,9 @@
+Rendered sprites of "Hind Attack Helicopter" by AshleyAslett
+https://sketchfab.com/3d-models/bb65bdfde2c54007a52dfbe1d91d930d
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNGs in this folder are top-down renders of that model made by
+scripts/render-sprite.py (changed: rendered from above, lit, desaturated).
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-10.

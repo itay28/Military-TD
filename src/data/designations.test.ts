@@ -17,12 +17,25 @@ function strings(value: unknown): string[] {
 describe('designationsIn', () => {
   const found = designationsIn(allDepicts(renderSprites));
 
-  it.each(['M1A2', 'T-72', 'ZU-23', 'UH-60', 'Mi-8', '2B14', 'Type 99', 'Humvee', 'Hilux', 'Toyota', 'Black Hawk'])(
-    'finds %s in the render list',
-    (name) => {
-      expect(found).toContain(name);
-    },
-  );
+  it.each([
+    'M1A2',
+    'T-72',
+    'ZU-23',
+    'UH-60',
+    'Mi-8',
+    '2B14',
+    'Type 99',
+    'Humvee',
+    'Hilux',
+    'Toyota',
+    'Black Hawk',
+    'F-16',
+    'Su-25',
+    'J-10',
+    'MiG-21',
+  ])('finds %s in the render list', (name) => {
+    expect(found).toContain(name);
+  });
 
   it('takes the stem of a variant, so T-72B3 also bans T-72', () => {
     expect(designationsIn(['T-72B3 main battle tank'])).toEqual(expect.arrayContaining(['T-72B3', 'T-72']));
