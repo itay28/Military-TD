@@ -389,6 +389,42 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-helicopter/**`
 
+## Boeing AH-64D Apache Combat Helicopter (top-down render)
+
+- Author: MirzaArrafiERV_45
+- Source: <https://sketchfab.com/3d-models/c3b58008c46b45048fdd7dd283a3c8c8>
+- License: CC-BY-4.0
+- Attribution: "Boeing AH-64D Apache Combat Helicopter" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-10
+- Files: `assets/render-us-gunship/**`
+
+## Mi-28N Havoc (top-down render)
+
+- Author: rukh3d
+- Source: <https://sketchfab.com/3d-models/3e80c95bbadf46abbafba9d9a08afc68>
+- License: CC-BY-4.0
+- Attribution: "Mi-28N Havoc" by rukh3d (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-10
+- Files: `assets/render-russia-gunship/**`
+
+## Eurocopter Tiger Attack Helicopter (top-down render)
+
+- Author: MirzaArrafiERV_45
+- Source: <https://sketchfab.com/3d-models/a8ae9b61995a49a1a2fa2de57e8ce4ef>
+- License: CC-BY-4.0
+- Attribution: "Eurocopter Tiger Attack Helicopter" by MirzaArrafiERV_45 (sketchfab.com), CC-BY 4.0, rendered top-down, re-coloured green
+- Downloaded: 2026-11-10
+- Files: `assets/render-china-gunship/**`
+
+## Hind Attack Helicopter (top-down render)
+
+- Author: AshleyAslett
+- Source: <https://sketchfab.com/3d-models/bb65bdfde2c54007a52dfbe1d91d930d>
+- License: CC-BY-4.0
+- Attribution: "Hind Attack Helicopter" by AshleyAslett (sketchfab.com), CC-BY 4.0, rendered top-down
+- Downloaded: 2026-11-10
+- Files: `assets/render-insurgents-gunship/**`
+
 ## The Free Firearm Sound Library
 
 - Author: Ben Jaszczak, Brian Nelson, Kevin Heras and Matthew Nanney
