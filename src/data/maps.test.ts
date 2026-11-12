@@ -3,7 +3,7 @@ import { isFaction } from '../sim/factions';
 import { createMap, type Tile } from '../sim/map';
 import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from '../../tests/e2e/firstMap';
 import { groundImagePath, groundTextureKey, MAPS, mapById, MVP_MAP, wavesForMap } from './maps';
-import { ENEMY_STATS } from './enemies';
+import { ENEMY_STATS, type EnemyKind } from './enemies';
 import { WAVES } from './waves';
 
 function edgesOf({ col, row }: Tile, cols: number, rows: number): string[] {
@@ -73,13 +73,13 @@ describe('map registry', () => {
     for (const wave of waves) expect(wave.groups.reduce((sum, g) => sum + g.count, 0)).toBeGreaterThan(0);
   });
 
-  it("Switchback's schedule is a step harder than Training Ground's and brings no new enemy kind", () => {
+  it("Switchback's schedule is a step harder than Training Ground's; its only new kinds are the APC and the jet", () => {
     const enemies = (waves: typeof WAVES) => waves.flatMap((w) => w.groups).reduce((sum, g) => sum + g.count, 0);
     const kinds = (waves: typeof WAVES) => new Set(waves.flatMap((w) => w.groups.map((g) => g.kind)));
     const { waves } = mapById('switchback');
     expect(waves.length).toBeGreaterThan(WAVES.length);
     expect(enemies(waves)).toBeGreaterThan(enemies(WAVES));
-    expect([...kinds(waves)].every((kind) => kinds(WAVES).has(kind))).toBe(true);
+    expect([...kinds(waves)].filter((kind) => !kinds(WAVES).has(kind)).sort()).toEqual(['apc', 'jet']);
     // Mixed groups come earlier: the first wave with two kinds is sooner than on Training Ground.
     const firstMixed = (ws: typeof WAVES) => ws.findIndex((w) => new Set(w.groups.map((g) => g.kind)).size > 1);
     expect(firstMixed(waves)).toBeGreaterThanOrEqual(0);
@@ -87,9 +87,11 @@ describe('map registry', () => {
   });
 
   const trainingKinds = new Set(WAVES.flatMap((w) => w.groups.map((g) => g.kind)));
+  /** The kinds the later maps add (#366): the APC, the jet, and the Heavy tank ending Hairpin. */
+  const laterKinds = new Set<EnemyKind>(['apc', 'jet', 'heavyTank']);
 
   it.each(MAPS.slice(1).map((entry, i) => [MAPS[i]!.id, entry.id, MAPS[i]!.waves, entry.waves] as const))(
-    'difficulty rises: %s → %s has as many waves or more, more enemies and more total hp, and no new kind',
+    'difficulty rises: %s → %s has as many waves or more, more enemies and more total hp, and only the later kinds are new',
     (_, __, before, after) => {
       const enemies = (waves: typeof WAVES) => waves.flatMap((w) => w.groups);
       const count = (waves: typeof WAVES) => enemies(waves).reduce((sum, g) => sum + g.count, 0);
@@ -98,7 +100,7 @@ describe('map registry', () => {
       expect(after.length).toBeGreaterThanOrEqual(before.length);
       expect(count(after)).toBeGreaterThan(count(before));
       expect(hp(after)).toBeGreaterThan(hp(before));
-      expect(enemies(after).every((g) => trainingKinds.has(g.kind))).toBe(true);
+      expect(enemies(after).every((g) => trainingKinds.has(g.kind) || laterKinds.has(g.kind))).toBe(true);
     },
   );
 

@@ -23,10 +23,10 @@ export const ENEMY_DISMOUNT: Partial<Record<EnemyKind, Dismount>> = {
 export const DISMOUNT_SPREAD_TILES = 0.3;
 
 /**
- * Kinds in no map or screen yet: each waits for its renders and rollout (#361, #366; ADR-0009: no map mixes art
- * styles). Remove one here when it ships. Until then the APC draws with the shape fallback.
+ * Kinds in no map or screen yet: each waits for its renders and rollout (ADR-0009: no map mixes art styles). Remove
+ * one here when it ships. The Gunship comes with map 5 (#81); the APC, jet and Heavy tank went in play in #366.
  */
-export const NOT_PLAYABLE_KINDS: readonly EnemyKind[] = ['jet', 'heavyTank', 'gunship', 'apc'];
+export const NOT_PLAYABLE_KINDS: readonly EnemyKind[] = ['gunship'];
 
 /** Every kind a player can meet. */
 export const PLAYABLE_KINDS = (Object.keys(ENEMY_STATS) as EnemyKind[]).filter((k) => !NOT_PLAYABLE_KINDS.includes(k));

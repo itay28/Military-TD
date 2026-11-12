@@ -11,11 +11,10 @@ describe('jet', () => {
     expect(ENEMY_NAMES.jet).toBe('Jet');
     expect(ENEMY_WEAKNESS.jet).toBe('Fast, fragile jet. Needs AA coverage along the route.');
   });
-  it('is in no map wave yet (ADR-0009)', () => {
-    expect(NOT_PLAYABLE_KINDS).toContain('jet');
-    const kinds = [WAVES, SWITCHBACK_WAVES, SERPENTINE_WAVES, HAIRPIN_WAVES].flatMap((waves) =>
-      waves.flatMap((w) => w.groups.map((g) => g.kind)),
-    );
-    expect(kinds).not.toContain('jet');
+  it('is in play on maps 2–4, not on the Training Ground (#366)', () => {
+    expect(NOT_PLAYABLE_KINDS).not.toContain('jet');
+    const kinds = (waves: typeof WAVES) => waves.flatMap((w) => w.groups.map((g) => g.kind));
+    expect(kinds(WAVES)).not.toContain('jet');
+    for (const waves of [SWITCHBACK_WAVES, SERPENTINE_WAVES, HAIRPIN_WAVES]) expect(kinds(waves)).toContain('jet');
   });
 });

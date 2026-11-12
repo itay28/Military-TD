@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { validateWaves } from '../sim/waves';
 import { NOT_PLAYABLE_KINDS, PLAYABLE_KINDS, type EnemyKind } from './enemies';
 import { MAPS } from './maps';
-import { WAVES } from './waves';
+import { HAIRPIN_WAVES, SERPENTINE_WAVES, SWITCHBACK_WAVES, WAVES } from './waves';
 
 const playableKinds: string[] = [...PLAYABLE_KINDS];
 
@@ -18,9 +18,14 @@ describe('the wave schedule', () => {
     expect(WAVES[0]).toEqual({ groups: [{ kind: 'infantry', count: 8, spacingMs: 800, delayMs: 0 }] });
   });
 
-  it('every enemy kind in play appears', () => {
+  it('every enemy kind in play appears on some map', () => {
+    const seen = new Set(MAPS.flatMap((map) => map.waves.flatMap((wave) => [...kindsIn(wave)])));
+    expect([...seen].sort()).toEqual([...playableKinds].sort());
+  });
+
+  it('the Training Ground keeps the four starting kinds: the new ones come on later maps (#366)', () => {
     const seen = new Set(WAVES.flatMap((wave) => [...kindsIn(wave)]));
-    expect([...seen].sort()).toEqual(playableKinds.sort());
+    expect([...seen].sort()).toEqual(['helicopter', 'infantry', 'jeep', 'tank']);
   });
 
   it("no map's waves have a kind that isn't playable yet", () => {
@@ -28,16 +33,56 @@ describe('the wave schedule', () => {
     expect(kinds.filter((k) => NOT_PLAYABLE_KINDS.includes(k))).toEqual([]);
   });
 
-  it.each(playableKinds.filter((k) => k !== 'infantry') as EnemyKind[])(
-    '%s first appears alone, at most 3 of it',
-    (kind) => {
-      const first = WAVES.find((wave) => kindsIn(wave).has(kind));
-      expect([...kindsIn(first!)]).toEqual([kind]);
-      expect(first!.groups.reduce((sum, g) => sum + g.count, 0)).toBeLessThanOrEqual(3);
-    },
-  );
+  it.each(['jeep', 'tank', 'helicopter'] as EnemyKind[])('%s first appears alone, at most 3 of it', (kind) => {
+    const first = WAVES.find((wave) => kindsIn(wave).has(kind));
+    expect([...kindsIn(first!)]).toEqual([kind]);
+    expect(first!.groups.reduce((sum, g) => sum + g.count, 0)).toBeLessThanOrEqual(3);
+  });
 
   it('Infantry is the only kind in wave 1', () => {
     expect([...kindsIn(WAVES[0]!)]).toEqual(['infantry']);
+  });
+});
+
+/** The new kinds on maps 2–4 (#366): each map's schedule brings them into its later waves. */
+describe.each([
+  ['Switchback', SWITCHBACK_WAVES],
+  ['Serpentine', SERPENTINE_WAVES],
+  ['Hairpin', HAIRPIN_WAVES],
+] as const)('%s waves: the APC and the Fighter jet', (_name, waves) => {
+  const firstWith = (kind: EnemyKind) => waves.findIndex((wave) => kindsIn(wave).has(kind));
+
+  it('are valid', () => {
+    expect(() => validateWaves(waves)).not.toThrow();
+  });
+
+  it.each(['apc', 'jet'] as EnemyKind[])('%s joins in the second half, first in a small group of at most 3', (kind) => {
+    const first = firstWith(kind);
+    expect(first).toBeGreaterThanOrEqual(waves.length / 2 - 1);
+    const groups = waves[first]!.groups.filter((g) => g.kind === kind);
+    expect(groups.reduce((sum, g) => sum + g.count, 0)).toBeLessThanOrEqual(3);
+  });
+
+  it.each(['apc', 'jet'] as EnemyKind[])('%s is in the last wave', (kind) => {
+    expect(kindsIn(waves.at(-1)!).has(kind)).toBe(true);
+  });
+});
+
+describe('the bosses (#366)', () => {
+  const bossWaves = (waves: readonly (typeof WAVES)[number][]) =>
+    waves.flatMap((wave, i) => (kindsIn(wave).has('heavyTank') ? [i] : []));
+
+  it("one Heavy tank ends Hairpin's last wave: its group starts after every other group", () => {
+    expect(bossWaves(HAIRPIN_WAVES)).toEqual([HAIRPIN_WAVES.length - 1]);
+    const last = HAIRPIN_WAVES.at(-1)!.groups;
+    const boss = last.find((g) => g.kind === 'heavyTank')!;
+    expect(boss.count).toBe(1);
+    for (const g of last.filter((g) => g !== boss)) expect(boss.delayMs).toBeGreaterThan(g.delayMs);
+  });
+
+  it('no other map has a boss before map 5 (#81)', () => {
+    for (const waves of [WAVES, SWITCHBACK_WAVES, SERPENTINE_WAVES]) expect(bossWaves(waves)).toEqual([]);
+    const kinds = MAPS.flatMap((map) => map.waves.flatMap((wave) => [...kindsIn(wave)]));
+    expect(kinds).not.toContain('gunship');
   });
 });

@@ -37,8 +37,9 @@ export const WAVES: readonly WaveData[] = [
 ];
 
 /**
- * Switchback's schedule: a step harder than `WAVES`. Two more waves, larger groups, and the kinds mix from wave 3,
- * but no new kind, and every wave still answerable more than one way (ADR-0007).
+ * Switchback's schedule: a step harder than `WAVES`. Two more waves, larger groups, and the kinds mix from wave 3;
+ * every wave still answerable more than one way (ADR-0007). The APC and the Fighter jet join the second half (#366):
+ * 2 APCs trail wave 7 and 3 jets trail wave 9, each the last group so it arrives on its own; waves 10–12 mix them in.
  */
 export const SWITCHBACK_WAVES: readonly WaveData[] = [
   { groups: [group('infantry', 10, 800)] },
@@ -47,15 +48,30 @@ export const SWITCHBACK_WAVES: readonly WaveData[] = [
   { groups: [group('tank', 2, 3000), group('infantry', 12, 700, 2000)] },
   { groups: [group('helicopter', 4, 2500), group('jeep', 6, 800, 4000)] },
   { groups: [group('infantry', 16, 600), group('tank', 3, 3000, 3000)] },
-  { groups: [group('helicopter', 6, 2000), group('infantry', 12, 700, 2000)] },
+  { groups: [group('helicopter', 6, 2000), group('infantry', 12, 700, 2000), group('apc', 2, 3000, 8000)] },
   { groups: [group('tank', 3, 3000), group('jeep', 10, 600, 3000), group('helicopter', 4, 2000, 6000)] },
-  { groups: [group('helicopter', 8, 1800), group('infantry', 16, 600, 2000), group('jeep', 8, 600, 8000)] },
-  { groups: [group('tank', 4, 2500), group('helicopter', 8, 2000, 3000), group('jeep', 12, 600, 6000)] },
+  {
+    groups: [
+      group('helicopter', 8, 1800),
+      group('infantry', 16, 600, 2000),
+      group('jeep', 8, 600, 8000),
+      group('jet', 3, 1200, 12000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 4, 2500),
+      group('helicopter', 8, 2000, 3000),
+      group('apc', 3, 2500, 5000),
+      group('jeep', 12, 600, 6000),
+    ],
+  },
   {
     groups: [
       group('infantry', 24, 500),
       group('tank', 4, 3000, 3000),
       group('helicopter', 8, 2000, 6000),
+      group('jet', 4, 1000, 8000),
       group('jeep', 10, 600, 10000),
     ],
   },
@@ -63,7 +79,9 @@ export const SWITCHBACK_WAVES: readonly WaveData[] = [
     groups: [
       group('tank', 6, 2500),
       group('helicopter', 12, 1800, 2000),
+      group('apc', 4, 2500, 3000),
       group('infantry', 24, 500, 4000),
+      group('jet', 5, 1000, 8000),
       group('jeep', 12, 600, 12000),
     ],
   },
@@ -71,7 +89,8 @@ export const SWITCHBACK_WAVES: readonly WaveData[] = [
 
 /**
  * Serpentine's schedule: a step harder than Switchback's. Its long Path gives towers more time, so the waves are
- * bigger and denser, with more armour and air, but still only the four kinds, mixed (ADR-0007).
+ * bigger and denser, with more armour and air, mixed (ADR-0007). The APC and the jet come in as on Switchback, in
+ * larger numbers (#366): 3 APCs trail wave 7, 3 jets trail wave 9, and waves 10–12 mix them in.
  */
 export const SERPENTINE_WAVES: readonly WaveData[] = [
   { groups: [group('infantry', 12, 700)] },
@@ -80,15 +99,30 @@ export const SERPENTINE_WAVES: readonly WaveData[] = [
   { groups: [group('tank', 3, 3000), group('infantry', 14, 600, 2000)] },
   { groups: [group('helicopter', 5, 2200), group('jeep', 8, 700, 4000)] },
   { groups: [group('infantry', 18, 500), group('tank', 4, 2800, 3000)] },
-  { groups: [group('helicopter', 7, 1800), group('infantry', 14, 600, 2000)] },
+  { groups: [group('helicopter', 7, 1800), group('infantry', 14, 600, 2000), group('apc', 3, 2800, 8000)] },
   { groups: [group('tank', 4, 2800), group('jeep', 12, 500, 3000), group('helicopter', 5, 2000, 6000)] },
-  { groups: [group('helicopter', 9, 1700), group('infantry', 18, 500, 2000), group('jeep', 10, 500, 8000)] },
-  { groups: [group('tank', 5, 2500), group('helicopter', 9, 1800, 3000), group('jeep', 14, 500, 6000)] },
+  {
+    groups: [
+      group('helicopter', 9, 1700),
+      group('infantry', 18, 500, 2000),
+      group('jeep', 10, 500, 8000),
+      group('jet', 3, 1100, 12000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 5, 2500),
+      group('helicopter', 9, 1800, 3000),
+      group('apc', 4, 2400, 5000),
+      group('jeep', 14, 500, 6000),
+    ],
+  },
   {
     groups: [
       group('infantry', 26, 450),
       group('tank', 5, 2800, 3000),
       group('helicopter', 9, 1800, 6000),
+      group('jet', 5, 900, 8000),
       group('jeep', 12, 500, 10000),
     ],
   },
@@ -96,7 +130,9 @@ export const SERPENTINE_WAVES: readonly WaveData[] = [
     groups: [
       group('tank', 7, 2400),
       group('helicopter', 13, 1700, 2000),
+      group('apc', 5, 2400, 3000),
       group('infantry', 26, 450, 4000),
+      group('jet', 6, 900, 8000),
       group('jeep', 14, 500, 12000),
     ],
   },
@@ -104,7 +140,9 @@ export const SERPENTINE_WAVES: readonly WaveData[] = [
 
 /**
  * Hairpin's schedule, the hardest: its towers cover the Path twice, so it brings one more wave, the most armour and
- * air, and the tightest spacing, from the same four kinds (ADR-0007).
+ * air, and the tightest spacing (ADR-0007). The APC and the jet come in as on Serpentine (waves 7 and 9, then mixed
+ * in), and one Heavy tank ends wave 13, the map's last (#366): it starts after every other group, so the boss bar
+ * shows over a thinning field. #381 moves it to wave 20.
  */
 export const HAIRPIN_WAVES: readonly WaveData[] = [
   { groups: [group('infantry', 14, 600)] },
@@ -113,15 +151,30 @@ export const HAIRPIN_WAVES: readonly WaveData[] = [
   { groups: [group('tank', 3, 2800), group('infantry', 16, 550, 2000)] },
   { groups: [group('helicopter', 6, 2000), group('jeep', 10, 600, 4000)] },
   { groups: [group('infantry', 20, 450), group('tank', 4, 2600, 3000)] },
-  { groups: [group('helicopter', 8, 1700), group('infantry', 16, 550, 2000)] },
+  { groups: [group('helicopter', 8, 1700), group('infantry', 16, 550, 2000), group('apc', 3, 2600, 8000)] },
   { groups: [group('tank', 5, 2600), group('jeep', 14, 450, 3000), group('helicopter', 6, 1900, 6000)] },
-  { groups: [group('helicopter', 10, 1600), group('infantry', 20, 450, 2000), group('jeep', 12, 450, 8000)] },
-  { groups: [group('tank', 6, 2400), group('helicopter', 10, 1700, 3000), group('jeep', 16, 450, 6000)] },
+  {
+    groups: [
+      group('helicopter', 10, 1600),
+      group('infantry', 20, 450, 2000),
+      group('jeep', 12, 450, 8000),
+      group('jet', 3, 1000, 12000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 6, 2400),
+      group('helicopter', 10, 1700, 3000),
+      group('apc', 4, 2300, 5000),
+      group('jeep', 16, 450, 6000),
+    ],
+  },
   {
     groups: [
       group('infantry', 28, 400),
       group('tank', 6, 2600, 3000),
       group('helicopter', 10, 1700, 6000),
+      group('jet', 5, 900, 8000),
       group('jeep', 14, 450, 10000),
     ],
   },
@@ -129,7 +182,9 @@ export const HAIRPIN_WAVES: readonly WaveData[] = [
     groups: [
       group('tank', 7, 2300),
       group('helicopter', 14, 1600, 2000),
+      group('apc', 5, 2300, 3000),
       group('infantry', 28, 400, 4000),
+      group('jet', 6, 900, 8000),
       group('jeep', 16, 450, 12000),
     ],
   },
@@ -137,8 +192,11 @@ export const HAIRPIN_WAVES: readonly WaveData[] = [
     groups: [
       group('helicopter', 14, 1500),
       group('tank', 8, 2200, 2000),
+      group('apc', 5, 2200, 4000),
       group('infantry', 30, 400, 5000),
+      group('jet', 7, 800, 8000),
       group('jeep', 18, 400, 10000),
+      group('heavyTank', 1, 0, 20000),
     ],
   },
 ];

@@ -104,7 +104,7 @@ describe('the committed render data', () => {
  * v0.8.0 kinds whose renders come before the kind is in play (#360). They aren't a `SpriteKind` until their gameplay
  * issue lands (the APC: #76). A Faction has one when `render-sprite.json` lists a model of it; the rest are exempt.
  */
-const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet', 'sniper'];
+const OPTIONAL_KINDS: readonly string[] = ['sniper'];
 
 /**
  * Kinds rendered before their gameplay (art-ahead): each Faction gets its render in its own part, and the kind joins
@@ -138,6 +138,15 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
     });
   }
 
+  it('has the new enemies in play for every Faction: APC, Fighter jet, Heavy tank (#366)', () => {
+    for (const kind of ['apc', 'jet', 'heavyTank'])
+      for (const faction of FACTIONS)
+        expect(
+          RENDER_CONFIG.models.some((m) => m.faction === faction && m.kind === kind),
+          `${faction} ${kind}`,
+        ).toBe(true);
+  });
+
   it('has a Fighter jet for every Faction (#482, #484)', () => {
     for (const faction of FACTIONS)
       expect(
@@ -147,13 +156,15 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   });
 
   it('lists a kind as upcoming only until it is in play (then drop it from UPCOMING_KINDS)', () => {
-    // A kind may be a sim kind (the Heavy tank boss, #457) with a null sprite, but has no frame until it is in play.
-    for (const kind of UPCOMING_KINDS)
+    // A kind may be a sim kind (the Gunship boss, #457) with a null sprite, but has no frame until it is in play.
+    for (const kind of UPCOMING_KINDS) {
       expect((SPRITES as Record<string, string | null>)[kind] ?? null, kind).toBeNull();
+      expect(NOT_PLAYABLE_KINDS as readonly string[], kind).toContain(kind);
+    }
   });
 
   it('keeps the new kinds out of SPRITES until they are in play', () => {
-    // The jet is already a sprite kind, kept out of play by NOT_PLAYABLE_KINDS; the Sniper by NOT_IN_PLAY.
+    // The Sniper is kept out of play by NOT_IN_PLAY.
     for (const kind of OPTIONAL_KINDS)
       expect(
         kind in SPRITES &&

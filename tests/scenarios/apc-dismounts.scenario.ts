@@ -3,7 +3,7 @@ import { START_LIVES, START_MONEY } from '../../src/data/start';
 import { damageReport } from '../../src/sim/report';
 import { defineScenario } from './define';
 
-// The APC isn't in any map's waves yet (#366), so it's only reachable here and in unit tests.
+// The APC joins the later waves of maps 2–4 (#366); here, one alone shows its squad jumping out.
 export default defineScenario({
   description:
     'Two Rifle Nests and a Mortar kill one APC near the Path start; its 3 Infantry jump out and every one is either killed or leaks.',
