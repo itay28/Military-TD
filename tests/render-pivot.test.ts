@@ -104,7 +104,7 @@ describe('the committed render data', () => {
  * v0.8.0 kinds whose renders come before the kind is in play (#360). They aren't a `SpriteKind` until their gameplay
  * issue lands (the APC: #76). A Faction has one when `render-sprite.json` lists a model of it; the rest are exempt.
  */
-const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet'];
+const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet', 'sniper'];
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
   // A kind not in play yet (the Sniper, renders in #358) has none until its rollout;
@@ -133,9 +133,14 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   });
 
   it('keeps the new kinds out of SPRITES until they are in play', () => {
-    // The jet is already a sprite kind, kept out of play by NOT_PLAYABLE_KINDS.
-    for (const kind of OPTIONAL_KINDS.filter((k) => !(NOT_PLAYABLE_KINDS as readonly string[]).includes(k)))
-      expect(kind in SPRITES, kind).toBe(false);
+    // The jet is already a sprite kind, kept out of play by NOT_PLAYABLE_KINDS; the Sniper by NOT_IN_PLAY.
+    for (const kind of OPTIONAL_KINDS)
+      expect(
+        kind in SPRITES &&
+          !(NOT_PLAYABLE_KINDS as readonly string[]).includes(kind) &&
+          !NOT_IN_PLAY.has(kind as TowerKind),
+        kind,
+      ).toBe(false);
   });
 });
 
