@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import { RENDERS, RENDER_FACING, renderFor } from './renders';
 import { SPRITES, type SpriteKind } from './sprites';
@@ -62,4 +64,30 @@ describe('RENDERS', () => {
   it('renders face north', () => {
     expect(RENDER_FACING).toBeCloseTo(-Math.PI / 2);
   });
+});
+
+describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 puts the Sniper in play)', () => {
+  // The Factions whose Sniper is rendered so far: US (#459). Later parts of #358 add theirs.
+  for (const faction of ['us']) {
+    const id = `${faction}-sniper`;
+    const dir = `assets/render-${id}`;
+
+    it(`${id} has its pivot data: a 1.25-tile canvas turning about the pad centre`, () => {
+      const meta = JSON.parse(readFileSync(`${dir}/${id}.json`, 'utf8'));
+      expect(meta).toMatchObject({ id, kind: 'sniper', pxPerTile: 128, canvasPx: 160, pivot: { x: 80, y: 80 } });
+    });
+
+    for (const layer of ['hull', 'turret'] as const) {
+      it(`${id} has a ${layer} layer on the same canvas`, () => {
+        const path = `${dir}/${id}-${layer}.png`;
+        expect(existsSync(path), path).toBe(true);
+        const png = PNG.sync.read(readFileSync(path));
+        expect([png.width, png.height]).toEqual([160, 160]);
+      });
+    }
+
+    it(`keeps ${id} out of RENDERS until it is in play`, () => {
+      expect(Object.values(RENDERS).map((r) => r.id)).not.toContain(id);
+    });
+  }
 });
