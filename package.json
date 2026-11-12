@@ -31,7 +31,8 @@
     "ambience-fx": "node scripts/ambience-fx.ts",
     "radio-fx": "node scripts/radio-fx.ts",
     "weapon-fx": "node scripts/weapon-fx.ts",
-    "render:pivot": "node scripts/render-pivot.ts"
+    "render:pivot": "node scripts/render-pivot.ts",
+    "itch:shots": "playwright test --config playwright.itch.config.ts"
   },
   "lint-staged": {
     "*.{ts,js}": [

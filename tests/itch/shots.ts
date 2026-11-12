@@ -30,9 +30,9 @@ export interface KitFile {
 /** What a screenshot shows: each map mid-wave, the Level select, the End screen. */
 export const SHOT_SUBJECTS = [...KIT_MAPS.map(({ id }) => `map-${id}`), 'level-select', 'end-screen'] as const;
 
-/** Every screenshot: each subject at each size, as `<subject>-<width>x<height>.png`. */
+/** Every screenshot: each subject at each size, as `<subject>-<width>x<height>.jpg` (JPEG keeps the aerial maps small). */
 export const SCREENSHOTS: readonly KitFile[] = SHOT_SUBJECTS.flatMap((subject) =>
-  SHOT_SIZES.map(({ width, height }) => ({ file: `${subject}-${width}x${height}.png`, width, height })),
+  SHOT_SIZES.map(({ width, height }) => ({ file: `${subject}-${width}x${height}.jpg`, width, height })),
 );
 
 /** The animated GIF of a wave being fought; under `GIF_MAX_BYTES`. */
@@ -41,5 +41,8 @@ export const GIF_MAX_BYTES = 3 * 1024 * 1024;
 
 /** itch's cover image size. */
 export const COVER: KitFile = { file: 'cover.png', width: 630, height: 500 };
+
+/** The screenshots' JPEG quality. */
+export const JPEG_QUALITY = 90;
 
 export const KIT_FILES: readonly KitFile[] = [...SCREENSHOTS, GIF, COVER];

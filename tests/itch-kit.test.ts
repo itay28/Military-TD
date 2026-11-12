@@ -11,10 +11,21 @@ import { GIF, GIF_MAX_BYTES, KIT_DIR, KIT_FILES, KIT_MAPS } from './itch/shots';
 // The itch.io page kit (#374): the files the maintainer pastes into the Restricted page.
 const read = (path: string) => readFileSync(path, 'utf8');
 
-/** A PNG's or GIF's size from its header. */
+/** A JPEG's size: the first start-of-frame marker's (SOF0–SOF2) height and width. */
+function jpegSize(bytes: Buffer): { width: number; height: number } {
+  for (let at = 2; at < bytes.length; at += 2 + bytes.readUInt16BE(at + 2)) {
+    if (bytes[at] !== 0xff) break;
+    if (bytes[at + 1]! >= 0xc0 && bytes[at + 1]! <= 0xc2)
+      return { width: bytes.readUInt16BE(at + 7), height: bytes.readUInt16BE(at + 5) };
+  }
+  throw new Error('No JPEG frame header');
+}
+
+/** A PNG's, JPEG's or GIF's size from its header. */
 function imageSize(path: string): { width: number; height: number } {
   const bytes = readFileSync(path);
   if (path.endsWith('.gif')) return { width: bytes.readUInt16LE(6), height: bytes.readUInt16LE(8) };
+  if (path.endsWith('.jpg')) return jpegSize(bytes);
   const { width, height } = PNG.sync.read(bytes);
   return { width, height };
 }
@@ -101,6 +112,6 @@ describe('capture runs on demand only', () => {
 describe('ADR-0005', () => {
   it('has an Updated note: the page stays Restricted at 1.0', () => {
     const adr = read('docs/adr/0005-host-on-itch-io.md');
-    expect(adr).toMatch(/Updated 2026-11-\d\d.*Restricted at 1\.0/s);
+    expect(adr).toMatch(/Updated 2026-11-\d\d.*Restricted\** at 1\.0/s);
   });
 });
