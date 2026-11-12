@@ -1,4 +1,4 @@
-"""Generate the raw voice takes for the radio comms cues (#396) with Chatterbox (ResembleAI, MIT).
+"""Generate the raw voice takes for the radio comms cues (#396, the cold open #477) with Chatterbox (ResembleAI, MIT).
 
 The takes are committed in assets/radio-voice/takes/, and `npm run radio-fx` builds the finished cues from them
 (band-pass, squelch, static, gunfire). Run this script only to change a line or retune a take, then listen to it
@@ -31,6 +31,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIR = os.path.join(ROOT, 'assets', 'radio-voice')
 
 TAKES = {
+    # The cold open (#477): the first thing a player hears, before the menu music. A firm order, not a shout.
+    'coldOpen': dict(
+        text='All units, hold the perimeter. Over.', sample='shout', exaggeration=0.7, cfg=0.4, seed=477
+    ),
     'waveStart': dict(text='Contact front! Enemy inbound. Over.', sample='shout', exaggeration=1.1, cfg=0.3, seed=2007),
     'waveReinforcements': dict(
         text='Be advised, enemy reinforcements inbound. Over.', sample='shout', exaggeration=0.9, cfg=0.35, seed=2007

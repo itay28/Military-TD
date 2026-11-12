@@ -280,6 +280,7 @@ describe('withFieldUpdates', () => {
     feature: false,
     needsYou: false,
     needsInfo: false,
+    needsSplit: false,
     autoAgent: false,
     size: undefined,
     priority: undefined,
@@ -309,7 +310,9 @@ describe('withFieldUpdates', () => {
 describe('retryQuery', () => {
   it("asks for each issue's comments, and its PR's last comment and commit when it has one", () => {
     const query = retryQuery([{ issue: 12 }, { issue: 34, pr: 56 }]);
-    expect(query).toContain('i0: issue(number: 12) { comments(last: 100) { nodes { body createdAt } } }');
+    expect(query).toContain(
+      'i0: issue(number: 12) { comments(last: 100) { nodes { body createdAt author { login } } } }',
+    );
     expect(query).toContain('i1: issue(number: 34)');
     expect(query).toContain(
       'p1: pullRequest(number: 56) { comments(last: 1) { nodes { createdAt } } commits(last: 1) { nodes { commit { committedDate } } } }',
@@ -334,6 +337,23 @@ describe('retryQuery', () => {
       comments: [],
       activity: ['2026-10-28T01:00:00Z', '2026-10-28T00:30:00Z'],
     });
+  });
+
+  it("reads each comment's author login, when there is one (#539)", () => {
+    const repository = {
+      i0: {
+        comments: {
+          nodes: [
+            { body: '/retry', createdAt: '2026-10-28T00:00:00Z', author: { login: 'itay28' } },
+            { body: 'x', createdAt: '2026-10-28T00:01:00Z', author: null },
+          ],
+        },
+      },
+    };
+    expect(readRetry(repository, 0).comments).toEqual([
+      { body: '/retry', createdAt: '2026-10-28T00:00:00Z', author: 'itay28' },
+      { body: 'x', createdAt: '2026-10-28T00:01:00Z' },
+    ]);
   });
 
   it('treats a missing issue as one with no comments', () => {
