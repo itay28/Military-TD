@@ -42,6 +42,14 @@ describe('createGame', () => {
     expect(game.spawnEnemy('infantry')).not.toBe(id);
   });
 
+  it('a spawn with hpScale has that many times the HP; a bad scale throws', () => {
+    const game = newGame();
+    game.spawnEnemy('infantry', { hpScale: 1000 });
+    expect(game.state.enemies[0]).toMatchObject({ hp: 30_000, maxHp: 30_000 });
+    expect(() => game.spawnEnemy('infantry', { hpScale: 0 })).toThrow(RangeError);
+    expect(() => game.spawnEnemy('infantry', { hpScale: Number.NaN })).toThrow(RangeError);
+  });
+
   it('a spawned Heavy tank carries the boss flag; an Infantry does not', () => {
     const game = newGame();
     game.spawnEnemy('heavyTank');
