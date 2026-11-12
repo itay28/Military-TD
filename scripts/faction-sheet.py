@@ -3,6 +3,7 @@
 Row 1: each kind at 48 px per tile (the game's TILE_PX), on a plain-grass crop of the NAIP patch.
 Row 2: the same at 128 px per tile (the render resolution), on grass.
 Row 3: the turret layer alone at 128 px on a neutral grey, with its pivot marked (kinds without a turret: blank).
+Art-ahead kinds (rendered before their gameplay, e.g. the Sniper, #358) get a last column when the Faction has one.
 
 Run after render-sprite.py and `npm run render:pivot` (needs Pillow in the art venv):
     .venv-art/bin/python scripts/faction-sheet.py us [--out docs/art/faction-us.png]
@@ -24,8 +25,8 @@ CELL = 2.5  # tiles per cell, enough for the largest canvas (the jet's, for its 
 FACTIONS = ["us", "russia", "china", "insurgents"]
 KINDS = ["rifleNest", "aaGun", "cannon", "mortar", "infantry", "jeep", "tank", "heavyTank", "helicopter", "jet"]
 PENDING = {"jet"}  # kinds a faction may not have yet (#482: China and Insurgents jets come in the next part)
-# v0.8.0 kinds rendered one Faction at a time ahead of their gameplay (#360): on the sheet once the Faction has one.
-NEW_KINDS = ["apc"]
+# v0.8.0 kinds rendered one Faction at a time ahead of their gameplay (#360, #358): on the sheet once the Faction has one.
+NEW_KINDS = ["apc", "sniper"]
 
 
 def grass(px: int) -> Image.Image:
