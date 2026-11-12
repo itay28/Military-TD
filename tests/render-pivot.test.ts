@@ -122,6 +122,7 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
           .map((m) => m.kind)
           .sort(),
       ).toEqual(kinds);
+      expect(new Set(models.map((m) => m.kind)).size).toBe(models.length);
     });
   }
 

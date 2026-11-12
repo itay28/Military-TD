@@ -17,6 +17,12 @@ export interface EnemyStats {
   readonly boss?: boolean;
 }
 
+/** A carrier's squad: `count` fresh enemies of `kind` jump out where it dies (never when it leaks). */
+export interface Dismount {
+  readonly kind: EnemyKind;
+  readonly count: number;
+}
+
 /** An enemy on the Path. Its stats are copied from its kind when it spawns. */
 export interface Enemy extends EnemyStats {
   readonly id: number;
@@ -63,6 +69,18 @@ export function createPathLine(points: readonly Position[]): PathLine {
       return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
     },
   };
+}
+
+/**
+ * Where a squad of `count` lands when its carrier dies `at` tiles along a Path `length` long: `spread` tiles apart,
+ * centred on the carrier, each kept on the Path.
+ */
+export function dismountDistances(at: number, count: number, spread: number, length: number): number[] {
+  return Array.from({ length: count }, (_, i) => {
+    const distance = at + (i - (count - 1) / 2) * spread;
+    // Rounded so a centred offset comes out exact (5 − 0.3 is 4.7, not 4.699…).
+    return Math.min(length, Math.max(0, Math.round(distance * 1e9) / 1e9));
+  });
 }
 
 /** Slack for float sums of tick distances, so an enemy due at the end on a tick arrives on it. */
