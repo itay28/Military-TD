@@ -371,6 +371,15 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-infantry/**`
 
+## Tactical Soldier (game ready) low poly (top-down render)
+
+- Author: MissingTray1151
+- Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
+- License: CC-BY-4.0
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit re-coloured to civilian browns and denim, a shooter and an observer set in a dug-in pit of our own
+- Downloaded: 2026-11-11
+- Files: `assets/render-insurgents-sniper/**`
+
 ## TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render)
 
 - Author: lm9241221

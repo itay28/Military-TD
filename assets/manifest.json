@@ -418,6 +418,16 @@
       "files": ["assets/render-insurgents-infantry/**"]
     },
     {
+      "id": "render-insurgents-sniper",
+      "name": "Tactical Soldier (game ready) low poly (top-down render)",
+      "author": "MissingTray1151",
+      "source": "https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a",
+      "license": "CC-BY-4.0",
+      "attribution": "\"Tactical Soldier (game ready) low poly\" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit re-coloured to civilian browns and denim, a shooter and an observer set in a dug-in pit of our own",
+      "downloaded": "2026-11-11",
+      "files": ["assets/render-insurgents-sniper/**"]
+    },
+    {
       "id": "render-insurgents-jeep",
       "name": "TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render)",
       "author": "lm9241221",
