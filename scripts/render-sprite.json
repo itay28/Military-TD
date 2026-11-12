@@ -250,6 +250,130 @@
       }
     },
     {
+      "id": "us-grenade-launcher",
+      "kind": "grenadeLauncher",
+      "faction": "us",
+      "depicts": "Mk 19 40 mm automatic grenade launcher on a tripod (stand-in tripod for the M3), gunner and assistant gunner in OCP, in a sandbagged pit",
+      "sketchfab": "9965461e257f4240a86b15a784d78fb2",
+      "author": "lebedeventerprise",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-y",
+      "lengthTiles": 0.55,
+      "liftTiles": 0.2,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": []
+      },
+      "parts": [
+        {
+          "sketchfab": "2a5ecc14900440af8fe2b5b30dabbef0",
+          "author": "GoldbergR",
+          "license": "CC-BY-4.0",
+          "frontAxis": "-y",
+          "lengthTiles": 0.45,
+          "copies": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            }
+          ],
+          "liftTiles": -0.22
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.03,
+              "y": -0.23
+            }
+          ],
+          "turret": true,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [1.25, 1.15, 0.85]
+              },
+              "material_6": {
+                "color": [1.25, 1.15, 0.85]
+              },
+              "material": {
+                "color": [1.4, 1.15, 0.9]
+              },
+              "Glove": {
+                "color": [1.3, 1.1, 0.85]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.26,
+              "y": -0.06,
+              "turnDeg": 15
+            }
+          ],
+          "turret": false,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [1.25, 1.15, 0.85]
+              },
+              "material_6": {
+                "color": [1.25, 1.15, 0.85]
+              },
+              "material": {
+                "color": [1.4, 1.15, 0.9]
+              },
+              "Glove": {
+                "color": [1.3, 1.1, 0.85]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        }
+      ],
+      "sun": {
+        "elevationDeg": 70
+      },
+      "copies": [
+        {
+          "x": -0.067,
+          "y": 0.03
+        }
+      ]
+    },
+    {
       "id": "us-infantry",
       "kind": "infantry",
       "faction": "us",
@@ -591,6 +715,109 @@
       "canvasTiles": 1.25,
       "turret": {
         "allBut": ["Base"]
+      }
+    },
+    {
+      "id": "russia-grenade-launcher",
+      "kind": "grenadeLauncher",
+      "faction": "russia",
+      "depicts": "AGS-40 Balkan 40 mm automatic grenade launcher on its tripod (stand-in for the AGS-30 30 mm, the same tripod-mounted layout), gunner and assistant gunner in olive (toward EMR), in a sandbagged pit",
+      "sketchfab": "85261dcf1d4e43b2b6b7db1818c7c3ae",
+      "author": "SpinoCactus",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 0.6,
+      "base": {
+        "radiusTiles": 0.4,
+        "gapDeg": 50
+      },
+      "canvasTiles": 1.25,
+      "turret": {
+        "allBut": ["Tripod", "Tripod_Rings", "Seat"]
+      },
+      "parts": [
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.0,
+              "y": -0.13
+            }
+          ],
+          "turret": true,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "material_6": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "material": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "Glove": {
+                "color": [0.6, 0.62, 0.5]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        },
+        {
+          "sketchfab": "2bfce585144d4403a3ddf76a0e65767a",
+          "author": "MissingTray1151",
+          "license": "CC-BY-4.0",
+          "frontAxis": "+y",
+          "lengthTiles": 0.42,
+          "pose": {
+            "action": "crouch_firing",
+            "frame": 10
+          },
+          "copies": [
+            {
+              "x": 0.24,
+              "y": -0.05,
+              "turnDeg": 15
+            }
+          ],
+          "turret": false,
+          "tint": {
+            "color": [1.0, 1.0, 1.0],
+            "skip": ["Eyewear"],
+            "overrides": {
+              "Bottom": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "material_6": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "material": {
+                "color": [0.95, 1.0, 0.72]
+              },
+              "Glove": {
+                "color": [0.6, 0.62, 0.5]
+              },
+              "Body": {
+                "color": [0.85, 0.72, 0.58]
+              }
+            }
+          }
+        }
+      ],
+      "sun": {
+        "elevationDeg": 70
       }
     },
     {
@@ -938,6 +1165,35 @@
       "canvasTiles": 1.5
     },
     {
+      "id": "china-jet",
+      "kind": "jet",
+      "faction": "china",
+      "depicts": "Chengdu J-10S (two-seat J-10), PLAAF markings painted out",
+      "sketchfab": "aa7c517fbded47439a526cafb78b4618",
+      "author": "MirzaArrafiERV_45",
+      "license": "CC-BY-4.0",
+      "frontAxis": "+y",
+      "lengthTiles": 1.3,
+      "liftTiles": 0.3,
+      "canvasTiles": 2.5,
+      "paintOver": {
+        "body.0": {
+          "boxes": [
+            [0.199, 0.231, 0.364, 0.305],
+            [0.199, 0.631, 0.364, 0.704]
+          ]
+        },
+        "body.3": {
+          "boxes": [
+            [0.135, 0.4, 0.298, 0.474],
+            [0.701, 0.4, 0.864, 0.474],
+            [0.045, 0.807, 0.208, 0.88],
+            [0.791, 0.807, 0.954, 0.88]
+          ]
+        }
+      }
+    },
+    {
       "id": "insurgents-rifle-nest",
       "kind": "rifleNest",
       "faction": "insurgents",
@@ -1268,6 +1524,29 @@
       "frontAxis": "-y",
       "lengthTiles": 1.4,
       "canvasTiles": 1.75
+    },
+    {
+      "id": "insurgents-jet",
+      "kind": "jet",
+      "faction": "insurgents",
+      "depicts": "MiG-21PF Fishbed in sand and green camouflage, markings removed (a captured MiG-21)",
+      "sketchfab": "e23e79075b9e41c3badd18bf43dc15c7",
+      "author": "mgg8",
+      "license": "CC0-1.0",
+      "frontAxis": "-y",
+      "lengthTiles": 1.34,
+      "liftTiles": 0.3,
+      "canvasTiles": 2.5,
+      "dropFaces": [
+        {
+          "mesh": "Object_8",
+          "colors": [
+            [0.74, 0.15, 0.15],
+            [0.93, 0.94, 0.94]
+          ],
+          "within": 0.015
+        }
+      ]
     }
   ],
   "alphaFloor": 0.06

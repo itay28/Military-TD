@@ -66,8 +66,12 @@ describe('assets/manifest.json', () => {
         ['attribution', 'author', 'downloaded', 'files', 'id', 'license', 'name', 'source'].sort(),
       );
       expect(pack.downloaded).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      // Its own folder first; files built from it (the sprite atlas, #40) may follow.
-      expect(pack.files[0]).toBe(`assets/${pack.id}/**`);
+      // Its own folder first; files built from it (the sprite atlas, #40) may follow. A part of a composite render
+      // (render-sprite.py `parts`, #464) has no folder of its own: its id is `<render folder>-<part>`.
+      const folder = pack.files[0]!.replace(/^assets\/(.*)\/\*\*$/, '$1');
+      expect(pack.id === folder || pack.id.startsWith(`${folder}-`), `${pack.id}: first glob ${pack.files[0]}`).toBe(
+        true,
+      );
       for (const glob of pack.files) expect(glob).toMatch(/^assets\//);
     }
   });

@@ -1,0 +1,12 @@
+Rendered sprites of "Chengdu J-10S" by MirzaArrafiERV_45
+https://sketchfab.com/3d-models/aa7c517fbded47439a526cafb78b4618
+License: Creative Commons Attribution 4.0 (CC-BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The PNG in this folder is a top-down render of that model made by
+scripts/render-sprite.py (changed: national markings painted out of the textures, rendered from
+above in flight, raised off the ground so its shadow falls offset, lit, desaturated).
+china-jet-turntable.webp is a turntable of the same model (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
+The model itself isn't committed.
+License checked on the model's Sketchfab page, 2026-11-11.

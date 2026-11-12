@@ -15,9 +15,11 @@ const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
 /** In-play models only: a kind whose art is ahead of its gameplay (`UPCOMING_KINDS`, e.g. the Heavy tank) gets its turntable later. */
 const inPlay = config.models.filter((m) => !isUpcoming(m.kind));
 const hasTurntable = (m: { id: string }): boolean => TURNTABLES[m.id] !== undefined;
-/** Towers and units come in separate parts (China's towers before its units), so each is done on its own. */
+/**
+ * Towers and units come in separate parts (China's towers before its units), so each is done on its own. The APC and the
+ * jet roll out one kind at a time (the jet's art is ahead of its gameplay, #77; the APC is #480/#481), so each is its own group.
+ */
 const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet'];
-/** The APC and the jet roll out one kind at a time (China's APC, #481, before its units), so each is its own group. */
 const groupOf = (m: { kind: string }): string =>
   OPTIONAL_KINDS.includes(m.kind) ? m.kind : m.kind in TOWER_STATS ? 'tower' : 'unit';
 const key = (m: { faction: string; kind: string }): string => `${m.faction}/${groupOf(m)}`;
