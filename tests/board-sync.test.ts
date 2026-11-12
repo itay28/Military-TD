@@ -3,6 +3,7 @@ import {
   closingIssues,
   currentMilestone,
   desiredStatus,
+  isStaleMove,
   planFieldsFromLabels,
   planFieldUpdates,
   planMoves,
@@ -97,9 +98,18 @@ describe('desiredStatus: the Ready rule (no PR, no assignee)', () => {
     expect(desiredStatus({ ...startable, blocked: true }, [draft], 'main', current)).toBe('In progress');
   });
 
-  it('never moves In progress / In review cards, Done cards or trackers (release issues, epics) by this rule', () => {
-    expect(desiredStatus({ ...startable, status: 'In progress', blocked: true }, [], 'main', current)).toBeUndefined();
-    expect(desiredStatus({ ...startable, status: 'In review' }, [], 'main', current)).toBeUndefined();
+  it('resets a stale In progress / In review card (no assignee, no PR) by the Ready rule (#560)', () => {
+    expect(desiredStatus({ ...startable, status: 'In progress' }, [], 'main', current)).toBe('Ready');
+    expect(desiredStatus({ ...startable, status: 'In review' }, [], 'main', current)).toBe('Ready');
+    expect(desiredStatus({ ...startable, status: 'In progress', blocked: true }, [], 'main', current)).toBe('Backlog');
+  });
+
+  it('keeps an In progress card that is assigned or has a draft PR', () => {
+    expect(desiredStatus({ ...startable, status: 'In progress', assigned: true }, [], 'main', current)).toBeUndefined();
+    expect(desiredStatus({ ...startable, status: 'In progress' }, [draft], 'main', current)).toBeUndefined();
+  });
+
+  it('never moves Done cards or trackers (release issues, epics) by this rule', () => {
     expect(desiredStatus({ ...startable, status: 'Done' }, [], 'main', current)).toBeUndefined();
     expect(desiredStatus({ ...startable, tracker: true, labelled: false }, [], 'main', current)).toBeUndefined();
   });
@@ -166,9 +176,16 @@ describe('desiredStatus', () => {
     expect(desiredStatus(issue({ tracker: true, assigned: true }), [ready])).toBeUndefined();
   });
 
-  it('leaves In progress and In review cards with no PR and no assignee where they are', () => {
-    expect(desiredStatus(issue({ status: 'In review' }), [])).toBeUndefined();
-    expect(desiredStatus(issue({ status: 'In progress' }), [])).toBeUndefined();
+  it('moves stale In progress and In review cards (no PR, no assignee) back by the Ready rule (#560)', () => {
+    expect(desiredStatus(issue({ status: 'In review' }), [])).toBe('Backlog');
+    expect(desiredStatus(issue({ status: 'In progress' }), [])).toBe('Backlog');
+  });
+
+  it('flags those moves as stale in the log (#560)', () => {
+    expect(isStaleMove({ from: 'In progress', to: 'Ready' })).toBe(true);
+    expect(isStaleMove({ from: 'In review', to: 'Backlog' })).toBe(true);
+    expect(isStaleMove({ from: 'Backlog', to: 'Ready' })).toBe(false);
+    expect(isStaleMove({ from: 'In review', to: 'In progress' })).toBe(false);
   });
 
   it('returns nothing when the card is already right', () => {

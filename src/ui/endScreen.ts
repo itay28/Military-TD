@@ -2,7 +2,13 @@ import { DIFFICULTY } from '../data/difficulty';
 import { TERMS, TOWER_NAMES } from '../data/display';
 import { isGameOver, type Game } from '../sim/game';
 import type { Stars } from '../sim/progression';
-import { damageReport, type DamageReport, type ReportFigures } from '../sim/report';
+import {
+  damageReport,
+  type DamageReport,
+  type KindReportRow,
+  type ReportFigures,
+  type TowerReportRow,
+} from '../sim/report';
 
 /** The parts of the Game the End screen reads. */
 export type EndScreenGame = Pick<Game, 'state'>;
@@ -47,9 +53,7 @@ const figures = ({ damage, kills, dps }: ReportFigures): string[] => [
 ];
 const seconds = (ms: number): string => `${(ms / 1000).toFixed(1)} s`;
 
-function buildTable(doc: Document, caption: string, headers: readonly string[], body: readonly Cells[], foot?: Cells) {
-  const table = doc.createElement('table');
-  table.createCaption().textContent = caption;
+function headerRow(doc: Document, table: HTMLTableElement, headers: readonly string[]) {
   const headRow = table.createTHead().insertRow();
   for (const text of headers) {
     const th = doc.createElement('th');
@@ -57,21 +61,65 @@ function buildTable(doc: Document, caption: string, headers: readonly string[], 
     th.textContent = text;
     headRow.append(th);
   }
-  const addRow = (section: HTMLTableSectionElement, [head, ...data]: Cells) => {
-    const row = section.insertRow();
-    const th = doc.createElement('th');
-    th.scope = 'row';
-    th.textContent = head;
-    row.append(th);
-    for (const text of data) row.insertCell().textContent = text;
-  };
+}
+
+/** Adds a row whose first cell is its header; `head` is its text, or an element to put in it. */
+function addRow(doc: Document, section: HTMLTableSectionElement, head: string | Node, data: readonly string[]) {
+  const row = section.insertRow();
+  const th = doc.createElement('th');
+  th.scope = 'row';
+  th.append(head);
+  row.append(th);
+  for (const text of data) row.insertCell().textContent = text;
+  return row;
+}
+
+function buildTable(doc: Document, caption: string, headers: readonly string[], body: readonly Cells[], foot?: Cells) {
+  const table = doc.createElement('table');
+  table.createCaption().textContent = caption;
+  headerRow(doc, table, headers);
   const tbody = table.createTBody();
-  for (const cells of body) addRow(tbody, cells);
-  if (foot) addRow(table.createTFoot(), foot);
+  for (const [head, ...data] of body) addRow(doc, tbody, head, data);
+  if (foot) addRow(doc, table.createTFoot(), foot[0], foot.slice(1));
   return table;
 }
 
-/** The damage report's tables: by tower and by tower type (when any was placed), and by wave with a total. */
+/**
+ * By tower type: a row per kind, each with a toggle that shows or hides that kind's towers right beneath it
+ * (#302). Each kind is its own pair of row groups, the kind's row then its towers, collapsed at first.
+ */
+function buildKindTable(doc: Document, kinds: readonly KindReportRow[], towers: readonly TowerReportRow[]) {
+  const table = doc.createElement('table');
+  table.createCaption().textContent = 'By tower type';
+  headerRow(doc, table, ['Type', 'Towers', 'Damage', 'Kills', 'DPS']);
+  for (const kind of kinds) {
+    const name = TOWER_NAMES[kind.kind];
+    const toggle = doc.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'kind-toggle';
+    toggle.textContent = name;
+    addRow(doc, table.createTBody(), toggle, [String(kind.towers), ...figures(kind)]);
+    const list = table.createTBody();
+    list.id = `end-report-${kind.kind}-towers`;
+    list.className = 'tower-rows';
+    list.hidden = true;
+    for (const tower of towers.filter((t) => t.kind === kind.kind)) {
+      addRow(doc, list, `${name}${tower.sold ? ' (sold)' : ''}`, [
+        `Tile ${tower.tile.col}, ${tower.tile.row}`,
+        ...figures(tower),
+      ]);
+    }
+    toggle.setAttribute('aria-controls', list.id);
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.addEventListener('click', () => {
+      list.hidden = !list.hidden;
+      toggle.setAttribute('aria-expanded', String(!list.hidden));
+    });
+  }
+  return table;
+}
+
+/** The damage report's tables: by tower type with each type's towers (when any was placed), and by wave with a total. */
 function buildReport(doc: Document, { towers, kinds, waves, total }: DamageReport): HTMLElement[] {
   const parts: HTMLElement[] = [];
   if (towers.length === 0) {
@@ -80,24 +128,7 @@ function buildReport(doc: Document, { towers, kinds, waves, total }: DamageRepor
     none.textContent = 'No towers were placed.';
     parts.push(none);
   } else {
-    parts.push(
-      buildTable(
-        doc,
-        'By tower',
-        ['Tower', 'Tile', 'Damage', 'Kills', 'DPS'],
-        towers.map((row) => [
-          `${TOWER_NAMES[row.kind]}${row.sold ? ' (sold)' : ''}`,
-          `${row.tile.col}, ${row.tile.row}`,
-          ...figures(row),
-        ]),
-      ),
-      buildTable(
-        doc,
-        'By tower type',
-        ['Type', 'Towers', 'Damage', 'Kills', 'DPS'],
-        kinds.map((row) => [TOWER_NAMES[row.kind], String(row.towers), ...figures(row)]),
-      ),
-    );
+    parts.push(buildKindTable(doc, kinds, towers));
   }
   parts.push(
     buildTable(

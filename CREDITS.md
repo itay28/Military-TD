@@ -407,84 +407,84 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-11
 - Files: `assets/render-insurgents-grenade-launcher/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit re-coloured to civilian browns and denim, two copies set in a sandbagged pit of our own; also the Grenade launcher's gunner and assistant gunner, crouched beside it
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed crouching and aiming (its crouch_firing animation), kit re-coloured to civilian browns and denim, two copies set in a sandbagged pit of our own, also the Grenade launcher's gunner and assistant gunner, crouched beside it, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-rifle-nest/**`, `assets/render-insurgents-grenade-launcher/**`
 
-## SPG-9 (top-down render)
+## SPG-9 (top-down render and turntable)
 
 - Author: Jack512kb
 - Source: <https://sketchfab.com/3d-models/6c31a440a65145e8814e9974eabf2227>
 - License: CC-BY-4.0
-- Attribution: "SPG-9" by Jack512kb (sketchfab.com), CC-BY 4.0, rendered top-down, painted olive, set on a sandbagged pad of our own
+- Attribution: "SPG-9" by Jack512kb (sketchfab.com), CC-BY 4.0, rendered top-down, painted olive, set on a sandbagged pad of our own, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-cannon/**`
 
-## ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render)
+## ZU - 23, зенитная установка, ЗУ-23, зенитка (top-down render and turntable)
 
 - Author: LuckySkink9661
 - Source: <https://sketchfab.com/3d-models/fdae5a37901941fea3a02578506072a3>
 - License: CC-BY-4.0
-- Attribution: "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, repainted sand, set on a sandbagged pad of our own, turret split from the carriage
+- Attribution: "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661 (sketchfab.com), CC-BY 4.0, rendered top-down, repainted sand, set on a sandbagged pad of our own, turret split from the carriage, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-aa-gun/**`
 
-## Pindad Mortars (top-down render)
+## Pindad Mortars (top-down render and turntable)
 
 - Author: sakigakefuruzawa
 - Source: <https://sketchfab.com/3d-models/567d0dd2bd1944a8ac8a6b0a9dcb5ebb>
 - License: CC-BY-4.0
-- Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate
+- Attribution: "Pindad Mortars" by sakigakefuruzawa (sketchfab.com), CC-BY 4.0, rendered top-down, the 81 mm MO-3 alone (the two 60 mm mortars removed), set in a sandbagged pit of our own, tube and bipod split from the baseplate, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-mortar/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit re-coloured to civilian browns and denim
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed advancing and firing (its walking_firing animation), kit re-coloured to civilian browns and denim, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-infantry/**`
 
-## Tactical Soldier (game ready) low poly (top-down render)
+## Tactical Soldier (game ready) low poly (top-down render and turntable)
 
 - Author: MissingTray1151
 - Source: <https://sketchfab.com/3d-models/2bfce585144d4403a3ddf76a0e65767a>
 - License: CC-BY-4.0
-- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit re-coloured to civilian browns and denim, a shooter and an observer set in a dug-in pit of our own
+- Attribution: "Tactical Soldier (game ready) low poly" by MissingTray1151 (sketchfab.com), CC-BY 4.0, rendered top-down, posed prone and aiming (its prone_firing animation), kit re-coloured to civilian browns and denim, a shooter and an observer set in a dug-in pit of our own, plus a turntable of the whole scene (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-11
 - Files: `assets/render-insurgents-sniper/**`
 
-## TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render)
+## TOYOTA DO AFEGANISTÃO (LOW POLY) (top-down render and turntable)
 
 - Author: lm9241221
 - Source: <https://sketchfab.com/3d-models/9dccb441c7064a11bf87446ab4f4e09b>
 - License: CC-BY-4.0
-- Attribution: "TOYOTA DO AFEGANISTÃO (LOW POLY)" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, brightened
+- Attribution: "TOYOTA DO AFEGANISTÃO (LOW POLY)" by lm9241221 (sketchfab.com), CC-BY 4.0, rendered top-down, ground disc removed, brightened, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-jeep/**`
 
-## T 54/55 Tank (top-down render)
+## T 54/55 Tank (top-down render and turntable)
 
 - Author: SGAstudios3DandGameDevelopment
 - Source: <https://sketchfab.com/3d-models/6bde9f748c3e472e878d333998b506f9>
 - License: CC-BY-4.0
-- Attribution: "T 54/55 Tank" by SGAstudios3DandGameDevelopment (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull
+- Attribution: "T 54/55 Tank" by SGAstudios3DandGameDevelopment (sketchfab.com), CC-BY 4.0, rendered top-down, turret split from the hull, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-tank/**`
 
-## Russian Transport Heli (top-down render)
+## Russian Transport Heli (top-down render and turntable)
 
 - Author: jeandiz
 - Source: <https://sketchfab.com/3d-models/ab981d28f7124a489cd1b1992b2e467b>
 - License: CC-BY-4.0
-- Attribution: "Russian Transport Heli" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "Russian Transport Heli" by jeandiz (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-02
 - Files: `assets/render-insurgents-helicopter/**`
 
