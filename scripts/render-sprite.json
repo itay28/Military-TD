@@ -518,6 +518,18 @@
       }
     },
     {
+      "id": "insurgents-apc",
+      "kind": "apc",
+      "faction": "insurgents",
+      "depicts": "BTR-60PB 8x8 armored personnel carrier (the BTR-60 family, a captured one)",
+      "sketchfab": "f2fe515e186c4aa1b9294fd364ad2417",
+      "author": "Mr_Chiko",
+      "license": "CC-BY-4.0",
+      "frontAxis": "-x",
+      "lengthTiles": 0.9,
+      "canvasTiles": 1.25
+    },
+    {
       "id": "us-apc",
       "kind": "apc",
       "faction": "us",

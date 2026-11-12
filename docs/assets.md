@@ -223,6 +223,7 @@ Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 
 | `render-us-helicopter/` | "Sikorsky UH-60 Black Hawk" by helijah, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-us-apc/` | "M113" by arc4de, CC-BY-4.0 (the APC, #478: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
 | `render-china-apc/` | "ZSL-92C" by 42manako, CC-BY-4.0 (the APC for China, #481: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
+| `render-insurgents-apc/` | "BTR-60PB - Takistan" by Mr_Chiko, CC-BY-4.0 (the APC for the Insurgents, #483: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
 | `render-russia-apc/` | "BTR-82A" by lebedeventerprise, CC-BY-4.0 (the APC for Russia, #480: rendered ahead of the kind being in play, #76) | `scripts/render-sprite.py` |
 | `render-russia-rifle-nest/` | "Tactical Soldier (game ready) low poly" by MissingTray1151, CC-BY-4.0 | `scripts/render-sprite.py` |
 | `render-russia-aa-gun/` | "ZU - 23, зенитная установка, ЗУ-23, зенитка" by LuckySkink9661, CC-BY-4.0 | `scripts/render-sprite.py` |

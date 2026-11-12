@@ -220,6 +220,16 @@
       "files": ["assets/render-china-apc/**"]
     },
     {
+      "id": "render-insurgents-apc",
+      "name": "BTR-60PB - Takistan (top-down render and turntable)",
+      "author": "Mr_Chiko",
+      "source": "https://sketchfab.com/3d-models/f2fe515e186c4aa1b9294fd364ad2417",
+      "license": "CC-BY-4.0",
+      "attribution": "\"BTR-60PB - Takistan\" by Mr_Chiko (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual",
+      "downloaded": "2026-11-12",
+      "files": ["assets/render-insurgents-apc/**"]
+    },
+    {
       "id": "render-russia-apc",
       "name": "BTR-82A (top-down render and turntable)",
       "author": "lebedeventerprise",
