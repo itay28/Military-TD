@@ -27,8 +27,7 @@
         - button "Classified"
       - listitem:
         - button "Classified"
-  - img "Tank, US model":
-    - paragraph: Loading model…
+  - img "Tank, US model"
   - button "Rotate left"
   - button "Rotate right"
   - group "Faction":
