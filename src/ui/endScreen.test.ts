@@ -19,10 +19,10 @@ const SMALL: MapData = {
 const LEAK_MS = 4000;
 
 // Three one-Infantry waves; nobody shoots, so each wave clears when its Infantry leaks.
-const newGame = (lives = 20): Game =>
+const newGame = (lives = 20, money = 100): Game =>
   createGame({
     map: SMALL,
-    money: 100,
+    money,
     lives,
     waves: Array.from({ length: 3 }, () => ({
       groups: [{ kind: 'infantry' as const, count: 1, spacingMs: 100, delayMs: 0 }],
@@ -268,24 +268,87 @@ describe('damage report', () => {
       [...tr.querySelectorAll('th, td')].map((cell) => cell.textContent),
     );
 
-  it('lists every tower with its kind, tile, damage, kills and DPS, sold ones marked', () => {
-    const game = played();
-    expect(headers('By tower')).toEqual(['Tower', 'Tile', 'Damage', 'Kills', 'DPS']);
-    const [first, second] = damageReport(game.state.stats).towers;
-    expect(first!.damage).toBeGreaterThan(0);
-    expect(rows('By tower')).toEqual([
-      ['Rifle Nest', '2, 2', String(Math.round(first!.damage)), String(first!.kills), first!.dps.toFixed(1)],
-      ['Rifle Nest (sold)', '4, 2', String(Math.round(second!.damage)), String(second!.kills), second!.dps.toFixed(1)],
-    ]);
+  /** The By tower type table's rows (hidden ones too) as cell texts, each with its kind and whether it's hidden. */
+  const typeTable = () => table('By tower type')!;
+  const toggle = (name: string) =>
+    [...typeTable().querySelectorAll<HTMLButtonElement>('th button')].find((b) => b.textContent === name)!;
+  const visibleRows = () =>
+    [...typeTable().querySelectorAll<HTMLTableRowElement>('tbody tr')]
+      .filter((tr) => !tr.closest('[hidden]'))
+      .map((tr) => [...tr.querySelectorAll('th, td')].map((cell) => cell.textContent));
+  const figureCells = (row: { damage: number; kills: number; dps: number }) => [
+    String(Math.round(row.damage)),
+    String(row.kills),
+    row.dps.toFixed(1),
+  ];
+
+  it('has no separate By tower table (#302)', () => {
+    played();
+    expect(table('By tower')).toBeUndefined();
   });
 
-  it('sums each tower type', () => {
+  it('lists each tower type with its tower count, damage, kills and DPS', () => {
     const game = played();
     expect(headers('By tower type')).toEqual(['Type', 'Towers', 'Damage', 'Kills', 'DPS']);
     const [kind] = damageReport(game.state.stats).kinds;
-    expect(rows('By tower type')).toEqual([
-      ['Rifle Nest', '2', String(Math.round(kind!.damage)), String(kind!.kills), kind!.dps.toFixed(1)],
+    expect(kind!.damage).toBeGreaterThan(0);
+    expect(visibleRows()).toEqual([['Rifle Nest', '2', ...figureCells(kind!)]]);
+  });
+
+  it("a type's towers are collapsed by default, its toggle pointing at them", () => {
+    played();
+    const button = toggle('Rifle Nest');
+    expect(button.type).toBe('button');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    const controlled = document.getElementById(button.getAttribute('aria-controls')!);
+    expect(controlled?.hidden).toBe(true);
+    expect(controlled?.querySelectorAll('tr')).toHaveLength(2);
+  });
+
+  it('expanding a type lists its towers underneath, with tile, damage, kills and DPS, sold ones marked', () => {
+    const game = played();
+    const { kinds, towers } = damageReport(game.state.stats);
+    const [first, second] = towers;
+    toggle('Rifle Nest').click();
+    expect(toggle('Rifle Nest').getAttribute('aria-expanded')).toBe('true');
+    expect(visibleRows()).toEqual([
+      ['Rifle Nest', '2', ...figureCells(kinds[0]!)],
+      ['Rifle Nest', 'Tile 2, 2', ...figureCells(first!)],
+      ['Rifle Nest (sold)', 'Tile 4, 2', ...figureCells(second!)],
     ]);
+  });
+
+  it('collapsing a type hides its towers again', () => {
+    played();
+    toggle('Rifle Nest').click();
+    toggle('Rifle Nest').click();
+    expect(toggle('Rifle Nest').getAttribute('aria-expanded')).toBe('false');
+    expect(visibleRows()).toHaveLength(1);
+  });
+
+  it("with two types, each type's towers sit under their own type, in the build bar's order", () => {
+    const game = newGame(20, 300);
+    const end = mountEndScreen(root, game, { onRestart: () => {}, onLevelSelect: () => {} });
+    game.placeTower('aaGun', { col: 2, row: 2 });
+    game.placeTower('rifleNest', { col: 4, row: 2 });
+    game.placeTower('aaGun', { col: 1, row: 2 });
+    playWave(game);
+    playWave(game);
+    playWave(game);
+    end.update();
+    const { kinds, towers } = damageReport(game.state.stats);
+    const [aa1, rifle, aa2] = towers;
+    expect(kinds.map((k) => k.kind)).toEqual(['rifleNest', 'aaGun']);
+    expect(visibleRows().map((r) => r[0])).toEqual(['Rifle Nest', 'AA Gun']);
+    toggle('AA Gun').click();
+    expect(visibleRows()).toEqual([
+      ['Rifle Nest', '1', ...figureCells(kinds[0]!)],
+      ['AA Gun', '2', ...figureCells(kinds[1]!)],
+      ['AA Gun', 'Tile 2, 2', ...figureCells(aa1!)],
+      ['AA Gun', 'Tile 1, 2', ...figureCells(aa2!)],
+    ]);
+    toggle('Rifle Nest').click();
+    expect(visibleRows()[1]).toEqual(['Rifle Nest', 'Tile 4, 2', ...figureCells(rifle!)]);
   });
 
   it('has a row per wave, with a total row', () => {
@@ -334,11 +397,11 @@ describe('damage report', () => {
     end.update();
     const damageCells = (caption: string, section = 'tbody') =>
       [...table(caption)!.querySelectorAll(`${section} tr`)].map((tr) => tr.querySelectorAll('td, th')[2]!.textContent);
-    expect(damageCells('By tower')[0]).toBe('1235');
-    expect(damageCells('By tower type')).toEqual(['1235']);
+    // The type row, then its tower rows.
+    expect(damageCells('By tower type')).toEqual(['1235', '1235', '0']);
     expect(damageCells('By wave')).toEqual(['1235', '1235', '1235']);
     expect(damageCells('By wave', 'tfoot')).toEqual(['1235']);
-    expect(rows('By tower')[0]![4]).toMatch(/^\d+\.\d$/);
+    expect(rows('By tower type')[1]![4]).toMatch(/^\d+\.\d$/);
   });
 
   it('says so when no tower was placed', () => {
@@ -348,6 +411,7 @@ describe('damage report', () => {
     end.update();
     expect(byTestId('no-towers')?.textContent).toBe('No towers were placed.');
     expect(table('By tower')).toBeUndefined();
+    expect(table('By tower type')).toBeUndefined();
     expect(rows('By wave')).toHaveLength(1);
   });
 });

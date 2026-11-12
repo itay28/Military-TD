@@ -781,7 +781,33 @@
         border-top: 1px solid var(--green-600);
         font-weight: bold;
       }
-      #end-screen button,
+      /* By tower type: each type's toggle opens its towers beneath it (#302). */
+      #end-screen .kind-toggle {
+        padding: 0;
+        border: 0;
+        font: inherit;
+        color: inherit;
+        background: none;
+        text-align: left;
+        white-space: nowrap;
+      }
+      #end-screen .kind-toggle::before {
+        content: '▸' / '';
+        display: inline-block;
+        width: 1.1em;
+        color: var(--amber);
+      }
+      #end-screen .kind-toggle[aria-expanded='true']::before {
+        content: '▾' / '';
+      }
+      #end-screen .tower-rows th[scope='row'] {
+        padding-left: calc(6px + 1.1em);
+        color: var(--bone-dim);
+      }
+      #end-screen .tower-rows td {
+        color: var(--bone-dim);
+      }
+      #end-screen button:not(.kind-toggle),
       #pause-menu button {
         padding: 6px 22px;
         font: bold 1rem var(--font-mono);
