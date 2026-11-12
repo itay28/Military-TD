@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Faction } from '../sim/factions';
-import { modelFor } from './modelViews';
+import { isUpcoming, modelFor } from './modelViews';
 import { TURNTABLES, TURNTABLE_BUDGET_BYTES, turntableFor } from './turntables';
 
 const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as {
@@ -10,9 +10,10 @@ const config = JSON.parse(readFileSync('scripts/render-sprite.json', 'utf8')) as
 const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as {
   packs: { id: string; name: string; attribution: string; files: string[] }[];
 };
-/** The factions rendered so far (#440 US, #442 Russia; #444, #445 add the others). */
+/** The factions rendered so far (#440 US, #442 Russia; #444, #445 add the others; #482 adds the US and Russia jets). */
 const DONE: readonly Faction[] = ['us', 'russia'];
-const done = config.models.filter((m) => (DONE as readonly string[]).includes(m.faction));
+/** In-play models only: a kind whose art is ahead of its gameplay (`UPCOMING_KINDS`, e.g. the Heavy tank) gets its turntable later. */
+const done = config.models.filter((m) => (DONE as readonly string[]).includes(m.faction) && !isUpcoming(m.kind));
 const sheetPath = (id: string): string => `assets/render-${id}/${id}-turntable.webp`;
 
 /** Width and height from a WebP's header (lossy VP8, lossless VP8L or extended VP8X). */
@@ -31,7 +32,7 @@ function webpSize(path: string): { width: number; height: number } {
 
 describe('TURNTABLES', () => {
   it('has a turntable for every model of the factions done so far, with its kind and faction', () => {
-    expect(done.length).toBe(18); // eight kinds in play per Faction done, plus the US and Russia APCs (#478, #480)
+    expect(done.length).toBe(20); // eight kinds in play per Faction, plus the Fighter jets for US and Russia (#482) and the US and Russia APCs (#478, #480)
     for (const m of done) {
       expect(TURNTABLES[m.id]!.kind, m.id).toBe(m.kind);
       expect(TURNTABLES[m.id]!.faction, m.id).toBe(m.faction);
