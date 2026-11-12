@@ -906,6 +906,21 @@
       #enemy-card p.role {
         margin: 8px 0 0;
       }
+      /* The enemy's render (#567), the same image the battlefield draws; the name sits beside it. */
+      #enemy-card .enemy-icon {
+        position: relative;
+        float: left;
+        width: 40px;
+        height: 40px;
+        margin: 0 8px 4px 0;
+        overflow: hidden;
+      }
+      #enemy-card .enemy-icon:not([hidden]) + h2 {
+        line-height: 40px;
+      }
+      #enemy-card dl {
+        clear: both;
+      }
       #tower-panel button:focus-visible,
       #enemy-card button:focus-visible {
         outline: 2px solid var(--amber);

@@ -45,7 +45,10 @@ describe('buildOptions', () => {
           },
           tooltip: towerTooltip(kind as keyof typeof TOWER_STATS),
           render: expect.objectContaining({
-            layerUrls: [(renderFor(kind as keyof typeof TOWER_STATS, 'us') as RenderedSprite).hullUrl, expect.any(String)],
+            layerUrls: [
+              (renderFor(kind as keyof typeof TOWER_STATS, 'us') as RenderedSprite).hullUrl,
+              expect.any(String),
+            ],
           }),
         })),
     );

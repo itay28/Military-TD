@@ -27,13 +27,13 @@ import { createWhistleTracker } from '../audio/whistle';
 import { DEMO_SCRIPTS, type DemoScript } from '../data/demo';
 import { RADIO_CUE_MS, SOUND_FALLOFF, SOUND_THROTTLE, SOUND_THROTTLE_BY_ID, WHISTLE_LEAD_MS } from '../data/sounds';
 import {
-  DRAWN_KINDS,
   RENDER_FACING,
-  factionFor,
   isTurretRender,
-  renderFor,
+  drawnRender,
   renderTextures,
+  type AnyRender,
   type RenderedSprite,
+  type SingleImageRender,
 } from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
@@ -123,6 +123,7 @@ import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { DEMO_SCENE_KEY, stopDemo, type DemoMode } from './demoMode';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
+import { renderIcon } from '../ui/renderIcon';
 import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
@@ -473,13 +474,15 @@ export class GameScene extends Phaser.Scene {
     return this.textures.get(ATLAS_KEY).has(frame) ? frame : null;
   }
 
-  /** The render `kind` is drawn with, or null for Kenney: it has none, or its textures didn't load. */
-  private renderOf(kind: SpriteKind): RenderedSprite | null {
-    if (!DRAWN_KINDS.has(kind)) return null;
-    const render = renderFor(kind, factionFor(kind, this.sides()));
-    if (render === null || !isTurretRender(render)) return null;
-    if (!this.textures.exists(render.hullKey) || !this.textures.exists(render.turretKey)) return null;
-    return render;
+  /** The render `kind` is drawn with on this map, or null for Kenney: it has none, or its textures didn't load. */
+  private renderOf(kind: SpriteKind): AnyRender | null {
+    return drawnRender(kind, this.sides(), (key) => this.textures.exists(key));
+  }
+
+  /** The turret render a tower is drawn with, or null for Kenney (every tower render has a turret). */
+  private towerRenderOf(kind: TowerKind): RenderedSprite | null {
+    const render = this.renderOf(kind);
+    return render !== null && isTurretRender(render) ? render : null;
   }
 
   /** The Factions of the map actually played (a loaded scenario's own map included), else the selected map's. */
@@ -521,6 +524,16 @@ export class GameScene extends Phaser.Scene {
     return { sprite, graphics, rendered: true, spriteScale: 1, facing: RENDER_FACING };
   }
 
+  /** An enemy drawn from a single-image render (Infantry, Jeep, Helicopter): one image turned whole; a Graphics over it. */
+  private addSingleImageEnemyView(render: SingleImageRender, layer: keyof typeof DEPTH): EntityView {
+    const scale = TILE_PX / render.pxPerTile;
+    const sprite = onLayer(this.add.image(0, 0, render.imageKey), layer)
+      .setOrigin(render.pivot.x / render.canvasPx, render.pivot.y / render.canvasPx)
+      .setScale(scale);
+    const graphics = onLayer(this.add.graphics(), layer);
+    return { sprite, graphics, rendered: true, spriteScale: scale, facing: RENDER_FACING };
+  }
+
   /**
    * What fights leave on the ground (#403): a wreck, crash mark or fallen soldier where an enemy died, turned the way it
    * was heading, and a crater where a shell landed. Cosmetic, so off with `?anim=0`; reduced motion follows the
@@ -545,7 +558,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Where `tower`'s shots start now: its barrel tips, turned with the turret to the sim's heading. */
   private muzzlesOf(tower: Tower): Pixel[] {
-    return muzzlePoints(this.renderOf(tower.kind), towerCenter(tower), tower.heading);
+    return muzzlePoints(this.towerRenderOf(tower.kind), towerCenter(tower), tower.heading);
   }
 
   /** A tower drawn from `render`: its hull as the base, its turret turning around the pivot, a Graphics over both. */
@@ -739,7 +752,9 @@ export class GameScene extends Phaser.Scene {
         return {
           ...(render === null
             ? this.addEntityView(enemy.kind, layer, { x: 0, y: 0 }, SPRITE_HEADING[enemy.kind])
-            : this.addRenderedEnemyView(render, layer)),
+            : isTurretRender(render)
+              ? this.addRenderedEnemyView(render, layer)
+              : this.addSingleImageEnemyView(render, layer)),
           id: enemy.id,
           kind: enemy.kind,
           hp: Number.NaN,
@@ -778,7 +793,7 @@ export class GameScene extends Phaser.Scene {
     this.towerViews = createViewSync<Tower, TowerView>({
       create: (tower) => {
         const at = towerCenter(tower);
-        const render = this.renderOf(tower.kind);
+        const render = this.towerRenderOf(tower.kind);
         const view: TowerView = {
           towerId: tower.id,
           kind: tower.kind,
@@ -891,10 +906,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBar = mountBuildBar(
       this.buildBarRoot,
       this.sim,
-      buildOptions(
-        (render) => this.textures.exists(render.hullKey) && this.textures.exists(render.turretKey),
-        this.sides().defender,
-      ),
+      buildOptions((key) => this.textures.exists(key), this.sides().defender),
       {
         onSelect: () => {
           this.towerPanel.select(undefined);
@@ -915,7 +927,13 @@ export class GameScene extends Phaser.Scene {
         this.enemyCard.pin(undefined);
       },
     });
-    this.enemyCard = mountEnemyCard(this.enemyCardRoot, this.sim, { onPin: () => this.towerPanel.select(undefined) });
+    this.enemyCard = mountEnemyCard(this.enemyCardRoot, this.sim, {
+      onPin: () => this.towerPanel.select(undefined),
+      iconFor: (kind) => {
+        const render = this.renderOf(kind);
+        return render && renderIcon(render);
+      },
+    });
     // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
     // build bar's, tower panel's and enemy card's Esc (cancel a selection) runs before its own (pause).
     this.pauseMenu = mountPauseMenu(this.pauseMenuRoot, this.sim, {

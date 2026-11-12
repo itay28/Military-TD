@@ -128,7 +128,6 @@ describe('the render table (#566)', () => {
     expect(SPRITES.gunship).toBeNull();
     expect(SPRITES.apc).toBeNull();
   });
-
 });
 
 describe('drawnRender (#567)', () => {
@@ -147,7 +146,10 @@ describe('drawnRender (#567)', () => {
     for (const kind of IN_PLAY) {
       const keys = renderKeys(drawnRender(kind, trainingGround, loaded)!);
       for (const missing of keys) {
-        expect(drawnRender(kind, trainingGround, (key) => key !== missing), `${kind} without ${missing}`).toBeNull();
+        expect(
+          drawnRender(kind, trainingGround, (key) => key !== missing),
+          `${kind} without ${missing}`,
+        ).toBeNull();
       }
     }
   });
@@ -167,7 +169,8 @@ describe('renderKeys', () => {
   it('are the keys renderTextures loads', () => {
     const map = MAPS[0]!;
     const loadedKeys = renderTextures(map).map(({ key }) => key);
-    for (const kind of IN_PLAY) for (const key of renderKeys(render(kind, factionFor(kind, map)))) expect(loadedKeys).toContain(key);
+    for (const kind of IN_PLAY)
+      for (const key of renderKeys(render(kind, factionFor(kind, map)))) expect(loadedKeys).toContain(key);
   });
 });
 

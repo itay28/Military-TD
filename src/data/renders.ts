@@ -157,15 +157,27 @@ export function renderFor(kind: SpriteKind, faction: Faction): AnyRender | null 
   return ALL_RENDERS.find((r) => r.kind === kind && r.faction === faction) ?? null;
 }
 
-/**
- * The kinds the battlefield and the build bar draw from their render so far; every other kind keeps Kenney. Part 2 of
- * #566 draws them all and drops this.
- */
-export const DRAWN_KINDS: ReadonlySet<SpriteKind> = new Set<SpriteKind>(['aaGun', 'tank']);
-
 /** The Faction whose model `kind` is drawn as on `map`: the defender builds the towers, the attacker sends the enemies. */
 export function factionFor(kind: SpriteKind, map: { readonly attacker: Faction; readonly defender: Faction }): Faction {
   return kind in TOWER_STATS ? map.defender : map.attacker;
+}
+
+/** The texture keys `render` is drawn with: hull then turret, or its one image. */
+export function renderKeys(render: AnyRender): string[] {
+  return isTurretRender(render) ? [render.hullKey, render.turretKey] : [render.imageKey];
+}
+
+/**
+ * The render `kind` is drawn with on `map` (the battlefield, the build bar and the enemy card), or null for its Kenney
+ * frame or shape: the kind isn't in play, or `loaded` says one of its textures failed to load (ADR-0009).
+ */
+export function drawnRender(
+  kind: SpriteKind,
+  map: { readonly attacker: Faction; readonly defender: Faction },
+  loaded: (key: string) => boolean,
+): AnyRender | null {
+  const render = renderFor(kind, factionFor(kind, map));
+  return render !== null && renderKeys(render).every(loaded) ? render : null;
 }
 
 /** A texture to load: its key and URL. */

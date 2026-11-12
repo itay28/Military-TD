@@ -154,7 +154,9 @@ describe('Enemy card icon (#567)', () => {
 
   it("shows the shown enemy's render, the same images the battlefield draws", () => {
     const iconFor = vi.fn((kind: EnemyKind) =>
-      kind === 'tank' ? { layerUrls: ['tank-hull.png', 'tank-turret.png'], canvasPx: 200 } : { layerUrls: ['jeep.png'], canvasPx: 160 },
+      kind === 'tank'
+        ? { layerUrls: ['tank-hull.png', 'tank-turret.png'], canvasPx: 200 }
+        : { layerUrls: ['jeep.png'], canvasPx: 160 },
     );
     const game = fakeGame([enemy(1, 'tank'), enemy(2, 'jeep')]);
     const card = mountEnemyCard(root, game, { iconFor });
