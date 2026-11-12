@@ -5,7 +5,7 @@ import { NOT_PLAYABLE_KINDS } from '../src/data/enemies';
 import { isUpcoming, UPCOMING_KINDS } from '../src/data/modelViews';
 import { SPRITES } from '../src/data/sprites';
 import { NOT_IN_PLAY, type TowerKind } from '../src/data/towers';
-import { FACTIONS, type Faction } from '../src/sim/factions';
+import { FACTIONS } from '../src/sim/factions';
 import { RENDER_CONFIG, buildRenderMeta, renderMeta, renderMetaPath, turretPivot } from '../scripts/render-pivot';
 
 /** A transparent `w` × `h` image with the given rectangles (x, y, w, h) opaque. */
@@ -101,10 +101,10 @@ describe('the committed render data', () => {
 });
 
 /**
- * v0.8.0 kinds whose renders come before the kind is in play (#360), with the Factions rendered so far. They aren't
- * a `SpriteKind` until their gameplay issue lands (the APC: #76). Parts 2–4 add Russia, China and the Insurgents.
+ * v0.8.0 kinds whose renders come before the kind is in play (#360). They aren't a `SpriteKind` until their gameplay
+ * issue lands (the APC: #76). A Faction has one when `render-sprite.json` lists a model of it; the rest are exempt.
  */
-const NEW_KINDS: Readonly<Record<string, readonly Faction[]>> = { apc: ['us'] };
+const OPTIONAL_KINDS: readonly string[] = ['apc', 'jet'];
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
   // A kind not in play yet (the Sniper, renders in #358) has none until its rollout;
@@ -112,17 +112,10 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   const inPlay = Object.keys(SPRITES).filter(
     (kind) => !NOT_IN_PLAY.has(kind as TowerKind) && !(NOT_PLAYABLE_KINDS as readonly string[]).includes(kind),
   );
-  // Every Faction: US (#314), Russia (#315), China (#316), Insurgents (#317).
-  // The Fighter jet (`jet`, #482) is rendered for US and Russia first; China and Insurgents are exempt until the next part.
-  const JET_DONE: readonly string[] = ['us', 'russia'];
   for (const faction of FACTIONS) {
     it(`has one render per kind for ${faction}`, () => {
-      const kinds = [
-        ...inPlay,
-        ...(JET_DONE.includes(faction) ? ['jet'] : []),
-        ...Object.keys(NEW_KINDS).filter((k) => NEW_KINDS[k]!.includes(faction)),
-      ].sort();
       const models = RENDER_CONFIG.models.filter((m) => m.faction === faction);
+      const kinds = [...inPlay, ...OPTIONAL_KINDS.filter((k) => models.some((m) => m.kind === k))].sort();
       expect(
         models
           .filter((m) => !isUpcoming(m.kind))
@@ -139,7 +132,9 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
   });
 
   it('keeps the new kinds out of SPRITES until they are in play', () => {
-    for (const kind of Object.keys(NEW_KINDS)) expect(kind in SPRITES, kind).toBe(false);
+    // The jet is already a sprite kind, kept out of play by NOT_PLAYABLE_KINDS.
+    for (const kind of OPTIONAL_KINDS.filter((k) => !(NOT_PLAYABLE_KINDS as readonly string[]).includes(k)))
+      expect(kind in SPRITES, kind).toBe(false);
   });
 });
 
