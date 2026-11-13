@@ -1,6 +1,6 @@
 # 9. Satellite-style milsim art and factions per map
 
-Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Heavy tank (boss) row for its renders (#362) · Updated 2026-11-11: an APC row in "What each kind depicts" (#478, v0.8.0); Fighter jet row and size (#482), its China and Insurgents cells (#484) · Updated 2026-11-11: a Gunship row (#363)
+Date: 2026-10-27 · Status: Accepted · Updated 2026-11-02: the maintainer approved the render spike's look (#286) · Updated 2026-11-10: a Heavy tank (boss) row for its renders (#362) · Updated 2026-11-11: an APC row in "What each kind depicts" (#478, v0.8.0); Fighter jet row and size (#482), its China and Insurgents cells (#484) · Updated 2026-11-11: a Gunship row (#363) · Updated 2026-11-12: every in-play kind is drawn from its Faction render; Kenney is a fallback only (#567)
 
 ## Context
 
@@ -22,7 +22,7 @@ The maintainer also wants each map to pit two sides against each other, picked f
    - In-game names stay generic (Tank, Jeep, AA Gun). Real designations (M1A2, T-72B3) appear only in art descriptions and docs.
    - No logos or names from other games: the insurgent faction is not called GLA and uses no C&C Generals insignia (EA's IP).
    - No real national insignia on enemy units beyond plain camouflage patterns and simple markings.
-5. **Kenney art stays as placeholders** until a faction's realistic set is complete, so the game never mixes styles on one map.
+5. **Kenney art stays as placeholders** until a faction's realistic set is complete, so the game never mixes styles on one map. Updated 2026-11-12 (#567): every Faction's set is complete for the in-play kinds, so the battlefield, the build bar, the enemy card and the menu demo draw each map's two sets (the defender's towers, the attacker's enemies). Kenney's frames are now only a fallback for a render that fails to load.
 
 ### What each kind depicts
 

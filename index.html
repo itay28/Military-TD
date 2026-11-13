@@ -149,6 +149,14 @@
       #hud [data-testid='hud-dps'] {
         min-width: 8ch;
       }
+      /* The tag's slot is there on Normal too, empty, so the row is the same on both difficulties (#569). */
+      #hud [data-testid='hud-difficulty'] {
+        min-width: 4ch;
+      }
+      /* "Next 100s": always whole, since it has its own slot. */
+      #hud [data-testid='hud-next-wave'] {
+        min-width: 9ch;
+      }
       #hud .hud-message {
         flex: 1;
         min-width: 0;
@@ -470,6 +478,26 @@
         #hud button {
           padding: 3px 10px;
           font-size: 0.8125rem;
+        }
+      }
+      /* A mid-width screen, a phone in landscape included (#569): two fixed rows, the stats over the controls and the
+         banner. The stats, with the difficulty tag's slot and the countdown, no longer fit beside five buttons. */
+      @media (min-width: 641px) and (max-width: 1100px) {
+        #hud {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+        }
+        #hud .hud-stats {
+          grid-area: 1 / 1 / 2 / -1;
+          flex-wrap: wrap;
+        }
+        #hud .hud-controls {
+          grid-area: 2 / 1;
+          flex-wrap: wrap;
+        }
+        #hud .hud-message {
+          grid-area: 2 / 2;
         }
       }
       /* A narrow screen: three fixed rows, stats / controls / message. The message row is kept when empty. */
@@ -905,6 +933,21 @@
       }
       #enemy-card p.role {
         margin: 8px 0 0;
+      }
+      /* The enemy's render (#567), the same image the battlefield draws; the name sits beside it. */
+      #enemy-card .enemy-icon {
+        position: relative;
+        float: left;
+        width: 40px;
+        height: 40px;
+        margin: 0 8px 4px 0;
+        overflow: hidden;
+      }
+      #enemy-card .enemy-icon:not([hidden]) + h2 {
+        line-height: 40px;
+      }
+      #enemy-card dl {
+        clear: both;
       }
       #tower-panel button:focus-visible,
       #enemy-card button:focus-visible {
@@ -1347,6 +1390,10 @@
       }
       #how-to-play p {
         margin: 2px 0;
+      }
+      /* One idea per paragraph (#571): a gap between them, so each reads on its own. */
+      #how-to-play p + p {
+        margin-top: 8px;
       }
       #how-to-play ul {
         margin: 2px 0;

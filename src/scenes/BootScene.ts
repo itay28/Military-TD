@@ -12,7 +12,7 @@ import combatOggUrl from '../../assets/battlefield-ambience/combat.ogg';
 import type { TrackId } from '../audio/music';
 import { musicKey } from '../audio/phaserMusic';
 import { groundTextureKey, MAPS } from '../data/maps';
-import { RENDERS } from '../data/renders';
+import { renderTextures } from '../data/renders';
 import { SOUND_URLS } from '../data/sounds';
 import { soundKey } from '../audio/phaserAudio';
 import { SOUND_IDS } from '../audio/sounds';
@@ -28,7 +28,7 @@ const TRACK_URLS: Record<TrackId, string[]> = {
 };
 
 /**
- * First scene. Preloads the sprite atlas, the rendered sprites, each map's ground image and the sounds, then goes to the
+ * First scene. Preloads the sprite atlas, the first map's rendered sprites, each map's ground image and the sounds, then goes to the
  * Main menu, or the Game in test mode. A failed load doesn't stop the game: the Game scene draws the tileset for a missing
  * ground image, shapes for any sprite it can't find, and stays silent for a sound that didn't load. Music (#66) and the
  * battlefield ambience (#405) load too; a track that fails to load stays silent.
@@ -46,11 +46,9 @@ export class BootScene extends Phaser.Scene {
     for (const { id, groundImageUrl } of MAPS) {
       if (groundImageUrl !== undefined) this.load.image(groundTextureKey(id), groundImageUrl);
     }
-    // Each render's hull and turret, at full size (ADR-0009); a kind whose render fails keeps its Kenney frame.
-    for (const render of Object.values(RENDERS)) {
-      this.load.image(render.hullKey, render.hullUrl);
-      this.load.image(render.turretKey, render.turretUrl);
-    }
+    // The renders of the first map's two sets only (ADR-0009, #566): the Game scene loads another map's when it
+    // differs. A kind whose render fails keeps its Kenney frame.
+    for (const { key, url } of renderTextures(MAPS[0]!)) this.load.image(key, url);
     // Test mode is silent (#45, #66), so it skips the sound and music files too.
     if (!this.flags.test) {
       for (const id of SOUND_IDS) this.load.audio(soundKey(id), SOUND_URLS[id]);

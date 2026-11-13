@@ -26,12 +26,20 @@ import type { AudioMix } from '../audio/volume';
 import { createWhistleTracker } from '../audio/whistle';
 import { DEMO_SCRIPTS, type DemoScript } from '../data/demo';
 import { RADIO_CUE_MS, SOUND_FALLOFF, SOUND_THROTTLE, SOUND_THROTTLE_BY_ID, WHISTLE_LEAD_MS } from '../data/sounds';
-import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
+import {
+  RENDER_FACING,
+  isTurretRender,
+  drawnRender,
+  renderTextures,
+  type AnyRender,
+  type RenderedSprite,
+  type SingleImageRender,
+} from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import type { Difficulty } from '../data/difficulty';
-import { groundTextureKey, MAPS, mapById } from '../data/maps';
+import { groundTextureKey, MAPS, mapById, type MapEntry } from '../data/maps';
 import type { Faction } from '../sim/factions';
 import type { Enemy } from '../sim/enemies';
 import { isGameOver, TICK_MS, type Game } from '../sim/game';
@@ -115,6 +123,7 @@ import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { DEMO_SCENE_KEY, stopDemo, type DemoMode } from './demoMode';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
+import { renderIcon } from '../ui/renderIcon';
 import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
@@ -465,12 +474,20 @@ export class GameScene extends Phaser.Scene {
     return this.textures.get(ATLAS_KEY).has(frame) ? frame : null;
   }
 
-  /** The render `kind` is drawn with, or null for Kenney: it has none, or its textures didn't load. */
-  private renderOf(kind: SpriteKind): RenderedSprite | null {
-    const render = renderFor(kind);
-    if (render === null || !this.textures.exists(render.hullKey) || !this.textures.exists(render.turretKey))
-      return null;
-    return render;
+  /** The render `kind` is drawn with on this map, or null for Kenney: it has none, or its textures didn't load. */
+  private renderOf(kind: SpriteKind): AnyRender | null {
+    return drawnRender(kind, this.sides(), (key) => this.textures.exists(key));
+  }
+
+  /** The turret render a tower is drawn with, or null for Kenney (every tower render has a turret). */
+  private towerRenderOf(kind: TowerKind): RenderedSprite | null {
+    const render = this.renderOf(kind);
+    return render !== null && isTurretRender(render) ? render : null;
+  }
+
+  /** The Factions of the map actually played (a loaded scenario's own map included), else the selected map's. */
+  private sides(): MapEntry {
+    return MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId);
   }
 
   /** A sprite of `kind` and a Graphics over it on `layer`, both at `at`; no sprite when `kind` has no frame. */
@@ -507,6 +524,16 @@ export class GameScene extends Phaser.Scene {
     return { sprite, graphics, rendered: true, spriteScale: 1, facing: RENDER_FACING };
   }
 
+  /** An enemy drawn from a single-image render (Infantry, Jeep, Helicopter): one image turned whole; a Graphics over it. */
+  private addSingleImageEnemyView(render: SingleImageRender, layer: keyof typeof DEPTH): EntityView {
+    const scale = TILE_PX / render.pxPerTile;
+    const sprite = onLayer(this.add.image(0, 0, render.imageKey), layer)
+      .setOrigin(render.pivot.x / render.canvasPx, render.pivot.y / render.canvasPx)
+      .setScale(scale);
+    const graphics = onLayer(this.add.graphics(), layer);
+    return { sprite, graphics, rendered: true, spriteScale: scale, facing: RENDER_FACING };
+  }
+
   /**
    * What fights leave on the ground (#403): a wreck, crash mark or fallen soldier where an enemy died, turned the way it
    * was heading, and a crater where a shell landed. Cosmetic, so off with `?anim=0`; reduced motion follows the
@@ -531,7 +558,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Where `tower`'s shots start now: its barrel tips, turned with the turret to the sim's heading. */
   private muzzlesOf(tower: Tower): Pixel[] {
-    return muzzlePoints(this.renderOf(tower.kind), towerCenter(tower), tower.heading);
+    return muzzlePoints(this.towerRenderOf(tower.kind), towerCenter(tower), tower.heading);
   }
 
   /** A tower drawn from `render`: its hull as the base, its turret turning around the pivot, a Graphics over both. */
@@ -635,8 +662,7 @@ export class GameScene extends Phaser.Scene {
     const audio = radio ?? silentAudio;
     if (radio) this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => radio.dispose());
     // The map actually played (a loaded scenario's own map included); one outside the registry falls back to the selected map.
-    const defenderOf = (): Faction =>
-      (MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId)).defender;
+    const defenderOf = (): Faction => this.sides().defender;
     const play = (event: SoundEvent, at?: Position): void => {
       const id = soundFor(event, defenderOf());
       if (id === null) return;
@@ -665,6 +691,12 @@ export class GameScene extends Phaser.Scene {
       const { shells, timeMs } = this.sim.state;
       for (const shell of whistles.due(shells, timeMs)) play({ type: 'shellIncoming' }, shell.target);
     };
+  }
+
+  /** Loads the renders of this map's two sets that the Boot scene didn't (it loads the Training Ground pair). */
+  preload(): void {
+    for (const { key, url } of renderTextures(mapById(this.mapId)))
+      if (!this.textures.exists(key)) this.load.image(key, url);
   }
 
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
@@ -720,7 +752,9 @@ export class GameScene extends Phaser.Scene {
         return {
           ...(render === null
             ? this.addEntityView(enemy.kind, layer, { x: 0, y: 0 }, SPRITE_HEADING[enemy.kind])
-            : this.addRenderedEnemyView(render, layer)),
+            : isTurretRender(render)
+              ? this.addRenderedEnemyView(render, layer)
+              : this.addSingleImageEnemyView(render, layer)),
           id: enemy.id,
           kind: enemy.kind,
           hp: Number.NaN,
@@ -759,7 +793,7 @@ export class GameScene extends Phaser.Scene {
     this.towerViews = createViewSync<Tower, TowerView>({
       create: (tower) => {
         const at = towerCenter(tower);
-        const render = this.renderOf(tower.kind);
+        const render = this.towerRenderOf(tower.kind);
         const view: TowerView = {
           towerId: tower.id,
           kind: tower.kind,
@@ -872,7 +906,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBar = mountBuildBar(
       this.buildBarRoot,
       this.sim,
-      buildOptions((render) => this.textures.exists(render.hullKey) && this.textures.exists(render.turretKey)),
+      buildOptions((key) => this.textures.exists(key), this.sides().defender),
       {
         onSelect: () => {
           this.towerPanel.select(undefined);
@@ -893,7 +927,13 @@ export class GameScene extends Phaser.Scene {
         this.enemyCard.pin(undefined);
       },
     });
-    this.enemyCard = mountEnemyCard(this.enemyCardRoot, this.sim, { onPin: () => this.towerPanel.select(undefined) });
+    this.enemyCard = mountEnemyCard(this.enemyCardRoot, this.sim, {
+      onPin: () => this.towerPanel.select(undefined),
+      iconFor: (kind) => {
+        const render = this.renderOf(kind);
+        return render && renderIcon(render);
+      },
+    });
     // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
     // build bar's, tower panel's and enemy card's Esc (cancel a selection) runs before its own (pause).
     this.pauseMenu = mountPauseMenu(this.pauseMenuRoot, this.sim, {

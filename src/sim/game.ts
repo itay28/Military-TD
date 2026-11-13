@@ -1,4 +1,4 @@
-import { DIFFICULTY, type Difficulty } from '../data/difficulty';
+import { DIFFICULTY, scaledReward, type Difficulty } from '../data/difficulty';
 import { DISMOUNT_SPREAD_TILES, ENEMY_DISMOUNT, ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, SELL_REFUND, START_HEADING, TOWER_STATS, type TowerKind } from '../data/towers';
 import { DEFAULT_WAVE_AFTER_MS } from '../data/waves';
@@ -206,11 +206,11 @@ export function createGame(config: GameConfig): Game {
   const waveOfEnemy = new Map<number, number>();
   const waveOf = (enemyId: number) => waveOfEnemy.get(enemyId);
 
-  const { hpScale, rewardScale } = DIFFICULTY[state.difficulty];
+  const { hpScale } = DIFFICULTY[state.difficulty];
   const createEnemy = (kind: EnemyKind, waveNumber?: number, distance = 0): Enemy => {
     const stats = ENEMY_STATS[kind];
     const maxHp = Math.round(stats.maxHp * hpScale);
-    const reward = Math.max(1, Math.round(stats.reward * rewardScale));
+    const reward = scaledReward(stats.reward, state.difficulty);
     const enemy = {
       ...stats,
       maxHp,

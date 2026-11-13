@@ -1,5 +1,7 @@
 import { ENEMY_NAMES, ENEMY_WEAKNESS, LAYER_NAME } from '../data/display';
+import type { EnemyKind } from '../data/enemies';
 import type { Game } from '../sim/game';
+import { renderIconLayers, type RenderIcon } from './renderIcon';
 
 /** The parts of the Game the enemy card reads. */
 export type EnemyCardGame = Pick<Game, 'state'>;
@@ -20,6 +22,8 @@ export interface EnemyCard {
 }
 
 const TITLE_ID = 'enemy-card-title';
+/** The icon's square, in CSS pixels. */
+const ENEMY_ICON_PX = 40;
 
 /**
  * Builds the enemy card inside `root`, an overlay over the canvas: what an enemy on the field is, and what hurts it.
@@ -28,8 +32,15 @@ const TITLE_ID = 'enemy-card-title';
 export function mountEnemyCard(
   root: HTMLElement,
   game: EnemyCardGame,
-  /** `onPin` runs when an enemy gets pinned (not on close), so the scene can close the tower panel. */
-  { onPin }: { readonly onPin?: () => void } = {},
+  {
+    onPin,
+    iconFor = () => null,
+  }: {
+    /** Runs when an enemy gets pinned (not on close), so the scene can close the tower panel. */
+    readonly onPin?: () => void;
+    /** The render a kind is drawn with on this map (#567), or null when it has none loaded: then the card has no icon. */
+    readonly iconFor?: (kind: EnemyKind) => RenderIcon | null;
+  } = {},
 ): EnemyCard {
   const doc = root.ownerDocument;
   const dialog = doc.createElement('div');
@@ -41,6 +52,11 @@ export function mountEnemyCard(
   close.type = 'button';
   close.setAttribute('aria-label', 'Close');
   close.textContent = '×';
+  const icon = doc.createElement('span');
+  icon.dataset.testid = 'enemy-icon';
+  icon.className = 'enemy-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.hidden = true;
   const list = doc.createElement('dl');
   const row = (label: string, testId: string) => {
     const dt = doc.createElement('dt');
@@ -57,13 +73,15 @@ export function mountEnemyCard(
   const weakness = doc.createElement('p');
   weakness.dataset.testid = 'enemy-weakness';
   weakness.className = 'role';
-  dialog.append(heading, close, list, weakness);
+  dialog.append(icon, heading, close, list, weakness);
   root.append(dialog);
   root.hidden = true;
   let pinnedId: number | undefined;
   let hoveredId: number | undefined;
   let shownId: number | undefined;
   let destroyed = false;
+  /** The kind the icon shows, so it is rebuilt only when that changes. */
+  let iconKind: EnemyKind | undefined;
 
   // Runs every frame, so it touches the DOM only when a value changed.
   const setText = (el: HTMLElement, text: string) => {
@@ -80,6 +98,12 @@ export function mountEnemyCard(
     const enemy = enemies.find((e) => e.id === shownId);
     if (root.hidden !== !enemy) root.hidden = !enemy;
     if (!enemy) return;
+    if (iconKind !== enemy.kind) {
+      iconKind = enemy.kind;
+      const render = iconFor(enemy.kind);
+      icon.replaceChildren(...(render ? renderIconLayers(doc, render, ENEMY_ICON_PX) : []));
+      icon.hidden = render === null;
+    }
     setText(heading, ENEMY_NAMES[enemy.kind]);
     setText(hp, `${Math.ceil(enemy.hp)} / ${enemy.maxHp}`);
     setText(armor, String(enemy.armor));

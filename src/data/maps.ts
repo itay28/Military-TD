@@ -1,7 +1,9 @@
 import type { Faction } from '../sim/factions';
 import { importTiledMap, type TiledMapData } from '../sim/tiled';
 import type { WaveData } from '../sim/waves';
-import { HAIRPIN_WAVES, SERPENTINE_WAVES, SWITCHBACK_WAVES, WAVES } from './waves';
+import { createPathLine } from '../sim/enemies';
+import { createMap } from '../sim/map';
+import { HAIRPIN_WAVES, SERPENTINE_WAVES, SWITCHBACK_WAVES, WAVES, timedWaves } from './waves';
 import trainingGround from '../../maps/01-training-ground.tmj?raw';
 import switchback from '../../maps/02-switchback.tmj?raw';
 import serpentine from '../../maps/03-serpentine.tmj?raw';
@@ -52,6 +54,7 @@ export interface MapEntry {
   readonly id: string;
   readonly name: string;
   readonly data: TiledMapData;
+  /** The waves played on it, with wave timers that fit its road (`timedWaves`, #570). */
   readonly waves: readonly WaveData[];
   /** Whose enemies walk the Path: picks enemy sprites. */
   readonly attacker: Faction;
@@ -77,7 +80,7 @@ const entry = (name: string, data: TiledMapData, waves: readonly WaveData[], bri
   id: data.id,
   name,
   data,
-  waves,
+  waves: timedWaves(waves, createPathLine(createMap(data).waypointPositions).length),
   briefing,
   attacker: data.attacker,
   defender: data.defender,
