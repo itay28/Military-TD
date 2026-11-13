@@ -1,5 +1,6 @@
 import { HEAVY_LOAD } from '../../src/data/heavyLoad';
-import { HEAVY_LOAD_MEASURE_TICKS, HEAVY_LOAD_WARMUP_TICKS, heavyLoadSetup } from '../../src/sim/heavyLoad';
+import { HEAVY_LOAD_MEASURE_TICKS, heavyLoadSetup } from '../../src/sim/heavyLoad';
+import { HEAVY_LOAD_WARMUP_TICKS } from '../../src/sim/heavyLoadTicks';
 import { defineScenario } from './define';
 
 // The performance checks' Heavy load (#73, docs/performance.md). `__TD__.loadScenario('heavy-load')` gives the
