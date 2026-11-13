@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { fileUnderEpic, type Request } from './epic.ts';
 import { send, type Push } from './notify.ts';
 
 // Turns a failed CI run on main, a failed release or a failed deploy into an issue (#207,
@@ -87,7 +88,6 @@ export function currentMilestone(milestones: Milestone[]): number | null {
 
 const API = 'https://api.github.com';
 const repoPath = process.env['GITHUB_REPOSITORY'] ?? 'itay28/Military-TD';
-const INFRA_EPIC = 24;
 
 async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = process.env['GITHUB_TOKEN'];
@@ -143,15 +143,16 @@ async function findReport(workflow: string): Promise<Report | null> {
   return found ? { number: found.number } : null;
 }
 
-async function open(run: Run): Promise<{ number: number; url: string }> {
-  const milestone = currentMilestone(await api<Milestone[]>('GET', '/milestones?state=open&per_page=100'));
-  const issue = await api<ApiIssue>('POST', '/issues', {
+/** Opens the failure issue under the open Infra epic (#586). `request` takes paths without a leading slash. */
+export async function openReport(run: Run, request: Request): Promise<{ number: number; url: string }> {
+  const milestone = currentMilestone((await request('GET', 'milestones?state=open&per_page=100')) as Milestone[]);
+  const issue = (await request('POST', 'issues', {
     title: issueTitle(run),
     body: issueBody(run),
     labels: ['bug', 'needs-triage', 'area:infra'],
     ...(milestone ? { milestone } : {}),
-  });
-  await api('POST', `/issues/${INFRA_EPIC}/sub_issues`, { sub_issue_id: issue.id });
+  })) as ApiIssue;
+  await fileUnderEpic(request, 'infra', issue);
   return { number: issue.number, url: issue.html_url };
 }
 
@@ -170,7 +171,7 @@ async function main(): Promise<void> {
     console.log(`Commented on #${decision.issue}.`);
     return;
   }
-  const issue = await open(run);
+  const issue = await openReport(run, (method, path, body) => api(method, `/${path}`, body));
   console.log(`Opened #${issue.number}.`);
   // Labels set with GITHUB_TOKEN don't start notify.yml, so push from here.
   await send(process.env['NTFY_TOPIC'], pushFor(run, issue));

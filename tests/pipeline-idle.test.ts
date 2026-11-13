@@ -292,19 +292,49 @@ describe('applyIdle', () => {
   const rs: Reason[] = [{ group: 'waiting', key: 'waiting:#5', text: '#5 `needs-info`' }];
   const now = '2026-10-27T11:00:00Z';
 
-  it('opens the issue, posts the summary for the push, then labels it needs-you', async () => {
-    const fetchFn = vi.fn<Fetch>(async () => ok({ number: 99, id: 1234 }));
+  it('opens the issue, files it under the open Infra epic, posts the summary, then labels it needs-you', async () => {
+    const fetchFn = vi.fn<Fetch>(async (_url, init) =>
+      init.method === 'GET'
+        ? ok([
+            { number: 24, title: 'Epic: Infra & testing', state: 'closed', labels: [{ name: 'epic' }] },
+            { number: 585, title: 'Epic: Infra & testing (2)', state: 'open', labels: [{ name: 'epic' }] },
+          ])
+        : ok({ number: 99, id: 1234 }),
+    );
     await applyIdle({ action: 'open' }, rs, now, 't', fetchFn);
     expect(calls(fetchFn)).toEqual([
       `POST ${api}/issues`,
-      `POST ${api}/issues/24/sub_issues`,
+      `GET ${api}/issues?state=open&labels=epic&per_page=100`,
+      `POST ${api}/issues/585/sub_issues`,
       `POST ${api}/issues/99/comments`,
       `POST ${api}/issues/99/labels`,
     ]);
     expect(sent(fetchFn, 0)).toMatchObject({ title: 'Pipeline is idle', body: idleBody(rs, now) });
-    expect(sent(fetchFn, 1)).toEqual({ sub_issue_id: 1234 });
-    expect(String(sent(fetchFn, 2)['body'])).toMatch(new RegExp(`^${HANDOFF_MARKER}\n`));
-    expect(sent(fetchFn, 3)).toEqual({ labels: ['needs-you', 'area:infra'] });
+    expect(sent(fetchFn, 2)).toEqual({ sub_issue_id: 1234 });
+    expect(String(sent(fetchFn, 3)['body'])).toMatch(new RegExp(`^${HANDOFF_MARKER}\n`));
+    expect(sent(fetchFn, 4)).toEqual({ labels: ['needs-you', 'area:infra'] });
+  });
+
+  it('files the idle issue without a parent, and warns, when the Infra epic is full', async () => {
+    const warn = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const fetchFn = vi.fn<Fetch>(async (_url, init) =>
+      init.method === 'GET'
+        ? ok([
+            {
+              number: 585,
+              title: 'Epic: Infra & testing (2)',
+              state: 'open',
+              labels: [{ name: 'epic' }],
+              sub_issues_summary: { total: 100 },
+            },
+          ])
+        : ok({ number: 99, id: 1234 }),
+    );
+    await applyIdle({ action: 'open' }, rs, now, 't', fetchFn);
+    expect(calls(fetchFn)).not.toContain(`POST ${api}/issues/585/sub_issues`);
+    expect(calls(fetchFn)).toContain(`POST ${api}/issues/99/labels`);
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/^::warning::.*#585/);
+    warn.mockRestore();
   });
 
   it('updates the body alone when there is nothing new to push', async () => {
