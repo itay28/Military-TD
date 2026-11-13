@@ -49,6 +49,10 @@ describe('itch.io page kit images', () => {
 describe('page.md', () => {
   const page = read(`${KIT_DIR}/page.md`);
 
+  it("uses the game's words: HQ and Funds, not Lives or Money", () => {
+    expect(page).not.toMatch(/\b(lives|money)\b/i);
+  });
+
   it('has the tagline, description, controls, credits and tags sections', () => {
     for (const heading of ['Tagline', 'Description', 'Controls', 'Credits', 'Tags'])
       expect(page).toMatch(new RegExp(`^## ${heading}$`, 'm'));

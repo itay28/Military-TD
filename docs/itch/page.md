@@ -8,7 +8,7 @@ Hold the road. A military tower defense on real aerial ground, where every weapo
 
 ## Description
 
-**Hold the Perimeter** is a tower defense game in the browser. An enemy column drives down the road toward your HQ, and you dig in along it: rifle positions, anti-aircraft guns, cannons and mortars, placed on satellite photos of real terrain. Hold every wave with Lives to spare and the next operation opens.
+**Hold the Perimeter** is a tower defense game in the browser. An enemy column drives down the road toward your HQ, and you dig in along it: rifle positions, anti-aircraft guns, cannons and mortars, placed on satellite photos of real terrain. Hold every wave with HQ intact and the next operation opens.
 
 **Factions.** Russian forces attack, US forces defend. The sides are only how things look: a tower or a vehicle has the same stats on either side.
 
@@ -30,7 +30,7 @@ Each tower takes two upgrades (Optics, then a Heavier weapon), and selling one g
 
 **Realistic, readable mechanics.** Armor takes a set amount off every hit, so a light round does little to a tank and a heavy shell does a lot. Aircraft can only be hit by guns that aim up. Turrets turn before they fire, mortar shells take a second to land, and every weapon has its range drawn on the map. There are no hard counters: a good mix of towers wins, and one kind alone loses.
 
-**Four operations**: Training Ground, Switchback, Serpentine and Hairpin, each on its own stretch of road, each with a Normal and a Hard difficulty. A win earns up to three stars for the Lives you keep.
+**Four operations**: Training Ground, Switchback, Serpentine and Hairpin, each on its own stretch of road, each with a Normal and a Hard difficulty. A win earns up to three stars for how much of HQ is left.
 
 Also: three game speeds, a Field manual with every tower and enemy, a live DPS meter, colourblind-safe colours, reduced motion, larger text, and full keyboard play.
 
