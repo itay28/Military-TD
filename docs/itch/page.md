@@ -27,6 +27,9 @@ Each tower takes two upgrades (Optics, then a Heavier weapon), and selling one g
 - **Jeep**: fast but fragile. Quick-firing guns catch it.
 - **Tank**: armored, so rifle rounds barely scratch it. Bring a Cannon or a Mortar.
 - **Helicopter**: flies over the road, so only Rifle Nests and AA Guns reach it.
+- **APC**: armored carrier that rolls up the road and drops a squad of infantry when it is destroyed.
+- **Jet**: fast aircraft that streaks over the road. Only Rifle Nests and AA Guns reach it.
+- **Heavy tank**: the boss at the end of Hairpin. Thick armor, so it takes Cannon and Mortar shells.
 
 **Realistic, readable mechanics.** Armor takes a set amount off every hit, so a light round does little to a tank and a heavy shell does a lot. Aircraft can only be hit by guns that aim up. Turrets turn before they fire, mortar shells take a second to land, and every weapon has its range drawn on the map. There are no hard counters: a good mix of towers wins, and one kind alone loses.
 
