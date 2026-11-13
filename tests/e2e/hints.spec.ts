@@ -19,11 +19,19 @@ async function openWithHints(page: Page) {
   await page.evaluate(() => window.__TD__!.setHints(true));
 }
 
-/** Runs ticks until the first wave is over, as the real-time loop would. */
+/**
+ * Runs ticks, a second at a time, until the first wave is cleared, as the real-time loop would. Wave 2 may be due by
+ * then (#570). The loop runs in the page: one browser round-trip per step made this test take 25 s of its 30 (#579).
+ */
 async function clearFirstWave(page: Page) {
-  await expect
-    .poll(async () => (await page.evaluate(() => window.__TD__!.step(600))).phase, { timeout: 30_000 })
-    .not.toBe('wave');
+  const cleared = await page.evaluate(() => {
+    const td = window.__TD__!;
+    for (let ticks = 0; ticks < 20_000; ticks += 60) {
+      if (td.step(60).wavesCleared >= 1) return true;
+    }
+    return false;
+  });
+  expect(cleared, 'the first wave clears within 20 000 ticks').toBe(true);
   expect((await state(page)).wavesCleared).toBe(1);
 }
 

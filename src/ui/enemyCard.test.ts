@@ -148,3 +148,40 @@ describe('Enemy card', () => {
     expect(root.children).toHaveLength(0);
   });
 });
+
+describe('Enemy card icon (#567)', () => {
+  const icon = () => root.querySelector<HTMLElement>('[data-testid="enemy-icon"]')!;
+
+  it("shows the shown enemy's render, the same images the battlefield draws", () => {
+    const iconFor = vi.fn((kind: EnemyKind) =>
+      kind === 'tank'
+        ? { layerUrls: ['tank-hull.png', 'tank-turret.png'], canvasPx: 200 }
+        : { layerUrls: ['jeep.png'], canvasPx: 160 },
+    );
+    const game = fakeGame([enemy(1, 'tank'), enemy(2, 'jeep')]);
+    const card = mountEnemyCard(root, game, { iconFor });
+    card.pin(1);
+    let layers = [...icon().querySelectorAll<HTMLElement>('.build-icon-layer')];
+    expect(layers.map((l) => l.style.backgroundImage)).toEqual([
+      expect.stringContaining('tank-hull.png'),
+      expect.stringContaining('tank-turret.png'),
+    ]);
+    expect(icon().hidden).toBe(false);
+    card.pin(2);
+    layers = [...icon().querySelectorAll<HTMLElement>('.build-icon-layer')];
+    expect(layers).toHaveLength(1);
+    expect(layers[0]!.style.backgroundImage).toContain('jeep.png');
+    // Built once per kind shown, not every frame.
+    card.update();
+    card.update();
+    expect(iconFor).toHaveBeenCalledTimes(2);
+  });
+
+  it('hides the icon when the kind has no render (it failed to load)', () => {
+    const game = fakeGame([enemy(1, 'tank')]);
+    const card = mountEnemyCard(root, game, { iconFor: () => null });
+    card.pin(1);
+    expect(icon().hidden).toBe(true);
+    expect(icon().childElementCount).toBe(0);
+  });
+});

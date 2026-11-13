@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE } from '../data/display';
-import { renderFor } from '../data/renders';
+import { renderFor, renderKeys, type RenderedSprite } from '../data/renders';
 import { towerIcon } from '../data/sprites';
 import { BUILD_KINDS, TOWER_STATS } from '../data/towers';
 import { buildOptions, mountBuildBar, type BuildOption } from './buildBar';
@@ -44,9 +44,12 @@ describe('buildOptions', () => {
             size: TOWER_STYLE[kind as keyof typeof TOWER_STATS].size,
           },
           tooltip: towerTooltip(kind as keyof typeof TOWER_STATS),
-          ...(kind === 'aaGun'
-            ? { render: expect.objectContaining({ hullUrl: renderFor('aaGun')!.hullUrl }) }
-            : { sprite: towerIcon(kind as keyof typeof TOWER_STATS) }),
+          render: expect.objectContaining({
+            layerUrls: [
+              (renderFor(kind as keyof typeof TOWER_STATS, 'us') as RenderedSprite).hullUrl,
+              expect.any(String),
+            ],
+          }),
         })),
     );
     expect(buildOptions()[0]).toMatchObject({ kind: 'rifleNest', name: 'Rifle Nest', cost: 50 });
@@ -309,32 +312,38 @@ describe('Build bar sprite icons', () => {
   });
 
   it('buildOptions gives each kind with a sprite its icon layers', () => {
-    expect(buildOptions().find((o) => o.kind === 'cannon')!.sprite).toMatchObject({ turretRotation: 0 });
+    expect(buildOptions(() => false).find((o) => o.kind === 'cannon')!.sprite).toMatchObject({ turretRotation: 0 });
   });
 });
 
 describe('Build bar render icons', () => {
-  const render = { hullUrl: 'hull.png', turretUrl: 'turret.png', canvasPx: 160 };
+  const render = { layerUrls: ['hull.png', 'turret.png'], canvasPx: 160 };
   const iconOf = (kind: string) => button(kind).querySelector<HTMLElement>('.build-icon')!;
 
-  it('buildOptions gives a kind with a render its images and no Kenney sprite; others keep Kenney', () => {
-    const options = buildOptions();
-    const aa = options.find((o) => o.kind === 'aaGun')!;
-    expect(aa.render).toEqual({
-      hullUrl: renderFor('aaGun')!.hullUrl,
-      turretUrl: renderFor('aaGun')!.turretUrl,
-      canvasPx: renderFor('aaGun')!.canvasPx,
-    });
-    expect(aa.sprite).toBeUndefined();
-    const cannon = options.find((o) => o.kind === 'cannon')!;
-    expect(cannon.render).toBeUndefined();
-    expect(cannon.sprite).toBeDefined();
+  it("buildOptions gives every kind its defender's render (hull then turret) and no Kenney sprite (#567)", () => {
+    for (const option of buildOptions()) {
+      const render = renderFor(option.kind, 'us') as RenderedSprite;
+      expect(option.render, option.kind).toEqual({
+        layerUrls: [render.hullUrl, render.turretUrl],
+        canvasPx: render.canvasPx,
+      });
+      expect(option.sprite, option.kind).toBeUndefined();
+    }
+  });
+
+  it("takes the map's defender: another Faction's set on its map", () => {
+    const cannon = buildOptions(() => true, 'china').find((o) => o.kind === 'cannon')!;
+    expect(cannon.render!.layerUrls[0]).toBe((renderFor('cannon', 'china') as RenderedSprite).hullUrl);
   });
 
   it('falls back to the Kenney sprite when the render did not load', () => {
     const aa = buildOptions(() => false).find((o) => o.kind === 'aaGun')!;
     expect(aa.render).toBeUndefined();
     expect(aa.sprite).toEqual(towerIcon('aaGun'));
+    const missingTurret = renderKeys(renderFor('cannon', 'us')!)[1]!;
+    const cannon = buildOptions((key) => key !== missingTurret).find((o) => o.kind === 'cannon')!;
+    expect(cannon.render).toBeUndefined();
+    expect(cannon.sprite).toEqual(towerIcon('cannon'));
   });
 
   it('draws hull then turret from the render images, scaled to the box, needing no atlas', () => {

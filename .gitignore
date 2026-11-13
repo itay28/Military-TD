@@ -13,3 +13,4 @@ playwright/.cache/
 .venv-art/
 .venv-voice/
 __pycache__/
+menu-clip-evidence/

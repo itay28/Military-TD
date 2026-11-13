@@ -1,4 +1,4 @@
-import type { WaveData, WaveGroup } from '../sim/waves';
+import { waveRoadTimeMs, type WaveData, type WaveGroup } from '../sim/waves';
 import type { EnemyKind } from './enemies';
 
 const group = (kind: EnemyKind, count: number, spacingMs: number, delayMs = 0): WaveGroup => ({
@@ -9,7 +9,29 @@ const group = (kind: EnemyKind, count: number, spacingMs: number, delayMs = 0): 
 });
 
 /** A wave's timer when its data gives none (`WaveData.afterMs`, ADR-0011): from the previous wave's start, in game time. */
-export const DEFAULT_WAVE_AFTER_MS = 40_000;
+export const DEFAULT_WAVE_AFTER_MS = 30_000;
+
+/** The first wave's timer on every map: the build window, from the game's start. */
+export const BUILD_WINDOW_MS = 40_000;
+
+/**
+ * How each later wave's timer follows the road (#570): `roadShare` of the time the wave before takes to pass along the
+ * map's road (`waveRoadTimeMs`), plus `extraMs`, rounded to the second and kept within `minMs`..`maxMs`. So a short
+ * road or a quick wave of Jeeps brings the next one sooner, and slow armour on a long road gives more time. Set with
+ * the balance bots (`tests/maps/maps.test.ts`).
+ */
+export const WAVE_TIMER = { roadShare: 0.5, extraMs: 10_000, minMs: 15_000, maxMs: 45_000 } as const;
+
+/** `waves` with their wave timers for a road `roadTiles` long (#570). A wave that sets its own `afterMs` keeps it. */
+export function timedWaves(waves: readonly WaveData[], roadTiles: number): WaveData[] {
+  const { roadShare, extraMs, minMs, maxMs } = WAVE_TIMER;
+  return waves.map((wave, i) => {
+    if (wave.afterMs !== undefined) return wave;
+    if (i === 0) return { ...wave, afterMs: BUILD_WINDOW_MS };
+    const raw = roadShare * waveRoadTimeMs(waves[i - 1]!, roadTiles) + extraMs;
+    return { ...wave, afterMs: Math.min(maxMs, Math.max(minMs, Math.round(raw / 1000) * 1000)) };
+  });
+}
 
 /**
  * The wave schedule, in order (PLAN: starting numbers). Each new kind first comes alone and in small numbers, then

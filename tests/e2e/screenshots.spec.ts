@@ -11,11 +11,13 @@ test('map', async ({ page }) => {
   await expect(page.locator('#game')).toHaveScreenshot('map.png');
 });
 
-test('rendered sprites: an AA Gun and a Tank on the map (ADR-0009)', async ({ page }) => {
+test('rendered sprites: every tower and a Tank on the map (ADR-0009, #567)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('every-tower-kind'));
   await page.evaluate(() => window.__TD__!.command({ type: 'spawnEnemy', kind: 'tank' }));
   await page.evaluate(() => window.__TD__!.step(240));
-  await expect.poll(async () => (await view(page)).rendered).toEqual(['aaGun', 'tank']);
+  await expect
+    .poll(async () => (await view(page)).rendered)
+    .toEqual(['aaGun', 'cannon', 'mortar', 'rifleNest', 'tank']);
   await expect(page.locator('#game')).toHaveScreenshot('rendered.png');
 });

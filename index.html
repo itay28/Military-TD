@@ -149,6 +149,14 @@
       #hud [data-testid='hud-dps'] {
         min-width: 8ch;
       }
+      /* The tag's slot is there on Normal too, empty, so the row is the same on both difficulties (#569). */
+      #hud [data-testid='hud-difficulty'] {
+        min-width: 4ch;
+      }
+      /* "Next 100s": always whole, since it has its own slot. */
+      #hud [data-testid='hud-next-wave'] {
+        min-width: 9ch;
+      }
       #hud .hud-message {
         flex: 1;
         min-width: 0;
@@ -470,6 +478,26 @@
         #hud button {
           padding: 3px 10px;
           font-size: 0.8125rem;
+        }
+      }
+      /* A mid-width screen, a phone in landscape included (#569): two fixed rows, the stats over the controls and the
+         banner. The stats, with the difficulty tag's slot and the countdown, no longer fit beside five buttons. */
+      @media (min-width: 641px) and (max-width: 1100px) {
+        #hud {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+        }
+        #hud .hud-stats {
+          grid-area: 1 / 1 / 2 / -1;
+          flex-wrap: wrap;
+        }
+        #hud .hud-controls {
+          grid-area: 2 / 1;
+          flex-wrap: wrap;
+        }
+        #hud .hud-message {
+          grid-area: 2 / 2;
         }
       }
       /* A narrow screen: three fixed rows, stats / controls / message. The message row is kept when empty. */
@@ -906,6 +934,21 @@
       #enemy-card p.role {
         margin: 8px 0 0;
       }
+      /* The enemy's render (#567), the same image the battlefield draws; the name sits beside it. */
+      #enemy-card .enemy-icon {
+        position: relative;
+        float: left;
+        width: 40px;
+        height: 40px;
+        margin: 0 8px 4px 0;
+        overflow: hidden;
+      }
+      #enemy-card .enemy-icon:not([hidden]) + h2 {
+        line-height: 40px;
+      }
+      #enemy-card dl {
+        clear: both;
+      }
       #tower-panel button:focus-visible,
       #enemy-card button:focus-visible {
         outline: 2px solid var(--amber);
@@ -970,9 +1013,28 @@
       #level-select > :last-child {
         margin-bottom: auto;
       }
-      /* While the live battlefield plays behind them (#402), the page is marked data-demo and the canvas shows through:
-         a dark scrim that is darkest behind the menu column, so its buttons stay readable over the battle. */
-      :root[data-demo] #menu {
+      /* The menu clip's video (or its still) behind the Main menu and the Level select (#568), edge to edge. */
+      #menu-backdrop {
+        position: fixed;
+        inset: 0;
+        background: var(--olive-900);
+      }
+      #menu-backdrop[hidden] {
+        display: none;
+      }
+      #menu-backdrop :is(video, img) {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      #menu-backdrop img[hidden] {
+        display: none;
+      }
+      /* While it plays the page is marked data-backdrop and it shows through: a dark scrim that is darkest behind the
+         menu column, so its buttons stay readable over the battle. */
+      :root[data-backdrop] #menu {
         background: radial-gradient(
           ellipse 60% 75% at center,
           color-mix(in srgb, var(--olive-900) 90%, transparent) 0%,
@@ -980,11 +1042,11 @@
           color-mix(in srgb, var(--olive-900) 35%, transparent) 100%
         );
       }
-      :root[data-demo] #level-select {
+      :root[data-backdrop] #level-select {
         background: color-mix(in srgb, var(--olive-900) 78%, transparent);
       }
-      /* The battlefield fills the window, edge to edge, while the menu screens hide the HUD and build bar around it. */
-      :root[data-demo] #app[data-screen] {
+      /* The menu clip's recording (?clip=1) fills the window, edge to edge, with the HUD and build bar hidden. */
+      #app[data-screen='clip'] {
         gap: 0;
         padding: 0;
       }
@@ -1347,6 +1409,10 @@
       }
       #how-to-play p {
         margin: 2px 0;
+      }
+      /* One idea per paragraph (#571): a gap between them, so each reads on its own. */
+      #how-to-play p + p {
+        margin-top: 8px;
       }
       #how-to-play ul {
         margin: 2px 0;
@@ -1786,6 +1852,7 @@
       </div>
       <div id="hints" hidden></div>
     </div>
+    <div id="menu-backdrop" hidden></div>
     <main id="menu" hidden></main>
     <main id="level-select" hidden></main>
     <div id="settings" hidden></div>

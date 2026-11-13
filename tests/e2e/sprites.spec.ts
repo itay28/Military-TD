@@ -100,17 +100,17 @@ async function towersAndTank(page: import('@playwright/test').Page) {
   await expect.poll(async () => (await view(page)).enemies.length).toBe(2);
 }
 
-test('the AA Gun and the Tank are drawn from their renders; every other kind keeps Kenney', async ({ page }) => {
+test('every tower and the enemies on the map are drawn from their renders (#567)', async ({ page }) => {
   await openGame(page);
   await towersAndTank(page);
   const { rendered, sprites, drawOrder } = await view(page);
   expect(sprites).toBe(true);
-  expect(rendered).toEqual(['aaGun', 'tank']);
+  expect(rendered).toEqual(['aaGun', 'cannon', 'infantry', 'mortar', 'rifleNest', 'tank']);
   expect(drawOrder.filter((layer) => LAYERS.includes(layer))).toEqual(LAYERS);
 });
 
 test('a render that fails to load falls back to the Kenney sprite', async ({ page }) => {
-  await page.route(/-(hull|turret)[^/]*\.png$/, (route) => route.abort());
+  await page.route(/\/(us|russia|china|insurgents)-[^/]+\.png$/, (route) => route.abort());
   await openGame(page);
   await towersAndTank(page);
   const { rendered, sprites } = await view(page);

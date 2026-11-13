@@ -83,9 +83,16 @@ describe('HUD', () => {
       expect(tag?.parentElement?.className).toBe('hud-stats');
     });
 
-    it('shows nothing on Normal, the default', () => {
+    it('keeps the tag slot on Normal, empty, so the layout is the same on both (#569)', () => {
       mountHud(root, gameOn('normal'), fakeSpeed());
-      expect(byTestId('hud-difficulty')).toBeNull();
+      const tag = byTestId('hud-difficulty');
+      expect(tag?.textContent).toBe('');
+      expect(tag?.parentElement?.className).toBe('hud-stats');
+    });
+
+    it('puts the next-wave timer in the stats group, not the clipping message slot (#569)', () => {
+      mountHud(root, gameOn('normal'), fakeSpeed());
+      expect(byTestId('hud-next-wave')?.parentElement?.className).toBe('hud-stats');
     });
   });
 

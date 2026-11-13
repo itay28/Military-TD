@@ -1,70 +1,209 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
-import { RENDERS, RENDER_FACING, renderFor } from './renders';
-import { FACTIONS } from '../sim/factions';
+import {
+  ALL_RENDERS,
+  RENDER_FACING,
+  drawnRender,
+  factionFor,
+  isTurretRender,
+  renderFor,
+  renderKeys,
+  renderTextures,
+  type AnyRender,
+} from './renders';
+import { FACTIONS, type Faction } from '../sim/factions';
 import { SPRITES, type SpriteKind } from './sprites';
 import { TURNTABLE_BUDGET_BYTES } from './turntables';
+import { BUILD_KINDS, NOT_IN_PLAY, type TowerKind } from './towers';
+import { NOT_PLAYABLE_KINDS, PLAYABLE_KINDS } from './enemies';
+import { MAPS } from './maps';
 
-describe('RENDERS', () => {
-  it('has the spike’s two renders: the China AA Gun and the Russia Tank', () => {
-    expect(Object.keys(RENDERS).sort()).toEqual(['aaGun', 'tank']);
-    expect(RENDERS.aaGun!.id).toBe('china-aa-gun');
-    expect(RENDERS.tank!.id).toBe('russia-tank');
+const IN_PLAY: readonly SpriteKind[] = [...BUILD_KINDS, ...PLAYABLE_KINDS];
+const SINGLE_IMAGE: readonly SpriteKind[] = ['infantry', 'jeep', 'helicopter'];
+const kebab = (kind: string) => kind.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+const render = (kind: SpriteKind, faction: Faction): AnyRender => {
+  const found = renderFor(kind, faction);
+  if (found === null) throw new Error(`no render for ${faction} ${kind}`);
+  return found;
+};
+const turretRenders = () => ALL_RENDERS.filter(isTurretRender);
+
+describe('the render table (#566)', () => {
+  it('covers the 8 in-play kinds', () => {
+    expect([...IN_PLAY].sort()).toEqual(
+      ['aaGun', 'cannon', 'helicopter', 'infantry', 'jeep', 'mortar', 'rifleNest', 'tank'].sort(),
+    );
   });
 
-  it('keeps the Gunship out of play: its art (#363) is not wired in until the rollout', () => {
-    expect(Object.keys(RENDERS)).not.toContain('gunship');
-    expect(SPRITES.gunship).toBeNull();
+  for (const kind of IN_PLAY)
+    for (const faction of FACTIONS)
+      it(`has the ${faction} ${kind}, under its render id`, () => {
+        const r = render(kind, faction);
+        expect(r.id).toBe(`${faction}-${kebab(kind)}`);
+        expect(r).toMatchObject({ kind, faction, pxPerTile: 128 });
+      });
+
+  it('picks the faction’s own model: the US AA Gun is us-aa-gun', () => {
+    expect(render('aaGun', 'us').id).toBe('us-aa-gun');
   });
 
-  it('gives each a hull and a turret texture, both its own keys', () => {
-    for (const render of Object.values(RENDERS)) {
-      expect(render.hullKey).toBe(`render-${render.id}-hull`);
-      expect(render.turretKey).toBe(`render-${render.id}-turret`);
-      expect(render.hullUrl).toMatch(/hull\.png/);
-      expect(render.turretUrl).toMatch(/turret\.png/);
-    }
+  it('holds exactly in-play kinds × factions, so no art-ahead kind slips into play', () => {
+    expect(ALL_RENDERS).toHaveLength(IN_PLAY.length * FACTIONS.length);
+    for (const kind of [...NOT_IN_PLAY, ...NOT_PLAYABLE_KINDS] as SpriteKind[])
+      for (const faction of FACTIONS) expect(renderFor(kind, faction), `${faction} ${kind}`).toBeNull();
+  });
+
+  it('gives Infantry, Jeep and Helicopter one image and no turret', () => {
+    for (const kind of SINGLE_IMAGE)
+      for (const faction of FACTIONS) {
+        const r = render(kind, faction);
+        expect(isTurretRender(r)).toBe(false);
+        expect(r).not.toHaveProperty('turretKey');
+        expect(r).not.toHaveProperty('hullKey');
+        expect(r).toMatchObject({ imageKey: `render-${r.id}`, imageUrl: expect.stringMatching(/\.png/) });
+        // No pivot in the metadata: it turns about the canvas centre.
+        expect(r.pivot).toEqual({ x: r.canvasPx / 2, y: r.canvasPx / 2 });
+      }
+  });
+
+  it('gives every tower and the Tank a hull and a turret, both its own keys', () => {
+    for (const kind of IN_PLAY.filter((k) => !SINGLE_IMAGE.includes(k)))
+      for (const faction of FACTIONS) {
+        const r = render(kind, faction);
+        if (!isTurretRender(r)) throw new Error(`${r.id} has no turret`);
+        expect(r.hullKey).toBe(`render-${r.id}-hull`);
+        expect(r.turretKey).toBe(`render-${r.id}-turret`);
+        expect(r.hullUrl).toMatch(/hull\.png/);
+        expect(r.turretUrl).toMatch(/turret\.png/);
+      }
   });
 
   it('reads the pivot from the render data: a tank off the canvas centre, a tower on its pad the centre', () => {
-    expect(RENDERS.tank!.canvasPx).toBe(192);
-    expect(RENDERS.tank!.pivot.y).toBeGreaterThan(96);
+    const tank = render('tank', 'russia');
+    expect(tank.canvasPx).toBe(192);
+    expect(tank.pivot.y).toBeGreaterThan(96);
     // The AA Gun stands on its sandbagged pad (#316), so it turns about the pad centre.
-    expect(RENDERS.aaGun!.canvasPx).toBe(160);
-    expect(RENDERS.aaGun!.pivot).toEqual({ x: 80, y: 80 });
+    expect(render('aaGun', 'china')).toMatchObject({ canvasPx: 160, pivot: { x: 80, y: 80 } });
   });
 
-  it('has a barrel tip per barrel: two on the AA Gun, one on the tank, all ahead of the pivot', () => {
-    expect(RENDERS.aaGun!.muzzles).toHaveLength(2);
-    expect(RENDERS.tank!.muzzles).toHaveLength(1);
-    for (const render of Object.values(RENDERS)) for (const m of render.muzzles) expect(m.y).toBeLessThan(-40);
+  it('has a barrel tip per barrel: two on the China AA Gun, one on the Russia tank', () => {
+    const [aa, tank] = [render('aaGun', 'china'), render('tank', 'russia')];
+    if (!isTurretRender(aa) || !isTurretRender(tank)) throw new Error('turret kinds');
+    expect(aa.muzzles).toHaveLength(2);
+    expect(tank.muzzles).toHaveLength(1);
   });
 
-  it('gives every render at least one barrel tip, so no rendered tower fires from nowhere', () => {
-    for (const render of Object.values(RENDERS)) expect(render.muzzles.length).toBeGreaterThan(0);
-  });
-
-  it('keeps Kenney for every kind without a render', () => {
-    for (const kind of Object.keys(SPRITES) as SpriteKind[]) {
-      if (kind in RENDERS) continue;
-      expect(renderFor(kind), kind).toBeNull();
+  it('reads every barrel tip off its turret image: an opaque pixel ahead of the pivot', () => {
+    for (const r of turretRenders()) {
+      expect(r.muzzles.length, r.id).toBeGreaterThan(0);
+      const png = PNG.sync.read(readFileSync(`assets/render-${r.id}/${r.id}-turret.png`));
+      const opaqueNear = (cx: number, cy: number) => {
+        for (let y = Math.round(cy) - 2; y <= Math.round(cy) + 2; y++)
+          for (let x = Math.round(cx) - 2; x <= Math.round(cx) + 2; x++)
+            if (x >= 0 && y >= 0 && x < png.width && y < png.height && png.data[(y * png.width + x) * 4 + 3]! > 128)
+              return true;
+        return false;
+      };
+      for (const m of r.muzzles) {
+        expect(m.y, r.id).toBeLessThan(0);
+        expect(opaqueNear(r.pivot.x + m.x, r.pivot.y + m.y), `${r.id} ${JSON.stringify(m)}`).toBe(true);
+        // A tip is the front of the barrel: nothing opaque further forward in its column.
+        const col = Math.round(r.pivot.x + m.x);
+        const above = Array.from({ length: Math.max(0, Math.round(r.pivot.y + m.y) - 3) }, (_, y) => y).some(
+          (y) => png.data[(y * png.width + col) * 4 + 3]! > 128,
+        );
+        expect(above, `${r.id} ${JSON.stringify(m)} has image ahead of it`).toBe(false);
+      }
     }
-    expect(SPRITES.aaGun).not.toBeNull(); // the fallback when the render doesn't load
-    expect(SPRITES.tank).not.toBeNull();
-  });
-
-  it('has no hull/turret render for the Fighter jet: it is one top-down sprite (#482, src/data/jet-sprites.test.ts)', () => {
-    expect('jet' in RENDERS).toBe(false);
-  });
-
-  it('leaves the APC out until it is in play (#76): its US (#478), Russia (#480), China (#481) and Insurgents (#483) renders are only in the Field manual for now', () => {
-    expect('apc' in RENDERS).toBe(false);
-    expect(SPRITES.apc).toBeNull();
   });
 
   it('renders face north', () => {
     expect(RENDER_FACING).toBeCloseTo(-Math.PI / 2);
+  });
+
+  it('keeps the Kenney frames the battlefield falls back to', () => {
+    expect(SPRITES.aaGun).not.toBeNull();
+    expect(SPRITES.tank).not.toBeNull();
+    expect(SPRITES.gunship).toBeNull();
+    expect(SPRITES.apc).toBeNull();
+  });
+});
+
+describe('drawnRender (#567)', () => {
+  const trainingGround = MAPS[0]!;
+  const loaded = () => true;
+
+  it('draws every in-play kind on Training Ground from its render: US towers, Russian enemies, never Kenney', () => {
+    for (const kind of IN_PLAY) {
+      const drawn = drawnRender(kind, trainingGround, loaded);
+      const side = (BUILD_KINDS as readonly SpriteKind[]).includes(kind) ? 'us' : 'russia';
+      expect(drawn?.id, kind).toBe(`${side}-${kebab(kind)}`);
+    }
+  });
+
+  it("falls back to Kenney (null) when any of the render's textures is missing", () => {
+    for (const kind of IN_PLAY) {
+      const keys = renderKeys(drawnRender(kind, trainingGround, loaded)!);
+      for (const missing of keys) {
+        expect(
+          drawnRender(kind, trainingGround, (key) => key !== missing),
+          `${kind} without ${missing}`,
+        ).toBeNull();
+      }
+    }
+  });
+
+  it('draws a kind not in play from Kenney', () => {
+    for (const kind of [...NOT_IN_PLAY, ...NOT_PLAYABLE_KINDS] as SpriteKind[])
+      expect(drawnRender(kind, trainingGround, loaded), kind).toBeNull();
+  });
+});
+
+describe('renderKeys', () => {
+  it('lists the hull and turret keys of a turret render, and the one image key of a single-image render', () => {
+    expect(renderKeys(render('tank', 'russia'))).toEqual(['render-russia-tank-hull', 'render-russia-tank-turret']);
+    expect(renderKeys(render('infantry', 'russia'))).toEqual(['render-russia-infantry']);
+  });
+
+  it('are the keys renderTextures loads', () => {
+    const map = MAPS[0]!;
+    const loadedKeys = renderTextures(map).map(({ key }) => key);
+    for (const kind of IN_PLAY)
+      for (const key of renderKeys(render(kind, factionFor(kind, map)))) expect(loadedKeys).toContain(key);
+  });
+});
+
+describe('factionFor', () => {
+  const map = { attacker: 'russia', defender: 'us' } as const;
+  it('gives a tower the defender', () => {
+    for (const kind of BUILD_KINDS) expect(factionFor(kind as TowerKind, map)).toBe('us');
+  });
+  it('gives an enemy the attacker', () => {
+    for (const kind of PLAYABLE_KINDS) expect(factionFor(kind, map)).toBe('russia');
+  });
+});
+
+describe('renderTextures', () => {
+  const keysOf = (r: AnyRender) => (isTurretRender(r) ? [r.hullKey, r.turretKey] : [r.imageKey]);
+
+  it('lists exactly the map’s two factions’ renders', () => {
+    const map = { attacker: 'china', defender: 'insurgents' } as const;
+    const expected = [
+      ...BUILD_KINDS.map((k) => render(k, 'insurgents')),
+      ...PLAYABLE_KINDS.map((k) => render(k, 'china')),
+    ].flatMap(keysOf);
+    const list = renderTextures(map);
+    expect(list.map((t) => t.key).sort()).toEqual(expected.sort());
+    for (const t of list) expect(t.url).toMatch(/\.png/);
+    expect(list.some((t) => t.key.includes('-us-') || t.key.includes('-russia-'))).toBe(false);
+  });
+
+  it('loads the Training Ground pair: US towers, Russia enemies', () => {
+    const keys = renderTextures(MAPS[0]!).map((t) => t.key);
+    expect(keys).toContain('render-us-aa-gun-turret');
+    expect(keys).toContain('render-russia-jeep');
+    expect(keys).not.toContain('render-china-aa-gun-turret');
   });
 });
 
@@ -89,7 +228,7 @@ describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 put
     }
 
     it(`keeps ${id} out of RENDERS until it is in play`, () => {
-      expect(Object.values(RENDERS).map((r) => r.id)).not.toContain(id);
+      expect(ALL_RENDERS.map((r) => r.id)).not.toContain(id);
     });
   }
 });
@@ -128,7 +267,7 @@ describe('the committed Grenade launcher renders (art-ahead: not in RENDERS unti
     });
 
     it(`keeps ${id} out of RENDERS until it is in play`, () => {
-      expect(Object.values(RENDERS).map((r) => r.id)).not.toContain(id);
+      expect(ALL_RENDERS.map((r) => r.id)).not.toContain(id);
     });
   }
 });

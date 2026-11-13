@@ -24,14 +24,22 @@ import { gameMusic, type MusicController } from '../audio/music';
 import { duckForRadio, MUSIC_REGISTRY_KEY } from '../audio/radio';
 import type { AudioMix } from '../audio/volume';
 import { createWhistleTracker } from '../audio/whistle';
-import { DEMO_SCRIPTS, type DemoScript } from '../data/demo';
+import { MENU_CLIP } from '../data/menuClip';
 import { RADIO_CUE_MS, SOUND_FALLOFF, SOUND_THROTTLE, SOUND_THROTTLE_BY_ID, WHISTLE_LEAD_MS } from '../data/sounds';
-import { RENDER_FACING, renderFor, type RenderedSprite } from '../data/renders';
+import {
+  RENDER_FACING,
+  isTurretRender,
+  drawnRender,
+  renderTextures,
+  type AnyRender,
+  type RenderedSprite,
+  type SingleImageRender,
+} from '../data/renders';
 import { ATLAS_KEY, SPRITE_HEADING, TOWER_BASES, TURRET_FACING, spriteFor, type SpriteKind } from '../data/sprites';
 import type { EnemyKind } from '../data/enemies';
 import { DISMANTLE_MS, type TowerKind } from '../data/towers';
 import type { Difficulty } from '../data/difficulty';
-import { groundTextureKey, MAPS, mapById } from '../data/maps';
+import { groundTextureKey, MAPS, mapById, type MapEntry } from '../data/maps';
 import type { Faction } from '../sim/factions';
 import type { Enemy } from '../sim/enemies';
 import { isGameOver, TICK_MS, type Game } from '../sim/game';
@@ -40,14 +48,14 @@ import { starsFor, winUnlocksNext } from '../sim/progression';
 import { setUpGame, type GameSetup } from '../sim/scenario';
 import type { ProgressStore, WinStars } from '../progress/progress';
 import type { SettingsStore } from '../settings/settings';
-import { createDemoGame, demoScriptAt, panAt } from '../sim/demo';
+import { clipPanAt, createMenuClipGame, type MenuClipGame } from '../sim/menuClip';
 import { towerAt, type Tower } from '../sim/towers';
 import type { TestHooks, TestView } from '../testing/api';
 import { frameMs, type TestFlags } from '../testing/flags';
 import {
   canPlaceAt,
   clampView,
-  demoView,
+  clipView,
   fitView,
   panBy,
   revealTile,
@@ -113,8 +121,8 @@ import { mountShortcuts } from '../ui/shortcuts';
 import type { OpenHowToPlay } from '../ui/howToPlay';
 import type { OpenSettings } from '../ui/settingsScreen';
 import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
-import { DEMO_SCENE_KEY, stopDemo, type DemoMode } from './demoMode';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
+import { renderIcon } from '../ui/renderIcon';
 import { createViewSync, type ViewSync } from './viewSync';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
@@ -216,11 +224,6 @@ export interface GameSceneOptions {
   readonly progress: ProgressStore;
   /** Called at the end of every create(), the first game's and each restart's. */
   readonly onCreate?: () => void;
-  /**
-   * Makes this instance the live battlefield behind the menu (#402), keyed `Demo`: a scripted, looping game with no
-   * HUD, input or sound, and a slow camera pan. Each start plays the next map's script.
-   */
-  readonly demo?: Exclude<DemoMode, 'off'>;
 }
 
 /** Owns the Simulation, draws it, and advances it on a fixed timestep. */
@@ -240,12 +243,17 @@ export class GameScene extends Phaser.Scene {
   private readonly openHowToPlay: OpenHowToPlay;
   private readonly progress: ProgressStore;
   private readonly onCreate: (() => void) | undefined;
-  private readonly demo: Exclude<DemoMode, 'off'> | undefined;
-  /** How many demos have started: picks the next script. */
-  private demoRotation = 0;
-  /** The demo playing, and how far into its pan (real ms; it holds at 0 for a still frame). */
-  private demoScript: DemoScript | undefined;
-  private demoPanMs = 0;
+  /**
+   * Test mode's `?clip=1` (#568): the scene plays the menu clip (`MENU_CLIP`) for `npm run menu:clip` to record, with
+   * no HUD, input or sound, and a camera pan. Only `clipFrames` moves it on, a video frame at a time.
+   */
+  private readonly clip: boolean;
+  /** The clip's game, while it plays (also `this.sim`). */
+  private clipSim: MenuClipGame | undefined;
+  /** How far into the clip the camera's pan is, in ms of clip time. */
+  private clipMs = 0;
+  /** The time the next update moves the clip on by: a frame's, set by `clipFrames`; 0 for Phaser's own frames. */
+  private clipStepMs = 0;
   /** How each game starts, the first and every restart. Test mode's loadScenario changes it. */
   private setup: GameSetup = {};
   /** The map picked on the Level select, kept across restarts. A loaded scenario's own map overrides it. */
@@ -352,10 +360,9 @@ export class GameScene extends Phaser.Scene {
     openHowToPlay,
     progress,
     onCreate,
-    demo,
   }: GameSceneOptions) {
-    super(demo ? DEMO_SCENE_KEY : 'Game');
-    this.demo = demo;
+    super('Game');
+    this.clip = flags.test && flags.clip;
     this.hudRoot = hudRoot;
     this.buildBarRoot = buildBarRoot;
     this.endScreenRoot = endScreenRoot;
@@ -384,6 +391,13 @@ export class GameScene extends Phaser.Scene {
       },
       step: (ticks) => {
         for (let i = 0; i < ticks; i++) this.tickOnce();
+      },
+      clipFrames: (frames) => {
+        if (!this.clip) throw new Error('clipFrames needs ?clip=1');
+        for (let i = 0; i < frames; i++) {
+          this.clipStepMs = 1000 / MENU_CLIP.fps;
+          this.update(this.time.now, 0);
+        }
       },
       load: (setup) => {
         setUpGame(setup); // throws for a bad setup before the running game is torn down
@@ -465,12 +479,20 @@ export class GameScene extends Phaser.Scene {
     return this.textures.get(ATLAS_KEY).has(frame) ? frame : null;
   }
 
-  /** The render `kind` is drawn with, or null for Kenney: it has none, or its textures didn't load. */
-  private renderOf(kind: SpriteKind): RenderedSprite | null {
-    const render = renderFor(kind);
-    if (render === null || !this.textures.exists(render.hullKey) || !this.textures.exists(render.turretKey))
-      return null;
-    return render;
+  /** The render `kind` is drawn with on this map, or null for Kenney: it has none, or its textures didn't load. */
+  private renderOf(kind: SpriteKind): AnyRender | null {
+    return drawnRender(kind, this.sides(), (key) => this.textures.exists(key));
+  }
+
+  /** The turret render a tower is drawn with, or null for Kenney (every tower render has a turret). */
+  private towerRenderOf(kind: TowerKind): RenderedSprite | null {
+    const render = this.renderOf(kind);
+    return render !== null && isTurretRender(render) ? render : null;
+  }
+
+  /** The Factions of the map actually played (a loaded scenario's own map included), else the selected map's. */
+  private sides(): MapEntry {
+    return MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId);
   }
 
   /** A sprite of `kind` and a Graphics over it on `layer`, both at `at`; no sprite when `kind` has no frame. */
@@ -507,6 +529,16 @@ export class GameScene extends Phaser.Scene {
     return { sprite, graphics, rendered: true, spriteScale: 1, facing: RENDER_FACING };
   }
 
+  /** An enemy drawn from a single-image render (Infantry, Jeep, Helicopter): one image turned whole; a Graphics over it. */
+  private addSingleImageEnemyView(render: SingleImageRender, layer: keyof typeof DEPTH): EntityView {
+    const scale = TILE_PX / render.pxPerTile;
+    const sprite = onLayer(this.add.image(0, 0, render.imageKey), layer)
+      .setOrigin(render.pivot.x / render.canvasPx, render.pivot.y / render.canvasPx)
+      .setScale(scale);
+    const graphics = onLayer(this.add.graphics(), layer);
+    return { sprite, graphics, rendered: true, spriteScale: scale, facing: RENDER_FACING };
+  }
+
   /**
    * What fights leave on the ground (#403): a wreck, crash mark or fallen soldier where an enemy died, turned the way it
    * was heading, and a crater where a shell landed. Cosmetic, so off with `?anim=0`; reduced motion follows the
@@ -531,7 +563,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Where `tower`'s shots start now: its barrel tips, turned with the turret to the sim's heading. */
   private muzzlesOf(tower: Tower): Pixel[] {
-    return muzzlePoints(this.renderOf(tower.kind), towerCenter(tower), tower.heading);
+    return muzzlePoints(this.towerRenderOf(tower.kind), towerCenter(tower), tower.heading);
   }
 
   /** A tower drawn from `render`: its hull as the base, its turret turning around the pivot, a Graphics over both. */
@@ -635,8 +667,7 @@ export class GameScene extends Phaser.Scene {
     const audio = radio ?? silentAudio;
     if (radio) this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => radio.dispose());
     // The map actually played (a loaded scenario's own map included); one outside the registry falls back to the selected map.
-    const defenderOf = (): Faction =>
-      (MAPS.find((m) => m.id === this.sim.state.map.id) ?? mapById(this.mapId)).defender;
+    const defenderOf = (): Faction => this.sides().defender;
     const play = (event: SoundEvent, at?: Position): void => {
       const id = soundFor(event, defenderOf());
       if (id === null) return;
@@ -667,6 +698,12 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  /** Loads the renders of this map's two sets that the Boot scene didn't (it loads the Training Ground pair). */
+  preload(): void {
+    for (const { key, url } of renderTextures(mapById(this.mapId)))
+      if (!this.textures.exists(key)) this.load.image(key, url);
+  }
+
   /** Phaser passes the data `scene.start('Game', { mapId })` was given; a restart passes the same again. */
   init(data: { readonly mapId?: string; readonly difficulty?: Difficulty } = {}): void {
     if (data.mapId !== undefined) this.mapId = mapById(data.mapId).id;
@@ -684,10 +721,8 @@ export class GameScene extends Phaser.Scene {
     this.allRingsKey = '';
     this.ghost = undefined;
     this.result = undefined;
-    if (this.demo) this.sim = this.startDemo();
+    if (this.clip) this.sim = this.startClip();
     else {
-      // A real game ends the demo behind the menu.
-      stopDemo(this.scene);
       // Tactical mode is fixed for the game, from the settings when it starts; a loaded scenario can set its own.
       const { tacticalMode } = this.settings.get();
       this.sim = setUpGame({ map: mapById(this.mapId).data, tacticalMode, difficulty: this.difficulty, ...this.setup });
@@ -720,7 +755,9 @@ export class GameScene extends Phaser.Scene {
         return {
           ...(render === null
             ? this.addEntityView(enemy.kind, layer, { x: 0, y: 0 }, SPRITE_HEADING[enemy.kind])
-            : this.addRenderedEnemyView(render, layer)),
+            : isTurretRender(render)
+              ? this.addRenderedEnemyView(render, layer)
+              : this.addSingleImageEnemyView(render, layer)),
           id: enemy.id,
           kind: enemy.kind,
           hp: Number.NaN,
@@ -731,13 +768,15 @@ export class GameScene extends Phaser.Scene {
       update: (view, enemy) => {
         // With ?anim=0 or reduced motion the walk cycle stands still: the per-id phase would still spread frames, so pin
         // them to 0.
-        const frame = this.motion().enemyWalk ? animFrame(this.animMs, enemy.id) : 0;
+        const frame = this.motion().enemyWalk ? animFrame(this.animMs, this.clipSim?.animKey(enemy.id) ?? enemy.id) : 0;
         // Only the shape's rotor moves with the frame; a sprite's HP bar doesn't.
         const redrawShape = !view.sprite && view.frame !== frame;
         if (view.hp !== enemy.hp || redrawShape) {
           view.graphics.clear();
-          if (view.sprite) drawHpBar(view.graphics, enemy);
-          else drawEnemy(view.graphics, enemy, rotorAngle(frame));
+          // The menu clip has no HP bars: most of its enemies only drive through.
+          if (view.sprite) {
+            if (!this.clip) drawHpBar(view.graphics, enemy);
+          } else drawEnemy(view.graphics, enemy, rotorAngle(frame));
           view.hp = enemy.hp;
         }
         view.frame = frame;
@@ -759,7 +798,7 @@ export class GameScene extends Phaser.Scene {
     this.towerViews = createViewSync<Tower, TowerView>({
       create: (tower) => {
         const at = towerCenter(tower);
-        const render = this.renderOf(tower.kind);
+        const render = this.towerRenderOf(tower.kind);
         const view: TowerView = {
           towerId: tower.id,
           kind: tower.kind,
@@ -800,10 +839,7 @@ export class GameScene extends Phaser.Scene {
     // Lifetimes read live from the reduced-motion setting (#354); ?anim=0 zeroes them, so the cosmetics never show.
     this.effects = createEffects(() => this.motion().effectLifeMs);
     this.effectGraphics = onLayer(this.add.graphics(), 'effects');
-    // A phone's demo leaves out the per-shot cosmetics: muzzle flashes and tracers.
-    const shotEffects = this.demo !== 'lite';
     this.sim.events.on('shellFired', ({ towerId }) => {
-      if (!shotEffects) return;
       const tower = this.sim.state.towers.find((t) => t.id === towerId);
       if (tower) for (const at of this.muzzlesOf(tower)) this.effects.add('muzzleFlash', at);
     });
@@ -813,7 +849,6 @@ export class GameScene extends Phaser.Scene {
     this.tracers = createTracers(() => this.motion().tracerFadeMs);
     this.tracerGraphics = onLayer(this.add.graphics(), 'tracers');
     this.sim.events.on('towerFired', (shot) => {
-      if (!shotEffects) return;
       const tower = this.sim.state.towers.find((t) => t.id === shot.towerId);
       if (!tower) return;
       for (const at of this.muzzlesOf(tower)) {
@@ -822,8 +857,8 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // The demo is silent: the menu music plays over it.
-    if (!this.demo) this.wireSounds();
+    // The clip is silent: its track is mixed from its sound timeline (`menuClipSounds`).
+    if (!this.clip) this.wireSounds();
 
     // The shell is game state, so it is always drawn; only its blast is cosmetic, and goes with ?anim=0.
     this.blasts = createBlasts(() => this.motion().blastFadeMs);
@@ -852,7 +887,10 @@ export class GameScene extends Phaser.Scene {
       update: (view, { x, y, alpha }) => view.setPosition(x, y).setAlpha(alpha),
       destroy: (view) => view.destroy(),
     });
-    if (this.demo) return this.setUpDemoCamera();
+    if (this.clip) {
+      this.setUpClipCamera();
+      return this.onCreate?.();
+    }
     this.setUpCamera();
     this.setUpMapGrid();
 
@@ -872,7 +910,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBar = mountBuildBar(
       this.buildBarRoot,
       this.sim,
-      buildOptions((render) => this.textures.exists(render.hullKey) && this.textures.exists(render.turretKey)),
+      buildOptions((key) => this.textures.exists(key), this.sides().defender),
       {
         onSelect: () => {
           this.towerPanel.select(undefined);
@@ -893,7 +931,13 @@ export class GameScene extends Phaser.Scene {
         this.enemyCard.pin(undefined);
       },
     });
-    this.enemyCard = mountEnemyCard(this.enemyCardRoot, this.sim, { onPin: () => this.towerPanel.select(undefined) });
+    this.enemyCard = mountEnemyCard(this.enemyCardRoot, this.sim, {
+      onPin: () => this.towerPanel.select(undefined),
+      iconFor: (kind) => {
+        const render = this.renderOf(kind);
+        return render && renderIcon(render);
+      },
+    });
     // A full freeze: the overlay covers the map and the HUD, build bar and tower panel go inert. Mounted last, so the
     // build bar's, tower panel's and enemy card's Esc (cancel a selection) runs before its own (pause).
     this.pauseMenu = mountPauseMenu(this.pauseMenuRoot, this.sim, {
@@ -991,41 +1035,38 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * The demo's game (#402): the next script in rotation, on its map, played `preRollMs` ahead so the field is busy from
-   * the first frame. Marks the page `data-demo` while it runs, which turns the menu's background into a see-through scrim.
+   * The menu clip's game (#568), on its map. It isn't warmed up here: the capture runs the warm-up through `clipFrames`
+   * too, so the wrecks and fallen of the warm-up's last kills are on the field at the first frame. The page is marked
+   * `data-screen="clip"`, which hides the HUD and lets the canvas fill the window.
    */
-  private startDemo(): Game {
-    const script = demoScriptAt(DEMO_SCRIPTS, this.demoRotation++);
-    const entry = mapById(script.mapId);
+  private startClip(): Game {
+    const entry = mapById(MENU_CLIP.mapId);
     this.mapId = entry.id;
-    this.demoScript = script;
-    this.demoPanMs = 0;
-    const sim = createDemoGame({ map: entry.data, waves: entry.waves, towers: script.towers });
-    for (let ms = 0; ms < script.preRollMs; ms += TICK_MS) sim.tick(TICK_MS);
-    this.previousPositions = snapshotPositions(sim.state.enemies);
-    const root = document.documentElement;
-    root.dataset.demo = this.demo ?? 'full';
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => delete root.dataset.demo);
+    this.clipMs = 0;
+    const sim = createMenuClipGame(MENU_CLIP, entry.data);
+    this.clipSim = sim;
+    const app = this.hudRoot.parentElement!;
+    app.dataset.screen = 'clip';
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => delete app.dataset.screen);
     return sim;
   }
 
-  /** The demo's camera: no input, it follows the script's pan, and follows the canvas size. */
-  private setUpDemoCamera(): void {
+  /** The clip's camera: no input, it follows the clip's pan, and follows the canvas size. */
+  private setUpClipCamera(): void {
     this.cameras.main.setOrigin(0, 0);
-    this.panDemoCamera(0);
+    this.panClipCamera();
     const onResize = (size: Phaser.Structs.Size) => {
       this.cameras.main.setSize(size.width, size.height);
-      this.panDemoCamera(0);
+      this.panClipCamera();
     };
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, onResize));
   }
 
-  /** Moves the demo's pan on by `deltaMs` and points the camera there. */
-  private panDemoCamera(deltaMs: number): void {
-    const { pan } = this.demoScript!;
-    this.demoPanMs += deltaMs;
-    this.setView(demoView(this.cameraBounds(), toPixels(panAt(pan, this.demoPanMs)), pan.zoom));
+  /** Points the camera where the clip's pan is now. */
+  private panClipCamera(): void {
+    const { pan } = MENU_CLIP;
+    this.setView(clipView(this.cameraBounds(), toPixels(clipPanAt(MENU_CLIP, this.clipMs)), pan.zoom));
   }
 
   /** Saves a win of `mapId` and says what it earned, including the next map when this win unlocked it. */
@@ -1235,9 +1276,9 @@ export class GameScene extends Phaser.Scene {
 
   override update(_time: number, frameDeltaMs: number): void {
     // Paused, no time passes: the sim doesn't tick and the cosmetics hold still (ADR-0002: the sim is untouched).
-    // The demo's still frame (reduced motion) is paused for good.
-    const held = this.demo ? this.demo === 'still' : this.pauseMenu.paused;
-    const deltaMs = held ? 0 : frameDeltaMs;
+    // The clip moves on only by clipFrames' frames.
+    const deltaMs = this.clip ? this.clipStepMs : this.pauseMenu.paused ? 0 : frameDeltaMs;
+    this.clipStepMs = 0;
     // Age tracers before ticking, so one fired this frame is drawn fully opaque.
     this.tracers.advance(deltaMs);
     this.blasts.advance(deltaMs);
@@ -1245,9 +1286,8 @@ export class GameScene extends Phaser.Scene {
     this.aftermath.advance(deltaMs);
     this.floatingTexts.advance(deltaMs);
     if (this.motion().enemyWalk) this.animMs += deltaMs;
-    // The demo plays in real time whatever test mode's stepping and speed: it isn't the game under test.
-    this.loop.advance(this.demo ? deltaMs : frameMs(this.flags, deltaMs, this.gameSpeed));
-    if (!this.demo) {
+    this.loop.advance(this.clip ? deltaMs : frameMs(this.flags, deltaMs, this.gameSpeed));
+    if (!this.clip) {
       this.playWhistles();
       // The battlefield ambience (#405): the combat layer during a wave, the game track on the End screen. Both calls do
       // nothing while nothing changes; a restart goes back to the bed through the scene's START.
@@ -1279,7 +1319,10 @@ export class GameScene extends Phaser.Scene {
     this.aftermathGraphics.clear();
     drawAftermath(this.aftermathGraphics, this.aftermath.active());
     this.drawShells();
-    if (this.demo) return this.panDemoCamera(deltaMs);
+    if (this.clip) {
+      this.clipMs += deltaMs;
+      return this.panClipCamera();
+    }
     this.drawHighlights(towers);
     const { selectedId } = this.towerPanel;
     const selected = towers.find((tower) => tower.id === selectedId);

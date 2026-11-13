@@ -1,4 +1,4 @@
-import type { EnemyKind } from '../data/enemies';
+import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 
 /** One group in a wave: `count` enemies of one kind, the first `delayMs` after the wave starts, then `spacingMs` apart. */
 export interface WaveGroup {
@@ -13,9 +13,23 @@ export interface WaveData {
   readonly groups: readonly WaveGroup[];
   /**
    * Its wave timer (ADR-0011): in timed mode the wave arrives this long after the previous wave started, or after the
-   * game started for the first wave (the build window). `DEFAULT_WAVE_AFTER_MS` when left out. Tactical mode ignores it.
+   * game started for the first wave (the build window). `DEFAULT_WAVE_AFTER_MS` when left out. Each map's waves get
+   * theirs from its road (`timedWaves`, #570). Tactical mode ignores it.
    */
   readonly afterMs?: number;
+}
+
+/**
+ * How long a wave takes to pass along a road `roadTiles` long (#570): from the wave's start until its last enemy would
+ * reach the end if nobody shot it, so the latest of each group's last spawn plus its kind's time to walk the road.
+ */
+export function waveRoadTimeMs(wave: WaveData, roadTiles: number): number {
+  return Math.max(
+    ...wave.groups.map(
+      ({ kind, count, spacingMs, delayMs }) =>
+        delayMs + (count - 1) * spacingMs + (roadTiles / ENEMY_STATS[kind].speed) * 1000,
+    ),
+  );
 }
 
 /**

@@ -41,15 +41,15 @@ export interface MenuOptions {
   readonly progress?: Readonly<Record<string, { completed: boolean; bestStars: number }>>;
   /** `unlock=all`: every map can be picked. */
   readonly unlockAll?: boolean;
-  /** `demo=1`: the live battlefield plays behind the menu (#402), as for a player. */
-  readonly demo?: boolean;
+  /** `backdrop=1`: the menu clip's video plays behind the menus (#568), as for a player. */
+  readonly backdrop?: boolean;
 }
 
 /** Opens the Main menu in test mode (`menu=1`). `window.__TD__` appears only once Play starts a game. */
-export async function openMenu(page: Page, { progress, unlockAll = false, demo = false }: MenuOptions = {}) {
+export async function openMenu(page: Page, { progress, unlockAll = false, backdrop = false }: MenuOptions = {}) {
   const params = new URLSearchParams({ test: '1', menu: '1', step: 'manual', anim: '0' });
   if (unlockAll) params.set('unlock', 'all');
-  if (demo) params.set('demo', '1');
+  if (backdrop) params.set('backdrop', '1');
   if (progress !== undefined) {
     params.set('persist', '1');
     await page.addInitScript(
@@ -128,4 +128,18 @@ export async function playToEnd(page: Page, maxTicks = 60 * 60 * 30): Promise<Te
     if (now.phase === 'victory' || now.phase === 'defeat') return now;
   }
   throw new Error(`The game did not end within ${maxTicks} ticks`);
+}
+
+/**
+ * Holds the menu clip's video still `seconds` in (#568), so a screenshot over it comes out the same every run. Waits
+ * until it can play first.
+ */
+export async function freezeBackdrop(page: Page, seconds: number): Promise<void> {
+  await page.locator('#menu-backdrop video').evaluate(async (video: HTMLVideoElement, at) => {
+    if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA)
+      await new Promise((resolve) => video.addEventListener('canplay', resolve, { once: true }));
+    video.pause();
+    video.currentTime = at;
+    await new Promise((resolve) => video.addEventListener('seeked', resolve, { once: true }));
+  }, seconds);
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createSpawnSchedule, validateWaves, type WaveData, type WaveGroup } from './waves';
+import { ENEMY_STATS } from '../data/enemies';
+import { createSpawnSchedule, validateWaves, waveRoadTimeMs, type WaveData, type WaveGroup } from './waves';
 
 const GROUP: WaveGroup = { kind: 'infantry', count: 3, spacingMs: 800, delayMs: 0 };
 const WAVE: WaveData = { groups: [GROUP] };
@@ -118,5 +119,30 @@ describe('validateWaves', () => {
     const waves = [ok, { groups: [GROUP, { ...GROUP, ...bad }] }];
     expect(() => validateWaves(waves)).toThrow(RangeError);
     expect(() => validateWaves(waves)).toThrow(message);
+  });
+});
+
+describe('waveRoadTimeMs (#570)', () => {
+  const infantryMs = (tiles: number) => (tiles / ENEMY_STATS.infantry.speed) * 1000;
+
+  it('one group: its last spawn, plus the time to walk the road', () => {
+    const wave: WaveData = { groups: [{ kind: 'infantry', count: 5, spacingMs: 1000, delayMs: 0 }] };
+    expect(waveRoadTimeMs(wave, 30)).toBeCloseTo(4000 + infantryMs(30));
+  });
+
+  it('the group whose last enemy is last off the road sets it, delay and speed included', () => {
+    const wave: WaveData = {
+      groups: [
+        { kind: 'infantry', count: 10, spacingMs: 800, delayMs: 0 },
+        { kind: 'tank', count: 1, spacingMs: 0, delayMs: 3000 },
+        { kind: 'jeep', count: 3, spacingMs: 500, delayMs: 9000 },
+      ],
+    };
+    expect(waveRoadTimeMs(wave, 30)).toBeCloseTo(3000 + (30 / ENEMY_STATS.tank.speed) * 1000);
+  });
+
+  it('a longer road takes longer', () => {
+    const wave: WaveData = { groups: [{ kind: 'jeep', count: 3, spacingMs: 1500, delayMs: 0 }] };
+    expect(waveRoadTimeMs(wave, 50)).toBeGreaterThan(waveRoadTimeMs(wave, 25));
   });
 });

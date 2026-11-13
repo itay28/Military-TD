@@ -153,6 +153,7 @@ tests/
 | Tank | 250 HP, 0.6 tiles/s, armor 8, reward 25, leak cost 5 |
 | Helicopter | 130 HP, 1.2 tiles/s, armor 4, air, reward 10, leak cost 2 |
 | Waves | 10, below (`src/data/waves.ts`) |
+| Wave timers | Wave 1: a 40 s build window. Each later wave: ½ × the time the wave before takes to pass along the map's road (its last spawn plus its slowest kind's walk, unhurt) + 10 s, rounded to the second, within 15–45 s (`timedWaves`, #570). So a short road gets short timers: about 16–37 s on Training Ground, 30–45 s on Serpentine. |
 
 **Balance checks (#230).** `src/data/counterMatrix.test.ts` requires every enemy kind to have at least two towers whose damage per second per Money against it is at least half the best tower's (ADR-0007). The balance bots in `tests/scenarios/bot-*.scenario.ts` play all 10 waves (`npm run scenario -- bot-balanced`); at these numbers:
 
