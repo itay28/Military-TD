@@ -3,11 +3,12 @@ import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import {
   ALL_RENDERS,
-  DRAWN_KINDS,
   RENDER_FACING,
+  drawnRender,
   factionFor,
   isTurretRender,
   renderFor,
+  renderKeys,
   renderTextures,
   type AnyRender,
 } from './renders';
@@ -139,9 +140,49 @@ describe('the render table (#566)', () => {
     expect(SPRITES.gunship).toBeNull();
     expect(SPRITES.apc).toBeNull();
   });
+});
 
-  it('draws only the AA Gun and Tank renders on the battlefield until part 2 (#566)', () => {
-    expect([...DRAWN_KINDS].sort()).toEqual(['aaGun', 'tank']);
+describe('drawnRender (#567)', () => {
+  const trainingGround = MAPS[0]!;
+  const loaded = () => true;
+
+  it('draws every in-play kind on Training Ground from its render: US towers, Russian enemies, never Kenney', () => {
+    for (const kind of IN_PLAY) {
+      const drawn = drawnRender(kind, trainingGround, loaded);
+      const side = (BUILD_KINDS as readonly SpriteKind[]).includes(kind) ? 'us' : 'russia';
+      expect(drawn?.id, kind).toBe(`${side}-${kebab(kind)}`);
+    }
+  });
+
+  it("falls back to Kenney (null) when any of the render's textures is missing", () => {
+    for (const kind of IN_PLAY) {
+      const keys = renderKeys(drawnRender(kind, trainingGround, loaded)!);
+      for (const missing of keys) {
+        expect(
+          drawnRender(kind, trainingGround, (key) => key !== missing),
+          `${kind} without ${missing}`,
+        ).toBeNull();
+      }
+    }
+  });
+
+  it('draws a kind not in play from Kenney', () => {
+    for (const kind of [...NOT_IN_PLAY, ...NOT_PLAYABLE_KINDS] as SpriteKind[])
+      expect(drawnRender(kind, trainingGround, loaded), kind).toBeNull();
+  });
+});
+
+describe('renderKeys', () => {
+  it('lists the hull and turret keys of a turret render, and the one image key of a single-image render', () => {
+    expect(renderKeys(render('tank', 'russia'))).toEqual(['render-russia-tank-hull', 'render-russia-tank-turret']);
+    expect(renderKeys(render('infantry', 'russia'))).toEqual(['render-russia-infantry']);
+  });
+
+  it('are the keys renderTextures loads', () => {
+    const map = MAPS[0]!;
+    const loadedKeys = renderTextures(map).map(({ key }) => key);
+    for (const kind of IN_PLAY)
+      for (const key of renderKeys(render(kind, factionFor(kind, map)))) expect(loadedKeys).toContain(key);
   });
 });
 

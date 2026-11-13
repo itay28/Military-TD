@@ -11,7 +11,8 @@ export default defineScenario({
   ],
   waves: [
     { groups: [{ kind: 'infantry', count: 4, spacingMs: 800, delayMs: 0 }] },
-    { groups: [{ kind: 'infantry', count: 3, spacingMs: 800, delayMs: 0 }] },
+    // A timer long enough that the script, not the timer, calls wave 2 in.
+    { groups: [{ kind: 'infantry', count: 3, spacingMs: 800, delayMs: 0 }], afterMs: 60_000 },
   ],
   script: [
     { atTick: 0, command: { type: 'callNextWave' } },

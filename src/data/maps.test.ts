@@ -64,8 +64,9 @@ describe('map registry', () => {
     ]);
   });
 
-  it('gives Training Ground the original `WAVES`', () => {
-    expect(mapById('mvp').waves).toBe(WAVES);
+  it('gives Training Ground the original `WAVES`, with timers for its road', () => {
+    expect(mapById('mvp').waves.map((wave) => wave.groups)).toEqual(WAVES.map((wave) => wave.groups));
+    expect(mapById('mvp').waves.every((wave) => wave.afterMs !== undefined)).toBe(true);
   });
 
   it.each(MAPS)('$id: has a wave schedule, every wave with enemies', ({ waves }) => {

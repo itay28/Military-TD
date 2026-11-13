@@ -1,10 +1,11 @@
 import { BUILD_BAR_COLUMNS, TOWER_NAMES, TOWER_STYLE, formatFunds } from '../data/display';
-import { DRAWN_KINDS, isTurretRender, renderFor, type RenderedSprite } from '../data/renders';
+import { drawnRender } from '../data/renders';
 import { MAPS } from '../data/maps';
 import type { Faction } from '../sim/factions';
 import { towerIcon, type TowerIcon } from '../data/sprites';
 import { BUILD_KINDS, TOWER_STATS, type TowerKind } from '../data/towers';
 import { shortcutFor } from './keymap';
+import { renderIcon, renderIconLayers, type RenderIcon } from './renderIcon';
 import { placeTip, towerTooltip, type Rect, type TowerTooltip } from './towerTooltip';
 
 /** One button on the build bar. */
@@ -26,9 +27,6 @@ export interface BuildOption<K extends string = TowerKind> {
   /** What the button's tooltip says: shown on hover, on focus and while the kind is selected. */
   readonly tooltip?: TowerTooltip;
 }
-
-/** What the build bar needs of a render: the two image URLs and the square canvas they share, in pixels. */
-export type RenderIcon = Pick<RenderedSprite, 'hullUrl' | 'turretUrl' | 'canvasPx'>;
 
 /** The atlas as the page sees it: the image's URL and each frame's rectangle in it, or null for an absent frame. */
 export interface IconAtlas {
@@ -66,17 +64,18 @@ export function buildBarNumber(kind: TowerKind): number {
 }
 
 /**
- * One option per tower kind in play (`BUILD_KINDS`, in `TOWER_STATS` order), so a kind added there shows up on the bar. A kind with a render
+ * One option per tower kind in play (`BUILD_KINDS`, in `TOWER_STATS` order), so a kind added there shows up on the bar. Each
  * gets its icon from the `defender`'s render, unless `renderLoaded` says its textures didn't (then Kenney, as the map does).
  */
 export function buildOptions(
-  renderLoaded: (render: RenderedSprite) => boolean = () => true,
+  /** Whether the texture with this key loaded. */
+  renderLoaded: (key: string) => boolean = () => true,
   defender: Faction = MAPS[0]!.defender,
 ): BuildOption[] {
   return buildKinds().map((kind) => {
     const { fill, outline, shape, size } = TOWER_STYLE[kind];
-    const rendered = DRAWN_KINDS.has(kind) ? renderFor(kind, defender) : null;
-    const render = rendered !== null && isTurretRender(rendered) && renderLoaded(rendered) ? rendered : null;
+    // A tower is drawn in the defender's set whoever attacks.
+    const render = drawnRender(kind, { attacker: defender, defender }, renderLoaded);
     const sprite = render ? null : towerIcon(kind);
     return {
       kind,
@@ -84,9 +83,7 @@ export function buildOptions(
       cost: TOWER_STATS[kind].cost,
       icon: { fill, outline, shape, size },
       tooltip: towerTooltip(kind),
-      ...(render
-        ? { render: { hullUrl: render.hullUrl, turretUrl: render.turretUrl, canvasPx: render.canvasPx } }
-        : {}),
+      ...(render ? { render: renderIcon(render) } : {}),
       ...(sprite ? { sprite } : {}),
     };
   });
@@ -113,19 +110,6 @@ function spriteLayers(doc: Document, atlas: IconAtlas, sprite: TowerIcon, box: n
       `background-image:url("${atlas.url}");background-position:-${x}px -${y}px;image-rendering:pixelated;`;
     // Fit the frame's longer side to the box, turned about its centre.
     layer.style.transform = `translate(-50%,-50%) scale(${box / Math.max(w, h)}) rotate(${(rotation * 180) / Math.PI}deg)`;
-    return layer;
-  });
-}
-
-/** The hull and turret images of a render icon, the canvas fitted to the icon's `box`; the turret already faces north. */
-function renderLayers(doc: Document, render: RenderIcon, box: number): HTMLElement[] {
-  return [render.hullUrl, render.turretUrl].map((url) => {
-    const layer = doc.createElement('span');
-    layer.className = 'build-icon-layer';
-    layer.style.cssText =
-      `position:absolute;left:50%;top:50%;width:${render.canvasPx}px;height:${render.canvasPx}px;background-repeat:no-repeat;` +
-      `background-image:url("${url}");background-size:100% 100%;`;
-    layer.style.transform = `translate(-50%,-50%) scale(${box / render.canvasPx})`;
     return layer;
   });
 }
@@ -210,7 +194,7 @@ export function mountBuildBar<K extends string>(
     icon.style.width = `${box}px`;
     icon.style.height = `${box}px`;
     const layers = option.render
-      ? renderLayers(doc, option.render, box)
+      ? renderIconLayers(doc, option.render, box)
       : atlas && option.sprite
         ? spriteLayers(doc, atlas, option.sprite, box)
         : null;
