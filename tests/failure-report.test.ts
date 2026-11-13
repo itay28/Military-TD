@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { Request } from '../scripts/epic.ts';
 import {
   commentFor,
   currentMilestone,
@@ -6,6 +7,7 @@ import {
   issueBody,
   issueTitle,
   markerFor,
+  openReport,
   pushFor,
   type Run,
 } from '../scripts/failure-report.ts';
@@ -109,5 +111,37 @@ describe('currentMilestone', () => {
       4,
     );
     expect(currentMilestone([])).toBeNull();
+  });
+});
+
+describe('openReport', () => {
+  const epics = [
+    { number: 24, title: 'Epic: Infra & testing', state: 'closed', labels: [{ name: 'epic' }] },
+    { number: 585, title: 'Epic: Infra & testing (2)', state: 'open', labels: [{ name: 'epic' }] },
+  ];
+  const requestFor = (list: unknown[]) =>
+    vi.fn<Request>(async (method, path) => {
+      if (path.startsWith('milestones')) return [];
+      if (method === 'GET') return list;
+      return { id: 1234, number: 99, html_url: 'https://github.com/itay28/Military-TD/issues/99' };
+    });
+
+  it('files the issue under the open Infra epic, never #24', async () => {
+    const request = requestFor(epics);
+    expect(await openReport(run(), request)).toEqual({
+      number: 99,
+      url: 'https://github.com/itay28/Military-TD/issues/99',
+    });
+    expect(request).toHaveBeenLastCalledWith('POST', 'issues/585/sub_issues', { sub_issue_id: 1234 });
+  });
+
+  it('files it without a parent, and warns, when the epic is full', async () => {
+    const warn = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const full = [{ ...epics[1], sub_issues_summary: { total: 100 } }];
+    const request = requestFor(full);
+    await openReport(run(), request);
+    expect(request.mock.calls.some(([, path]) => path.endsWith('/sub_issues'))).toBe(false);
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/^::warning::.*#585/);
+    warn.mockRestore();
   });
 });
