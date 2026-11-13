@@ -2,6 +2,7 @@ import { HEAVY_LOAD } from '../data/heavyLoad';
 import { SERPENTINE_MAP } from '../data/maps';
 import type { TowerKind } from '../data/towers';
 import { TICK_MS, type Game } from './game';
+import { HEAVY_LOAD_WARMUP_TICKS } from './heavyLoadTicks';
 import { createMap, type Tile } from './map';
 import { createRng } from './rng';
 import { setUpGame, type GameSetup, type TowerPlacement } from './scenario';
@@ -46,6 +47,8 @@ export function heavyLoadSetup(seed: number = HEAVY_LOAD.seed): GameSetup {
   return { map: SERPENTINE_MAP, lives: HEAVY_LOAD.lives, money: 0, towers, waves: [{ groups }] };
 }
 
+export { HEAVY_LOAD_WARMUP_TICKS };
+
 /** A Heavy load game mid-wave: its setup, the wave started, and `HEAVY_LOAD_WARMUP_TICKS` run so every enemy has spawned. */
 export function createHeavyLoadGame(seed: number = HEAVY_LOAD.seed): Game {
   const game = setUpGame(heavyLoadSetup(seed));
@@ -55,7 +58,5 @@ export function createHeavyLoadGame(seed: number = HEAVY_LOAD.seed): Game {
   return game;
 }
 
-/** Ticks after the wave starts until every enemy has spawned. */
-export const HEAVY_LOAD_WARMUP_TICKS = Math.ceil(HEAVY_LOAD.warmupMs / TICK_MS) + 1;
 /** Ticks the sim budget test times. */
 export const HEAVY_LOAD_MEASURE_TICKS = Math.round(HEAVY_LOAD.measureMs / TICK_MS);
