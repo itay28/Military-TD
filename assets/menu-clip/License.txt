@@ -1,0 +1,15 @@
+Menu clip (menu-clip.webm, menu-clip.mp4, menu-clip-small.webm, menu-clip-small.mp4, menu-clip-still.webp)
+for Hold the Perimeter
+
+Recorded from the game by tests/menu-clip/capture.spec.ts (npm run menu:clip, issue #568): the menu clip scene on
+Training Ground, stepped frame by frame, with a muffled battle track mixed from the game's own sounds. It shows and
+plays these assets, each under its own license (see CREDITS.md):
+- NAIP aerial imagery (Iowa 2023) by the USDA Farm Service Agency (assets/naip-field-road-treeline/), public domain
+- The US renders: render-us-rifle-nest, render-us-aa-gun, render-us-cannon, render-us-mortar (CC-BY 4.0)
+- The Russian renders: render-russia-infantry, render-russia-jeep, render-russia-helicopter, render-russia-apc,
+  render-russia-tank (CC-BY 4.0)
+- Weapon sounds (assets/weapon-sounds/) and battlefield ambience (assets/battlefield-ambience/), CC0 1.0
+
+License: Creative Commons Attribution 4.0 (CC-BY 4.0), as the renders it shows. Credit the renders' authors as
+CREDITS.md does.
+https://creativecommons.org/licenses/by/4.0/

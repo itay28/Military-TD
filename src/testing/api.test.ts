@@ -9,15 +9,18 @@ const BUILDABLE = { col: 1, row: 3 };
 const ONE_INFANTRY: GameSetup = { waves: [{ groups: [{ kind: 'infantry', count: 1, spacingMs: 0, delayMs: 0 }] }] };
 
 /** Hooks over a real game, as the Game scene gives them. */
-function fakeHooks(
-  setup: GameSetup = {},
-): TestHooks & { load: ReturnType<typeof vi.fn>; setHints: Mock<(on: boolean) => void> } {
+function fakeHooks(setup: GameSetup = {}): TestHooks & {
+  load: ReturnType<typeof vi.fn>;
+  setHints: Mock<(on: boolean) => void>;
+  clipFrames: Mock<(frames: number) => void>;
+} {
   const game = setUpGame(setup);
   return {
     game,
     step: (ticks) => {
       for (let i = 0; i < ticks; i++) game.tick(TICK_MS);
     },
+    clipFrames: vi.fn<(frames: number) => void>(),
     load: vi.fn(async () => {}),
     view: () => EMPTY_VIEW,
     setHints: vi.fn<(on: boolean) => void>(),
@@ -110,6 +113,14 @@ describe('createTestApi', () => {
     expect(() => api(fakeHooks()).step(ticks)).toThrow(RangeError);
   });
 
+  it('clipFrames(n) moves the menu clip on n frames through the hooks, and refuses a bad count', () => {
+    const hooks = fakeHooks();
+    const testApi = api(hooks);
+    testApi.clipFrames(3);
+    expect(hooks.clipFrames).toHaveBeenCalledWith(3);
+    for (const bad of [-1, 1.5, Number.NaN]) expect(() => testApi.clipFrames(bad)).toThrow(RangeError);
+  });
+
   it("loadScenario hands the named scenario's setup to the scene", async () => {
     const hooks = fakeHooks();
     await api(hooks, { 'one-infantry': async () => ONE_INFANTRY }).loadScenario('one-infantry');
@@ -130,6 +141,7 @@ describe('createTestApi', () => {
         return game;
       },
       step: () => {},
+      clipFrames: () => {},
       load: async () => {},
       setHints: () => {},
       view: () => EMPTY_VIEW,

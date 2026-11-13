@@ -718,6 +718,16 @@
       "attribution": "IBM Plex Mono by IBM Corp., SIL Open Font License 1.1 (Regular and Bold)",
       "downloaded": "2026-11-05",
       "files": ["assets/ibm-plex-mono/**"]
+    },
+    {
+      "id": "menu-clip",
+      "name": "Menu clip (the battle video behind the Main menu)",
+      "author": "Hold the Perimeter, recorded from the game with its own art and sounds",
+      "source": "https://github.com/itay28/Military-TD/issues/568",
+      "license": "CC-BY-4.0",
+      "attribution": "Recorded by tests/menu-clip/capture.spec.ts from the game on Training Ground, showing the NAIP aerial imagery (USDA FSA, public domain) and the faction renders render-us-rifle-nest, render-us-aa-gun, render-us-cannon, render-us-mortar, render-russia-infantry, render-russia-jeep, render-russia-helicopter, render-russia-apc and render-russia-tank (CC-BY 4.0, credited above), with a muffled track mixed from the weapon sounds and battlefield ambience (CC0)",
+      "downloaded": "2026-11-12",
+      "files": ["assets/menu-clip/**"]
     }
   ]
 }
