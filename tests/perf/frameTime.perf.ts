@@ -1,6 +1,6 @@
 import { appendFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { HEAVY_LOAD_WARMUP_TICKS } from '../../src/sim/heavyLoad';
+import { HEAVY_LOAD_WARMUP_TICKS } from '../../src/sim/heavyLoadTicks';
 import { openGame } from '../e2e/helpers';
 import { FRAME_P95_LIMIT_MS, frameStats, frameSummary } from './frameStats';
 
