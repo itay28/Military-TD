@@ -1013,9 +1013,28 @@
       #level-select > :last-child {
         margin-bottom: auto;
       }
-      /* While the live battlefield plays behind them (#402), the page is marked data-demo and the canvas shows through:
-         a dark scrim that is darkest behind the menu column, so its buttons stay readable over the battle. */
-      :root[data-demo] #menu {
+      /* The menu clip's video (or its still) behind the Main menu and the Level select (#568), edge to edge. */
+      #menu-backdrop {
+        position: fixed;
+        inset: 0;
+        background: var(--olive-900);
+      }
+      #menu-backdrop[hidden] {
+        display: none;
+      }
+      #menu-backdrop :is(video, img) {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      #menu-backdrop img[hidden] {
+        display: none;
+      }
+      /* While it plays the page is marked data-backdrop and it shows through: a dark scrim that is darkest behind the
+         menu column, so its buttons stay readable over the battle. */
+      :root[data-backdrop] #menu {
         background: radial-gradient(
           ellipse 60% 75% at center,
           color-mix(in srgb, var(--olive-900) 90%, transparent) 0%,
@@ -1023,11 +1042,11 @@
           color-mix(in srgb, var(--olive-900) 35%, transparent) 100%
         );
       }
-      :root[data-demo] #level-select {
+      :root[data-backdrop] #level-select {
         background: color-mix(in srgb, var(--olive-900) 78%, transparent);
       }
-      /* The battlefield fills the window, edge to edge, while the menu screens hide the HUD and build bar around it. */
-      :root[data-demo] #app[data-screen] {
+      /* The menu clip's recording (?clip=1) fills the window, edge to edge, with the HUD and build bar hidden. */
+      #app[data-screen='clip'] {
         gap: 0;
         padding: 0;
       }
@@ -1833,6 +1852,7 @@
       </div>
       <div id="hints" hidden></div>
     </div>
+    <div id="menu-backdrop" hidden></div>
     <main id="menu" hidden></main>
     <main id="level-select" hidden></main>
     <div id="settings" hidden></div>

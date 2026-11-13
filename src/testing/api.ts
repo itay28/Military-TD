@@ -13,6 +13,8 @@ export interface TestHooks {
   readonly game: Game;
   /** Runs `ticks` fixed ticks, as the real-time loop would. */
   step(ticks: number): void;
+  /** With `?clip=1`, moves the menu clip on `frames` video frames: the sim, the cosmetics and the pan. Throws otherwise. */
+  clipFrames(frames: number): void;
   /** Restarts the scene with a new game built from `setup`; resolves once it's running. */
   load(setup: GameSetup): Promise<void>;
   /** What the scene draws now, read from its display objects. */
@@ -101,6 +103,11 @@ export interface TestApi {
   /** Runs `ticks` fixed ticks and returns the state after them. Throws RangeError unless `ticks` is a whole number ≥ 0. */
   step(ticks: number): TestState;
   /**
+   * With `?clip=1`, moves the menu clip on `frames` video frames (#568); the next render draws the last. Throws
+   * RangeError unless `frames` is a whole number ≥ 0, and an Error without `?clip=1`.
+   */
+  clipFrames(frames: number): void;
+  /**
    * Restarts the game with the setup of `tests/scenarios/<name>.scenario.ts` (map, Lives, Money, towers, waves).
    * Its script and stop condition don't run: the test drives the game from there. Rejects for an unknown name.
    */
@@ -133,6 +140,11 @@ export function createTestApi(hooks: TestHooks, scenarios: ScenarioLoaders): Tes
         throw new RangeError(`step(${ticks}): ticks must be a whole number of at least 0`);
       hooks.step(ticks);
       return state();
+    },
+    clipFrames(frames) {
+      if (!Number.isInteger(frames) || frames < 0)
+        throw new RangeError(`clipFrames(${frames}): frames must be a whole number of at least 0`);
+      hooks.clipFrames(frames);
     },
     async loadScenario(name) {
       const load = scenarios[name];

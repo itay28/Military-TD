@@ -14,8 +14,10 @@ export interface TestFlags {
   readonly persist: boolean;
   /** `?unlock=all`: test mode opens every map on the Level select, so e2e can play any of them. */
   readonly unlockAll: boolean;
-  /** `?demo=1`: test mode plays the live battlefield behind the menu (off otherwise, so e2e see a flat background). */
-  readonly demo: boolean;
+  /** `?backdrop=1`: test mode plays the menu clip's video behind the menus (off otherwise, so e2e see a flat background). */
+  readonly backdrop: boolean;
+  /** `?clip=1`: test mode's Game scene plays the menu clip, for `npm run menu:clip` to record (#568). */
+  readonly clip: boolean;
 }
 
 export function parseTestFlags(search: string): TestFlags {
@@ -29,7 +31,8 @@ export function parseTestFlags(search: string): TestFlags {
     menu: params.get('menu') === '1',
     persist: params.get('persist') === '1',
     unlockAll: params.get('unlock') === 'all',
-    demo: params.get('demo') === '1',
+    backdrop: params.get('backdrop') === '1',
+    clip: params.get('clip') === '1',
   };
 }
 

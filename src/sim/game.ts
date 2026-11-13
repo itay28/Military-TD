@@ -109,6 +109,12 @@ export interface GameEvents {
   defeat: { readonly waveNumber: number };
 }
 
+/** How one `spawnEnemy` differs from a wave's enemy. */
+export interface SpawnOptions {
+  /** Multiplies its HP (after the Difficulty's scale). A positive finite number; 1 by default. */
+  readonly hpScale?: number;
+}
+
 /** What a command returns: success (with any `Value` it reports), or the reason it was refused (and changed nothing). */
 export type CommandResult<Reason extends string, Value extends object = object> =
   ({ readonly ok: true } & Value) | { readonly ok: false; readonly reason: Reason };
@@ -130,8 +136,11 @@ export interface Game {
   readonly events: Events<GameEvents>;
   /** Advances the game by `dtMs` milliseconds; does nothing once it's over. Throws RangeError for a negative or non-finite dt. */
   tick(dtMs: number): void;
-  /** Spawns an enemy at the Path start, outside any wave, and returns its id. For tests and scenarios. */
-  spawnEnemy(kind: EnemyKind): number;
+  /**
+   * Spawns an enemy at the Path start, outside any wave, and returns its id. For tests, scenarios and the menu clip.
+   * `hpScale` multiplies its HP on top of the Difficulty's (the menu clip's near-immortal enemies, #568); 1 by default.
+   */
+  spawnEnemy(kind: EnemyKind, options?: SpawnOptions): number;
   /**
    * Calls in the next wave now: its first enemy spawns at once, the rest one every spacing. In timed mode this works
    * during a wave too, and the wave after it is then due its `afterMs` from now; there is no bonus. Refuses with
@@ -207,9 +216,9 @@ export function createGame(config: GameConfig): Game {
   const waveOf = (enemyId: number) => waveOfEnemy.get(enemyId);
 
   const { hpScale } = DIFFICULTY[state.difficulty];
-  const createEnemy = (kind: EnemyKind, waveNumber?: number, distance = 0): Enemy => {
+  const createEnemy = (kind: EnemyKind, waveNumber?: number, distance = 0, extraHpScale = 1): Enemy => {
     const stats = ENEMY_STATS[kind];
-    const maxHp = Math.round(stats.maxHp * hpScale);
+    const maxHp = Math.round(stats.maxHp * hpScale * extraHpScale);
     const reward = scaledReward(stats.reward, state.difficulty);
     const enemy = {
       ...stats,
@@ -405,8 +414,10 @@ export function createGame(config: GameConfig): Game {
       )
         callNextWave();
     },
-    spawnEnemy(kind) {
-      const enemy = createEnemy(kind);
+    spawnEnemy(kind, { hpScale: extra = 1 } = {}) {
+      if (!Number.isFinite(extra) || extra <= 0)
+        throw new RangeError(`spawnEnemy: hpScale must be positive, got ${extra}`);
+      const enemy = createEnemy(kind, undefined, 0, extra);
       state.enemies.push(enemy);
       return enemy.id;
     },
