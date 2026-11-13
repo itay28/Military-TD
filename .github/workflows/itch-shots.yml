@@ -1,0 +1,47 @@
+name: itch.io page kit
+
+# Re-makes the itch.io page kit's images (docs/itch/, #374) in CI's Playwright container and uploads
+# them as an artifact to copy into docs/itch/. By hand only: it plays four maps and takes minutes,
+# so it never runs on a PR or a push.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: itch-shots
+    runs-on: ubuntu-latest
+    # The same image as ci.yml's e2e job.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Capture the page kit
+        run: npm run itch:shots
+
+      - name: Upload the page kit
+        uses: actions/upload-artifact@v4
+        with:
+          name: itch-page-kit
+          path: |
+            docs/itch/*.jpg
+            docs/itch/*.png
+            docs/itch/*.gif
+          if-no-files-found: error
+          retention-days: 14
