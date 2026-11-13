@@ -1,3 +1,4 @@
+import { fileUnderEpic } from './epic.ts';
 import {
   github,
   HANDOFF_MARKER,
@@ -21,8 +22,6 @@ import {
 /** Hidden in the idle issue's body, so later runs find it. */
 export const IDLE_MARKER = '<!-- pipeline-starved -->';
 export const IDLE_TITLE = 'Pipeline is idle';
-/** The Infra & testing epic: the idle issue is filed under it. */
-const INFRA_EPIC = 24;
 const TRIAGE_LABEL = 'needs-triage';
 const HUMAN_LABEL = 'ready-for-human';
 /** The PR steward's approval hand-off (#206, #417). */
@@ -287,11 +286,12 @@ export async function applyIdle(
       number: number;
       id: number;
     };
-    try {
-      await github(fetchFn, token, 'POST', `issues/${INFRA_EPIC}/sub_issues`, { sub_issue_id: created.id });
-    } catch (error) {
-      console.log(`::warning::#${created.number}: filing the idle issue under #${INFRA_EPIC} failed: ${String(error)}`);
-    }
+    await fileUnderEpic(
+      async (method, path, requestBody) =>
+        (await github(fetchFn, token, method, path, requestBody)).json() as Promise<unknown>,
+      'infra',
+      created,
+    );
     await github(fetchFn, token, 'POST', `issues/${created.number}/comments`, { body: stuck('The pipeline is idle.') });
     await github(fetchFn, token, 'POST', `issues/${created.number}/labels`, {
       labels: [NEEDS_YOU_LABEL, INFRA_LABEL],

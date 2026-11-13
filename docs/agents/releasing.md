@@ -13,7 +13,7 @@ How versions are cut, deployed, and how milestones close. Issue work doesn't nee
 
 ## Milestone release
 
-Milestones can't be cards on the project board, so each milestone has a **release issue** that stands in for it: `Release v0.N.0`, in that milestone, labelled `release` + `area:infra`, a sub-issue of the infra epic (#24). Its body links the milestone. Nobody works on a release issue directly: it moves as the milestone does, and the **Releases** view on the board lists them all. It has no `ready-for-agent` label, so it is never picked as work and never promoted to *Ready*.
+Milestones can't be cards on the project board, so each milestone has a **release issue** that stands in for it: `Release v0.N.0`, in that milestone, labelled `release` + `area:infra`, a sub-issue of the open Infra epic. Its body links the milestone. Nobody works on a release issue directly: it moves as the milestone does, and the **Releases** view on the board lists them all. It has no `ready-for-agent` label, so it is never picked as work and never promoted to *Ready*.
 
 | Milestone moment | Release issue status | Moved by |
 | --- | --- | --- |
