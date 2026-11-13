@@ -17,3 +17,7 @@ Deploy every release to an itch.io HTML5 project with butler from GitHub Actions
 - Needs a one-time setup by a human: an itch.io account, the project page, and an API key stored as the `BUTLER_API_KEY` repo secret.
 - Builds must use relative paths (Vite `base: "./"`) because itch.io serves games inside an iframe from its CDN.
 - Keep CI on Linux runners. Windows and macOS minutes count 2× and 10× against the free quota.
+
+## Updated 2026-11-12
+
+The page stays **Restricted** at 1.0, not public (maintainer's decision, 2026-11-03). 1.0 is released to invited testers on the same Restricted page; making it public is a separate decision, not part of the roadmap. The page's text and images are kept in `docs/itch/` (#374).
