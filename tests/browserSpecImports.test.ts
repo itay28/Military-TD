@@ -13,6 +13,8 @@ const resolveImport = (from: string, spec: string): string | undefined => {
 };
 
 // `import type` is erased before loading, so it can't reach a module.
+// A heuristic: it doesn't follow dynamic `import()` or `require`, and it counts `import { type X } from`
+// as a runtime import, so it can report a false positive.
 const importsOf = (file: string): string[] =>
   [
     ...readFileSync(file, 'utf8').matchAll(

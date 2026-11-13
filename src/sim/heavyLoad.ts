@@ -47,8 +47,6 @@ export function heavyLoadSetup(seed: number = HEAVY_LOAD.seed): GameSetup {
   return { map: SERPENTINE_MAP, lives: HEAVY_LOAD.lives, money: 0, towers, waves: [{ groups }] };
 }
 
-export { HEAVY_LOAD_WARMUP_TICKS };
-
 /** A Heavy load game mid-wave: its setup, the wave started, and `HEAVY_LOAD_WARMUP_TICKS` run so every enemy has spawned. */
 export function createHeavyLoadGame(seed: number = HEAVY_LOAD.seed): Game {
   const game = setUpGame(heavyLoadSetup(seed));
