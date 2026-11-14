@@ -30,6 +30,8 @@ describe('counter matrix', () => {
     expect(efficiency('cannon', 'tank')).toBeCloseTo((0.5 * 60) / 100);
     // Cannon vs Jeep: a 60-damage shell kills a 20-HP Jeep, so it counts 20.
     expect(efficiency('cannon', 'jeep')).toBeCloseTo((0.5 * 20) / 100);
+    // AA Gun vs Infantry: its ground damage (#588), not its air damage.
+    expect(efficiency('aaGun', 'infantry')).toBeCloseTo((3 * 10) / 75);
   });
 
   it('the Heavy tank boss keeps the Cannon and the Sniper as efficient counters', () => {

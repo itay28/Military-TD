@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { MAPS, MVP_MAP } from '../../src/data/maps';
-import { TOWER_STATS } from '../../src/data/towers';
+import { BUILD_KINDS, TOWER_STATS, type TowerKind } from '../../src/data/towers';
 import { runScenario } from '../../src/sim/scenario';
 import { TICK_MS } from '../../src/sim/game';
 import { createPathLine } from '../../src/sim/enemies';
@@ -338,10 +338,12 @@ describe('wave timers fit the road', () => {
   });
 
   // The stars the reference bot earns on the timers alone, never calling a wave in (Normal, Hard).
+  // #588 weakened the AA Gun's ground fire, so the Training Ground's Hard run loses a few Lives now.
+  // #381: Serpentine's 20th wave is a 17-Helicopter push that gets a few through on Hard.
   const EXPECTED_STARS: Record<string, readonly [number, number]> = {
-    mvp: [3, 3],
+    mvp: [3, 2],
     switchback: [3, 1],
-    serpentine: [3, 3],
+    serpentine: [3, 1],
     hairpin: [3, 2],
   };
 
@@ -363,6 +365,10 @@ describe('wave timers fit the road', () => {
   );
 });
 
+/** One tower kind only, as many as Money allows, never upgraded; `fitOrder` moves each to the best free tile. */
+const onlyKind = (kind: TowerKind): readonly BuildStep[] =>
+  Array.from({ length: 30 }, (_, i) => ({ place: kind, tile: { col: i % 16, row: Math.floor(i / 16) } }));
+
 // Hard (#461) is tuned with these bots (ADR-0007): a good mix still wins it, one tower kind alone doesn't.
 describe('Hard difficulty', () => {
   const { startLives } = DIFFICULTY.hard;
@@ -382,13 +388,15 @@ describe('Hard difficulty', () => {
     }
   });
 
-  it.each(MAPS)('$id: Rifle Nests alone lose Hard', ({ data, waves }) => {
+  // #588: no tower kind in play wins alone (ADR-0007), whichever map.
+  const singleKind = MAPS.flatMap((map) => BUILD_KINDS.map((kind) => ({ ...map, kind })));
+  it.each(singleKind)('$id: $kind alone loses Hard', ({ data, waves, kind }) => {
     const result = runScenario({
       map: data,
       waves,
       difficulty: 'hard',
       autoStartWaves: true,
-      bot: buildOrder(fitOrder(data, RIFLES_ONLY)),
+      bot: buildOrder(fitOrder(data, onlyKind(kind))),
       until: 'end',
     });
     expect(result.outcome).toBe('defeat');

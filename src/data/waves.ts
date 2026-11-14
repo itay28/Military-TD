@@ -384,7 +384,7 @@ export const SERPENTINE_WAVES: readonly WaveData[] = [
   {
     groups: [
       group('tank', 8, 2150),
-      group('helicopter', 17, 1450, 2000),
+      group('helicopter', 15, 1450, 2000),
       group('apc', 6, 2250, 4000),
       group('infantry', 34, 400, 8000),
       group('jet', 6, 900, 16000),
@@ -395,7 +395,7 @@ export const SERPENTINE_WAVES: readonly WaveData[] = [
   {
     groups: [
       group('tank', 10, 2050),
-      group('helicopter', 19, 1350, 2000),
+      group('helicopter', 17, 1350, 2000),
       group('apc', 6, 2150, 4000),
       group('infantry', 38, 350, 6000),
       group('jet', 7, 800, 10000),
