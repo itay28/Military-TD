@@ -35,7 +35,7 @@ for (const map of [FIRST_MAP, SECOND_MAP, THIRD_MAP, FOURTH_MAP]) {
     await page.evaluate((kinds) => {
       const td = window.__TD__!;
       for (const kind of kinds) td.command({ type: 'spawnEnemy', kind });
-      td.step(30);
+      td.step(5);
     }, ENEMIES);
     await expect.poll(async () => (await view(page)).rendered).toEqual([...TOWERS, ...ENEMIES].sort());
     expect(errors).toEqual([]);
