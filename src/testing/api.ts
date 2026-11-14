@@ -1,4 +1,5 @@
 import type { TowerKind } from '../data/towers';
+import type { WaveIntel } from '../sim/intel';
 import type { EnemyKind } from '../data/enemies';
 import type { SpriteKind } from '../data/sprites';
 import type { Pixel } from '../scenes/coords';
@@ -79,6 +80,11 @@ export interface TestView {
    * The enemy card open now: the enemy it shows, its kind and the name it gives, and whether a tap pinned it (rather
    * than a hovering mouse). Null when it is closed.
    */
+  /**
+   * Sniper intel in the HUD (#353): the coming waves it shows (none without a Sniper, or while no wave is due), and
+   * whether the "Build a Sniper for intel" hint is up.
+   */
+  readonly intel: { readonly waves: readonly WaveIntel[]; readonly hint: boolean };
   readonly enemyCard: {
     readonly enemyId: number;
     readonly kind: EnemyKind;

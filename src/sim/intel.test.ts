@@ -67,9 +67,10 @@ describe('intelDepth', () => {
     expect(intelDepth([{ kind: 'rifleNest', level: 1 }, sniper()])).toBe(1);
   });
 
-  it('a fully upgraded Sniper reports the wave after next as well', () => {
-    expect(top).toBeGreaterThan(1);
-    expect(intelDepth([sniper(), sniper(top)])).toBe(2);
+  it('a level-3 Sniper reports the wave after next as well', () => {
+    expect(top).toBe(3);
+    expect(intelDepth([sniper(2)])).toBe(1);
+    expect(intelDepth([sniper(), sniper(3)])).toBe(2);
   });
 
   it('a Sniper being dismantled reports nothing', () => {

@@ -37,7 +37,7 @@ export function waveComposition(wave: WaveData): KindCount[] {
 
 /**
  * How many coming waves the player's Snipers report (#353): 0 without a standing Sniper (one being dismantled doesn't
- * count), 1 with one, 2 when one is fully upgraded (its top level), which adds the wave after next.
+ * count), 1 with one, 2 when one is at level 3 (its top level), which adds the wave after next.
  */
 export function intelDepth(towers: readonly IntelTower[]): 0 | 1 | 2 {
   const snipers = towers.filter((t) => t.kind === 'sniper' && t.dismantleMs === undefined);

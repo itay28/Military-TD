@@ -1,12 +1,15 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { WAVE_BANNER_MS } from '../data/display';
+import { ENEMY_WEAKNESS, WAVE_BANNER_MS } from '../data/display';
 import { createGame, type Game } from '../sim/game';
 import type { Enemy } from '../sim/enemies';
 import type { MapData } from '../sim/map';
 import { waveDps } from '../sim/stats';
 import type { GameSpeed } from '../scenes/gameSpeed';
 import { mountHud, type HudSpeed } from './hud';
+import type { RenderIcon } from './renderIcon';
+import type { EnemyKind } from '../data/enemies';
+import type { WaveData, WaveGroup } from '../sim/waves';
 
 // Path 6 tiles long: an Infantry (1.5 tiles/s) leaks after 4000 ms.
 const SMALL: MapData = {
@@ -653,5 +656,166 @@ describe('boss HP bar', () => {
       expect(game.state.lives).toBe(20);
       expect(bar().hidden).toBe(true);
     });
+  });
+});
+
+describe('Sniper intel (#353)', () => {
+  const g = (kind: WaveGroup['kind'], count: number, delayMs = 0): WaveGroup => ({
+    kind,
+    count,
+    spacingMs: 100,
+    delayMs,
+  });
+  const WAVES: WaveData[] = [
+    { groups: [g('infantry', 1)], afterMs: TIMER_MS },
+    { groups: [g('jeep', 1, 500), g('tank', 2)], afterMs: TIMER_MS },
+    { groups: [g('helicopter', 1)], afterMs: TIMER_MS },
+  ];
+  const intelGame = (tacticalMode = false) =>
+    createGame({ map: SMALL, money: 1000, lives: 20, tacticalMode, waves: WAVES });
+  const mount = (game: Game, iconFor?: (kind: EnemyKind) => RenderIcon | null) =>
+    mountHud(root, game, fakeSpeed(), iconFor ? { iconFor } : {});
+  const intel = () => byTestId('hud-intel')!;
+  const shown = () =>
+    intel().hidden
+      ? []
+      : [...intel().querySelectorAll<HTMLElement>('[data-testid="intel-wave"]')].map((w) => ({
+          wave: Number(w.dataset.wave),
+          kinds: [...w.querySelectorAll<HTMLElement>('[data-testid="intel-kind"]')].map((k) => k.textContent),
+        }));
+  const hint = () => {
+    const el = byTestId('intel-hint');
+    return !intel().hidden && !!el && !el.hidden;
+  };
+  const SNIPER_TILE = { col: 1, row: 0 };
+
+  it('without a Sniper there is no preview, only the hint "Build a Sniper for intel"', () => {
+    const hud = mount(intelGame());
+    hud.update();
+    expect(shown()).toEqual([]);
+    expect(hint()).toBe(true);
+    expect(byTestId('intel-hint')!.textContent).toBe('Build a Sniper for intel');
+  });
+
+  it('the hint shows once per game: gone after the wave it was shown for starts', () => {
+    const game = intelGame();
+    const hud = mount(game);
+    hud.update();
+    expect(hint()).toBe(true);
+    game.callNextWave();
+    hud.update();
+    expect(hint()).toBe(false);
+    game.tick(TIMER_MS);
+    hud.update();
+    expect(hint()).toBe(false);
+  });
+
+  it('a Sniper shows the next wave: icon, count and name for each kind, in order of first appearance', () => {
+    const game = intelGame();
+    const hud = mount(game);
+    game.placeTower('sniper', SNIPER_TILE);
+    game.callNextWave();
+    hud.update();
+    expect(hint()).toBe(false);
+    expect(shown()).toEqual([{ wave: 2, kinds: ['2 Tank', '1 Jeep'] }]);
+    expect(intel().querySelectorAll('[data-testid="intel-kind"] .intel-icon')).toHaveLength(2);
+  });
+
+  it("a kind's icon is its render when there is one, else the shape fallback", () => {
+    const game = intelGame();
+    const hud = mount(game, (kind) => (kind === 'tank' ? { layerUrls: ['tank.png'], canvasPx: 64 } : null));
+    game.placeTower('sniper', SNIPER_TILE);
+    game.callNextWave();
+    hud.update();
+    const icon = (kind: string) => intel().querySelector<HTMLElement>(`[data-kind="${kind}"] .intel-icon`)!;
+    expect(icon('tank').querySelector('.build-icon-layer')).not.toBeNull();
+    expect(icon('jeep').querySelector('.intel-shape')).not.toBeNull();
+  });
+
+  it('hover, focus or tap on a kind shows its weakness line and armor', () => {
+    const game = intelGame();
+    const hud = mount(game);
+    game.placeTower('sniper', SNIPER_TILE);
+    hud.update();
+    const chip = intel().querySelector<HTMLElement>('[data-kind="infantry"]')!;
+    const tip = byTestId('intel-tip')!;
+    expect(tip.hidden).toBe(true);
+    chip.dispatchEvent(new Event('mouseenter'));
+    expect(tip.hidden).toBe(false);
+    expect(tip.textContent).toBe(`${ENEMY_WEAKNESS.infantry} Armor 0.`);
+    chip.dispatchEvent(new Event('mouseleave'));
+    expect(tip.hidden).toBe(true);
+    chip.focus();
+    expect(tip.hidden).toBe(false);
+    expect(chip.getAttribute('aria-describedby')).toBe(tip.id);
+    chip.blur();
+    expect(tip.hidden).toBe(true);
+    chip.click();
+    expect(tip.hidden).toBe(false);
+    chip.click();
+    expect(tip.hidden).toBe(true);
+  });
+
+  it('a level-3 Sniper shows the wave after next as well', () => {
+    const game = intelGame();
+    const hud = mount(game);
+    const placed = game.placeTower('sniper', SNIPER_TILE);
+    if (!placed.ok) throw new Error(placed.reason);
+    game.upgradeTower(placed.towerId);
+    hud.update();
+    expect(shown()).toHaveLength(1);
+    game.upgradeTower(placed.towerId);
+    hud.update();
+    expect(shown()).toEqual([
+      { wave: 1, kinds: ['1 Infantry'] },
+      { wave: 2, kinds: ['2 Tank', '1 Jeep'] },
+    ]);
+  });
+
+  it('a Sniper being dismantled gives no intel', () => {
+    const game = intelGame();
+    const hud = mount(game);
+    const placed = game.placeTower('sniper', SNIPER_TILE);
+    if (!placed.ok) throw new Error(placed.reason);
+    hud.update();
+    expect(shown()).toHaveLength(1);
+    game.sellTower(placed.towerId);
+    hud.update();
+    expect(shown()).toEqual([]);
+  });
+
+  it('in timed mode it stays up during a wave, for the next wave to arrive', () => {
+    const game = intelGame();
+    const hud = mount(game);
+    game.placeTower('sniper', SNIPER_TILE);
+    game.callNextWave();
+    game.tick(100);
+    hud.update();
+    expect(game.state.phase).toBe('wave');
+    expect(shown().map((w) => w.wave)).toEqual([2]);
+  });
+
+  it('in Tactical mode it shows between waves and hides once the wave starts', () => {
+    const game = intelGame(true);
+    const hud = mount(game);
+    game.placeTower('sniper', SNIPER_TILE);
+    hud.update();
+    expect(shown().map((w) => w.wave)).toEqual([1]);
+    game.callNextWave();
+    hud.update();
+    expect(intel().hidden).toBe(true);
+  });
+
+  it('hides once the last wave has started', () => {
+    const game = intelGame();
+    const hud = mount(game);
+    game.placeTower('sniper', SNIPER_TILE);
+    game.callNextWave();
+    game.callNextWave();
+    hud.update();
+    expect(shown().map((w) => w.wave)).toEqual([3]);
+    game.callNextWave();
+    hud.update();
+    expect(intel().hidden).toBe(true);
   });
 });
