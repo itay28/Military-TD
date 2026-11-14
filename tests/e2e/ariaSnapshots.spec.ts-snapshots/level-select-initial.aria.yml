@@ -10,4 +10,6 @@
       - button "Serpentine, locked. Complete Switchback to unlock" [disabled]: Serpentine
     - listitem:
       - button "Hairpin, locked. Complete Serpentine to unlock" [disabled]: Hairpin
+    - listitem:
+      - button "Gauntlet, locked. Complete Hairpin to unlock" [disabled]: Gauntlet
   - button "Back"

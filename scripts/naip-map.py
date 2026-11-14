@@ -54,7 +54,17 @@ MAPS = [
         # A dense wood: the treeline on blocked tiles.
         "trees": (440950, 4662770),
         "seed": 312,
-    }
+    },
+    {
+        "map": "maps/05-gauntlet.tmj",
+        "id": "gauntlet",
+        "item": IOWA_2023,
+        # A mottled crop field, drier streaks through green, with no track, building or field edge in it (#81).
+        "field": (439270, 4659300),
+        "dirt": (441624, 4660705),
+        "trees": (440950, 4662770),
+        "seed": 81,
+    },
 ]
 
 

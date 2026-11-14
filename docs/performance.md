@@ -1,8 +1,8 @@
 # Performance checks
 
 Two checks catch performance regressions (#73). Both time the same **Heavy load**: a seeded game on Serpentine (the
-longest Path; every map is 16 × 10) with 40 towers of every kind and one wave of 200 enemies of every kind, mid-wave
-once they've all spawned. `src/sim/heavyLoad.ts` builds it (numbers in `src/data/heavyLoad.ts`), and the `heavy-load`
+longest Path after Gauntlet's; Gauntlet's lets the towers kill too many of the 200 during the warmup) with 40 towers of
+every kind and one wave of 200 enemies of every kind, mid-wave once they've all spawned. `src/sim/heavyLoad.ts` builds it (numbers in `src/data/heavyLoad.ts`), and the `heavy-load`
 scenario gives the browser the same setup.
 
 | Check | Command | Where it runs in CI | Fails when |

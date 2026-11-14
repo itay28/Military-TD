@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isFaction } from '../sim/factions';
 import { createMap, type Tile } from '../sim/map';
-import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from '../../tests/e2e/firstMap';
+import { FIFTH_MAP, FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from '../../tests/e2e/firstMap';
 import { groundImagePath, groundTextureKey, MAPS, mapById, MVP_MAP, wavesForMap } from './maps';
 import { ENEMY_STATS, type EnemyKind } from './enemies';
 import { WAVES } from './waves';
@@ -42,6 +42,7 @@ describe('map registry', () => {
     expect({ id: MAPS[1]?.id, name: MAPS[1]?.name }).toEqual(SECOND_MAP);
     expect({ id: MAPS[2]?.id, name: MAPS[2]?.name }).toEqual(THIRD_MAP);
     expect({ id: MAPS[3]?.id, name: MAPS[3]?.name }).toEqual(FOURTH_MAP);
+    expect({ id: MAPS[4]?.id, name: MAPS[4]?.name }).toEqual(FIFTH_MAP);
   });
 
   it('has unique ids', () => {
@@ -55,12 +56,13 @@ describe('map registry', () => {
     expect(() => createMap(data)).not.toThrow();
   });
 
-  it('lists Training Ground, Switchback, Serpentine, then Hairpin', () => {
+  it('lists Training Ground, Switchback, Serpentine, Hairpin, then Gauntlet', () => {
     expect(MAPS.map(({ id, name }) => ({ id, name }))).toEqual([
       { id: 'mvp', name: 'Training Ground' },
       { id: 'switchback', name: 'Switchback' },
       { id: 'serpentine', name: 'Serpentine' },
       { id: 'hairpin', name: 'Hairpin' },
+      { id: 'gauntlet', name: 'Gauntlet' },
     ]);
   });
 
@@ -88,8 +90,8 @@ describe('map registry', () => {
   });
 
   const trainingKinds = new Set(WAVES.flatMap((w) => w.groups.map((g) => g.kind)));
-  /** The kinds the later maps add (#366): the APC, the jet, and the Heavy tank ending Hairpin. */
-  const laterKinds = new Set<EnemyKind>(['apc', 'jet', 'heavyTank']);
+  /** The kinds the later maps add (#366, #81): the APC, the jet, the Heavy tank ending Hairpin, and the Gunship on Gauntlet. */
+  const laterKinds = new Set<EnemyKind>(['apc', 'jet', 'heavyTank', 'gunship']);
 
   it.each(MAPS.slice(1).map((entry, i) => [MAPS[i]!.id, entry.id, MAPS[i]!.waves, entry.waves] as const))(
     'difficulty rises: %s → %s has as many waves or more, more enemies and more total hp, and only the later kinds are new',
@@ -104,6 +106,12 @@ describe('map registry', () => {
       expect(enemies(after).every((g) => trainingKinds.has(g.kind) || laterKinds.has(g.kind))).toBe(true);
     },
   );
+
+  it('Gauntlet, the boss map (#81): China attacks and the US defends, on a painted NAIP ground', () => {
+    const gauntlet = mapById('gauntlet');
+    expect({ attacker: gauntlet.attacker, defender: gauntlet.defender }).toEqual({ attacker: 'china', defender: 'us' });
+    expect(gauntlet.groundImageUrl).toMatch(/naip-maps\/gauntlet.*\.jpg/);
+  });
 
   it('serves a map its own waves, and WAVES for a map outside the registry', () => {
     expect(wavesForMap('switchback')).toBe(mapById('switchback').waves);

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { FOURTH_MAP } from './firstMap';
+import { FIFTH_MAP } from './firstMap';
 import { openLevelSelect, openMenu } from './helpers';
 
 // From #370: on a phone the Level select was clipped top and bottom and could not scroll.
@@ -13,7 +13,7 @@ for (const [name, viewport] of [
 
     test('the first map, the last map and Back can each be scrolled to', async ({ page }) => {
       await openLevelSelect(page, { unlockAll: true });
-      const last = page.getByRole('button', { name: `${FOURTH_MAP.name}, no stars yet` });
+      const last = page.getByRole('button', { name: `${FIFTH_MAP.name}, no stars yet` });
       const back = page.getByRole('button', { name: 'Back', exact: true });
       // Opening focuses the first map, which scrolls it into view, so the title is checked by scrolling back up.
       await page.getByRole('heading', { name: 'Operations' }).scrollIntoViewIfNeeded();

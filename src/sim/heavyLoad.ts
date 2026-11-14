@@ -12,8 +12,8 @@ import type { WaveGroup } from './waves';
 const TOWER_KINDS: readonly TowerKind[] = ['rifleNest', 'aaGun', 'cannon', 'mortar'];
 
 /**
- * The Heavy load's setup (numbers in `src/data/heavyLoad.ts`): the longest Path (every map is 16 × 10, so Serpentine is the largest to cover), `towers`
- * of every kind on seeded tiles near the Path, and one wave of `enemies` of every kind. Same seed, same setup.
+ * The Heavy load's setup (numbers in `src/data/heavyLoad.ts`): Serpentine's Path (the longest after Gauntlet's, which lets the towers kill too many
+ * enemies during the warmup), `towers` of every kind on seeded tiles near the Path, and one wave of `enemies` of every kind. Same seed, same setup.
  */
 export function heavyLoadSetup(seed: number = HEAVY_LOAD.seed): GameSetup {
   const map = createMap(SERPENTINE_MAP);

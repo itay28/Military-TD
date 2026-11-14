@@ -138,8 +138,8 @@ describe('the complete Faction sets (ADR-0009, point 5)', () => {
     });
   }
 
-  it('has the new enemies in play for every Faction: APC, Fighter jet, Heavy tank (#366)', () => {
-    for (const kind of ['apc', 'jet', 'heavyTank'])
+  it('has the new enemies in play for every Faction: APC, Fighter jet, Heavy tank (#366), Gunship (#81)', () => {
+    for (const kind of ['apc', 'jet', 'heavyTank', 'gunship'])
       for (const faction of FACTIONS)
         expect(
           RENDER_CONFIG.models.some((m) => m.faction === faction && m.kind === kind),
