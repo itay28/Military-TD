@@ -8,3 +8,5 @@ scripts/render-sprite.py (changed: rendered from above, lit, desaturated,
 diorama base and grass removed, turret turned to the front, split into hull
 and turret layers). The model itself isn't committed.
 License checked on the model's Sketchfab page, 2026-11-11.
+china-heavy-tank-turntable.webp is a turntable of the same model (the whole model, 24 views orbiting
+it from 30 degrees up, for the Field manual), made by scripts/render-sprite.py --turntable.
