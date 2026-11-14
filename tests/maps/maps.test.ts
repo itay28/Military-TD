@@ -339,7 +339,7 @@ describe('wave timers fit the road', () => {
 
   // The stars the reference bot earns on the timers alone, never calling a wave in (Normal, Hard).
   // #588 weakened the AA Gun's ground fire, so the Training Ground's Hard run loses a few Lives now.
-  // #381: Serpentine's 20th wave is a 17-Helicopter push that gets a few through on Hard.
+  // #381: Serpentine's 20th wave is a big Helicopter push that gets a few through on Hard.
   const EXPECTED_STARS: Record<string, readonly [number, number]> = {
     mvp: [3, 2],
     switchback: [3, 1],

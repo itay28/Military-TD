@@ -159,7 +159,7 @@ tests/
 
 | Bot | Strategy | Outcome |
 | --- | --- | --- |
-| `bot-idle` | builds nothing | Defeat on wave 2 |
+| `bot-idle` | builds nothing | Defeat by wave 3 |
 | `bot-rifle-spam` | Rifle Nests only, as Money allows | Defeat on wave 10 (Tanks) |
 | `bot-no-aa` | `bot-balanced` with Rifle Nests for the AA Guns | Victory, 4 Lives |
 | `bot-balanced` | all four kinds, with upgrades | Victory, 13 Lives |
@@ -178,7 +178,7 @@ tests/
 | 8 | 6 Helicopters, 2000 ms · 10 Infantry, 800 ms, after 2 s · 6 Jeeps, 600 ms, after 8 s | |
 | 9 | 3 Tanks, 3000 ms · 6 Helicopters, 2000 ms, after 3 s · 10 Jeeps, 600 ms, after 6 s | |
 | 10 | 5 Tanks, 3000 ms · 10 Helicopters, 2000 ms, after 2 s · 20 Infantry, 600 ms, after 4 s · 10 Jeeps, 600 ms, after 12 s | |
-| 11–19 | Larger mixes of the same four kinds, each ending in a second push of 2–5 Tanks 50 s in | |
+| 11–19 | Larger mixes of the same four kinds, each ending in a second push of 2–6 Tanks 50 s in | |
 | 20 | 10 Tanks · 16 Helicopters · 40 Infantry · 20 Jeeps · 4 more Tanks 30 s in | finale |
 
 Maps 2–4 follow the same shape with larger groups and earlier mixes; the APC joins in wave 11 and the Fighter jet in wave 13 (at most 3 each), and Hairpin's wave 20 ends with the Heavy tank.
