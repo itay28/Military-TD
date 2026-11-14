@@ -68,6 +68,15 @@ const SOUNDS: readonly Sound[] = [
       { file: AR, from: 0.09, dur: 0.4, delay: 0.05, db: -5 },
     ],
   },
+  {
+    // Sniper: one heavy .30-06 crack with its long tail, a single deliberate shot (it fires every 2.5 s).
+    id: 'sniperShot',
+    length: 1.2,
+    layers: [
+      { file: RIFLE_30, from: 0.1, dur: 1.1, rate: 0.85, db: 2 },
+      { file: AR, from: 0.09, dur: 0.3, db: -9, filter: 'highpass=f=1500' },
+    ],
+  },
   { id: 'aaGunBurst', length: 0.26, layers: autocannon },
   {
     // TOW and HJ-8: the launch motor's whoosh, with a low thump from the eject charge.

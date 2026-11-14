@@ -8,7 +8,7 @@ const VIEWPORTS = [
   { name: 'phone portrait', width: 390, height: 844 },
   { name: 'phone landscape', width: 844, height: 390 },
 ] as const;
-const KINDS: readonly TowerKind[] = BUILD_KINDS; // the kinds in play: a held-back one (the Sniper, #364) has no button
+const KINDS: readonly TowerKind[] = BUILD_KINDS; // the kinds in play: a held-back one (the Grenade launcher, #365) has no button
 
 /** Selects tower `kind` (placed by the every-tower-kind scenario) at `level`, by commands and a click on its tile. */
 async function openPanel(page: Page, kind: TowerKind, level: number) {

@@ -2,7 +2,7 @@ import { START_LIVES } from '../../src/data/start';
 import { buildOrder, type BuildStep } from './bots';
 import { defineScenario } from './define';
 
-/** A sensible mix: Rifle Nests early, a Cannon before the Tanks, AA before the Helicopters, then a Mortar and upgrades. */
+/** A sensible mix: Rifle Nests early, a Cannon before the Tanks, AA before the Helicopters, then a Mortar, a Sniper and upgrades. */
 export const BALANCED_ORDER: readonly BuildStep[] = [
   { place: 'rifleNest', tile: { col: 4, row: 6 } },
   { place: 'rifleNest', tile: { col: 9, row: 3 } },
@@ -15,6 +15,7 @@ export const BALANCED_ORDER: readonly BuildStep[] = [
   { place: 'aaGun', tile: { col: 4, row: 4 } },
   { upgrade: { col: 5, row: 5 }, level: 2 },
   { place: 'mortar', tile: { col: 6, row: 4 } },
+  { place: 'sniper', tile: { col: 7, row: 4 } },
   { upgrade: { col: 10, row: 4 }, level: 2 },
   { upgrade: { col: 9, row: 3 }, level: 2 },
   { upgrade: { col: 7, row: 6 }, level: 2 },
@@ -29,7 +30,7 @@ export const BALANCED_ORDER: readonly BuildStep[] = [
 ];
 
 export default defineScenario({
-  description: 'Balance bot: a sensible mix of all four towers, with upgrades. Victory, losing a few Lives.',
+  description: 'Balance bot: a sensible mix of the towers in play, with upgrades. Victory, losing a few Lives.',
   autoStartWaves: true,
   bot: buildOrder(BALANCED_ORDER),
   until: 'end',

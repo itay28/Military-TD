@@ -53,7 +53,7 @@ describe('buildOptions', () => {
         })),
     );
     expect(buildOptions()[0]).toMatchObject({ kind: 'rifleNest', name: 'Rifle Nest', cost: 50 });
-    expect(buildOptions().map((o) => o.kind)).not.toContain('sniper'); // not in play yet (#364)
+    expect(buildOptions().map((o) => o.kind)).toContain('sniper'); // in play (#364), key 5
   });
 
   it('leaves out a kind not in play yet: the grenade launcher waits for its renders (#75, #365)', () => {

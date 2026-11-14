@@ -99,9 +99,9 @@ describe('automatic grenade launcher (#75)', () => {
 
 describe('kinds in play', () => {
   // ADR-0009: a kind reaches the build bar in its rollout issue, once its renders land (the Sniper's: #364, the grenade launcher's: #365).
-  it('the build kinds are every kind not held back, in TOWER_STATS order; the Sniper and the grenade launcher are held back', () => {
-    expect(NOT_IN_PLAY.has('sniper')).toBe(true);
+  it('the build kinds are every kind not held back, in TOWER_STATS order; the grenade launcher is held back, the Sniper is in play (#364)', () => {
+    expect(NOT_IN_PLAY.has('sniper')).toBe(false);
     expect(BUILD_KINDS).toEqual(KINDS.filter((kind) => !NOT_IN_PLAY.has(kind)));
-    expect(BUILD_KINDS).toEqual(['rifleNest', 'aaGun', 'cannon', 'mortar']);
+    expect(BUILD_KINDS).toEqual(['rifleNest', 'aaGun', 'cannon', 'mortar', 'sniper']);
   });
 });
