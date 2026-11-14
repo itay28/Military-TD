@@ -1,0 +1,5 @@
+- group "Sniper intel":
+  - text: Wave 1
+  - button "8 Infantry"
+  - text: Wave 2
+  - button "12 Infantry"

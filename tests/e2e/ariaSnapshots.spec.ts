@@ -13,11 +13,27 @@ async function expectAria(locator: Locator, name: string) {
   expect(`${await locator.ariaSnapshot()}\n`).toMatchSnapshot([name]);
 }
 
-test('the HUD at the start shows Funds, the HQ meter, Wave, DPS, the countdown and a Call next wave button that is not disabled', async ({
+test('the HUD at the start shows Funds, the HQ meter, Wave, DPS, the countdown, a Call next wave button that is not disabled and the Sniper intel hint', async ({
   page,
 }) => {
   await openGame(page);
   await expectAria(page.locator('#hud'), 'hud-initial.aria.yml');
+});
+
+test('the HUD with a level-3 Sniper adds Sniper intel: a group of the next two waves, a button per enemy kind (#353)', async ({
+  page,
+}) => {
+  await openGame(page);
+  await page.evaluate(() => window.__TD__!.loadScenario('sniper-intel'));
+  await page.evaluate(() => {
+    const placed = window.__TD__!.command({ type: 'placeTower', kind: 'sniper', tile: { col: 1, row: 3 } });
+    if (!placed.ok) throw new Error('Sniper not placed');
+    const { id } = window.__TD__!.state().towers[0]!;
+    window.__TD__!.command({ type: 'upgradeTower', towerId: id });
+    window.__TD__!.command({ type: 'upgradeTower', towerId: id });
+  });
+  await expect(page.getByTestId('intel-wave')).toHaveCount(2);
+  await expectAria(page.getByTestId('hud-intel'), 'hud-intel.aria.yml');
 });
 
 test('the HUD with a Heavy tank on the field adds its boss HP bar: a meter named Heavy tank, read as HP of max', async ({

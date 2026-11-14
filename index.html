@@ -344,6 +344,90 @@
         min-width: 9ch;
         text-align: right;
       }
+      /* Sniper intel (#353): under the HUD at the map's top-left corner, below the countdown, while a wave is due. Out
+         of the HUD's flow like the boss bar, so it never moves a button. The DPS meter, when open, lies over it. */
+      #hud .hud-intel {
+        position: absolute;
+        top: calc(100% + 14px);
+        left: 8px;
+        z-index: 1;
+        box-sizing: border-box;
+        max-width: min(260px, calc(100vw - 80px));
+        padding: 4px 6px;
+        font: 0.75rem var(--font-mono);
+        background: color-mix(in srgb, var(--olive-900) 88%, transparent);
+        border: 1px solid var(--bone-muted);
+        border-radius: 3px;
+      }
+      #hud .hud-intel[hidden],
+      #hud .hud-intel [hidden] {
+        display: none;
+      }
+      /* With the boss bar up on a phone, both start at the left edge: drop under it. */
+      @media (max-width: 600px) {
+        #hud:has(.hud-boss:not([hidden])) .hud-intel {
+          top: calc(100% + 50px);
+        }
+      }
+      #hud .intel-wave {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px 4px;
+      }
+      #hud .intel-wave + .intel-wave {
+        margin-top: 3px;
+        padding-top: 3px;
+        border-top: 1px solid var(--olive-500);
+      }
+      #hud .intel-label {
+        flex: none;
+        margin-right: 2px;
+        font-weight: bold;
+        color: var(--amber);
+      }
+      #hud button.intel-kind {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        min-height: 24px;
+        padding: 0 4px 0 2px;
+        font: inherit;
+        color: inherit;
+        background: none;
+        box-shadow: none;
+        white-space: nowrap;
+      }
+      #hud .intel-icon {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        overflow: hidden;
+      }
+      #hud .intel-shape {
+        width: 12px;
+        height: 12px;
+        border: 1px solid var(--bone);
+      }
+      #hud .intel-shape.circle {
+        border-radius: 50%;
+      }
+      #hud .intel-count {
+        font-weight: bold;
+      }
+      #hud .intel-hint,
+      #hud .intel-tip {
+        margin: 0;
+        white-space: normal;
+        color: var(--tan);
+      }
+      #hud .intel-tip {
+        margin-top: 3px;
+        color: var(--bone);
+      }
       #hud .dps-scope {
         display: flex;
         gap: 3px;
