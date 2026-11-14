@@ -11,6 +11,8 @@
         - button "Cannon"
       - listitem:
         - button "Mortar"
+      - listitem:
+        - button "Grenade Launcher"
     - heading "Enemies" [level=3]
     - list:
       - listitem:
