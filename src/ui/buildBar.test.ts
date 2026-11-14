@@ -56,8 +56,10 @@ describe('buildOptions', () => {
     expect(buildOptions().map((o) => o.kind)).not.toContain('sniper'); // not in play yet (#364)
   });
 
-  it('leaves out a kind not in play yet: the grenade launcher waits for its renders (#75, #365)', () => {
-    expect(buildOptions().map((option) => option.kind)).not.toContain('grenadeLauncher');
+  it('lists the grenade launcher last, with hotkey 5 (#365)', () => {
+    const options = buildOptions();
+    expect(options.at(-1)).toMatchObject({ kind: 'grenadeLauncher', name: 'Grenade Launcher' });
+    expect(options).toHaveLength(5);
   });
 });
 

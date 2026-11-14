@@ -340,10 +340,11 @@ describe('wave timers fit the road', () => {
   // The stars the reference bot earns on the timers alone, never calling a wave in (Normal, Hard).
   // #588 weakened the AA Gun's ground fire, so the Training Ground's Hard run loses a few Lives now.
   // #381: Serpentine's 20th wave is a big Helicopter push that gets a few through on Hard.
+  // #365: the bot builds Grenade Launchers now, which hold Serpentine's ground waves, so Hard keeps all 3 stars.
   const EXPECTED_STARS: Record<string, readonly [number, number]> = {
     mvp: [3, 2],
     switchback: [3, 1],
-    serpentine: [3, 1],
+    serpentine: [3, 3],
     hairpin: [3, 2],
   };
 
@@ -368,6 +369,12 @@ describe('wave timers fit the road', () => {
 /** One tower kind only, as many as Money allows, never upgraded; `fitOrder` moves each to the best free tile. */
 const onlyKind = (kind: TowerKind): readonly BuildStep[] =>
   Array.from({ length: 30 }, (_, i) => ({ place: kind, tile: { col: i % 16, row: Math.floor(i / 16) } }));
+
+/** Grenade Launchers only (#365): ground-only, so air never stops. */
+const LAUNCHERS_ONLY: readonly BuildStep[] = Array.from({ length: 20 }, (_, i) => ({
+  place: 'grenadeLauncher',
+  tile: { col: i % 16, row: Math.floor(i / 16) },
+}));
 
 // Hard (#461) is tuned with these bots (ADR-0007): a good mix still wins it, one tower kind alone doesn't.
 describe('Hard difficulty', () => {
@@ -397,6 +404,18 @@ describe('Hard difficulty', () => {
       difficulty: 'hard',
       autoStartWaves: true,
       bot: buildOrder(fitOrder(data, onlyKind(kind))),
+      until: 'end',
+    });
+    expect(result.outcome).toBe('defeat');
+  });
+
+  it.each(MAPS)('$id: Grenade Launchers alone lose Hard (#365)', ({ data, waves }) => {
+    const result = runScenario({
+      map: data,
+      waves,
+      difficulty: 'hard',
+      autoStartWaves: true,
+      bot: buildOrder(fitOrder(data, LAUNCHERS_ONLY)),
       until: 'end',
     });
     expect(result.outcome).toBe('defeat');

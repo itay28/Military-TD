@@ -148,6 +148,7 @@ One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesoun
 | `gunReport` | Cannon: MT-12 (Russia) | the cannon shot, with a rifle's supersonic crack on top |
 | `recoillessBlast` | Cannon: SPG-9 (Insurgents) | the cannon shot, lower and duller, with a backblast hiss |
 | `mortarLaunch`, `mortarWhistle`, `mortarBlast` | Mortar: launch, incoming (0.5 s before impact), impact | a sharp light-mortar "tonk" (cannon shot plus a rifle crack); the synthesized falling, breathy whistle; `explosion3` with a crack, a thump and debris |
+| `grenadeLaunch` | Grenade Launcher | a short dull "thunk": a synthesized thump under a pitched-up cannon shot, with a faint rifle crack; 0.2 s, one sound per grenade |
 | `vehicleExplosion` | a jeep, tank or helicopter destroyed | `explosion1` at about half speed, a sub-bass thump, `explosion3` as a second blast and rumbling tail, a debris crackle |
 | `infantryHit` | infantry killed | `explosion2`, short and light |
 
@@ -157,7 +158,7 @@ One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesoun
 | Missile Sound (`mikeask-missile`), by mikeask | opengameart.org/content/missile-sound | the missile launch |
 | Cannon Fire (`thimras-cannon`), by Thimras | opengameart.org/content/cannon-fire | the gun, recoilless and mortar reports |
 | Explosions (`ezduzziteh-explosions`), by EZduzziteh | opengameart.org/content/explosions-4 | the explosions |
-| Weapon sounds (`weapon-sounds`) | the script's output | the ten sounds above |
+| Weapon sounds (`weapon-sounds`) | the script's output | the eleven sounds above |
 
 Each source ships no license file, so its `License.txt` copies the source page's CC0 notice. Rejected: *Light Machine Gun* and *4 Projectile Launches* (CC-BY), *2 Big Gun Shots* and *Q009's weapon sounds* (CC-BY-SA), the *Whistles* items (CC-BY, and not shell whistles).
 

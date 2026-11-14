@@ -30,6 +30,7 @@
       - listitem: "AA Gun ($75): Built for aircraft: fast, light rounds. Weaker against ground."
       - listitem: "Cannon ($100): Slow, heavy shells that punch through armor. Ground only."
       - listitem: "Mortar ($125): Long-range shells that hit everything in the blast. Ground only, not up close."
+      - listitem: "Grenade Launcher ($90): Fast bursts of grenades. Shreds infantry, bounces off armor."
     - heading "Enemies" [level=3]
     - list:
       - listitem: "Infantry (reward $4; HQ −1): No armor: every tower hurts it. Mortar blasts catch whole squads."

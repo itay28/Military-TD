@@ -91,6 +91,11 @@ const MUZZLES: Record<string, RenderedSprite['muzzles']> = {
   'russia-tank': [{ x: 0, y: -104.5 }],
   'china-tank': [{ x: -0.5, y: -100 }],
   'insurgents-tank': [{ x: 0, y: -96.5 }],
+  // Grenade launchers: one barrel each, tips read off the turret image (top row 41, 42, 53 and 39).
+  'us-grenade-launcher': [{ x: 3, y: -39 }],
+  'russia-grenade-launcher': [{ x: -0.5, y: -38 }],
+  'china-grenade-launcher': [{ x: -3, y: -27 }],
+  'insurgents-grenade-launcher': [{ x: -0.5, y: -41 }],
   // One barrel each (top row 19 of the turret image).
   'us-heavy-tank': [{ x: -0.5, y: -116 }],
   'russia-heavy-tank': [{ x: -0.5, y: -120 }],

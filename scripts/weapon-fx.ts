@@ -105,6 +105,18 @@ const SOUNDS: readonly Sound[] = [
       { file: RIFLE_30, from: 0.1, dur: 0.15, db: -9, rate: 0.9, filter: 'lowpass=f=3000' },
     ],
   },
+  {
+    // An automatic grenade launcher's round: a short, dull "thunk" of the 40 mm grenade leaving the barrel, lighter than
+    // the mortar's tonk, with a faint crack on top. One sound per grenade, so it ends before the next (fires 1.5 to 1.9 a second).
+    id: 'grenadeLaunch',
+    length: 0.3,
+    fade: 0.05,
+    layers: [
+      { file: 'thump', dur: 0.25, db: -3, rate: 1.6 },
+      { file: CANNON, dur: 0.2, rate: 1.25, db: -6, filter: 'lowpass=f=1400,highpass=f=150' },
+      { file: RIFLE_30, from: 0.1, dur: 0.1, db: -11, rate: 1.1, filter: 'lowpass=f=3500' },
+    ],
+  },
   { id: 'mortarWhistle', length: 0.5, fade: 0.008, layers: [{ file: 'whistle', dur: 0.5 }] },
   {
     // A mortar bomb's impact: a sharp crack, then the earth thump and a debris patter, not a gun's long boom.

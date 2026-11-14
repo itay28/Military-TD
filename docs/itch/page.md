@@ -18,6 +18,7 @@ Hold the road. A military tower defense on real aerial ground, where every weapo
 - **AA Gun**: built for aircraft, with fast, light rounds. Hits ground too.
 - **Cannon**: slow, heavy shells that punch through armor. Ground only.
 - **Mortar**: long-range shells that hit everything in the blast. Ground only, and not up close.
+- **Grenade Launcher**: fast bursts of small-blast grenades at short range, good against groups of infantry. Ground only; a tank barely notices them.
 
 Each tower takes two upgrades (Optics, then a Heavier weapon), and selling one gives back most of what it cost.
 
