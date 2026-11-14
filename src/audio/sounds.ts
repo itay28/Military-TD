@@ -10,6 +10,7 @@ export const SOUND_IDS = [
   'gunReport',
   'recoillessBlast',
   'mortarLaunch',
+  'grenadeLaunch',
   'mortarWhistle',
   'mortarBlast',
   'vehicleExplosion',
@@ -37,7 +38,7 @@ export const SHOT_SOUND: Record<TowerKind, Record<Faction, SoundId>> = {
   aaGun: everyFaction('aaGunBurst'),
   cannon: { us: 'missileLaunch', china: 'missileLaunch', russia: 'gunReport', insurgents: 'recoillessBlast' },
   mortar: everyFaction('mortarLaunch'),
-  grenadeLauncher: everyFaction('mortarLaunch'), // a placeholder until it's in play: its own sound comes with #365
+  grenadeLauncher: everyFaction('grenadeLaunch'),
   sniper: everyFaction('rifleShot'),
 };
 

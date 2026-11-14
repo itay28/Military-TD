@@ -4,6 +4,7 @@ import missileLaunchUrl from '../../assets/weapon-sounds/missileLaunch.ogg?url';
 import gunReportUrl from '../../assets/weapon-sounds/gunReport.ogg?url';
 import recoillessBlastUrl from '../../assets/weapon-sounds/recoillessBlast.ogg?url';
 import mortarLaunchUrl from '../../assets/weapon-sounds/mortarLaunch.ogg?url';
+import grenadeLaunchUrl from '../../assets/weapon-sounds/grenadeLaunch.ogg?url';
 import mortarWhistleUrl from '../../assets/weapon-sounds/mortarWhistle.ogg?url';
 import mortarBlastUrl from '../../assets/weapon-sounds/mortarBlast.ogg?url';
 import vehicleExplosionUrl from '../../assets/weapon-sounds/vehicleExplosion.ogg?url';
@@ -29,6 +30,7 @@ export const SOUND_URLS: Record<SoundId, string> = {
   gunReport: gunReportUrl,
   recoillessBlast: recoillessBlastUrl,
   mortarLaunch: mortarLaunchUrl,
+  grenadeLaunch: grenadeLaunchUrl,
   mortarWhistle: mortarWhistleUrl,
   mortarBlast: mortarBlastUrl,
   vehicleExplosion: vehicleExplosionUrl,

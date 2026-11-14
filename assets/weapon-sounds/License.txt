@@ -1,5 +1,5 @@
 Weapon sounds (rifleShot, aaGunBurst, missileLaunch, gunReport, recoillessBlast,
-mortarLaunch, mortarWhistle, mortarBlast, vehicleExplosion, infantryHit .ogg)
+mortarLaunch, grenadeLaunch, mortarWhistle, mortarBlast, vehicleExplosion, infantryHit .ogg)
 for Hold the Perimeter
 
 Built by scripts/weapon-fx.ts (ffmpeg) from these CC0 1.0 items:

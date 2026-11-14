@@ -4,3 +4,4 @@
   - button "AA Gun ($75)": $75 2
   - button "Cannon ($100)": $100 3
   - button "Mortar ($125)" [disabled]: $125 4
+  - button "Grenade Launcher ($90)": $90 5

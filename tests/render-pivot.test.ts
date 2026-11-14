@@ -108,9 +108,9 @@ const OPTIONAL_KINDS: readonly string[] = ['sniper'];
 
 /**
  * Kinds rendered before their gameplay (art-ahead): each Faction gets its render in its own part, and the kind joins
- * `SPRITES` when it is put in play (Grenade launcher: #359).
+ * `SPRITES` when it is put in play (none now: the Grenade launcher joined in #365).
  */
-const ART_AHEAD_KINDS = ['grenadeLauncher'];
+const ART_AHEAD_KINDS: string[] = [];
 
 describe('the complete Faction sets (ADR-0009, point 5)', () => {
   // A kind not in play yet (the Sniper, renders in #358) has none until its rollout. The upcoming ones (the Heavy tank,
@@ -360,7 +360,7 @@ describe('the Sniper renders (art-ahead, #358)', () => {
   }
 });
 
-describe('the Grenade launcher renders (art-ahead, #359)', () => {
+describe('the Grenade launcher renders (#359, in play since #365)', () => {
   const launchers = RENDER_CONFIG.models.filter((m) => m.kind === 'grenadeLauncher');
 
   it('covers every Faction, one each (#464, #467, #468, #469)', () => {
