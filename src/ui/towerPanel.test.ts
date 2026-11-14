@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TOWER_NAMES, TOWER_ROLES } from '../data/display';
-import { TOWER_STATS } from '../data/towers';
+import { TOWER_LEVELS, TOWER_STATS } from '../data/towers';
 import { createGame, TICK_MS, type GameState } from '../sim/game';
 import type { MapData } from '../sim/map';
 import { emptyStats, type CombatStats } from '../sim/stats';
@@ -92,6 +92,13 @@ describe('Tower panel', () => {
     const panel = mountTowerPanel(root, fakeGame([{ ...rifleNest(1), fireRate: 1 / 3 }]));
     panel.select(1);
     expect(value('tower-fire-rate')).toBe('0.33/s');
+  });
+
+  it("shows an AA Gun's air and ground damage at its level (#588)", () => {
+    const aa: Tower = { ...rifleNest(1), ...TOWER_LEVELS.aaGun[1], kind: 'aaGun', level: 3 };
+    const panel = mountTowerPanel(root, fakeGame([aa]));
+    panel.select(1);
+    expect(value('tower-damage')).toBe('20.8\u00a0air, 16\u00a0ground');
   });
 
   it("shows the selected tower's stats and figures, in a dialog labelled by its name", () => {

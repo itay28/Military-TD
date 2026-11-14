@@ -52,8 +52,8 @@
   - definition: 5 Lives
   - paragraph:
     - strong: "Weak against:"
-    - text: AA Gun, Cannon, Sniper
+    - text: Cannon, Sniper
   - paragraph:
     - strong: "Shrugs off:"
-    - text: Rifle Nest, Mortar
+    - text: Rifle Nest, AA Gun, Mortar
   - button "Back"

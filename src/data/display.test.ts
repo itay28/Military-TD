@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  damageText,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   FLOATING_TEXT,
@@ -104,5 +105,16 @@ describe('names and role lines', () => {
   it.each(Object.keys(ENEMY_STATS) as EnemyKind[])('enemy %s has a name and a line on what hurts it', (kind) => {
     expect(ENEMY_NAMES[kind]?.trim()).toBeTruthy();
     expect(ENEMY_WEAKNESS[kind]?.trim()).toBeTruthy();
+  });
+});
+
+describe('damageText', () => {
+  it('is the damage alone for a tower that hits every layer the same', () => {
+    expect(damageText({ damage: 60 })).toBe('60');
+  });
+
+  it("names the air and ground damage when they differ (#588: the AA Gun's ground fire)", () => {
+    expect(damageText({ damage: 13, groundDamage: 10 })).toBe('13\u00a0air, 10\u00a0ground');
+    expect(damageText({ damage: 20.8, groundDamage: 16 })).toBe('20.8\u00a0air, 16\u00a0ground');
   });
 });

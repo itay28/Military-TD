@@ -1,5 +1,5 @@
 import { counteredBy, poorAgainst, resists, strongAgainst } from './counters';
-import { ENEMY_NAMES, ENEMY_WEAKNESS, LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES } from './display';
+import { damageText, ENEMY_NAMES, ENEMY_WEAKNESS, LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES } from './display';
 import { ENEMY_STATS, type EnemyKind, PLAYABLE_KINDS } from './enemies';
 import { BUILD_KINDS, TOWER_LEVELS, TOWER_STATS, type TowerKind } from './towers';
 
@@ -51,6 +51,7 @@ function towerEntry(kind: TowerKind): FieldManualEntry {
   const stats: {
     cost: number;
     damage: number;
+    groundDamage?: number;
     range: number;
     fireRate: number;
     targets: readonly ('ground' | 'air')[];
@@ -59,7 +60,7 @@ function towerEntry(kind: TowerKind): FieldManualEntry {
   } = TOWER_STATS[kind];
   const rows: [string, string][] = [
     ['Cost', num(stats.cost)],
-    ['Damage', num(stats.damage)],
+    ['Damage', damageText(stats)],
     ['Range', `${num(stats.range)} tiles`],
     ['Fire rate', `${num(stats.fireRate)} shots/s`],
     ['Targets', stats.targets.map((layer) => LAYER_NAME[layer]).join(', ')],

@@ -1,4 +1,12 @@
-import { LAYER_NAME, LEVEL_NAME, TOWER_NAMES, TOWER_ROLES, UPGRADE_REFUSAL_TEXT, formatFunds } from '../data/display';
+import {
+  damageText,
+  LAYER_NAME,
+  LEVEL_NAME,
+  TOWER_NAMES,
+  TOWER_ROLES,
+  UPGRADE_REFUSAL_TEXT,
+  formatFunds,
+} from '../data/display';
 import type { TowerKind } from '../data/towers';
 import type { Game } from '../sim/game';
 import { buildBarNumber } from './buildBar';
@@ -119,7 +127,7 @@ export function mountTowerPanel(
     }
     setText(role, TOWER_ROLES[tower.kind]);
     setText(level, `Level ${tower.level}`);
-    setText(damage, String(tower.damage));
+    setText(damage, damageText(tower));
     setText(fireRate, `${Number(tower.fireRate.toFixed(2))}/s`);
     setText(range, `${tower.range} tiles`);
     setText(targets, tower.targets.map((layer) => LAYER_NAME[layer]).join(', '));
