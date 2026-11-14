@@ -55,9 +55,9 @@ describe('fieldManualEntries', () => {
   });
 
   it('names no tower that is not in play in an enemy entry (ADR-0009)', () => {
+    const towerNames = entries.filter((x) => x.group === 'tower').map((x) => x.name);
     for (const e of entries.filter((x) => x.group === 'enemy')) {
-      expect(e.effective).not.toContain('Sniper');
-      expect(e.weak).not.toContain('Sniper');
+      for (const name of [...e.effective, ...e.weak]) expect(towerNames).toContain(name);
     }
   });
 });

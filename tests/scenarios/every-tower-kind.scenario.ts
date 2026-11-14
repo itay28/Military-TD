@@ -9,10 +9,18 @@ export default defineScenario({
     { kind: 'aaGun', tile: { col: 6, row: 5 } },
     { kind: 'mortar', tile: { col: 10, row: 4 } },
     { kind: 'grenadeLauncher', tile: { col: 7, row: 4 } },
+    { kind: 'sniper', tile: { col: 7, row: 3 } },
   ],
   money: 2000,
   until: { ticks: 1 },
   expectations({ finalState }, expect) {
-    expect(finalState.towers.map((t) => t.kind)).toEqual(['rifleNest', 'cannon', 'aaGun', 'mortar', 'grenadeLauncher']);
+    expect(finalState.towers.map((t) => t.kind)).toEqual([
+      'rifleNest',
+      'cannon',
+      'aaGun',
+      'mortar',
+      'grenadeLauncher',
+      'sniper',
+    ]);
   },
 });

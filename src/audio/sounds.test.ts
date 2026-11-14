@@ -16,7 +16,7 @@ describe('SHOT_SOUND', () => {
     for (const kind of KINDS) for (const faction of FACTIONS) expect(SOUND_IDS).toContain(SHOT_SOUND[kind][faction]);
   });
 
-  // A kind not in play yet (the Sniper) borrows a sound until its rollout (#364) gives it its own.
+  // A kind not in play yet (the grenade launcher) borrows a sound until its rollout (#365) gives it its own.
   it("gives each tower kind in play its shot's own sound within a faction", () => {
     for (const faction of FACTIONS) {
       const shots = BUILD_KINDS.map((kind) => soundFor(shotOf(kind), faction));

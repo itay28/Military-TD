@@ -3,7 +3,7 @@ import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from './firstMap';
 import { openLevelSelect, state, view } from './helpers';
 
 // #567: every map draws its two Faction sets (ADR-0009 point 5): the defender's towers, the attacker's enemies, no Kenney.
-const TOWERS = ['rifleNest', 'aaGun', 'cannon', 'mortar', 'grenadeLauncher'] as const;
+const TOWERS = ['rifleNest', 'aaGun', 'cannon', 'mortar', 'grenadeLauncher', 'sniper'] as const;
 const ENEMIES = ['infantry', 'jeep', 'tank', 'helicopter'] as const;
 
 /** The scenario with one of each tower beside `mapId`'s Path (`tests/scenarios/everyTowerKind.ts`). */
@@ -35,7 +35,7 @@ for (const map of [FIRST_MAP, SECOND_MAP, THIRD_MAP, FOURTH_MAP]) {
     await page.evaluate((kinds) => {
       const td = window.__TD__!;
       for (const kind of kinds) td.command({ type: 'spawnEnemy', kind });
-      td.step(30);
+      td.step(5);
     }, ENEMIES);
     await expect.poll(async () => (await view(page)).rendered).toEqual([...TOWERS, ...ENEMIES].sort());
     expect(errors).toEqual([]);

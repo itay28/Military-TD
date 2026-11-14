@@ -21,7 +21,7 @@ export const SPRITES = {
   cannon: 'towerDefense_tile249',
   mortar: 'towerDefense_tile226',
   grenadeLauncher: null, // no frame until its renders land (#359): it keeps its shape
-  sniper: null, // shape until its renders land (#358)
+  sniper: null, // drawn from its renders (assets/render-*-sniper); no Kenney frame
   infantry: 'towerDefense_tile247',
   jeep: 'towerDefense_tile269',
   tank: 'tankBody_sand',

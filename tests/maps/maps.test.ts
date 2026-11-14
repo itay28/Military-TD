@@ -341,6 +341,7 @@ describe('wave timers fit the road', () => {
   // #588 weakened the AA Gun's ground fire, so the Training Ground's Hard run loses a few Lives now.
   // #381: Serpentine's 20th wave is a big Helicopter push that gets a few through on Hard.
   // #365: the bot builds Grenade Launchers now, which hold Serpentine's ground waves, so Hard keeps all 3 stars.
+  // #364: the Sniper in the good mix picks off that push, so Serpentine's Hard run holds all its Lives.
   const EXPECTED_STARS: Record<string, readonly [number, number]> = {
     mvp: [3, 2],
     switchback: [3, 1],
