@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.7.1](https://github.com/itay28/Military-TD/compare/v0.7.0...v0.7.1) (2026-11-14)
+
+
+### Features
+
+* draw every in-play tower and enemy from the map's faction renders ([#577](https://github.com/itay28/Military-TD/issues/577)) ([03d57ea](https://github.com/itay28/Military-TD/commit/03d57ead0c44a42c7675a5d8d8476c4b32ab6373))
+* give every map 20 waves ([#590](https://github.com/itay28/Military-TD/issues/590)) ([bb05397](https://github.com/itay28/Military-TD/commit/bb05397fec6cade1942697f751475dae3d49cd24))
+* Heavy tank turntables for all four factions ([#595](https://github.com/itay28/Military-TD/issues/595)) ([01066bc](https://github.com/itay28/Military-TD/commit/01066bc4197b0fd8845cc8ad3ebb02ea836f7fb0))
+* menu clip, a seamless looping battle video behind the main menu ([#578](https://github.com/itay28/Military-TD/issues/578)) ([8446dc3](https://github.com/itay28/Military-TD/commit/8446dc37adf1195aad4b80bead356434f5015e19))
+* put the APC, Fighter jet and Heavy tank in the waves ([#563](https://github.com/itay28/Military-TD/issues/563)) ([50eb84b](https://github.com/itay28/Military-TD/commit/50eb84bec49e8ccbf06fed5da4403f0bd97ae22d))
+* render table per faction, Boot loads the map's two sets ([#572](https://github.com/itay28/Military-TD/issues/572)) ([49e72bd](https://github.com/itay28/Military-TD/commit/49e72bd6f50ed3505b54274722b6cdb6fafd91a0))
+* wave timers fit each map's road ([#575](https://github.com/itay28/Military-TD/issues/575)) ([cfc7e43](https://github.com/itay28/Military-TD/commit/cfc7e4347e20a426ddeee6b144b8de5d83b455e4))
+
+
+### Bug Fixes
+
+* find the open Infra epic instead of hardcoding [#24](https://github.com/itay28/Military-TD/issues/24) ([#587](https://github.com/itay28/Military-TD/issues/587)) ([fa6cbba](https://github.com/itay28/Military-TD/commit/fa6cbba93c1d729d0ea463f49057a6f47e6f37eb))
+* hints e2e clears the first wave in one page round-trip ([#584](https://github.com/itay28/Military-TD/issues/584)) ([3177487](https://github.com/itay28/Military-TD/commit/3177487c6f829c1d319b0a5fcc8f2b3c75700ef2))
+* How to play in the game's wording, ordered sections and per-difficulty numbers ([#574](https://github.com/itay28/Military-TD/issues/574)) ([4d0e1c5](https://github.com/itay28/Military-TD/commit/4d0e1c5d4c3dccd3bb22668c5cbe7236ec7f7c27))
+* **perf:** keep the browser frame-time spec off the .tmj map imports ([#583](https://github.com/itay28/Military-TD/issues/583)) ([0ae7fc4](https://github.com/itay28/Military-TD/commit/0ae7fc4896a9b9cecef2601df2f0e41ffadbbc31))
+* **perf:** load the browser frame-time spec without the .tmj maps ([#582](https://github.com/itay28/Military-TD/issues/582)) ([5c253c4](https://github.com/itay28/Military-TD/commit/5c253c4c89b608232a9c3cf28c9b36c70e65c649))
+* **ui:** keep the HUD layout and next-wave timer the same on Normal and Hard ([#573](https://github.com/itay28/Military-TD/issues/573)) ([78c8e93](https://github.com/itay28/Military-TD/commit/78c8e93cb051026a8b5cb341115be22a8458b01b))
+* weaken the AA Gun's ground fire so it can't win alone ([#589](https://github.com/itay28/Military-TD/issues/589)) ([6661550](https://github.com/itay28/Military-TD/commit/66615509bffda3f3a330700808d5effe0086a4c5))
+
 ## [0.7.0](https://github.com/itay28/Military-TD/compare/v0.6.0...v0.7.0) (2026-11-12)
 
 
