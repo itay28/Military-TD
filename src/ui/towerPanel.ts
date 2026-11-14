@@ -2,6 +2,7 @@ import {
   damageText,
   LAYER_NAME,
   LEVEL_NAME,
+  SNIPER_INTEL_TEXT,
   TOWER_NAMES,
   TOWER_ROLES,
   UPGRADE_REFUSAL_TEXT,
@@ -9,6 +10,7 @@ import {
 } from '../data/display';
 import type { TowerKind } from '../data/towers';
 import type { Game } from '../sim/game';
+import { intelDepth } from '../sim/intel';
 import { buildBarNumber } from './buildBar';
 import { waveDps } from '../sim/stats';
 import { nextLevel } from '../sim/towers';
@@ -66,6 +68,11 @@ export function mountTowerPanel(
   const role = doc.createElement('p');
   role.dataset.testid = 'tower-role';
   role.className = 'role';
+  // Only a Sniper's panel has it: the intel it gives (#353).
+  const intel = doc.createElement('p');
+  intel.dataset.testid = 'tower-intel';
+  intel.className = 'role';
+  intel.hidden = true;
   const level = doc.createElement('p');
   level.dataset.testid = 'tower-level';
   const list = doc.createElement('dl');
@@ -96,7 +103,7 @@ export function mountTowerPanel(
   const sell = doc.createElement('button');
   sell.type = 'button';
   sell.dataset.testid = 'tower-sell';
-  dialog.append(heading, close, role, level, list, upgrade, upgradeReason, sell);
+  dialog.append(heading, close, role, intel, level, list, upgrade, upgradeReason, sell);
   root.append(dialog);
   root.hidden = true;
   let selectedId: number | undefined;
@@ -126,6 +133,10 @@ export function mountTowerPanel(
       heading.replaceChildren(badge, ` ${TOWER_NAMES[tower.kind]}`);
     }
     setText(role, TOWER_ROLES[tower.kind]);
+    // What it gives standing: the panel stays open while it is dismantled.
+    const depth = intelDepth([{ kind: tower.kind, level: tower.level }]);
+    setHidden(intel, depth === 0);
+    if (depth !== 0) setText(intel, SNIPER_INTEL_TEXT[depth]);
     setText(level, `Level ${tower.level}`);
     setText(damage, damageText(tower));
     setText(fireRate, `${Number(tower.fireRate.toFixed(2))}/s`);

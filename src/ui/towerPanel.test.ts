@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TOWER_NAMES, TOWER_ROLES } from '../data/display';
+import { SNIPER_INTEL_TEXT, TOWER_NAMES, TOWER_ROLES } from '../data/display';
 import { TOWER_LEVELS, TOWER_STATS } from '../data/towers';
 import { createGame, TICK_MS, type GameState } from '../sim/game';
 import type { MapData } from '../sim/map';
@@ -344,5 +344,35 @@ describe('Tower panel onSelect', () => {
     expect(calls).toBe(1);
     panel.select(undefined);
     expect(calls).toBe(1);
+  });
+});
+
+describe('Sniper intel line (#353)', () => {
+  const sniper = (level: number): Tower => ({
+    ...TOWER_STATS.sniper,
+    id: 1,
+    kind: 'sniper',
+    tile: { col: 1, row: 3 },
+    cooldownMs: 0,
+    heading: 0,
+    level,
+    spent: 88,
+  });
+  const intel = () => root.querySelector<HTMLElement>('[data-testid="tower-intel"]')!;
+
+  it('a Sniper says it reports the next wave, and that level 3 adds the wave after', () => {
+    mountTowerPanel(root, fakeGame([sniper(1)])).select(1);
+    expect(intel().hidden).toBe(false);
+    expect(intel().textContent).toBe(SNIPER_INTEL_TEXT[1]);
+  });
+
+  it('a level-3 Sniper says it reports the next two waves', () => {
+    mountTowerPanel(root, fakeGame([sniper(3)])).select(1);
+    expect(intel().textContent).toBe(SNIPER_INTEL_TEXT[2]);
+  });
+
+  it('other towers have no intel line', () => {
+    mountTowerPanel(root, fakeGame([rifleNest(1)])).select(1);
+    expect(intel().hidden).toBe(true);
   });
 });

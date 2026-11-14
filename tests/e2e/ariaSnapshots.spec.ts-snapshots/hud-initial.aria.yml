@@ -10,3 +10,5 @@
   - button "×2"
   - button "×3"
 - button "Pause"
+- group "Sniper intel":
+  - paragraph: Build a Sniper for intel
