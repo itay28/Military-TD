@@ -105,7 +105,7 @@ test('every tower and the enemies on the map are drawn from their renders (#567)
   await towersAndTank(page);
   const { rendered, sprites, drawOrder } = await view(page);
   expect(sprites).toBe(true);
-  expect(rendered).toEqual(['aaGun', 'cannon', 'infantry', 'mortar', 'rifleNest', 'tank']);
+  expect(rendered).toEqual(['aaGun', 'cannon', 'infantry', 'mortar', 'rifleNest', 'sniper', 'tank']);
   expect(drawOrder.filter((layer) => LAYERS.includes(layer))).toEqual(LAYERS);
 });
 

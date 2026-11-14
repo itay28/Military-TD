@@ -18,6 +18,6 @@ test('rendered sprites: every tower and a Tank on the map (ADR-0009, #567)', asy
   await page.evaluate(() => window.__TD__!.step(240));
   await expect
     .poll(async () => (await view(page)).rendered)
-    .toEqual(['aaGun', 'cannon', 'mortar', 'rifleNest', 'tank']);
+    .toEqual(['aaGun', 'cannon', 'mortar', 'rifleNest', 'sniper', 'tank']);
   await expect(page.locator('#game')).toHaveScreenshot('rendered.png');
 });

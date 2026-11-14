@@ -10,12 +10,14 @@ test('the Sniper is on the build bar under key 5: build it and upgrade it to lev
   await page.keyboard.press('5');
   await expect(page.getByTestId('build-sniper')).toHaveAttribute('aria-pressed', 'true');
   await clickTile(page, TILE);
-  expect((await state(page)).towers.map((t) => t.kind)).toContain('sniper');
+  expect((await state(page)).towers.filter((t) => t.kind === 'sniper')).toHaveLength(2);
   await clickTile(page, TILE);
   await expect(page.getByRole('dialog', { name: 'Sniper' })).toBeVisible();
   await page.keyboard.press('u');
   await expect(page.getByTestId('tower-level')).toHaveText('Level 2');
   await page.keyboard.press('u');
   await expect(page.getByTestId('tower-level')).toHaveText('Level 3');
-  expect((await state(page)).towers.find((t) => t.kind === 'sniper')).toMatchObject({ level: 3 });
+  expect((await state(page)).towers.find((t) => t.tile.col === TILE.col && t.tile.row === TILE.row)).toMatchObject({
+    level: 3,
+  });
 });

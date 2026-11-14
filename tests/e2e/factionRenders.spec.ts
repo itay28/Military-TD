@@ -3,14 +3,14 @@ import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from './firstMap';
 import { openLevelSelect, state, view } from './helpers';
 
 // #567: every map draws its two Faction sets (ADR-0009 point 5): the defender's towers, the attacker's enemies, no Kenney.
-const TOWERS = ['rifleNest', 'aaGun', 'cannon', 'mortar'] as const;
+const TOWERS = ['rifleNest', 'aaGun', 'cannon', 'mortar', 'sniper'] as const;
 const ENEMIES = ['infantry', 'jeep', 'tank', 'helicopter'] as const;
 
 /** The scenario with one of each tower beside `mapId`'s Path (`tests/scenarios/everyTowerKind.ts`). */
 const everyTowerKind = (mapId: string) => (mapId === FIRST_MAP.id ? 'every-tower-kind' : `every-tower-kind-${mapId}`);
 
 for (const map of [FIRST_MAP, SECOND_MAP, THIRD_MAP, FOURTH_MAP]) {
-  test(`${map.name}: all 4 towers and all 4 enemy kinds are drawn from renders, with no texture errors`, async ({
+  test(`${map.name}: all 5 towers and all 4 enemy kinds are drawn from renders, with no texture errors`, async ({
     page,
   }) => {
     const errors: string[] = [];
@@ -29,7 +29,7 @@ for (const map of [FIRST_MAP, SECOND_MAP, THIRD_MAP, FOURTH_MAP]) {
     await page.waitForFunction(() => window.__TD__ !== undefined);
     await expect.poll(async () => (await state(page)).mapId).toBe(map.id);
 
-    // Building all 4 takes more Money than a map starts with, so a scenario places them on this map.
+    // Building all 5 takes more Money than a map starts with, so a scenario places them on this map.
     await page.evaluate((name) => window.__TD__!.loadScenario(name), everyTowerKind(map.id));
     expect((await state(page)).towers.map((t) => t.kind).sort()).toEqual([...TOWERS].sort());
     await page.evaluate((kinds) => {
