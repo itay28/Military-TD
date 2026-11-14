@@ -15,6 +15,7 @@ import {
 import { FACTIONS, type Faction } from '../sim/factions';
 import { SPRITES, type SpriteKind } from './sprites';
 import { TURNTABLE_BUDGET_BYTES } from './turntables';
+import { modelFor } from './modelViews';
 import { BUILD_KINDS, NOT_IN_PLAY, type TowerKind } from './towers';
 import { NOT_PLAYABLE_KINDS, PLAYABLE_KINDS } from './enemies';
 import { MAPS } from './maps';
@@ -280,6 +281,16 @@ describe('the committed Grenade launcher renders (art-ahead: not in RENDERS unti
 
     it(`keeps ${id} out of RENDERS until it is in play`, () => {
       expect(ALL_RENDERS.map((r) => r.id)).not.toContain(id);
+    });
+  }
+});
+
+describe('the Heavy tank turntables (#510)', () => {
+  for (const faction of FACTIONS) {
+    it(`gives the ${faction} Heavy tank a turntable in the Field manual`, () => {
+      const model = modelFor(faction, 'heavyTank');
+      expect(model.turntable?.url).toContain(`${faction}-heavy-tank-turntable`);
+      expect(model.turntable).toMatchObject({ frames: 24 });
     });
   }
 });

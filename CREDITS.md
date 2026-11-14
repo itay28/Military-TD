@@ -74,39 +74,39 @@ Third-party assets in this game. Generated from `assets/manifest.json` by `npm r
 - Downloaded: 2026-11-02
 - Files: `assets/render-russia-tank/**`
 
-## T-14 Armara Uralvagon Factory (top-down render)
+## T-14 Armara Uralvagon Factory (top-down render and turntable)
 
 - Author: 3DYAROSLAV2
 - Source: <https://sketchfab.com/3d-models/9864af9626f14256a255d4faea52ec7f>
 - License: CC-BY-4.0
-- Attribution: "T-14 Armara Uralvagon Factory" by 3DYAROSLAV2 (sketchfab.com), CC-BY 4.0, rendered top-down
+- Attribution: "T-14 Armara Uralvagon Factory" by 3DYAROSLAV2 (sketchfab.com), CC-BY 4.0, rendered top-down, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-11
 - Files: `assets/render-russia-heavy-tank/**`
 
-## WIP - Abrams M1A2 TUSK 2 (top-down render)
+## WIP - Abrams M1A2 TUSK 2 (top-down render and turntable)
 
 - Author: davidfalke
 - Source: <https://sketchfab.com/3d-models/efb7311b641f4a76afff19e5f3068298>
 - License: CC-BY-4.0
-- Attribution: "WIP - Abrams M1A2 TUSK 2" by davidfalke (sketchfab.com), CC-BY 4.0, rendered top-down, tinted tan
+- Attribution: "WIP - Abrams M1A2 TUSK 2" by davidfalke (sketchfab.com), CC-BY 4.0, rendered top-down, tinted tan, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-11
 - Files: `assets/render-us-heavy-tank/**`
 
-## T98 Main Battle Tank (top-down render)
+## T98 Main Battle Tank (top-down render and turntable)
 
 - Author: Risama
 - Source: <https://sketchfab.com/3d-models/d75cdec1a34b417fadbb72656664b54a>
 - License: CC-BY-4.0
-- Attribution: "T98 Main Battle Tank" by Risama (sketchfab.com), CC-BY 4.0, rendered top-down, diorama base removed, turret turned to the front
+- Attribution: "T98 Main Battle Tank" by Risama (sketchfab.com), CC-BY 4.0, rendered top-down, diorama base removed, turret turned to the front, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-11
 - Files: `assets/render-china-heavy-tank/**`
 
-## T-72M1 (top-down render)
+## T-72M1 (top-down render and turntable)
 
 - Author: ballDAYLCbusta
 - Source: <https://sketchfab.com/3d-models/673f659618b748c4847c659aadcd2aba>
 - License: CC-BY-4.0
-- Attribution: "T-72M1" by ballDAYLCbusta (sketchfab.com), CC-BY 4.0, rendered top-down, painted olive
+- Attribution: "T-72M1" by ballDAYLCbusta (sketchfab.com), CC-BY 4.0, rendered top-down, painted olive, plus a turntable of the whole model (24 views from 30 degrees up) for the Field manual
 - Downloaded: 2026-11-11
 - Files: `assets/render-insurgents-heavy-tank/**`
 
