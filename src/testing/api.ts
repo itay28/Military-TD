@@ -77,14 +77,14 @@ export interface TestView {
     readonly frame: number;
   }[];
   /**
-   * The enemy card open now: the enemy it shows, its kind and the name it gives, and whether a tap pinned it (rather
-   * than a hovering mouse). Null when it is closed.
-   */
-  /**
    * Sniper intel in the HUD (#353): the coming waves it shows (none without a Sniper, or while no wave is due), and
    * whether the "Build a Sniper for intel" hint is up.
    */
   readonly intel: { readonly waves: readonly WaveIntel[]; readonly hint: boolean };
+  /**
+   * The enemy card open now: the enemy it shows, its kind and the name it gives, and whether a tap pinned it (rather
+   * than a hovering mouse). Null when it is closed.
+   */
   readonly enemyCard: {
     readonly enemyId: number;
     readonly kind: EnemyKind;
