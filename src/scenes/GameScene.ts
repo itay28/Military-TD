@@ -444,6 +444,7 @@ export class GameScene extends Phaser.Scene {
       sprites: this.textures.exists(ATLAS_KEY),
       mapTiles: this.mapTiles,
       enemies: this.enemyViews.views().map(({ id, kind, heading, frame }) => ({ id, kind, facing: heading, frame })),
+      intel: this.hud.intel,
       enemyCard: this.enemyCardView(),
       turrets: [...this.towerViewById].map(([towerId, { angle }]) => ({ towerId, angle })),
       rendered: [
@@ -905,6 +906,10 @@ export class GameScene extends Phaser.Scene {
     this.hud = mountHud(this.hudRoot, this.sim, speed, {
       onSelectTower: (id) => this.selectTower(id),
       onHighlightKind: (kind) => (this.highlightedKind = kind),
+      iconFor: (kind) => {
+        const render = this.renderOf(kind);
+        return render && renderIcon(render);
+      },
     });
     // Placing a new tower, inspecting a placed one and inspecting an enemy are exclusive: picking one closes the others.
     this.buildBar = mountBuildBar(

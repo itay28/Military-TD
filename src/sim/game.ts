@@ -134,6 +134,8 @@ export type SellTowerRefusal = 'gameEnded' | 'noSuchTower' | 'dismantling';
 export interface Game {
   readonly state: GameState;
   readonly events: Events<GameEvents>;
+  /** The wave schedule it was built with (`GameConfig.waves`), in order: what Sniper intel reports on (#353). */
+  readonly waves: readonly WaveData[];
   /** Advances the game by `dtMs` milliseconds; does nothing once it's over. Throws RangeError for a negative or non-finite dt. */
   tick(dtMs: number): void;
   /**
@@ -303,6 +305,7 @@ export function createGame(config: GameConfig): Game {
   return {
     state,
     events: { on: emitter.on },
+    waves: config.waves,
     tick(dtMs) {
       if (!Number.isFinite(dtMs) || dtMs < 0)
         throw new RangeError(`tick(dtMs): ${dtMs} is not a finite, non-negative time`);

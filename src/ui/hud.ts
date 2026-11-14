@@ -1,16 +1,68 @@
 import { DIFFICULTY } from '../data/difficulty';
-import { ENEMY_NAMES, TERMS, WAVE_BANNER_MS, contactBanner, formatFunds, hqLevel } from '../data/display';
+import {
+  ENEMY_NAMES,
+  ENEMY_STYLE,
+  ENEMY_WEAKNESS,
+  TERMS,
+  WAVE_BANNER_MS,
+  contactBanner,
+  formatFunds,
+  hqLevel,
+} from '../data/display';
+import { ENEMY_STATS, type EnemyKind } from '../data/enemies';
 import { mountSpeedButtons, type GameSpeedControl } from '../scenes/gameSpeed';
 import { leadBoss } from '../sim/enemies';
-import { isGameOver, type Game } from '../sim/game';
+import { isGameOver, type Game, type GameState } from '../sim/game';
+import { intelDepth, waveIntel, type WaveIntel } from '../sim/intel';
 import { waveDps } from '../sim/stats';
+import type { WaveData } from '../sim/waves';
 import { mountDpsMeter, type DpsMeterOptions } from './dpsMeter';
+import { renderIconLayers, type RenderIcon } from './renderIcon';
 
 /** The parts of the Game the HUD reads and commands. */
-export type HudGame = Pick<Game, 'state' | 'events' | 'callNextWave'>;
+export type HudGame = Pick<Game, 'state' | 'events' | 'callNextWave' | 'waves'>;
 
 /** The player's game speed, which the scene owns: the HUD shows it and sets the one clicked. */
 export type HudSpeed = GameSpeedControl;
+
+/** The HUD's options: the DPS meter's, plus the icons Sniper intel (#353) shows. */
+export interface HudOptions extends DpsMeterOptions {
+  /** The render a kind is drawn with on this map (#567), or null when it has none loaded: then a shape stands in. */
+  readonly iconFor?: (kind: EnemyKind) => RenderIcon | null;
+}
+
+/** The intel strip's text with no Sniper on the field (#353), shown once per game. */
+export const INTEL_HINT = 'Build a Sniper for intel';
+
+/** What Sniper intel shows now; see `intelView`. */
+export interface IntelView {
+  /** A wave is due: the strip may show. */
+  readonly due: boolean;
+  /** The number of the next wave to start, counting from 1. */
+  readonly nextWave: number;
+  /** The coming waves the Snipers report: none without one. */
+  readonly waves: readonly WaveIntel[];
+}
+
+/**
+ * What Sniper intel shows now (#353): the coming waves the player's Snipers report, while a wave is due. In timed mode
+ * that's whenever the countdown runs, during a wave too; in Tactical mode only in the build phase. `due` is false once
+ * the last wave has started or the game is over.
+ */
+export function intelView(
+  state: Pick<GameState, 'towers' | 'waveNumber' | 'totalWaves' | 'phase' | 'tacticalMode' | 'nextWaveAtMs'>,
+  waves: readonly WaveData[],
+): IntelView {
+  const due =
+    !isGameOver(state.phase) &&
+    state.waveNumber < Math.min(state.totalWaves, waves.length) &&
+    (state.tacticalMode ? state.phase === 'build' : state.nextWaveAtMs !== undefined);
+  const nextWave = state.waveNumber + 1;
+  return { due, nextWave, waves: due ? waveIntel(waves, state.waveNumber, intelDepth(state.towers)) : [] };
+}
+
+/** The intel icon's square, in CSS pixels. */
+const INTEL_ICON_PX = 20;
 
 export interface Hud {
   /** The group holding the HUD's buttons; the pause menu adds its Pause button here. */
@@ -19,12 +71,15 @@ export interface Hud {
   startWave(): void;
   /** Redraws from `game.state`; call once per frame. Writes only values that changed. */
   update(): void;
+  /** What the Sniper intel strip shows (#353): the waves it reports, and whether the "Build a Sniper" hint is up. */
+  readonly intel: { readonly waves: readonly WaveIntel[]; readonly hint: boolean };
   /** Removes the HUD's elements, and unsubscribes from game events. */
   destroy(): void;
 }
 
 /** Builds the HUD inside `root` and shows `game` in it. It's DOM, not Phaser text, so tests can query it (ADR-0003). */
-export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsMeter: DpsMeterOptions = {}): Hud {
+export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, options: HudOptions = {}): Hud {
+  const { iconFor = () => null, ...dpsMeter } = options;
   const doc = root.ownerDocument;
   // Three fixed groups, so a text that appears or grows never moves a button (#274): the stats, a message slot that
   // takes the leftover space and clips, and the controls.
@@ -118,6 +173,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
   bossMeter.append(bossName, bossBar, bossCount);
   boss.append(bossMeter);
   root.append(boss);
+  const intel = mountIntel(root, iconFor);
   const meter = mountDpsMeter(root, game, dpsMeter);
   dps.addEventListener('click', () => {
     meter.toggle();
@@ -168,6 +224,7 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
     const { nextWaveAtMs } = state;
     setText(nextWave, nextWaveAtMs === undefined ? '' : `Next ${Math.ceil((nextWaveAtMs - state.timeMs) / 1000)}s`);
     updateBoss();
+    intel.update(intelView(state, game.waves));
     meter.update();
   };
   const updateBoss = () => {
@@ -205,10 +262,131 @@ export function mountHud(root: HTMLElement, game: HudGame, speed: HudSpeed, dpsM
     controls,
     startWave: onStartWave,
     update,
+    get intel() {
+      return intel.shown;
+    },
     destroy() {
       offWaveStarted();
       offWaveCleared();
       root.replaceChildren();
+    },
+  };
+}
+
+/**
+ * The Sniper intel strip (#353): hangs under the HUD like the boss bar, so it never moves a button. One row per
+ * reported wave, each kind a chip with its icon, count and name; hovering, focusing or tapping a chip shows its
+ * weakness line and armor. With no Sniper it hints at building one, once per game: until that wave starts, or a
+ * Sniper is built.
+ */
+function mountIntel(root: HTMLElement, iconFor: (kind: EnemyKind) => RenderIcon | null) {
+  const doc = root.ownerDocument;
+  const strip = doc.createElement('div');
+  strip.dataset.testid = 'hud-intel';
+  strip.className = 'hud-intel';
+  strip.setAttribute('role', 'group');
+  strip.setAttribute('aria-label', 'Sniper intel');
+  strip.hidden = true;
+  const rows = doc.createElement('div');
+  rows.className = 'intel-waves';
+  const tip = doc.createElement('p');
+  tip.id = 'hud-intel-tip';
+  tip.dataset.testid = 'intel-tip';
+  tip.className = 'intel-tip';
+  tip.setAttribute('role', 'tooltip');
+  tip.hidden = true;
+  const hint = doc.createElement('p');
+  hint.dataset.testid = 'intel-hint';
+  hint.className = 'intel-hint';
+  hint.textContent = INTEL_HINT;
+  hint.hidden = true;
+  strip.append(rows, hint, tip);
+  root.append(strip);
+
+  /** The hint: not yet shown, up for the wave number it was first shown before, or over for this game. */
+  let hintFor: number | 'pending' | 'done' = 'pending';
+  let shown: Hud['intel'] = { waves: [], hint: false };
+  /** The waves drawn, as a key, so the chips are rebuilt only when what they say changes. */
+  let drawnKey = '';
+  /** The chip whose tip a tap pinned open. */
+  let tapped: HTMLElement | undefined;
+
+  const showTip = (chip: HTMLElement | undefined) => {
+    const kind = chip?.dataset.kind as EnemyKind | undefined;
+    tip.hidden = !kind;
+    if (kind) tip.textContent = `${ENEMY_WEAKNESS[kind]} Armor ${ENEMY_STATS[kind].armor}.`;
+  };
+  const chipFor = (kind: EnemyKind, count: number) => {
+    const chip = doc.createElement('button');
+    chip.type = 'button';
+    chip.dataset.testid = 'intel-kind';
+    chip.dataset.kind = kind;
+    chip.className = 'intel-kind';
+    chip.setAttribute('aria-describedby', tip.id);
+    const icon = doc.createElement('span');
+    icon.className = 'intel-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    const render = iconFor(kind);
+    if (render) icon.append(...renderIconLayers(doc, render, INTEL_ICON_PX));
+    else {
+      const { shape, color } = ENEMY_STYLE[kind];
+      const fallback = doc.createElement('span');
+      fallback.className = `intel-shape ${shape}`;
+      fallback.style.background = `#${color.toString(16).padStart(6, '0')}`;
+      icon.append(fallback);
+    }
+    const countEl = doc.createElement('span');
+    countEl.className = 'intel-count';
+    countEl.textContent = String(count);
+    const name = doc.createElement('span');
+    name.className = 'intel-name';
+    name.textContent = ENEMY_NAMES[kind];
+    chip.append(icon, countEl, ' ', name);
+    chip.addEventListener('mouseenter', () => showTip(chip));
+    chip.addEventListener('mouseleave', () => showTip(tapped));
+    chip.addEventListener('focus', () => showTip(chip));
+    chip.addEventListener('blur', () => showTip(tapped));
+    chip.addEventListener('click', () => {
+      tapped = tapped === chip ? undefined : chip;
+      showTip(tapped);
+    });
+    return chip;
+  };
+  const draw = (waves: readonly WaveIntel[]) => {
+    tapped = undefined;
+    showTip(undefined);
+    rows.replaceChildren(
+      ...waves.map(({ waveNumber, composition }) => {
+        const row = doc.createElement('div');
+        row.dataset.testid = 'intel-wave';
+        row.dataset.wave = String(waveNumber);
+        row.className = 'intel-wave';
+        const label = doc.createElement('span');
+        label.className = 'intel-label';
+        label.textContent = `Wave ${waveNumber}`;
+        row.append(label, ...composition.map(({ kind, count }) => chipFor(kind, count)));
+        return row;
+      }),
+    );
+  };
+
+  return {
+    get shown() {
+      return shown;
+    },
+    update({ due, nextWave, waves }: IntelView) {
+      if (waves.length > 0 || (typeof hintFor === 'number' && hintFor !== nextWave)) hintFor = 'done';
+      else if (due && hintFor === 'pending') hintFor = nextWave;
+      const showHint = due && hintFor === nextWave;
+      const key = JSON.stringify(waves);
+      if (key !== drawnKey) {
+        drawnKey = key;
+        draw(waves);
+      }
+      if (hint.hidden !== !showHint) hint.hidden = !showHint;
+      const hidden = waves.length === 0 && !showHint;
+      if (strip.hidden !== hidden) strip.hidden = hidden;
+      shown = { waves, hint: showHint };
     },
   };
 }

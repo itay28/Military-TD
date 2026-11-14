@@ -160,6 +160,15 @@ export const TOWER_ROLES = {
   sniper: 'Long range, slow, hits the toughest target. Reports on the next wave.',
 } as const satisfies Record<TowerKind, string>;
 
+/**
+ * What a Sniper's tower panel says about its intel (#353), by how many coming waves it reports (`intelDepth`): below
+ * level 3 the next wave, at level 3 the wave after next as well.
+ */
+export const SNIPER_INTEL_TEXT = {
+  1: 'Intel: shows the next wave in the HUD. Level 3 adds the wave after.',
+  2: 'Intel: shows the next two waves in the HUD.',
+} as const;
+
 /** What the player calls each enemy kind. Every kind needs one. */
 export const ENEMY_NAMES = {
   infantry: 'Infantry',
