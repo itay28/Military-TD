@@ -36,6 +36,9 @@
       - listitem: "Tank (reward $25, $23 on Hard; HQ −5): Armor: Rifle Nests barely scratch it. Cannons and Mortars work."
       - listitem: "Jeep (reward $3; HQ −1): Fast but fragile, no armor: quick-firing Rifle Nests and AA Guns catch it."
       - listitem: "Helicopter (reward $10, $9 on Hard; HQ −2): Flies: only Rifle Nests and AA Guns reach it. Its armor blunts rifle rounds; AA Guns work best."
+      - listitem: "APC (reward $12, $11 on Hard; HQ −3): Armored carrier. Kill it and its squad jumps out."
+      - listitem: "Heavy tank (reward $120, $108 on Hard; HQ −10): Boss. Heavy armor, huge HP."
+      - listitem: "Jet (reward $6, $5 on Hard; HQ −2): Fast, fragile jet. Needs AA coverage along the route."
     - heading "Keys" [level=3]
     - table:
       - rowgroup:

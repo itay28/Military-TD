@@ -80,6 +80,8 @@ test('the Field manual lists the entries, the model with its text alternative, a
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'Field manual' }).click();
   await page.getByRole('button', { name: 'Tank' }).click();
+  // The model has loaded: the "Loading model…" placeholder is hidden, so it is not in the snapshot.
+  await expect(page.locator('#field-manual .fm-loading')).toBeHidden();
   await expectAria(page.locator('#field-manual'), 'field-manual.aria.yml');
 });
 

@@ -41,8 +41,8 @@ describe('gunship (boss)', () => {
     });
   });
 
-  it('is not in play yet', () => {
-    expect(NOT_PLAYABLE_KINDS.includes('gunship')).toBe(true);
+  it('is not in play yet: it comes with map 5 (#81)', () => {
+    expect(NOT_PLAYABLE_KINDS).toEqual(['gunship']);
   });
 });
 
@@ -69,7 +69,7 @@ describe('apc', () => {
     expect(ENEMY_DISMOUNT).toEqual({ apc: { kind: 'infantry', count: 3 } });
   });
 
-  it('is not in play yet: its rollout adds it to the waves (ADR-0009)', () => {
-    expect(NOT_PLAYABLE_KINDS.includes('apc')).toBe(true);
+  it('is in play: its renders are done for every Faction (#366)', () => {
+    expect(NOT_PLAYABLE_KINDS.includes('apc')).toBe(false);
   });
 });
