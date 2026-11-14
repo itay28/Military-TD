@@ -24,9 +24,9 @@ export const DISMOUNT_SPREAD_TILES = 0.3;
 
 /**
  * Kinds in no map or screen yet: each waits for its renders and rollout (ADR-0009: no map mixes art styles). Remove
- * one here when it ships. The Gunship comes with map 5 (#81); the APC, jet and Heavy tank went in play in #366.
+ * one here when it ships. Empty now: the APC, jet and Heavy tank went in play in #366, the Gunship with map 5 (#81).
  */
-export const NOT_PLAYABLE_KINDS: readonly EnemyKind[] = ['gunship'];
+export const NOT_PLAYABLE_KINDS: readonly EnemyKind[] = [];
 
 /** Every kind a player can meet. */
 export const PLAYABLE_KINDS = (Object.keys(ENEMY_STATS) as EnemyKind[]).filter((k) => !NOT_PLAYABLE_KINDS.includes(k));

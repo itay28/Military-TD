@@ -41,8 +41,8 @@ describe('gunship (boss)', () => {
     });
   });
 
-  it('is not in play yet: it comes with map 5 (#81)', () => {
-    expect(NOT_PLAYABLE_KINDS).toEqual(['gunship']);
+  it('is in play: it comes with map 5 (#81), so every kind is playable', () => {
+    expect(NOT_PLAYABLE_KINDS).toEqual([]);
   });
 });
 

@@ -536,3 +536,159 @@ export const HAIRPIN_WAVES: readonly WaveData[] = [
     ],
   },
 ];
+
+/**
+ * Gauntlet, the boss map (#81): the hardest schedule and the only one with every kind. The APC and the jet are known
+ * from the earlier maps, so they come in from waves 5 and 7; waves 11–19 end in a second push of Tanks 50 s in, as on
+ * every map. The last wave ends with both bosses, one Heavy tank and then one Gunship, after every other group.
+ */
+export const GAUNTLET_WAVES: readonly WaveData[] = [
+  { groups: [group('infantry', 10, 900)] },
+  { groups: [group('infantry', 12, 600), group('jeep', 3, 1400, 5000)] },
+  { groups: [group('jeep', 7, 850), group('infantry', 13, 550, 4000)] },
+  { groups: [group('tank', 5, 2000), group('infantry', 17, 550, 2000)] },
+  {
+    groups: [
+      group('helicopter', 6, 2050),
+      group('jeep', 8, 650, 4000),
+      group('apc', 2, 2450, 9000),
+      group('tank', 5, 2150, 10000),
+    ],
+  },
+  { groups: [group('infantry', 24, 500), group('tank', 6, 2300, 3000), group('apc', 3, 2300, 12000)] },
+  {
+    groups: [
+      group('helicopter', 8, 1650),
+      group('infantry', 19, 550, 2000),
+      group('jet', 3, 1000, 6000),
+      group('jeep', 8, 650, 8000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 8, 2150),
+      group('jeep', 14, 500, 3000),
+      group('helicopter', 6, 1650, 6000),
+      group('apc', 3, 2450, 10000),
+    ],
+  },
+  {
+    groups: [
+      group('helicopter', 11, 1500),
+      group('infantry', 24, 500, 2000),
+      group('jeep', 11, 500, 8000),
+      group('tank', 5, 2450, 12000),
+      group('jet', 3, 1000, 16000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 8, 2050),
+      group('helicopter', 11, 1650, 3000),
+      group('infantry', 24, 500, 5000),
+      group('jeep', 17, 500, 6000),
+      group('apc', 3, 2300, 10000),
+    ],
+  },
+  {
+    groups: [
+      group('infantry', 30, 500),
+      group('tank', 4, 2450, 3000),
+      group('apc', 3, 2450, 12000),
+      group('jet', 4, 900, 18000),
+      group('tank', 3, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('helicopter', 14, 1500),
+      group('jeep', 18, 400, 3000),
+      group('infantry', 24, 500, 8000),
+      group('tank', 3, 2450, 20000),
+      group('tank', 3, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 6, 2300),
+      group('infantry', 30, 400, 2000),
+      group('helicopter', 8, 1650, 10000),
+      group('jet', 4, 1000, 24000),
+      group('tank', 4, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('apc', 5, 2300),
+      group('helicopter', 14, 1500, 2000),
+      group('jeep', 21, 400, 6000),
+      group('infantry', 30, 400, 12000),
+      group('tank', 4, 2450, 24000),
+      group('tank', 4, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 7, 2150),
+      group('jet', 6, 900, 4000),
+      group('infantry', 36, 400, 6000),
+      group('helicopter', 12, 1500, 12000),
+      group('jeep', 18, 400, 30000),
+      group('tank', 5, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('helicopter', 18, 1400),
+      group('apc', 6, 2150, 3000),
+      group('jeep', 23, 350, 8000),
+      group('jet', 7, 800, 16000),
+      group('tank', 4, 2450, 30000),
+      group('tank', 5, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 8, 2050),
+      group('infantry', 41, 350, 2000),
+      group('helicopter', 14, 1400, 6000),
+      group('apc', 5, 2150, 14000),
+      group('jeep', 21, 350, 34000),
+      group('tank', 5, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('infantry', 44, 350),
+      group('jet', 8, 800, 3000),
+      group('tank', 8, 2050, 6000),
+      group('jeep', 23, 350, 14000),
+      group('helicopter', 12, 1500, 30000),
+      group('tank', 6, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 10, 1950),
+      group('helicopter', 21, 1300, 2000),
+      group('apc', 7, 2050, 4000),
+      group('infantry', 41, 350, 8000),
+      group('jet', 8, 800, 16000),
+      group('tank', 4, 2450, 36000),
+      group('tank', 6, 3000, 50000),
+    ],
+  },
+  {
+    groups: [
+      group('tank', 11, 1900),
+      group('helicopter', 22, 1250, 2000),
+      group('apc', 8, 1950, 4000),
+      group('infantry', 46, 350, 6000),
+      group('jet', 8, 750, 10000),
+      group('jeep', 26, 350, 14000),
+      group('tank', 6, 2150, 40000),
+      group('heavyTank', 1, 0, 48000),
+      group('gunship', 1, 0, 56000),
+    ],
+  },
+];

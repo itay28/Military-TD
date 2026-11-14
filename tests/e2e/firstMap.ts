@@ -10,3 +10,6 @@ export const SECOND_MAP = { id: 'switchback', name: 'Switchback' } as const;
 /** The third and fourth maps, for the same reason. */
 export const THIRD_MAP = { id: 'serpentine', name: 'Serpentine' } as const;
 export const FOURTH_MAP = { id: 'hairpin', name: 'Hairpin' } as const;
+
+/** The fifth map, the boss map (#81), for the same reason. */
+export const FIFTH_MAP = { id: 'gauntlet', name: 'Gauntlet' } as const;

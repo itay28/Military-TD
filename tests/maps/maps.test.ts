@@ -217,6 +217,37 @@ describe('04-hairpin.tmj', () => {
   });
 });
 
+describe('05-gauntlet.tmj', () => {
+  const file = 'maps/05-gauntlet.tmj';
+  const earlier = mapFiles.filter((f) => f !== file);
+
+  it('enters on the left edge and leaves on the bottom edge', () => {
+    const map = createMap(load(file));
+    expect([map.cols, map.rows]).toEqual([16, 10]);
+    expect(map.waypoints[0]?.col).toBe(0);
+    expect(map.waypoints.at(-1)?.row).toBe(map.rows - 1);
+  });
+
+  it('has the longest Path so far, with the most turns', () => {
+    const map = createMap(load(file));
+    const others = earlier.map((f) => createMap(load(f)));
+    expect(map.pathTiles.length).toBeGreaterThan(Math.max(...others.map((m) => m.pathTiles.length)));
+    expect(map.waypoints.length).toBeGreaterThan(Math.max(...others.map((m) => m.waypoints.length)));
+  });
+
+  it('draws road tiles on the Path and nowhere else', () => {
+    for (const { tile, road, path } of roadsAndPath(file)) expect({ tile, road }).toEqual({ tile, road: path });
+  });
+
+  it('uses the same tileset as the Training Ground', () => {
+    expect(tilesets(file)).toEqual(tilesets(TRAINING_GROUND));
+  });
+
+  it('is painted from NAIP: its own ground image', () => {
+    expect(load(file).groundImage).toBe('../assets/naip-maps/gauntlet.jpg');
+  });
+});
+
 /** Rifle Nests only, as many as Money allows, never upgraded; `fitOrder` moves each to the best free tile. */
 const RIFLES_ONLY: readonly BuildStep[] = Array.from({ length: 30 }, (_, i) => ({
   place: 'rifleNest',
@@ -342,11 +373,13 @@ describe('wave timers fit the road', () => {
   // #381: Serpentine's 20th wave is a big Helicopter push that gets a few through on Hard.
   // #365: the bot builds Grenade Launchers now, which hold Serpentine's ground waves, so Hard keeps all 3 stars.
   // #364: the Sniper in the good mix picks off that push, so Serpentine's Hard run holds all its Lives.
+  // #81: Gauntlet, the boss map, loses a few early Lives on Hard.
   const EXPECTED_STARS: Record<string, readonly [number, number]> = {
     mvp: [3, 2],
     switchback: [3, 1],
     serpentine: [3, 3],
     hairpin: [3, 2],
+    gauntlet: [3, 2],
   };
 
   it.each(MAPS)(
@@ -370,6 +403,21 @@ describe('wave timers fit the road', () => {
 /** One tower kind only, as many as Money allows, never upgraded; `fitOrder` moves each to the best free tile. */
 const onlyKind = (kind: TowerKind): readonly BuildStep[] =>
   Array.from({ length: 30 }, (_, i) => ({ place: kind, tile: { col: i % 16, row: Math.floor(i / 16) } }));
+
+// #81: the boss map's AC asks that a single tower kind lose on Normal too, not only on Hard.
+describe('Gauntlet on Normal: one tower kind alone loses (#81, ADR-0007)', () => {
+  const gauntlet = MAPS.find((map) => map.id === 'gauntlet')!;
+  it.each(BUILD_KINDS)('%s alone loses Normal', (kind) => {
+    const result = runScenario({
+      map: gauntlet.data,
+      waves: gauntlet.waves,
+      autoStartWaves: true,
+      bot: buildOrder(fitOrder(gauntlet.data, onlyKind(kind))),
+      until: 'end',
+    });
+    expect(result.outcome).toBe('defeat');
+  });
+});
 
 /** Grenade Launchers only (#365): ground-only, so air never stops. */
 const LAUNCHERS_ONLY: readonly BuildStep[] = Array.from({ length: 20 }, (_, i) => ({

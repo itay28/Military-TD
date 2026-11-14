@@ -21,7 +21,7 @@ import { NOT_PLAYABLE_KINDS, PLAYABLE_KINDS } from './enemies';
 import { MAPS } from './maps';
 
 const IN_PLAY: readonly SpriteKind[] = [...BUILD_KINDS, ...PLAYABLE_KINDS];
-const SINGLE_IMAGE: readonly SpriteKind[] = ['infantry', 'jeep', 'helicopter', 'apc', 'jet'];
+const SINGLE_IMAGE: readonly SpriteKind[] = ['infantry', 'jeep', 'helicopter', 'apc', 'jet', 'gunship'];
 const kebab = (kind: string) => kind.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 const render = (kind: SpriteKind, faction: Faction): AnyRender => {
   const found = renderFor(kind, faction);
@@ -31,13 +31,14 @@ const render = (kind: SpriteKind, faction: Faction): AnyRender => {
 const turretRenders = () => ALL_RENDERS.filter(isTurretRender);
 
 describe('the render table (#566)', () => {
-  it('covers the 12 in-play kinds', () => {
+  it('covers the 14 in-play kinds: every tower and enemy kind', () => {
     expect([...IN_PLAY].sort()).toEqual(
       [
         'aaGun',
         'apc',
         'cannon',
         'grenadeLauncher',
+        'gunship',
         'heavyTank',
         'helicopter',
         'infantry',
@@ -69,7 +70,7 @@ describe('the render table (#566)', () => {
       for (const faction of FACTIONS) expect(renderFor(kind, faction), `${faction} ${kind}`).toBeNull();
   });
 
-  it('gives Infantry, Jeep, Helicopter, APC and Jet one image and no turret', () => {
+  it('gives Infantry, Jeep, Helicopter, APC, Jet and Gunship one image and no turret', () => {
     for (const kind of SINGLE_IMAGE)
       for (const faction of FACTIONS) {
         const r = render(kind, faction);

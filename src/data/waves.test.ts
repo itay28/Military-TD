@@ -6,6 +6,7 @@ import type { WaveData } from '../sim/waves';
 import { waveRoadTimeMs } from '../sim/waves';
 import {
   BUILD_WINDOW_MS,
+  GAUNTLET_WAVES,
   DEFAULT_WAVE_AFTER_MS,
   HAIRPIN_WAVES,
   SERPENTINE_WAVES,
@@ -109,10 +110,26 @@ describe('the bosses (#366)', () => {
     for (const g of last.filter((g) => g !== boss)) expect(boss.delayMs).toBeGreaterThan(g.delayMs);
   });
 
-  it('no other map has a boss before map 5 (#81)', () => {
+  it('no map before Hairpin has a boss, and only Gauntlet has the Gunship (#81)', () => {
     for (const waves of [WAVES, SWITCHBACK_WAVES, SERPENTINE_WAVES]) expect(bossWaves(waves)).toEqual([]);
-    const kinds = MAPS.flatMap((map) => map.waves.flatMap((wave) => [...kindsIn(wave)]));
-    expect(kinds).not.toContain('gunship');
+    const withGunship = MAPS.filter((map) => map.waves.some((wave) => kindsIn(wave).has('gunship')));
+    expect(withGunship.map((map) => map.id)).toEqual(['gauntlet']);
+  });
+
+  it('Gauntlet uses every kind, and its last wave ends with both bosses, one each, after every other group (#81)', () => {
+    const kinds = new Set(GAUNTLET_WAVES.flatMap((wave) => [...kindsIn(wave)]));
+    expect([...kinds].sort()).toEqual(Object.keys(ENEMY_STATS).sort());
+    const withBoss = (kind: EnemyKind) => GAUNTLET_WAVES.flatMap((wave, i) => (kindsIn(wave).has(kind) ? [i] : []));
+    expect(withBoss('gunship')).toEqual([19]);
+    expect(withBoss('heavyTank')).toContain(19);
+    const last = GAUNTLET_WAVES.at(-1)!.groups;
+    const bosses = last.filter((g) => 'boss' in ENEMY_STATS[g.kind]);
+    expect(bosses.map((g) => [g.kind, g.count]).sort()).toEqual([
+      ['gunship', 1],
+      ['heavyTank', 1],
+    ]);
+    const lastEscort = Math.max(...last.filter((g) => !bosses.includes(g)).map((g) => g.delayMs));
+    for (const boss of bosses) expect(boss.delayMs).toBeGreaterThan(lastEscort);
   });
 });
 

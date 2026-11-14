@@ -3,11 +3,12 @@ import { importTiledMap, type TiledMapData } from '../sim/tiled';
 import type { WaveData } from '../sim/waves';
 import { createPathLine } from '../sim/enemies';
 import { createMap } from '../sim/map';
-import { HAIRPIN_WAVES, SERPENTINE_WAVES, SWITCHBACK_WAVES, WAVES, timedWaves } from './waves';
+import { GAUNTLET_WAVES, HAIRPIN_WAVES, SERPENTINE_WAVES, SWITCHBACK_WAVES, WAVES, timedWaves } from './waves';
 import trainingGround from '../../maps/01-training-ground.tmj?raw';
 import switchback from '../../maps/02-switchback.tmj?raw';
 import serpentine from '../../maps/03-serpentine.tmj?raw';
 import hairpin from '../../maps/04-hairpin.tmj?raw';
+import gauntlet from '../../maps/05-gauntlet.tmj?raw';
 
 /** Every painted ground image (`scripts/naip-map.py`, #312) as a URL Vite serves, keyed by path from this module. */
 const GROUND_IMAGES = import.meta.glob<string>('../../assets/naip-maps/*.jpg', {
@@ -48,6 +49,9 @@ export const SERPENTINE_MAP: TiledMapData = importTiledMap('serpentine', JSON.pa
 
 /** Enters on the left, runs deep into the map and doubles back two rows lower, so towers between cover both. */
 export const HAIRPIN_MAP: TiledMapData = importTiledMap('hairpin', JSON.parse(hairpin));
+
+/** The boss map (#81): the longest road, three long lanes then a zigzag in front of HQ. China attacks. */
+export const GAUNTLET_MAP: TiledMapData = importTiledMap('gauntlet', JSON.parse(gauntlet));
 
 /** A map the player can pick on the Level select: its id, the name shown, its data, its Factions (ADR-0009), and the waves played on it. */
 export interface MapEntry {
@@ -111,6 +115,12 @@ export const MAPS: readonly MapEntry[] = [
     situation:
       'The enemy is driving hard down the western road toward HQ. Hold the hook where it turns back on itself.',
     terrain: 'The road runs deep, then doubles back two rows lower; one position covers both legs.',
+  }),
+  entry('Gauntlet', GAUNTLET_MAP, GAUNTLET_WAVES, {
+    operation: 'Operation Final Hour',
+    situation:
+      'Everything the enemy has left is coming, with a Heavy tank and a Gunship at the rear. Hold every lane to the last.',
+    terrain: 'The longest road yet: three long lanes, then a zigzag right in front of HQ.',
   }),
 ];
 

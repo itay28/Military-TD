@@ -1,16 +1,20 @@
 import { expect, test } from '@playwright/test';
-import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from './firstMap';
+import { FIFTH_MAP, FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from './firstMap';
 import { openLevelSelect, state, view } from './helpers';
 
 // #567: every map draws its two Faction sets (ADR-0009 point 5): the defender's towers, the attacker's enemies, no Kenney.
 const TOWERS = ['rifleNest', 'aaGun', 'cannon', 'mortar', 'grenadeLauncher', 'sniper'] as const;
 const ENEMIES = ['infantry', 'jeep', 'tank', 'helicopter'] as const;
+/** Gauntlet (#81) has every kind, the bosses too, so it checks all 8: its attacker is China, not Russia. */
+const ALL_ENEMIES = [...ENEMIES, 'apc', 'jet', 'heavyTank', 'gunship'] as const;
+const enemiesOn = (mapId: string): readonly (typeof ALL_ENEMIES)[number][] =>
+  mapId === FIFTH_MAP.id ? ALL_ENEMIES : ENEMIES;
 
 /** The scenario with one of each tower beside `mapId`'s Path (`tests/scenarios/everyTowerKind.ts`). */
 const everyTowerKind = (mapId: string) => (mapId === FIRST_MAP.id ? 'every-tower-kind' : `every-tower-kind-${mapId}`);
 
-for (const map of [FIRST_MAP, SECOND_MAP, THIRD_MAP, FOURTH_MAP]) {
-  test(`${map.name}: all 5 towers and all 4 enemy kinds are drawn from renders, with no texture errors`, async ({
+for (const map of [FIRST_MAP, SECOND_MAP, THIRD_MAP, FOURTH_MAP, FIFTH_MAP]) {
+  test(`${map.name}: every tower and the map's enemy kinds are drawn from renders, with no texture errors`, async ({
     page,
   }) => {
     const errors: string[] = [];
@@ -36,8 +40,8 @@ for (const map of [FIRST_MAP, SECOND_MAP, THIRD_MAP, FOURTH_MAP]) {
       const td = window.__TD__!;
       for (const kind of kinds) td.command({ type: 'spawnEnemy', kind });
       td.step(5);
-    }, ENEMIES);
-    await expect.poll(async () => (await view(page)).rendered).toEqual([...TOWERS, ...ENEMIES].sort());
+    }, enemiesOn(map.id));
+    await expect.poll(async () => (await view(page)).rendered).toEqual([...TOWERS, ...enemiesOn(map.id)].sort());
     expect(errors).toEqual([]);
   });
 }

@@ -31,11 +31,12 @@ Each tower takes two upgrades (Optics, then a Heavier weapon), and selling one g
 - **Helicopter**: flies over the road, so only Rifle Nests and AA Guns reach it.
 - **APC**: armored carrier that rolls up the road and drops a squad of infantry when it is destroyed.
 - **Jet**: fast aircraft that streaks over the road. Only Rifle Nests and AA Guns reach it.
-- **Heavy tank**: the boss at the end of Hairpin. Thick armor, so it takes Cannon and Mortar shells.
+- **Heavy tank**: the boss at the end of Hairpin and Gauntlet. Thick armor, so it takes Cannon and Mortar shells.
+- **Gunship**: the air boss at the end of Gauntlet. Armored, so AA Guns are the best answer.
 
 **Realistic, readable mechanics.** Armor takes a set amount off every hit, so a light round does little to a tank and a heavy shell does a lot. Aircraft can only be hit by guns that aim up. Turrets turn before they fire, mortar shells take a second to land, and every weapon has its range drawn on the map. There are no hard counters: a good mix of towers wins, and one kind alone loses.
 
-**Four operations**: Training Ground, Switchback, Serpentine and Hairpin, each on its own stretch of road, each with a Normal and a Hard difficulty. A win earns up to three stars for how much of HQ is left.
+**Five operations**: Training Ground, Switchback, Serpentine, Hairpin and Gauntlet, each on its own stretch of road, each with a Normal and a Hard difficulty. A win earns up to three stars for how much of HQ is left.
 
 Also: three game speeds, a Field manual with every tower and enemy, a live DPS meter, colourblind-safe colours, reduced motion, larger text, and full keyboard play.
 

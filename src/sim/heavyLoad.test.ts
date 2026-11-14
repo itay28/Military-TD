@@ -8,11 +8,13 @@ import { createMap, tileKey } from './map';
 describe('heavyLoadSetup', () => {
   const setup = heavyLoadSetup();
 
-  it('plays on the map with the longest Path (every map is the same size)', () => {
+  // Gauntlet's Path (#81) is two tiles longer, but there the towers kill too many of the 200 during the warmup (163
+  // left, not 190), so the load stays on Serpentine, within a few tiles of the longest (every map is 16 × 10).
+  it('plays on Serpentine, whose Path is within a few tiles of the longest', () => {
     const pathLength = (data: (typeof MAPS)[number]['data']) => createMap(data).pathTiles.length;
     const longest = Math.max(...MAPS.map((entry) => pathLength(entry.data)));
     expect(setup.map).toBe(SERPENTINE_MAP);
-    expect(pathLength(SERPENTINE_MAP)).toBe(longest);
+    expect(pathLength(SERPENTINE_MAP)).toBeGreaterThanOrEqual(longest - 3);
   });
 
   it(`places ${HEAVY_LOAD.towers} towers of every kind on distinct buildable tiles`, () => {
