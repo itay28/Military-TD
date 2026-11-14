@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAPS, SERPENTINE_MAP } from '../data/maps';
+import { GAUNTLET_MAP, MAPS, SERPENTINE_MAP } from '../data/maps';
 import { TICK_MS } from './game';
 import { HEAVY_LOAD } from '../data/heavyLoad';
 import { createHeavyLoadGame, HEAVY_LOAD_MEASURE_TICKS, heavyLoadSetup } from './heavyLoad';
@@ -8,13 +8,14 @@ import { createMap, tileKey } from './map';
 describe('heavyLoadSetup', () => {
   const setup = heavyLoadSetup();
 
-  // Gauntlet's Path (#81) is two tiles longer, but there the towers kill too many of the 200 during the warmup (163
-  // left, not 190), so the load stays on Serpentine, within a few tiles of the longest (every map is 16 × 10).
-  it('plays on Serpentine, whose Path is within a few tiles of the longest', () => {
+  // Gauntlet (#81) is the one map with a longer Path, but there the towers kill too many of the 200 during the warmup
+  // (163 left, not 190), so the load stays on Serpentine: the longest Path among the other maps.
+  it('plays on Serpentine, the longest Path among the maps other than Gauntlet', () => {
     const pathLength = (data: (typeof MAPS)[number]['data']) => createMap(data).pathTiles.length;
-    const longest = Math.max(...MAPS.map((entry) => pathLength(entry.data)));
+    const others = MAPS.filter((entry) => entry.data !== GAUNTLET_MAP);
     expect(setup.map).toBe(SERPENTINE_MAP);
-    expect(pathLength(SERPENTINE_MAP)).toBeGreaterThanOrEqual(longest - 3);
+    expect(pathLength(SERPENTINE_MAP)).toBe(Math.max(...others.map((entry) => pathLength(entry.data))));
+    expect(pathLength(GAUNTLET_MAP)).toBeGreaterThan(pathLength(SERPENTINE_MAP));
   });
 
   it(`places ${HEAVY_LOAD.towers} towers of every kind on distinct buildable tiles`, () => {
