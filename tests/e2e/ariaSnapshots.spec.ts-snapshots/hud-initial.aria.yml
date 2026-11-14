@@ -1,6 +1,6 @@
 - text: Funds $100
 - meter "HQ": HQ 20/20
-- text: Wave 0 / 10
+- text: Wave 0 / 20
 - button "DPS –"
 - text: Next 40s
 - status

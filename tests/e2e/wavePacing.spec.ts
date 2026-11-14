@@ -60,7 +60,7 @@ for (const viewport of [
   { width: 844, height: 390 },
   { width: 390, height: 844 },
 ]) {
-  test(`on ${viewport.width} × ${viewport.height}, the countdown fits whole beside "Waves 1–2 / 10"`, async ({
+  test(`on ${viewport.width} × ${viewport.height}, the countdown fits whole beside "Waves 1–2 / 20"`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);

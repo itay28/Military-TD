@@ -3,10 +3,11 @@ import { START_LIVES } from '../../src/data/start';
 import { isDeepStrictEqual } from 'node:util';
 import { readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MAPS, MVP_MAP } from '../../src/data/maps';
 import { BUILD_KINDS, TOWER_STATS, type TowerKind } from '../../src/data/towers';
 import { runScenario } from '../../src/sim/scenario';
+import { TICK_MS } from '../../src/sim/game';
 import { createPathLine } from '../../src/sim/enemies';
 import { starsFor } from '../../src/sim/progression';
 import { waveRoadTimeMs } from '../../src/sim/waves';
@@ -17,6 +18,9 @@ import { BALANCED_ORDER } from '../scenarios/bot-balanced.scenario';
 import { buildOrder, fitOrder, type BuildStep } from '../scenarios/bots';
 
 // Every map in `maps/` must import cleanly and be winnable by the reference bot (ADR-0006).
+
+// A full game is 20 waves (#381), and some tests play several, so they get more than the default 5 s.
+vi.setConfig({ testTimeout: 30_000 });
 
 const MAPS_DIR = 'maps';
 
@@ -213,6 +217,12 @@ describe('04-hairpin.tmj', () => {
   });
 });
 
+/** Rifle Nests only, as many as Money allows, never upgraded; `fitOrder` moves each to the best free tile. */
+const RIFLES_ONLY: readonly BuildStep[] = Array.from({ length: 30 }, (_, i) => ({
+  place: 'rifleNest',
+  tile: { col: i % 16, row: Math.floor(i / 16) },
+}));
+
 describe('Tiled map files', () => {
   it('the registry serves the Training Ground file as the MVP map', () => {
     expect(MVP_MAP).toEqual({ ...load(TRAINING_GROUND), id: 'mvp' });
@@ -276,6 +286,26 @@ describe('Tiled map files', () => {
     expect(result.outcome).toBe('victory');
   });
 
+  // #381: 20 waves on the timers alone make a map last about 15–20 minutes of game time at 1×.
+  it.each(MAPS)('$id: on the wave timers alone, a full game lasts 15–20 minutes', ({ data, waves }) => {
+    const result = runScenario({ map: data, waves, bot: buildOrder(fitOrder(data, BALANCED_ORDER)), until: 'end' });
+    expect(result.outcome).toBe('victory');
+    const minutes = (result.ticks * TICK_MS) / 60_000;
+    expect(minutes).toBeGreaterThanOrEqual(15);
+    expect(minutes).toBeLessThanOrEqual(20);
+  });
+
+  it.each(MAPS)('$id: Rifle Nests alone lose Normal (ADR-0007)', ({ data, waves }) => {
+    const result = runScenario({
+      map: data,
+      waves,
+      autoStartWaves: true,
+      bot: buildOrder(fitOrder(data, RIFLES_ONLY)),
+      until: 'end',
+    });
+    expect(result.outcome).toBe('defeat');
+  });
+
   it.each(MAPS)('$id: a bot that builds nothing loses to its own waves', ({ data, waves }) => {
     const result = runScenario({ map: data, waves, autoStartWaves: true, until: 'end' });
     expect(result.outcome).toBe('defeat');
@@ -309,11 +339,12 @@ describe('wave timers fit the road', () => {
 
   // The stars the reference bot earns on the timers alone, never calling a wave in (Normal, Hard).
   // #588 weakened the AA Gun's ground fire, so the Training Ground's Hard run loses a few Lives now.
+  // #381: Serpentine's 20th wave is a big Helicopter push that gets a few through on Hard.
   const EXPECTED_STARS: Record<string, readonly [number, number]> = {
     mvp: [3, 2],
     switchback: [3, 1],
-    serpentine: [3, 3],
-    hairpin: [3, 1],
+    serpentine: [3, 1],
+    hairpin: [3, 2],
   };
 
   it.each(MAPS)(
