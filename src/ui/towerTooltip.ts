@@ -1,4 +1,4 @@
-import { LAYER_NAME, TOWER_NAMES, TOWER_ROLES } from '../data/display';
+import { damageText, LAYER_NAME, TOWER_NAMES, TOWER_ROLES } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import type { Layer } from '../sim/combat';
 
@@ -22,7 +22,7 @@ export function towerTooltip(kind: TowerKind): TowerTooltip {
     role: TOWER_ROLES[kind],
     rows: [
       { label: 'Cost', value: String(stats.cost) },
-      { label: 'Damage', value: String(stats.damage) },
+      { label: 'Damage', value: damageText(stats) },
       { label: 'Range', value: `${minRange === undefined ? '' : `${minRange}–`}${stats.range} tiles` },
       { label: 'Fire rate', value: `${Number(stats.fireRate.toFixed(2))}/s` },
       {
