@@ -68,6 +68,11 @@ const MUZZLES: Record<string, RenderedSprite['muzzles']> = {
   'russia-mortar': [{ x: 0, y: -41 }],
   'china-mortar': [{ x: 0, y: -41 }],
   'insurgents-mortar': [{ x: 0, y: -41 }],
+  // A long rifle, prone: the barrel tip is the topmost opaque pixel (row 45, x 62-63).
+  'us-sniper': [{ x: -17.5, y: -35 }],
+  'russia-sniper': [{ x: -17.5, y: -35 }],
+  'china-sniper': [{ x: -17.5, y: -35 }],
+  'insurgents-sniper': [{ x: -17.5, y: -35 }],
   // Two riflemen, one either side of the pad.
   'us-rifle-nest': [
     { x: -31, y: -8 },

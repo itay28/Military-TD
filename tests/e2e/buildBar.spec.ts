@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { BUILD_KINDS, TOWER_STATS, type TowerKind } from '../../src/data/towers';
 import { clickTile, openGame, selectKind, state } from './helpers';
 
-const KINDS: readonly TowerKind[] = BUILD_KINDS; // the kinds in play: a held-back one (the Sniper, #364) has no button
+const KINDS: readonly TowerKind[] = BUILD_KINDS; // the kinds in play: a held-back one (the Grenade launcher, #365) has no button
 const FIRST = KINDS[0]!;
 const BESIDE_PATH = { col: 1, row: 3 };
 

@@ -104,7 +104,7 @@ describe('the committed render data', () => {
  * v0.8.0 kinds whose renders come before the kind is in play (#360). They aren't a `SpriteKind` until their gameplay
  * issue lands (the APC: #76). A Faction has one when `render-sprite.json` lists a model of it; the rest are exempt.
  */
-const OPTIONAL_KINDS: readonly string[] = ['sniper'];
+const OPTIONAL_KINDS: readonly string[] = [];
 
 /**
  * Kinds rendered before their gameplay (art-ahead): each Faction gets its render in its own part, and the kind joins

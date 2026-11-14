@@ -44,7 +44,7 @@ export interface FieldManualEntry {
 
 /** A number as the player reads it: at most two decimals, no trailing zeros. */
 const num = (n: number) => String(Math.round(n * 100) / 100);
-/** Only towers in play are listed (ADR-0009), so the not-in-play Sniper stays out of the enemy lines too. */
+/** Only towers in play are listed (ADR-0009), so the not-in-play Grenade launcher stays out of the enemy lines too. */
 const inPlay = (tower: TowerKind) => BUILD_KINDS.includes(tower);
 
 function towerEntry(kind: TowerKind): FieldManualEntry {

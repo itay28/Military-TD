@@ -1,4 +1,5 @@
 import rifleShotUrl from '../../assets/weapon-sounds/rifleShot.ogg?url';
+import sniperShotUrl from '../../assets/weapon-sounds/sniperShot.ogg?url';
 import aaGunBurstUrl from '../../assets/weapon-sounds/aaGunBurst.ogg?url';
 import missileLaunchUrl from '../../assets/weapon-sounds/missileLaunch.ogg?url';
 import gunReportUrl from '../../assets/weapon-sounds/gunReport.ogg?url';
@@ -24,6 +25,7 @@ import type { SoundId } from '../audio/sounds';
  */
 export const SOUND_URLS: Record<SoundId, string> = {
   rifleShot: rifleShotUrl,
+  sniperShot: sniperShotUrl,
   aaGunBurst: aaGunBurstUrl,
   missileLaunch: missileLaunchUrl,
   gunReport: gunReportUrl,

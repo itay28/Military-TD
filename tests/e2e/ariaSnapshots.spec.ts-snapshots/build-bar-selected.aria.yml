@@ -4,6 +4,7 @@
   - button "AA Gun ($75)": $75 2
   - button "Cannon ($100)": $100 3
   - button "Mortar ($125)" [disabled]: $125 4
+  - button "Sniper ($110)" [disabled]: $110 5
   - 'tooltip "Rifle Nest [1] Cheap all-rounder: hits ground and air. Light rounds that armor soaks. Cost 50 Damage 10 Range 2.5 tiles Fire rate 2/s Hits Ground, Air"':
     - strong: Rifle Nest [1]
     - paragraph: "Cheap all-rounder: hits ground and air. Light rounds that armor soaks."

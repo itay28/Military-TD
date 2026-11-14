@@ -5,6 +5,7 @@ import type { Faction } from '../sim/factions';
 /** Every sound the game plays. Each has a file in `src/data/sounds.ts`. */
 export const SOUND_IDS = [
   'rifleShot',
+  'sniperShot',
   'aaGunBurst',
   'missileLaunch',
   'gunReport',
@@ -38,7 +39,7 @@ export const SHOT_SOUND: Record<TowerKind, Record<Faction, SoundId>> = {
   cannon: { us: 'missileLaunch', china: 'missileLaunch', russia: 'gunReport', insurgents: 'recoillessBlast' },
   mortar: everyFaction('mortarLaunch'),
   grenadeLauncher: everyFaction('mortarLaunch'), // a placeholder until it's in play: its own sound comes with #365
-  sniper: everyFaction('rifleShot'),
+  sniper: everyFaction('sniperShot'),
 };
 
 /**

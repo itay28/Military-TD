@@ -30,7 +30,7 @@ const render = (kind: SpriteKind, faction: Faction): AnyRender => {
 const turretRenders = () => ALL_RENDERS.filter(isTurretRender);
 
 describe('the render table (#566)', () => {
-  it('covers the 11 in-play kinds', () => {
+  it('covers the 12 in-play kinds', () => {
     expect([...IN_PLAY].sort()).toEqual(
       [
         'aaGun',
@@ -43,6 +43,7 @@ describe('the render table (#566)', () => {
         'jet',
         'mortar',
         'rifleNest',
+        'sniper',
         'tank',
       ].sort(),
     );
@@ -219,7 +220,7 @@ describe('renderTextures', () => {
   });
 });
 
-describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 puts the Sniper in play)', () => {
+describe('the committed Sniper renders (in play since #364)', () => {
   // The Factions whose Sniper is rendered so far: US (#459), Russia and China (#460), Insurgents (#462): every Faction.
   for (const faction of FACTIONS) {
     const id = `${faction}-sniper`;
@@ -239,8 +240,8 @@ describe('the committed Sniper renders (art-ahead: not in RENDERS until #364 put
       });
     }
 
-    it(`keeps ${id} out of RENDERS until it is in play`, () => {
-      expect(ALL_RENDERS.map((r) => r.id)).not.toContain(id);
+    it(`has ${id} in RENDERS`, () => {
+      expect(ALL_RENDERS.map((r) => r.id)).toContain(id);
     });
   }
 });
