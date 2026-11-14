@@ -25,6 +25,8 @@ export interface TowerStats {
   readonly fireRate: number;
   /** HP taken per shot, before armor. */
   readonly damage: number;
+  /** HP taken per shot from a ground target, before armor; `damage` when left out (#588: the AA Gun's is lower). */
+  readonly groundDamage?: number;
   /** The layers it can hit. */
   readonly targets: readonly Layer[];
   /** Armor it ignores per hit; 0 when left out. */
@@ -66,6 +68,11 @@ export interface Tower extends TowerStats {
   readonly coverage?: readonly CoverageInterval[];
   /** The enemy an idle tower is pre-aiming at (see `preAim`), kept until another comes in clearly sooner. */
   readonly preAimId?: number | undefined;
+}
+
+/** HP one shot of `stats` takes, before armor, from a target on `layer`. */
+export function shotDamage(stats: Pick<TowerStats, 'damage' | 'groundDamage'>, layer: Layer): number {
+  return layer === 'ground' ? (stats.groundDamage ?? stats.damage) : stats.damage;
 }
 
 /** Every level's stats for `kind`, level 1 (`TOWER_STATS`) first. */
@@ -213,7 +220,7 @@ export function fireTowers(
   return { towers: nextTowers, enemies: alive, shots, launches, kills };
 
   function fireDirect(tower: Tower, target: Enemy): void {
-    const damage = damageTaken(tower.damage, target.armor, tower.armorPierce ?? 0, target.hp);
+    const damage = damageTaken(shotDamage(tower, target.layer), target.armor, tower.armorPierce ?? 0, target.hp);
     shots.push({
       towerId: tower.id,
       targetId: target.id,

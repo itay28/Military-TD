@@ -1,4 +1,5 @@
 import { damageTaken } from '../sim/combat';
+import { shotDamage } from '../sim/towers';
 import { ENEMY_STATS, type EnemyKind } from './enemies';
 import { TOWER_STATS, type TowerKind } from './towers';
 
@@ -17,11 +18,17 @@ export const POOR_SHARE = 1 / 3;
 
 /** Damage per second per Money of `tower` at level 1 against a lone `enemy`. */
 export function efficiency(tower: TowerKind, enemy: EnemyKind): number {
-  const t: { cost: number; fireRate: number; damage: number; targets: readonly string[]; armorPierce?: number } =
-    TOWER_STATS[tower];
+  const t: {
+    cost: number;
+    fireRate: number;
+    damage: number;
+    groundDamage?: number;
+    targets: readonly string[];
+    armorPierce?: number;
+  } = TOWER_STATS[tower];
   const e = ENEMY_STATS[enemy];
   if (!t.targets.includes(e.layer)) return 0;
-  return (t.fireRate * damageTaken(t.damage, e.armor, t.armorPierce ?? 0, e.maxHp)) / t.cost;
+  return (t.fireRate * damageTaken(shotDamage(t, e.layer), e.armor, t.armorPierce ?? 0, e.maxHp)) / t.cost;
 }
 
 /** `tower`'s efficiency against `enemy` as a share of the best tower's. */
