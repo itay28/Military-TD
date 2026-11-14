@@ -13,6 +13,7 @@
         - button "Mortar"
       - listitem:
         - button "Grenade Launcher"
+      - listitem:
         - button "Sniper"
     - heading "Enemies" [level=3]
     - list:
