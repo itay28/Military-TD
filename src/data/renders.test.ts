@@ -37,6 +37,7 @@ describe('the render table (#566)', () => {
         'aaGun',
         'apc',
         'cannon',
+        'grenadeLauncher',
         'heavyTank',
         'helicopter',
         'infantry',
@@ -247,7 +248,7 @@ describe('the committed Sniper renders (in play since #364)', () => {
   }
 });
 
-describe('the committed Grenade launcher renders (art-ahead: not in RENDERS until #359 puts it in play)', () => {
+describe('the committed Grenade launcher renders (in play since #365)', () => {
   // Every Faction: US (#464), Russia (#467), China (#468), Insurgents (#469).
   for (const faction of FACTIONS) {
     const id = `${faction}-grenade-launcher`;
@@ -280,8 +281,8 @@ describe('the committed Grenade launcher renders (art-ahead: not in RENDERS unti
       expect(JSON.parse(readFileSync(`${dir}/${id}-turntable.json`, 'utf8'))).toMatchObject({ id, frames: 24 });
     });
 
-    it(`keeps ${id} out of RENDERS until it is in play`, () => {
-      expect(ALL_RENDERS.map((r) => r.id)).not.toContain(id);
+    it(`has ${id} in RENDERS, now it is in play`, () => {
+      expect(ALL_RENDERS.map((r) => r.id)).toContain(id);
     });
   }
 });

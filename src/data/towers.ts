@@ -41,9 +41,10 @@ export type TowerKind = keyof typeof TOWER_STATS;
 
 /**
  * Kinds in the sim (tests and headless scenarios use them) but not in play yet: no build bar button. A kind joins
- * play in its rollout issue, once its renders land (ADR-0009: no map mixes art styles). The grenade launcher's is #365.
+ * play in its rollout issue, once its renders land (ADR-0009: no map mixes art styles). The grenade launcher (#365)
+ * and the Sniper (#364) have joined, so nothing is held back now.
  */
-export const NOT_IN_PLAY: ReadonlySet<TowerKind> = new Set<TowerKind>(['grenadeLauncher']);
+export const NOT_IN_PLAY: ReadonlySet<TowerKind> = new Set<TowerKind>();
 
 /** The kinds the player can build, in `TOWER_STATS` order: every kind not in `NOT_IN_PLAY`. */
 export const BUILD_KINDS: readonly TowerKind[] = (Object.keys(TOWER_STATS) as TowerKind[]).filter(

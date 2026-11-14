@@ -3,11 +3,11 @@ import { clickTile, openGame, state } from './helpers';
 
 const TILE = { col: 2, row: 3 };
 
-test('the Sniper is on the build bar under key 5: build it and upgrade it to level 3 (#364)', async ({ page }) => {
+test('the Sniper is on the build bar under key 6: build it and upgrade it to level 3 (#364)', async ({ page }) => {
   await openGame(page);
   await page.evaluate(() => window.__TD__!.loadScenario('every-tower-kind'));
   await expect(page.getByTestId('build-sniper')).toBeVisible();
-  await page.keyboard.press('5');
+  await page.keyboard.press('6');
   await expect(page.getByTestId('build-sniper')).toHaveAttribute('aria-pressed', 'true');
   await clickTile(page, TILE);
   expect((await state(page)).towers.filter((t) => t.kind === 'sniper')).toHaveLength(2);

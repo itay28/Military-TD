@@ -148,6 +148,7 @@ One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesoun
 | `gunReport` | Cannon: MT-12 (Russia) | the cannon shot, with a rifle's supersonic crack on top |
 | `recoillessBlast` | Cannon: SPG-9 (Insurgents) | the cannon shot, lower and duller, with a backblast hiss |
 | `mortarLaunch`, `mortarWhistle`, `mortarBlast` | Mortar: launch, incoming (0.5 s before impact), impact | a sharp light-mortar "tonk" (cannon shot plus a rifle crack); the synthesized falling, breathy whistle; `explosion3` with a crack, a thump and debris |
+| `grenadeLaunch` | Grenade Launcher | a short dull "thunk": a synthesized thump under a pitched-up cannon shot, with a faint rifle crack; 0.2 s, one sound per grenade |
 | `vehicleExplosion` | a jeep, tank or helicopter destroyed | `explosion1` at about half speed, a sub-bass thump, `explosion3` as a second blast and rumbling tail, a debris crackle |
 | `infantryHit` | infantry killed | `explosion2`, short and light |
 
@@ -157,7 +158,7 @@ One sound per weapon, CC0 only, downloaded 2026-11-03 from OpenGameArt (Freesoun
 | Missile Sound (`mikeask-missile`), by mikeask | opengameart.org/content/missile-sound | the missile launch |
 | Cannon Fire (`thimras-cannon`), by Thimras | opengameart.org/content/cannon-fire | the gun, recoilless and mortar reports |
 | Explosions (`ezduzziteh-explosions`), by EZduzziteh | opengameart.org/content/explosions-4 | the explosions |
-| Weapon sounds (`weapon-sounds`) | the script's output | the ten sounds above |
+| Weapon sounds (`weapon-sounds`) | the script's output | the eleven sounds above |
 
 Each source ships no license file, so its `License.txt` copies the source page's CC0 notice. Rejected: *Light Machine Gun* and *4 Projectile Launches* (CC-BY), *2 Big Gun Shots* and *Q009's weapon sounds* (CC-BY-SA), the *Whistles* items (CC-BY, and not shell whistles).
 
@@ -205,7 +206,7 @@ python3.11 -m venv .venv-art && .venv-art/bin/pip install bpy==5.0.1 pillow rast
 
 Don't use plain `python3` (3.13 in the cloud image, where pip offers only `bpy` 5.1+), and don't upgrade `bpy` without re-rendering every set. Cloud sessions get the venv from the environment's setup script.
 
-**Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US (the Sniper too), Russia and China models have them, and every faction's Heavy tank (#510); `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
+**Turntables** (#407, #440): `.venv-art/bin/python scripts/render-sprite.py --turntable [--only <id>]` renders each model again, whole, as 24 views orbiting it from 30° up (384 px, 32 samples) into `<id>-turntable.webp` (one 6 × 4 sheet, lossy WebP with alpha) and `<id>-turntable.json`, next to its sprites and covered by the same license entry. The script steps the WebP quality down until the sheet fits the 300 KB budget, which `src/data/turntables.test.ts` also enforces. They aren't in the Boot preload: `src/data/turntables.ts` holds only their URLs and layout, and the Field manual (`modelFor`, `src/data/modelViews.ts`) loads a sheet when its entry opens. The US (the Sniper too), Russia and China models have them, and every faction's Heavy tank (#510) and Gunship (#504); `turntables.test.ts` lists the factions done. Frames are kept in `.cache/turntable-frames/<id>/`. It needs Pillow in `.venv-art` too.
 
 | Folder | Source | Made by |
 | --- | --- | --- |

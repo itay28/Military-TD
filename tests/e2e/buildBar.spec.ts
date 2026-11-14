@@ -137,3 +137,21 @@ test('keyboard focus shows the tooltip', async ({ page }) => {
   await page.getByTestId('build-aaGun').focus();
   await expect(page.getByTestId('build-tip-aaGun')).toBeVisible();
 });
+
+test('builds a grenade launcher with 5 and upgrades it to level 3 (#365)', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => window.__TD__!.loadScenario('rich-build-phase'));
+  const button = page.getByTestId('build-grenadeLauncher');
+  await expect(button.locator('kbd')).toHaveText('5');
+  await page.keyboard.press('5');
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  await clickTile(page, BESIDE_PATH);
+  expect((await state(page)).towers).toMatchObject([{ kind: 'grenadeLauncher', level: 1 }]);
+  await clickTile(page, BESIDE_PATH);
+  const panel = page.getByRole('dialog', { name: 'Grenade Launcher' });
+  await panel.getByRole('button', { name: /^Optics/ }).click();
+  await expect(page.getByTestId('tower-level')).toHaveText('Level 2');
+  await panel.getByRole('button', { name: /^Heavier weapon/ }).click();
+  await expect(page.getByTestId('tower-level')).toHaveText('Level 3');
+  expect((await state(page)).towers).toMatchObject([{ kind: 'grenadeLauncher', level: 3 }]);
+});

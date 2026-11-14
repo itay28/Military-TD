@@ -53,11 +53,14 @@ describe('buildOptions', () => {
         })),
     );
     expect(buildOptions()[0]).toMatchObject({ kind: 'rifleNest', name: 'Rifle Nest', cost: 50 });
-    expect(buildOptions().map((o) => o.kind)).toContain('sniper'); // in play (#364), key 5
+    expect(buildOptions().map((o) => o.kind)).toContain('sniper'); // in play (#364), key 6
   });
 
-  it('leaves out a kind not in play yet: the grenade launcher waits for its renders (#75, #365)', () => {
-    expect(buildOptions().map((option) => option.kind)).not.toContain('grenadeLauncher');
+  it('lists the grenade launcher fifth (hotkey 5, #365) and the Sniper last (hotkey 6, #364)', () => {
+    const options = buildOptions();
+    expect(options[4]).toMatchObject({ kind: 'grenadeLauncher', name: 'Grenade Launcher' });
+    expect(options.at(-1)).toMatchObject({ kind: 'sniper', name: 'Sniper' });
+    expect(options).toHaveLength(6);
   });
 });
 

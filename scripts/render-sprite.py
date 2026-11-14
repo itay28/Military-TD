@@ -590,11 +590,15 @@ def orbit_frame(meshes, cfg: dict, spec: dict) -> tuple[Vector, float]:
     lo, hi = world_bounds(meshes)
     centre = (lo + hi) / 2
     pts = []
+    depsgraph = bpy.context.evaluated_depsgraph_get()
     for m in meshes:
-        co = np.empty(len(m.data.vertices) * 3, dtype=np.float64)
-        m.data.vertices.foreach_get("co", co)
-        co = np.c_[co.reshape(-1, 3), np.ones(len(co) // 3)] @ np.array(m.matrix_world).T
+        ev = m.evaluated_get(depsgraph)  # as world_bounds: raw vertices miss the armature/shape keys (the Russia Gunship's)
+        mesh = ev.to_mesh()
+        co = np.empty(len(mesh.vertices) * 3, dtype=np.float64)
+        mesh.vertices.foreach_get("co", co)
+        co = np.c_[co.reshape(-1, 3), np.ones(len(co) // 3)] @ np.array(ev.matrix_world).T
         pts.append(co[:, :3])
+        ev.to_mesh_clear()
     pts = np.concatenate(pts)
     sun = {**cfg["sun"], **spec.get("sun", {})}  # as build_stage lights it
     el, az = math.radians(sun["elevationDeg"]), math.radians(sun["azimuthDeg"])

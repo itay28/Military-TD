@@ -25,6 +25,10 @@ describe('SHOT_SOUND', () => {
     }
   });
 
+  it("gives the grenade launcher its own thunk, not the Mortar's tonk (#365)", () => {
+    expect(soundFor({ type: 'shellFired', kind: 'grenadeLauncher' }, 'us')).toBe('grenadeLaunch');
+  });
+
   it("follows the defender's anti-tank weapon for the Cannon (ADR-0009)", () => {
     const cannon = (faction: (typeof FACTIONS)[number]) => soundFor({ type: 'towerFired', kind: 'cannon' }, faction);
     expect(cannon('us')).toBe('missileLaunch'); // TOW

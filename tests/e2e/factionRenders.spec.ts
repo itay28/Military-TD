@@ -3,7 +3,7 @@ import { FIRST_MAP, FOURTH_MAP, SECOND_MAP, THIRD_MAP } from './firstMap';
 import { openLevelSelect, state, view } from './helpers';
 
 // #567: every map draws its two Faction sets (ADR-0009 point 5): the defender's towers, the attacker's enemies, no Kenney.
-const TOWERS = ['rifleNest', 'aaGun', 'cannon', 'mortar', 'sniper'] as const;
+const TOWERS = ['rifleNest', 'aaGun', 'cannon', 'mortar', 'grenadeLauncher', 'sniper'] as const;
 const ENEMIES = ['infantry', 'jeep', 'tank', 'helicopter'] as const;
 
 /** The scenario with one of each tower beside `mapId`'s Path (`tests/scenarios/everyTowerKind.ts`). */
