@@ -78,7 +78,7 @@ describe('map registry', () => {
     const enemies = (waves: typeof WAVES) => waves.flatMap((w) => w.groups).reduce((sum, g) => sum + g.count, 0);
     const kinds = (waves: typeof WAVES) => new Set(waves.flatMap((w) => w.groups.map((g) => g.kind)));
     const { waves } = mapById('switchback');
-    expect(waves.length).toBeGreaterThan(WAVES.length);
+    expect(waves.length).toBe(WAVES.length);
     expect(enemies(waves)).toBeGreaterThan(enemies(WAVES));
     expect([...kinds(waves)].filter((kind) => !kinds(WAVES).has(kind)).sort()).toEqual(['apc', 'jet']);
     // Mixed groups come earlier: the first wave with two kinds is sooner than on Training Ground.

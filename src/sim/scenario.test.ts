@@ -283,7 +283,7 @@ describe('setUpGame', () => {
     const switchback = mapById('switchback');
     expect(setUpGame({ map: switchback.data }).state.totalWaves).toBe(switchback.waves.length);
     expect(setUpGame({ map: MVP_MAP }).state.totalWaves).toBe(WAVES.length);
-    expect(switchback.waves.length).not.toBe(WAVES.length);
+    expect(switchback.waves.map((w) => w.groups)).not.toEqual(WAVES.map((w) => w.groups));
   });
 
   it("plays `WAVES` on a map outside the registry, and `waves` still overrides the map's own", () => {
