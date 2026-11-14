@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LAYER_NAME, TOWER_NAMES, TOWER_ROLES } from '../data/display';
+import { damageText, LAYER_NAME, TOWER_NAMES, TOWER_ROLES } from '../data/display';
 import { TOWER_STATS, type TowerKind } from '../data/towers';
 import { placeTip, TIP_GAP, towerTooltip } from './towerTooltip';
 
@@ -14,7 +14,7 @@ describe('towerTooltip', () => {
     const value = (label: string) => tip.rows.find((row) => row.label === label)?.value;
     expect(tip.rows.map((row) => row.label)).toEqual(['Cost', 'Damage', 'Range', 'Fire rate', 'Hits']);
     expect(value('Cost')).toBe(String(stats.cost));
-    expect(value('Damage')).toBe(String(stats.damage));
+    expect(value('Damage')).toBe(damageText(stats));
     expect(value('Range')).toContain(String(stats.range));
     expect(value('Fire rate')).toBe(`${Number(stats.fireRate.toFixed(2))}/s`);
     for (const layer of stats.targets) expect(value('Hits')).toContain(LAYER_NAME[layer]);
@@ -36,6 +36,7 @@ describe('towerTooltip', () => {
 
   it('lists Ground first whatever the stats order, and shows only what a kind can hit', () => {
     expect(towerTooltip('aaGun').rows.at(-1)).toEqual({ label: 'Hits', value: 'Ground, Air' });
+    expect(towerTooltip('aaGun').rows[1]).toEqual({ label: 'Damage', value: '13\u00a0air, 10\u00a0ground' });
     expect(towerTooltip('cannon').rows.at(-1)).toEqual({ label: 'Hits', value: 'Ground' });
   });
 

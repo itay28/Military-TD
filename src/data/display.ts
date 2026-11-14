@@ -153,7 +153,7 @@ export const TOWER_NAMES = {
 /** What each tower kind is for, in one line: the tower panel leads with it. Every kind needs one; keep it true to the stats. */
 export const TOWER_ROLES = {
   rifleNest: 'Cheap all-rounder: hits ground and air. Light rounds that armor soaks.',
-  aaGun: 'Built for aircraft: fast, light rounds. Hits ground too.',
+  aaGun: 'Built for aircraft: fast, light rounds. Weaker against ground.',
   cannon: 'Slow, heavy shells that punch through armor. Ground only.',
   mortar: 'Long-range shells that hit everything in the blast. Ground only, not up close.',
   grenadeLauncher: 'Fast bursts of grenades. Shreds infantry, bounces off armor.',
@@ -201,6 +201,19 @@ export const LEVEL_NAME: Readonly<Record<number, string>> = { 2: 'Optics', 3: 'H
 export const MAP_CURSOR = { color: 0xffc400, width: 3 } as const;
 
 export const LEVEL_PIP = { size: 4, gap: 3, inset: 4, color: 0xe5e1cf } as const; // bone, like the outline
+
+/**
+ * A tower's damage per shot as the player reads it (at most two decimals): one number, or the air and the ground
+ * damage when they differ (#588: the AA Gun's ground fire is weaker).
+ */
+export function damageText(stats: { readonly damage: number; readonly groundDamage?: number }): string {
+  const num = (n: number) => String(Math.round(n * 100) / 100);
+  const { damage, groundDamage } = stats;
+  return groundDamage === undefined || groundDamage === damage
+    ? num(damage)
+    : // Non-breaking spaces: a narrow box wraps after the comma, never between a number and its layer.
+      `${num(damage)}\u00a0air, ${num(groundDamage)}\u00a0ground`;
+}
 
 /** What the tower panel calls each layer a tower can hit. */
 export const LAYER_NAME = { ground: 'Ground', air: 'Air' } as const satisfies Record<Layer, string>;

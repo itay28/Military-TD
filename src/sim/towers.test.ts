@@ -465,18 +465,30 @@ describe('AA Gun', () => {
     });
 
   it('has the starting numbers from the spec', () => {
-    expect(TOWER_STATS.aaGun).toEqual({ cost: 75, range: 3, fireRate: 3, damage: 13, targets: ['air', 'ground'] });
+    expect(TOWER_STATS.aaGun).toEqual({
+      cost: 75,
+      range: 3,
+      fireRate: 3,
+      damage: 13,
+      groundDamage: 10,
+      targets: ['air', 'ground'],
+    });
   });
 
-  it('hits ground enemies too (ADR-0007: no hard counters)', () => {
+  it('hits ground enemies too (ADR-0007: no hard counters), for its lower ground damage (#588)', () => {
     const result = fireTowers([aaGun()], [handEnemy(1, 1)], 0);
     expect(result.shots.map((s) => s.targetId)).toEqual([1]);
-    expect(result.shots[0]?.hits).toEqual([{ enemyId: 1, damage: 13 }]);
+    expect(result.shots[0]?.hits).toEqual([{ enemyId: 1, damage: 10 }]);
   });
 
-  it('does 8 damage per hit to an armor-5 enemy', () => {
+  it('does 5 damage per hit to an armor-5 ground enemy', () => {
     const result = fireTowers([aaGun()], [handEnemy(1, 1, { armor: 5 })], 0);
-    expect(result.shots[0]?.hits).toEqual([{ enemyId: 1, damage: 8 }]);
+    expect(result.shots[0]?.hits).toEqual([{ enemyId: 1, damage: 5 }]);
+  });
+
+  it('hits a Helicopter for its full damage, less armor', () => {
+    const result = fireTowers([{ ...aaGun(), heading: -Math.PI / 2 }], [helicopter(1, 2)], 0);
+    expect(result.shots[0]?.hits).toEqual([{ enemyId: 1, damage: 13 - ENEMY_STATS.helicopter.armor }]);
   });
 
   it('shoots a Helicopter that is further along than a ground enemy', () => {
