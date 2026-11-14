@@ -53,6 +53,13 @@ describe('TURNTABLES', () => {
     }
   });
 
+  it('has a turntable for the Gunship of every faction, though the kind is upcoming (#504)', () => {
+    const gunships = config.models.filter((m) => m.kind === 'gunship');
+    expect(gunships.map((m) => m.faction).sort()).toEqual(['china', 'insurgents', 'russia', 'us']);
+    expect(gunships.filter((m) => !hasTurntable(m)).map((m) => m.id)).toEqual([]);
+    for (const m of gunships) expect(turntableFor(m.faction as Faction, 'gunship')?.id, m.id).toBe(m.id);
+  });
+
   it('only holds turntables of models in render-sprite.json', () => {
     const ids = config.models.map((m) => m.id);
     for (const id of Object.keys(TURNTABLES)) expect(ids, id).toContain(id);
