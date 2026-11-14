@@ -152,17 +152,17 @@ tests/
 | Jeep | 20 HP, 3 tiles/s, armor 0, reward 3, leak cost 1 |
 | Tank | 250 HP, 0.6 tiles/s, armor 8, reward 25, leak cost 5 |
 | Helicopter | 130 HP, 1.2 tiles/s, armor 4, air, reward 10, leak cost 2 |
-| Waves | 10, below (`src/data/waves.ts`) |
-| Wave timers | Wave 1: a 40 s build window. Each later wave: ½ × the time the wave before takes to pass along the map's road (its last spawn plus its slowest kind's walk, unhurt) + 10 s, rounded to the second, within 15–45 s (`timedWaves`, #570). So a short road gets short timers: about 16–37 s on Training Ground, 30–45 s on Serpentine. |
+| Waves | 20 per map (#381), Training Ground's below (`src/data/waves.ts`). About 15–20 minutes a map on the timers alone: 15.3 (Training Ground), 15.9 (Switchback), 18.1 (Serpentine), 16.0 (Hairpin) |
+| Wave timers | Wave 1: a 40 s build window. Each later wave: ½ × the time the wave before takes to pass along the map's road (its last spawn plus its slowest kind's walk, unhurt) + 10 s, rounded to the second, within 15–60 s (`timedWaves`, #570, #381). So a short road gets short timers: about 16–40 s for Training Ground's first ten waves, 30–58 s on Serpentine's; the long waves 11–20 reach the 60 s ceiling on every map. |
 
-**Balance checks (#230).** `src/data/counterMatrix.test.ts` requires every enemy kind to have at least two towers whose damage per second per Money against it is at least half the best tower's (ADR-0007). The balance bots in `tests/scenarios/bot-*.scenario.ts` play all 10 waves (`npm run scenario -- bot-balanced`); at these numbers:
+**Balance checks (#230).** `src/data/counterMatrix.test.ts` requires every enemy kind to have at least two towers whose damage per second per Money against it is at least half the best tower's (ADR-0007). The balance bots in `tests/scenarios/bot-*.scenario.ts` play all 20 waves (`npm run scenario -- bot-balanced`); at these numbers:
 
 | Bot | Strategy | Outcome |
 | --- | --- | --- |
-| `bot-idle` | builds nothing | Defeat on wave 2 |
-| `bot-rifle-spam` | Rifle Nests only, as Money allows | Defeat on wave 9 (Tanks) |
-| `bot-no-aa` | `bot-balanced` with Rifle Nests for the AA Guns | Victory, 6 Lives (14 lost on Helicopter waves) |
-| `bot-balanced` | all four kinds, with upgrades | Victory, 13 Lives (2 lost on Helicopter waves) |
+| `bot-idle` | builds nothing | Defeat by wave 3 |
+| `bot-rifle-spam` | Rifle Nests only, as Money allows | Defeat on wave 10 (Tanks) |
+| `bot-no-aa` | `bot-balanced` with Rifle Nests for the AA Guns | Victory, 4 Lives |
+| `bot-balanced` | all four kinds, with upgrades | Victory, 13 Lives |
 
 **Wave schedule.** Each new kind first comes alone, in small numbers, then mixes with the others. A group is count × kind, spacing between spawns, and a delay before its first spawn (#140); groups in a wave run in parallel. Tuning: #16.
 
@@ -178,6 +178,10 @@ tests/
 | 8 | 6 Helicopters, 2000 ms · 10 Infantry, 800 ms, after 2 s · 6 Jeeps, 600 ms, after 8 s | |
 | 9 | 3 Tanks, 3000 ms · 6 Helicopters, 2000 ms, after 3 s · 10 Jeeps, 600 ms, after 6 s | |
 | 10 | 5 Tanks, 3000 ms · 10 Helicopters, 2000 ms, after 2 s · 20 Infantry, 600 ms, after 4 s · 10 Jeeps, 600 ms, after 12 s | |
+| 11–19 | Larger mixes of the same four kinds, each ending in a second push of 2–6 Tanks 50 s in | |
+| 20 | 10 Tanks · 16 Helicopters · 40 Infantry · 20 Jeeps · 4 more Tanks 30 s in | finale |
+
+Maps 2–4 follow the same shape with larger groups and earlier mixes; the APC joins in wave 11 and the Fighter jet in wave 13 (at most 3 each), and Hairpin's wave 20 ends with the Heavy tank.
 
 ## v0.1.0 — MVP tasks
 
