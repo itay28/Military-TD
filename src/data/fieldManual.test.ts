@@ -33,6 +33,12 @@ describe('fieldManualEntries', () => {
     expect(cannon.weak).toContain('Helicopter');
   });
 
+  it("shows the AA Gun's lower ground damage next to its air damage (#588)", () => {
+    const aa = entries.find((e) => e.kind === 'aaGun')!;
+    expect(Object.fromEntries(aa.stats)).toMatchObject({ Damage: '13\u00a0air, 10\u00a0ground' });
+    expect(aa.weak).toContain('Tank');
+  });
+
   it("lists an enemy's stats from the data", () => {
     const heli = entries.find((e) => e.kind === 'helicopter')!;
     expect(Object.fromEntries(heli.stats)).toEqual({
