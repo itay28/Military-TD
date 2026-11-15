@@ -39,3 +39,16 @@ export function opaqueBounds(
   const y = Math.max(0, top - 1);
   return { x, y, width: Math.min(width - 1, right + 1) - x + 1, height: Math.min(height - 1, bottom + 1) - y + 1 };
 }
+
+/**
+ * The origin (0 to 1 across, as Phaser's `setOrigin`) on a copy cut to `box` that sits on the same point as `origin`
+ * on the whole `width` × `height` image, so the copy is placed and turned exactly like the whole image.
+ */
+export function trimmedOrigin(
+  box: PixelBox,
+  width: number,
+  height: number,
+  origin: { readonly x: number; readonly y: number },
+): { x: number; y: number } {
+  return { x: (origin.x * width - box.x) / box.width, y: (origin.y * height - box.y) / box.height };
+}

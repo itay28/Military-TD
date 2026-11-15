@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { opaqueBounds } from './trim';
+import { opaqueBounds, trimmedOrigin } from './trim';
 
 /** RGBA pixels of a `width` × `height` image, transparent but for the listed [x, y, alpha] pixels. */
 function image(width: number, height: number, opaque: [number, number, number][]): Uint8ClampedArray {
@@ -59,5 +59,19 @@ describe('opaqueBounds', () => {
 
   it('is undefined for a fully transparent image', () => {
     expect(opaqueBounds(image(3, 3, []), 3, 3)).toBeUndefined();
+  });
+});
+
+describe('trimmedOrigin', () => {
+  const box = { x: 40, y: 20, width: 80, height: 100 };
+
+  it('keeps the point the whole image turned around at the same place on the trimmed copy', () => {
+    // The whole 160 px canvas's centre (80, 80) is 40 px into the box and 60 px down it.
+    expect(trimmedOrigin(box, 160, 160, { x: 0.5, y: 0.5 })).toEqual({ x: 0.5, y: 0.6 });
+  });
+
+  it('works for an off-centre pivot, such as a turret turning near its back', () => {
+    // (0.25 × 160, 0.75 × 160) = (40, 120): the box's left edge, its bottom edge.
+    expect(trimmedOrigin(box, 160, 160, { x: 0.25, y: 0.75 })).toEqual({ x: 0, y: 1 });
   });
 });
