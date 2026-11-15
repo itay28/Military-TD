@@ -26,6 +26,6 @@ describe('frameSummary', () => {
     expect(passed).toContain('240');
     expect(passed).toMatch(/^### /);
     expect(passed).toContain('✅');
-    expect(frameSummary({ frames: 240, meanMs: 30, p95Ms: 40 })).toContain('❌');
+    expect(frameSummary({ frames: 240, meanMs: 30, p95Ms: FRAME_P95_LIMIT_MS + 5 })).toContain('❌');
   });
 });
