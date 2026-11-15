@@ -133,6 +133,9 @@ const game = new Phaser.Game({
   // The mouse and two fingers, for a pinch.
   input: { activePointers: 2 },
   backgroundColor: '#1b1e16',
+  // No multisampling (#420): software rendering (CI's headless Chromium, players without a GPU) spends about a third of
+  // each frame on it. Sprites keep their smooth edges from their own transparency; only drawn shapes' edges get harder.
+  render: { antialiasGL: false },
   scene: [
     new BootScene(flags),
     new MenuScene({ app, menuRoot, openSettings, openFieldManual, openHowToPlay }),
