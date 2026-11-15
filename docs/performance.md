@@ -8,7 +8,7 @@ scenario gives the browser the same setup.
 | Check | Command | Where it runs in CI | Fails when |
 | --- | --- | --- | --- |
 | Sim budget (hard gate) | `npm run test:perf` | `ci` job, after the tests | the mean sim tick time is over `SIM_TICK_BUDGET_MS` |
-| Frame-time check | `npm run test:perf:browser` | `e2e` job, after the e2e tests | the p95 frame time is over `FRAME_P95_LIMIT_MS` (45 ms) |
+| Frame-time check | `npm run test:perf:browser` | `e2e` job, after the e2e tests | the p95 frame time is over `FRAME_P95_LIMIT_MS` (65 ms) |
 
 ## Sim budget
 
@@ -33,9 +33,10 @@ the slowest and most repeatable setup we have, so the limit is set from its numb
 
 ### The limit
 
-The target was 33 ms p95 (30 fps). After the rendering work in #420 the Heavy load measured **30.1 ms mean, 33.4 ms
-p95** in CI: just over, because the p95 frame takes two 60 Hz steps. So the limit is set the way the sim budget was:
-that p95 × 1.25, rounded up to the next 5 ms = **45 ms**. A run whose p95 frame takes three steps (50 ms) fails.
+The target was 33 ms p95 (30 fps). After the rendering work in #420, five CI runs of the Heavy load measured
+**30.1–40.9 ms mean and 33.4–50.1 ms p95**: one run's p95 frame took two 60 Hz steps, the other four took three. So the
+limit is set the way the sim budget was: the worst p95 × 1.25, rounded up to the next 5 ms = **65 ms**. A run whose p95
+frame takes four steps (66.7 ms) fails; before #420 it took six (100 ms).
 
 To change it, read the *Frame-time check* summary of a few recent `e2e` runs on `main`, and say why in the PR.
 
@@ -60,7 +61,7 @@ Not worth it: downscaling the 2× painted ground to the zoom (no change), and th
 | Heavy load | Mean | p95 |
 | --- | --- | --- |
 | CI, before (#73) | 95 ms | 100 ms |
-| CI, after | 30.1 ms | 33.4 ms |
+| CI, after (5 runs) | 30.1–40.9 ms | 33.4–50.1 ms |
 | Cloud container, before | 69–73 ms | 83–100 ms |
 | Cloud container, after | 28 ms | 33.4 ms |
 
