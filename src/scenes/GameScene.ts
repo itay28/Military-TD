@@ -822,7 +822,7 @@ export class GameScene extends Phaser.Scene {
         const frame = this.motion().enemyWalk ? animFrame(this.animMs, this.clipSim?.animKey(enemy.id) ?? enemy.id) : 0;
         // Only the shape's rotor moves with the frame; a sprite's HP bar doesn't.
         const redrawShape = !view.sprite && view.frame !== frame;
-        if (!view.sprite && (view.hp !== enemy.hp || redrawShape)) {
+        if (redrawShape || (!view.sprite && view.hp !== enemy.hp)) {
           view.graphics.clear();
           drawEnemy(view.graphics, enemy, rotorAngle(frame));
           view.hp = enemy.hp;
