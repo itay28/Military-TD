@@ -62,11 +62,14 @@ export function drawEnemy(painter: EntityPainter, enemy: Enemy, rotorAngle = 0):
   drawHpBar(painter, enemy);
 }
 
-/** The HP bar centered above the enemy, filled in proportion to HP left. Drawn over its sprite too. */
-export function drawHpBar(painter: EntityPainter, enemy: Enemy): void {
+/**
+ * The HP bar centered above the enemy, filled in proportion to HP left. Drawn over its sprite too, then with the enemy
+ * at `at`: one Graphics holds every sprite's bar, so the sprites draw in one batch (#420).
+ */
+export function drawHpBar(painter: EntityPainter, enemy: Enemy, at: Pixel = { x: 0, y: 0 }): void {
   const { radius } = ENEMY_STYLE[enemy.kind];
-  const left = -HP_BAR.width / 2;
-  const top = -radius - HP_BAR.gap - HP_BAR.height;
+  const left = at.x - HP_BAR.width / 2;
+  const top = at.y - radius - HP_BAR.gap - HP_BAR.height;
   painter.fillStyle(HP_BAR.back, HP_BAR.backAlpha);
   painter.fillRect(left, top, HP_BAR.width, HP_BAR.height);
   painter.fillStyle(hpBarFill(enemy.hp, enemy.maxHp));

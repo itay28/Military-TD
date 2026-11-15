@@ -140,7 +140,10 @@ const DEPTH = {
   decals: 0.5,
   towers: 1,
   enemies: 2,
+  // Every HP bar of a layer in one Graphics just over it, so the enemy sprites draw in one batch (#420).
+  hpBars: 2.5,
   air: 3,
+  airHpBars: 3.5,
   tracers: 4,
   shells: 4,
   effects: 4,
@@ -266,6 +269,9 @@ export class GameScene extends Phaser.Scene {
   private loop!: FixedStep;
   /** How the map was drawn, for the test view. */
   private mapTiles: TestView['mapTiles'] = 'shapes';
+  /** The HP bars of the ground and the air enemies drawn as sprites (#420). */
+  private hpBars!: Phaser.GameObjects.Graphics;
+  private airHpBars!: Phaser.GameObjects.Graphics;
   /** The player's game speed. Each game starts at the default speed in the settings. */
   private gameSpeed: GameSpeed = 1;
   private hud!: Hud;
@@ -772,17 +778,17 @@ export class GameScene extends Phaser.Scene {
         const frame = this.motion().enemyWalk ? animFrame(this.animMs, this.clipSim?.animKey(enemy.id) ?? enemy.id) : 0;
         // Only the shape's rotor moves with the frame; a sprite's HP bar doesn't.
         const redrawShape = !view.sprite && view.frame !== frame;
-        if (view.hp !== enemy.hp || redrawShape) {
+        if (!view.sprite && (view.hp !== enemy.hp || redrawShape)) {
           view.graphics.clear();
-          // The menu clip has no HP bars: most of its enemies only drive through.
-          if (view.sprite) {
-            if (!this.clip) drawHpBar(view.graphics, enemy);
-          } else drawEnemy(view.graphics, enemy, rotorAngle(frame));
+          drawEnemy(view.graphics, enemy, rotorAngle(frame));
           view.hp = enemy.hp;
         }
         view.frame = frame;
         view.heading = headingOf(this.previousPositions.get(enemy.id), enemy.position, view.heading);
         const { x, y } = toPixels(interpolatePosition(this.previousPositions, enemy, this.loop.alpha));
+        // A sprite's HP bar goes on its layer's shared Graphics, redrawn every frame. The menu clip has no HP bars: most
+        // of its enemies only drive through.
+        if (view.sprite && !this.clip) drawHpBar(enemy.layer === 'air' ? this.airHpBars : this.hpBars, enemy, { x, y });
         view.graphics.setPosition(x, y);
         view.sprite
           ?.setPosition(x, y)
@@ -795,6 +801,8 @@ export class GameScene extends Phaser.Scene {
       },
     });
 
+    this.hpBars = onLayer(this.add.graphics(), 'hpBars');
+    this.airHpBars = onLayer(this.add.graphics(), 'airHpBars');
     this.towerViewById.clear();
     this.towerViews = createViewSync<Tower, TowerView>({
       create: (tower) => {
@@ -1316,6 +1324,8 @@ export class GameScene extends Phaser.Scene {
 
     const { enemies, towers } = this.sim.state;
     this.towerViews.sync(towers);
+    this.hpBars.clear();
+    this.airHpBars.clear();
     this.enemyViews.sync(enemies);
     this.tracerGraphics.clear();
     drawTracers(this.tracerGraphics, this.tracers.active());
