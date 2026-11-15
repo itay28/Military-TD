@@ -43,15 +43,16 @@ describe('ci workflow', () => {
     ]);
   });
 
-  it('e2e runs npm ci, then the e2e tests, then the frame-time report', () => {
+  it('e2e runs npm ci, then the e2e tests, then the frame-time check', () => {
     expect(job('e2e')).toMatch(/^ {4}name: e2e$/m);
     expect(runs(job('e2e'))).toEqual(['npm ci', 'npm run test:e2e', 'npm run test:perf:browser']);
   });
 
-  it('the frame-time report runs even when an e2e test failed but never fails the e2e job: report only until rendering is faster (#73)', () => {
+  it('the frame-time check runs even when an e2e test failed, and fails the e2e job over the p95 limit (#420)', () => {
     expect(job('e2e')).toMatch(
-      /name: Frame-time report\n\s+if: \$\{\{ !cancelled\(\) \}\}\n\s+continue-on-error: true\n/,
+      /name: Frame-time check\n\s+if: \$\{\{ !cancelled\(\) \}\}\n\s+run: npm run test:perf:browser\n/,
     );
+    expect(job('e2e')).not.toContain('continue-on-error');
   });
 
   it('e2e runs in the Playwright container that matches the @playwright/test version', () => {

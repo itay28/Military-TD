@@ -237,6 +237,18 @@ describe('drawHpBar', () => {
     expect(calls[2]).toEqual(['fillStyle', HP_BAR.low]);
     expect(calls[3]).toEqual(['fillRect', -HP_BAR.width / 2, expect.any(Number), HP_BAR.width / 4, HP_BAR.height]);
   });
+
+  it('draws the bar over an enemy at `at`, so every bar can share one Graphics (#420)', () => {
+    const atOrigin = recordingPainter();
+    drawHpBar(atOrigin.painter, infantry(10));
+    const moved = recordingPainter();
+    drawHpBar(moved.painter, infantry(10), { x: 100, y: 50 });
+    expect(moved.calls).toEqual(
+      atOrigin.calls.map(([name, ...args]) =>
+        name === 'fillRect' ? [name, args[0]! + 100, args[1]! + 50, args[2], args[3]] : [name, ...args],
+      ),
+    );
+  });
 });
 
 describe('hpBarFill', () => {

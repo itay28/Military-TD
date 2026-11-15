@@ -83,10 +83,10 @@ jobs:
       - name: Run e2e tests
         run: npm run test:e2e
 
-      # Mean and p95 frame time for the Heavy load, in the job summary; report only, never fails the job (docs/performance.md).
-      - name: Frame-time report
+      # Mean and p95 frame time for the Heavy load, in the job summary; fails over the p95 limit (docs/performance.md).
+      # It runs even when an e2e test failed, so the summary always has the numbers.
+      - name: Frame-time check
         if: ${{ !cancelled() }}
-        continue-on-error: true
         run: npm run test:perf:browser
 
       - name: Upload report and traces

@@ -4,13 +4,13 @@ import { HEAVY_LOAD_WARMUP_TICKS } from '../../src/sim/heavyLoadTicks';
 import { openGame } from '../e2e/helpers';
 import { FRAME_P95_LIMIT_MS, frameStats, frameSummary } from './frameStats';
 
-// The browser frame-time report (#73, docs/performance.md): `npm run test:perf:browser`. It writes mean and p95 to
-// the job summary. The CI step is continue-on-error (report only) until rendering is faster; the test still fails over 33 ms p95.
+// The browser frame-time check (#73, #420, docs/performance.md): `npm run test:perf:browser`. It writes mean and p95
+// to the job summary and fails over FRAME_P95_LIMIT_MS, in CI too.
 
 /** How long frames are recorded for, in ms. */
 const RECORD_MS = 4000;
 
-test('the Heavy load plays in real time above 30 fps (p95)', async ({ page }) => {
+test('the Heavy load plays in real time within the p95 frame-time limit', async ({ page }) => {
   // Player mode: the real-time loop and animations run, as for a player.
   await openGame(page, { manualStep: false, anim: true });
   await page.evaluate(() => window.__TD__!.loadScenario('heavy-load'));
