@@ -404,3 +404,10 @@ export const AFTERMATH_OF = {
   helicopter: { decal: 'crashMark', size: 12 },
   jet: { decal: 'crashMark', size: 10 }, // a small fast jet leaves a smaller crash mark than the helicopter
 } as const satisfies Record<EnemyKind, { decal: Exclude<DecalKind, 'crater'>; size: number }>;
+
+/**
+ * Render sprites are drawn from the box around their visible pixels (#420), leaving out the transparent rest of their
+ * canvas: software rendering (CI's headless Chromium) pays for every pixel of a quad. Pixels this faint or fainter
+ * (alpha out of 255, under 2% opaque) don't count, so the barely-there edge of a soft shadow doesn't stretch the box.
+ */
+export const RENDER_TRIM_FAINT_ALPHA = 4;

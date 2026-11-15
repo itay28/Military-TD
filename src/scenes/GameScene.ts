@@ -11,6 +11,7 @@ import {
   HIGHLIGHT,
   MAP_CURSOR,
   MAP_GRID,
+  RENDER_TRIM_FAINT_ALPHA,
   SPRITE_SCALE,
   TILE_PX,
   TOWER_STYLE,
@@ -124,6 +125,7 @@ import { mountTowerPanel, type TowerPanel } from '../ui/towerPanel';
 import { mountEnemyCard, type EnemyCard } from '../ui/enemyCard';
 import { renderIcon } from '../ui/renderIcon';
 import { createViewSync, type ViewSync } from './viewSync';
+import { opaqueBounds } from './trim';
 
 /** Real time keeps up down to about 12 fps; below that the game runs slower instead of spiralling. */
 const MAX_TICKS_PER_FRAME = 5;
@@ -153,6 +155,9 @@ const DEPTH = {
   floatingText: 7,
 } as const;
 
+/** The frame name of a render texture's visible part (`trimmedFrame`, #420). */
+const TRIMMED_FRAME = 'trimmed';
+
 /** Puts `object` on `layer`: the depth that orders it, and the name test mode's view() reports it by. */
 function onLayer<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Depth>(
   object: T,
@@ -178,7 +183,7 @@ interface EntityView {
 interface EnemyView extends EntityView {
   readonly id: number;
   readonly kind: EnemyKind;
-  /** The HP and movement frame last drawn, so the shape or HP bar is redrawn only when one changes. */
+  /** The HP and movement frame last drawn, so a shape (no sprite) is redrawn only when one changes. */
   hp: number;
   frame: number;
   /** The way it is heading (`headingOf`), kept while it stands still. */
@@ -512,6 +517,29 @@ export class GameScene extends Phaser.Scene {
     return { sprite, graphics, rendered: false, spriteScale: SPRITE_SCALE, facing };
   }
 
+  /**
+   * The frame of render texture `key` cut down to its visible part (#420), made the first time it's asked for: a render
+   * is a square canvas mostly transparent around the unit, and software rendering pays for every pixel of a quad. A
+   * trimmed frame keeps the whole canvas's size, so origins, pivots and scales work as on the whole image.
+   */
+  private trimmedFrame(key: string): string {
+    const texture = this.textures.get(key);
+    if (texture.has(TRIMMED_FRAME)) return TRIMMED_FRAME;
+    const source = texture.getSourceImage() as HTMLImageElement;
+    const { width, height } = source;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { willReadFrequently: true })!;
+    context.drawImage(source, 0, 0);
+    const pixels = context.getImageData(0, 0, width, height).data;
+    const box = opaqueBounds(pixels, width, height, RENDER_TRIM_FAINT_ALPHA) ?? { x: 0, y: 0, width, height };
+    texture
+      .add(TRIMMED_FRAME, 0, box.x, box.y, box.width, box.height)
+      ?.setTrim(width, height, box.x, box.y, box.width, box.height);
+    return TRIMMED_FRAME;
+  }
+
   /** A tower in Kenney's sprites: its base frame, then its turret over it (none for a kind drawn as a shape). */
   private addKenneyTowerView(kind: TowerKind, at: Pixel): EntityView & { base: Phaser.GameObjects.Image | undefined } {
     const baseFrame = this.frameFor(kind) === null ? null : this.atlasFrame(TOWER_BASES[kind]);
@@ -526,9 +554,9 @@ export class GameScene extends Phaser.Scene {
   /** An enemy drawn from `render`: hull, then the turret over its shadow, turned together; a Graphics over both. */
   private addRenderedEnemyView(render: RenderedSprite, layer: keyof typeof DEPTH): EntityView {
     const { scale, turretOrigin, turretOffset } = renderPlacement(render);
-    const hull = this.add.image(0, 0, render.hullKey).setScale(scale);
+    const hull = this.add.image(0, 0, render.hullKey, this.trimmedFrame(render.hullKey)).setScale(scale);
     const turret = this.add
-      .image(turretOffset.x, turretOffset.y, render.turretKey)
+      .image(turretOffset.x, turretOffset.y, render.turretKey, this.trimmedFrame(render.turretKey))
       .setOrigin(turretOrigin.x, turretOrigin.y)
       .setScale(scale);
     const sprite = onLayer(this.add.container(0, 0, [hull, turret]), layer);
@@ -539,7 +567,7 @@ export class GameScene extends Phaser.Scene {
   /** An enemy drawn from a single-image render (Infantry, Jeep, Helicopter): one image turned whole; a Graphics over it. */
   private addSingleImageEnemyView(render: SingleImageRender, layer: keyof typeof DEPTH): EntityView {
     const scale = TILE_PX / render.pxPerTile;
-    const sprite = onLayer(this.add.image(0, 0, render.imageKey), layer)
+    const sprite = onLayer(this.add.image(0, 0, render.imageKey, this.trimmedFrame(render.imageKey)), layer)
       .setOrigin(render.pivot.x / render.canvasPx, render.pivot.y / render.canvasPx)
       .setScale(scale);
     const graphics = onLayer(this.add.graphics(), layer);
@@ -576,8 +604,13 @@ export class GameScene extends Phaser.Scene {
   /** A tower drawn from `render`: its hull as the base, its turret turning around the pivot, a Graphics over both. */
   private addRenderedTowerView(render: RenderedSprite, at: Pixel): EntityView & { base: Phaser.GameObjects.Image } {
     const { scale, turretOrigin, turretOffset } = renderPlacement(render);
-    const base = onLayer(this.add.image(at.x, at.y, render.hullKey), 'towers').setScale(scale);
-    const sprite = onLayer(this.add.image(at.x + turretOffset.x, at.y + turretOffset.y, render.turretKey), 'towers')
+    const hull = this.trimmedFrame(render.hullKey);
+    const turret = this.trimmedFrame(render.turretKey);
+    const base = onLayer(this.add.image(at.x, at.y, render.hullKey, hull), 'towers').setScale(scale);
+    const sprite = onLayer(
+      this.add.image(at.x + turretOffset.x, at.y + turretOffset.y, render.turretKey, turret),
+      'towers',
+    )
       .setOrigin(turretOrigin.x, turretOrigin.y)
       .setScale(scale);
     const graphics = onLayer(this.add.graphics(), 'towers').setPosition(at.x, at.y);
